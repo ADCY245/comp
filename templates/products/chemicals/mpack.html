@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MPACK</title>
+
+  <!-- Bootstrap CSS -->
+  <link 
+    rel="stylesheet" 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT+zDk0s5H7v3aVVl7wYX3qG" 
+    crossorigin="anonymous"
+  >
+
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+  <style>
+    /* Custom styles for Select2 */
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+        padding: 0.375rem 0.75rem;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        padding-left: 0;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+  </style>
+</head>
+<body class="container py-4">
+  <div style="text-align: right; margin-bottom: 20px; position: relative;">
+    <a href="{{ url_for('cart') }}" style="position: relative; display: inline-block;">
+      <img
+        src="{{ url_for('static', filename='images/cart-icon.png') }}"
+        alt="Cart"
+        style="width: 40px; height: 40px; cursor: pointer;"
+      />
+      <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+    </a>
+  </div>
+
+  <h2>MPACK Selection</h2>
+
+  <!-- Machine Selector -->
+  <div class="mb-3">
+    <label for="machineSelect" class="form-label">Select Machine:</label>
+    <select id="machineSelect" class="form-select">
+      <option value="">-- Select Machine --</option>
+    </select>
+  </div>
+
+  <!-- Thickness -->
+  <div class="mb-3" id="thicknessSection" style="display:none;">
+    <label for="thicknessSelect" class="form-label">Select Thickness (micron):</label>
+    <select id="thicknessSelect" class="form-select">
+      <option value="">-- Select Thickness --</option>
+      <option value="100">100</option>
+      <option value="125">125</option>
+      <option value="150">150</option>
+      <option value="200">200</option>
+      <option value="250">250</option>
+      <option value="300">300</option>
+      <option value="400">400</option>
+    </select>
+  </div>
+
+  <!-- Size with Search -->
+  <div class="mb-3" id="sizeSection" style="display:none;">
+    <label for="sizeInput" class="form-label">Search Size:</label>
+    <input type="text" id="sizeInput" class="form-control" placeholder="Type to search sizes (e.g., 260x350)">
+    <div id="sizeSuggestions" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+    <!-- Hidden select for compatibility -->
+    <select id="sizeSelect" style="display: none;">
+      <option value="">-- Select Size --</option>
+    </select>
+  </div>
+
+  <!-- Price Display -->
+  <div class="mb-3" id="priceSection" style="display:none;">
+    <p><strong>Net Price Per Sheet:</strong> ₹<span id="netPrice">-</span></p>
+  </div>
+
+  <!-- Quantity -->
+  <div class="mb-3" id="sheetInputSection" style="display:none;">
+    <label for="sheetInput" class="form-label">Enter Number of Sheets:</label>
+    <input type="number" id="sheetInput" class="form-control" />
+  </div>
+
+  <!-- Total Price -->
+  <div class="mb-3" id="totalPriceSection" style="display:none;">
+    <p><strong>Total Price:</strong> ₹<span id="totalPrice">-</span></p>
+    <p><strong>GST @12%:</strong> ₹<span id="gstAmount">-</span></p>
+    <p><strong>Final Price (incl. GST):</strong> ₹<span id="finalPrice">-</span></p>
+  </div>
+
+  <!-- Discount -->
+  <div class="mb-3" id="discountPromptSection" style="display:none;">
+    <label class="form-label">Apply Discount?</label>
+    <button class="btn btn-outline-primary btn-sm" onclick="showDiscountSection(true)">Yes</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="showDiscountSection(false)">No</button>
+  </div>
+
+  <div class="mb-3" id="discountSection" style="display:none;">
+    <label for="discountSelect" class="form-label">Select Discount:</label>
+    <select id="discountSelect" class="form-select mb-2">
+      <option value="">-- Select Discount --</option>
+    </select>
+    <div id="discountDetails" class="mt-2 p-2 bg-light rounded">
+      <!-- Discount breakdown will be shown here -->
+    </div>
+  </div>
+
+  <!-- Add to Cart -->
+  <button onclick="addMpackToCart()" class="btn btn-warning">Add to Cart</button>
+
+  <!-- jQuery (required for Select2) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  
+  <!-- JavaScript -->
+  <script src="{{ url_for('static', filename='js/mpack.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+  
+  <script>
+    // Function to handle size search and selection
+    function initSizeSearch() {
+      const sizeInput = document.getElementById('sizeInput');
+      const sizeSelect = document.getElementById('sizeSelect');
+      const sizeSuggestions = document.getElementById('sizeSuggestions');
+      
+      if (!sizeInput || !sizeSelect) return;
+      
+      // Function to update the hidden select and trigger change
+      function selectSize(value, text) {
+        if (sizeSelect) {
+          // Update the hidden select
+          sizeSelect.value = value;
+          // Update the input field
+          sizeInput.value = text;
+          // Hide suggestions
+          sizeSuggestions.style.display = 'none';
+          
+          // Trigger change event after a small delay to ensure the value is set
+          setTimeout(() => {
+            const event = new Event('change');
+            sizeSelect.dispatchEvent(event);
+          }, 10);
+        }
+      }
+      
+      // Function to update suggestions
+      function updateSuggestions() {
+        const searchTerm = sizeInput.value.toLowerCase();
+        const options = Array.from(sizeSelect.options);
+        
+        // Clear previous suggestions
+        sizeSuggestions.innerHTML = '';
+        
+        if (!searchTerm) {
+          sizeSuggestions.style.display = 'none';
+          return;
+        }
+        
+        // Filter matching options
+        const matches = options.filter(opt => 
+          opt.value && 
+          (opt.text.toLowerCase().includes(searchTerm) || 
+           opt.text.replace(/[^0-9x]/g, '').includes(searchTerm))
+        );
+        
+        // Show suggestions
+        if (matches.length > 0) {
+          matches.forEach(option => {
+            const suggestion = document.createElement('button');
+            suggestion.type = 'button';
+            suggestion.className = 'list-group-item list-group-item-action';
+            suggestion.textContent = option.text;
+            suggestion.onclick = () => selectSize(option.value, option.text);
+            sizeSuggestions.appendChild(suggestion);
+          });
+          sizeSuggestions.style.display = 'block';
+        } else {
+          const noResults = document.createElement('div');
+          noResults.className = 'list-group-item';
+          noResults.textContent = 'No matching sizes found';
+          sizeSuggestions.appendChild(noResults);
+          sizeSuggestions.style.display = 'block';
+        }
+      }
+      
+      // Handle input changes
+      sizeInput.addEventListener('input', updateSuggestions);
+      
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', function(e) {
+        if (e.target !== sizeInput && e.target !== sizeSuggestions) {
+          sizeSuggestions.style.display = 'none';
+        }
+      });
+      
+      // Handle Enter key to select the first suggestion
+      sizeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const firstSuggestion = sizeSuggestions.querySelector('button');
+          if (firstSuggestion) {
+            firstSuggestion.click();
+          }
+        }
+      });
+      
+      // Watch for changes to the sizeSelect options
+      const observer = new MutationObserver(updateSuggestions);
+      observer.observe(sizeSelect, { childList: true });
+      
+      // Initial update
+      updateSuggestions();
+    }
+    
+    // Store the original loadSizes function
+    const originalLoadSizes = window.loadSizes;
+    
+    // Override the loadSizes function to initialize search after loading sizes
+    window.loadSizes = function() {
+      // Call the original loadSizes
+      const result = originalLoadSizes.apply(this, arguments);
+      
+      // If it returns a promise (which it should)
+      if (result && typeof result.then === 'function') {
+        return result.then(() => {
+          // Initialize size search after sizes are loaded
+          initSizeSearch();
+          return true;
+        }).catch(error => {
+          console.error('Error in loadSizes:', error);
+          // Show error to user
+          const sizeInput = document.getElementById('sizeInput');
+          if (sizeInput) {
+            sizeInput.placeholder = 'Error loading sizes. Please try again.';
+            sizeInput.disabled = true;
+          }
+          throw error;
+        });
+      } else {
+        // If it doesn't return a promise, just initialize the search
+        initSizeSearch();
+        return Promise.resolve();
+      }
+    };
+    
+    // Initialize the search when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set up a mutation observer to watch for the size section becoming visible
+      const sizeSection = document.getElementById('sizeSection');
+      if (sizeSection) {
+        const observer = new MutationObserver(function(mutations) {
+          if (sizeSection.style.display !== 'none') {
+            initSizeSearch();
+          }
+        });
+        observer.observe(sizeSection, { attributes: true, attributeFilter: ['style'] });
+      }
+    });
+    
+    // Update cart count when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCartCount();
+    });
+  </script>
+</body>
+</html>
