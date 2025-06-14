@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Select Product - WQA{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+<style>
+    /* Custom styles for Select2 */
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+        padding: 0.375rem 0.75rem;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        padding-left: 0;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .cart-icon {
+        position: relative;
+        display: inline-block;
+    }
+    #cart-count {
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform: translate(50%, -50%);
+    }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ url_for('static', filename='js/selection.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const select = $('#companySelect');
+            const productTypeSelect = document.getElementById('productTypeSelect');
+            let companiesData = [];
+            
+            // Clear any existing selection
+            select.val(null).trigger('change');
+            
+            // Disable product type selection until company is selected
+            productTypeSelect.disabled = true;
+            
+            try {
+                // Load companies from the server
+                const response = await fetch("{{ url_for('static', filename='data/company_emails.json') }}");
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                companiesData = await response.json();
+                
+                if (!Array.isArray(companiesData) || companiesData.length === 0) {
+                    throw new Error('No companies data found');
+                }
+                
+                // Sort companies alphabetically by name
+                companiesData.sort((a, b) => (a['Company Name'] || '').localeCompare(b['Company Name'] || ''));
+                
+                // Store companies data for later use
+                select.data('companies', companiesData);
+                
+                // Initialize Select2 with the companies data
+                select.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Type to search for a company',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownAutoWidth: true,
+                    minimumInputLength: 1,
+                    data: companiesData.map(company => ({
+                        id: company['Company Name'],
+                        text: company['Company Name'],
+                        email: company['EmailID']
+                    })),
+                    language: {
+                        noResults: function() {
+                            return 'No companies found';
+                        },
+                        searching: function() {
+                            return 'Searching...';
+                        },
+                        inputTooShort: function(args) {
+                            return 'Please enter ' + args.minimum + ' or more characters';
+                        }
+                    },
+                    templateResult: function(result) {
+                        if (!result.id) return result.text;
+                        return $('<span>').text(result.text);
+                    },
+                    templateSelection: function(selected) {
+                        return selected.text || 'Select a company';
+                    }
+                });
+                
+                console.log(`Successfully loaded ${companiesData.length} companies`);
+                
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                // Add error message to the dropdown
+                select.empty().append('<option value="">Error loading companies. Please refresh the page.</option>');
+                select.trigger('change');
+            }
+            
+            // Function to update cart link with company info
+            function updateCartLink(company, navigateToCart = false) {
+                try {
+                    const cartLink = document.getElementById('cartLink');
+                    if (!cartLink) return false;
+                    
+                    // If no company provided, try to get from localStorage
+                    if (!company) {
+                        const savedCompany = localStorage.getItem('selectedCompany');
+                        if (savedCompany) {
+                            try {
+                                company = JSON.parse(savedCompany);
+                            } catch (e) {
+                                console.error('Error parsing saved company:', e);
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                    
+                    const baseUrl = "{{ url_for('cart') }}";
+                    const params = new URLSearchParams();
+                    
+                    // Add company info to URL parameters
+                    if (company.name) params.append('company', company.name);
+                    if (company.email) params.append('email', company.email);
+                    
+                    // Update the cart link
+                    const newHref = `${baseUrl}?${params.toString()}`;
+                    cartLink.href = newHref;
+                    console.log('Updated cart link to:', newHref);
+                    
+                    // Only navigate to cart if explicitly requested
+                    if (navigateToCart && window.event) {
+                        window.event.preventDefault();
+                        window.location.href = newHref;
+                        return false;
+                    }
+                    
+                    return true;
+                } catch (e) {
+                    console.error('Error updating cart link:', e);
+                    return false;
+                }
+            }
+            
+            // When a company is selected, enable the product type dropdown
+            select.on('select2:select', function(e) {
+                try {
+                    productTypeSelect.disabled = false;
+                    
+                    // Store the selected company in localStorage
+                    const selectedCompany = {
+                        name: e.params.data.text || '',
+                        email: e.params.data.email || ''
+                    };
+                    console.log('Company selected:', selectedCompany);
+                    
+                    localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
+                    
+                    // Update cart link
+                    updateCartLink(selectedCompany);
+                    
+                    // Also update the product type links
+                    if (selectedCompany.name || selectedCompany.email) {
+                        const companyParam = new URLSearchParams();
+                        if (selectedCompany.name) companyParam.append('company', selectedCompany.name);
+                        if (selectedCompany.email) companyParam.append('email', selectedCompany.email);
+                        
+                        document.querySelectorAll('#productTypeSelect option').forEach(option => {
+                            if (option.value) {
+                                option.value = `${option.value.split('?')[0]}?${companyParam.toString()}`;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error handling company selection:', error);
+                }
+            });
+            
+            // Restore cart link and selected company from localStorage on page load
+            const savedCompany = localStorage.getItem('selectedCompany');
+            if (savedCompany) {
+                try {
+                    const company = JSON.parse(savedCompany);
+                    updateCartLink(company);
+                    select.val(company.name).trigger('change');
+                } catch (e) {
+                    console.error('Error parsing saved company:', e);
+                    // If parsing fails, try to just set the value directly
+                    select.val(savedCompany).trigger('change');
+                }
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="mb-4">Select Company</h1>
+        
+        <div class="mb-3">
+            <label for="companySelect" class="form-label">Search Company</label>
+            <select id="companySelect" class="form-select mb-4" style="width: 100%;" onchange="localStorage.setItem('selectedCompany', this.value);">
+                <option value="">-- Type to search for a company --</option>
+                <!-- Companies will be loaded here by JavaScript -->
+            </select>
+        </div>
+
+        <h2 class="mb-4">Select Product Type</h2>
+        
+        <div class="mb-3">
+            <select id="productTypeSelect" class="form-select" onchange="if(this.value) { updateCartLink(); window.location.href=this.value; }" disabled>
+                <option value="">-- Select Type --</option>
+                <option value="{{ url_for('blankets') }}">Blanket</option>
+                <option value="{{ url_for('mpack') }}">Underpacking</option>
+            </select>
+        </div>
+    </div>
+{% endblock %}
