@@ -1,0 +1,935 @@
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for, jsonify, flash, session, make_response, send_file
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from waitress import serve
+import os
+import json
+from datetime import datetime, timedelta
+import uuid
+import hashlib
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from functools import wraps
+import jwt
+from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# JWT Configuration
+JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
+JWT_ALGORITHM = 'HS256'
+JWT_EXPIRATION = 3600  # 1 hour
+
+# Email Configuration
+SMTP_SERVER = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
+SMTP_USERNAME = os.getenv('SMTP_USER', '')
+# Support both traditional SMTP_PASS and the more explicit SMTP_PASSWORD variable names
+SMTP_PASSWORD = os.getenv('SMTP_PASS') or os.getenv('SMTP_PASSWORD', '')
+EMAIL_FROM = os.getenv('EMAIL_FROM', 'noreply@yourdomain.com')
+EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'Moneda App')
+
+# File paths
+USERS_FILE = os.path.join('static', 'data', 'users.json')
+CART_FILE = os.path.join('static', 'data', 'cart.json')
+
+# Ensure data directory exists
+os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+
+# For Render deployment - use in-memory storage
+class CartStore:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.cart = {"products": []}
+        return cls._instance
+    
+    def get_cart(self):
+        return self.cart
+    
+    def save_cart(self, cart):
+        self.cart = cart
+        return True
+
+# Initialize cart store
+cart_store = CartStore()
+
+# Ensure the data directory exists
+os.makedirs('static/data', exist_ok=True)
+
+# Initialize Flask app
+app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# Configuration
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(user_id)
+
+# Initialize Flask-Login
+# User model
+class User(UserMixin):
+    def __init__(self, id, email, username, password_hash, is_verified=False, reset_token=None, reset_token_expiry=None, otp_verified=False):
+        self.id = id
+        self.email = email
+        self.username = username
+        self.password_hash = password_hash
+        self.is_verified = is_verified
+        self.reset_token = reset_token
+        self.reset_token_expiry = reset_token_expiry
+        self.otp_verified = otp_verified
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+    def generate_auth_token(self, expires_in=JWT_EXPIRATION):
+        payload = {
+            'user_id': self.id,
+            'exp': datetime.utcnow() + timedelta(seconds=expires_in)
+        }
+        return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    
+    @staticmethod
+    def verify_auth_token(token):
+        try:
+            data = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            return data.get('user_id')
+        except:
+            return None
+
+# User storage
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r') as f:
+            users_data = json.load(f)
+            return {uid: User(**user_data) for uid, user_data in users_data.items()}
+    return {}
+
+def save_users(users_dict):
+    users_data = {}
+    for uid, user in users_dict.items():
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'username': user.username,
+            'password_hash': user.password_hash,
+            'is_verified': user.is_verified,
+            'reset_token': user.reset_token,
+            'reset_token_expiry': user.reset_token_expiry.isoformat() if user.reset_token_expiry else None,
+            'otp_verified': user.otp_verified
+        }
+        users_data[uid] = user_data
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users_data, f, indent=2)
+
+# Initialize users
+users = load_users()
+
+# OTP storage
+otp_store = {}
+
+def generate_otp(email, otp_type='verification'):
+    """Generate and store OTP for the given email and type"""
+    otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
+    expiry = datetime.utcnow() + timedelta(minutes=10)  # 10 minutes expiry
+    
+    otp_store[email] = {
+        'otp': otp,
+        'expiry': expiry,
+        'type': otp_type,
+        'attempts': 0,
+        'verified': False
+    }
+    return otp
+
+def verify_otp(email, otp, otp_type='verification'):
+    """Verify if the OTP is valid"""
+    if email not in otp_store:
+        return False
+    
+    otp_data = otp_store[email]
+    
+    # Check if OTP matches and not expired
+    if (otp_data['otp'] == otp and 
+        otp_data['expiry'] > datetime.utcnow() and 
+        otp_data['type'] == otp_type):
+        
+        # Mark as verified for one-time use
+        otp_data['verified'] = True
+        return True
+    
+    # Increment failed attempts
+    otp_data['attempts'] += 1
+    
+    # Clear after too many attempts
+    if otp_data['attempts'] >= 5:
+        del otp_store[email]
+    
+    return False
+
+def send_otp_email(email, otp_type='verification'):
+    """Send OTP to user's email"""
+    otp = generate_otp(email, otp_type)
+    
+    if otp_type == 'verification':
+        subject = "Verify Your Email Address"
+        body = f"""
+        <h2>Email Verification</h2>
+        <p>Your verification code is: <strong>{otp}</strong></p>
+        <p>This code will expire in 10 minutes.</p>
+        """
+    else:  # password_reset
+        subject = "Password Reset Request"
+        body = f"""
+        <h2>Password Reset</h2>
+        <p>Your password reset code is: <strong>{otp}</strong></p>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+        """
+    
+    return send_email(email, subject, body, is_html=True)
+
+# Email utility
+def send_email(to_email, subject, body, is_html=False):
+    print(f"Attempting to send email to: {to_email}")
+    print(f"Using SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
+    print(f"From: {EMAIL_FROM_NAME} <{EMAIL_FROM}>")
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        if is_html:
+            msg.attach(MIMEText(body, 'html'))
+        else:
+            msg.attach(MIMEText(body, 'plain'))
+        
+        print("Connecting to SMTP server...")
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+            print("Starting TLS...")
+            server.starttls()
+            print("Logging in...")
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            print("Sending email...")
+            server.send_message(msg)
+            print("Email sent successfully")
+        return True
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"SMTP Authentication Error: {e}")
+        print(f"Username: {SMTP_USERNAME}")
+        print("Please check your email and password. If using Gmail, make sure you've enabled 'Less secure app access' or use an App Password.")
+        return False
+    except smtplib.SMTPException as e:
+        print(f"SMTP Error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error sending email: {e}")
+        return False
+    return False
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(user_id)
+
+def login_required_custom(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+CART_FILE = os.path.join('static', 'data', 'cart.json')
+
+# Initialize cart file if it doesn't exist
+if not os.path.exists(CART_FILE):
+    with open(CART_FILE, 'w') as f:
+        json.dump({"products": []}, f)
+
+# ---------- ROUTES ---------- #
+
+@app.route('/')
+def home():
+    if 'user_id' in session:
+        return redirect(url_for('display'))
+    return redirect(url_for('login'))
+
+# Auth Routes
+@app.route('/api/request-otp', methods=['POST'])
+def request_otp():
+    print("\n--- OTP Request Received ---")
+    data = request.get_json()
+    email = data.get('email')
+    otp_type = data.get('type', 'verification')
+    
+    print(f"Email: {email}")
+    print(f"OTP Type: {otp_type}")
+    
+    if not email:
+        print("Error: Email is required")
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    # Check if user exists for password reset
+    if otp_type == 'password_reset':
+        user = next((u for u in users.values() if u.email == email), None)
+        if not user:
+            print(f"Error: No account found with email: {email}")
+            return jsonify({'success': False, 'error': 'No account found with this email'}), 404
+    
+    print(f"Sending OTP to: {email}")
+    # Send OTP email
+    if send_otp_email(email, otp_type):
+        print("OTP email sent successfully")
+        response = jsonify({
+            'success': True,
+            'message': 'OTP sent successfully',
+            'email': email
+        })
+        print(f"Sending response: {response.get_data(as_text=True)}")
+        return response, 200
+    else:
+        print("Failed to send OTP email")
+        response = jsonify({
+            'success': False,
+            'error': 'Failed to send OTP. Please try again later.'
+        })
+        print(f"Sending error response: {response.get_data(as_text=True)}")
+        return response, 500
+
+@app.route('/api/verify-otp', methods=['POST'])
+def verify_otp_endpoint():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    otp_type = data.get('type', 'verification')
+    
+    if not email or not otp:
+        return jsonify({'error': 'Email and OTP are required'}), 400
+    
+    if verify_otp(email, otp, otp_type):
+        return jsonify({'message': 'OTP verified successfully'}), 200
+    else:
+        return jsonify({'error': 'Invalid or expired OTP'}), 400
+
+@app.route('/api/auth/register/initiate', methods=['POST'])
+def api_register_initiate():
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+        
+    if not email.endswith('@chemo.in'):
+        return jsonify({'success': False, 'error': 'Only @chemo.in emails are allowed'}), 400
+        
+    if any(u.email == email for u in users.values()):
+        return jsonify({'success': False, 'error': 'Email already registered'}), 400
+    
+    # Generate and send OTP
+    if send_otp_email(email, 'verification'):
+        return jsonify({
+            'success': True, 
+            'message': 'Verification code sent to your email',
+            'email': email,
+            'redirectTo': url_for('login')
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Failed to send verification code'}), 500
+
+@app.route('/api/auth/register/complete', methods=['POST'])
+def api_register_complete():
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    otp = data.get('otp', '').strip()
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    confirm_password = data.get('confirmPassword', '').strip()
+    
+    # Validate inputs
+    if not all([email, otp, username, password, confirm_password]):
+        return jsonify({'success': False, 'error': 'All fields are required'}), 400
+    
+    if password != confirm_password:
+        return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
+    
+    if len(password) < 8:
+        return jsonify({'success': False, 'error': 'Password must be at least 8 characters long'}), 400
+    
+    if any(u.username.lower() == username.lower() for u in users.values()):
+        return jsonify({'success': False, 'error': 'Username already taken'}), 400
+    
+    # Verify OTP
+    if not verify_otp(email, otp, 'verification'):
+        return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
+    
+    # Create new user
+    try:
+        user_id = str(uuid.uuid4())
+        new_user = User(
+            id=user_id,
+            email=email,
+            username=username,
+            password_hash=generate_password_hash(password),
+            is_verified=True,
+            otp_verified=True
+        )
+        users[user_id] = new_user
+        save_users(users)
+        
+        # Don't log the user in automatically, redirect to login page
+        return jsonify({
+            'success': True,
+            'message': 'Registration successful! You can now log in.',
+            'redirectTo': url_for('login')
+        })
+        
+    except Exception as e:
+        print(f"Error during registration: {str(e)}")
+        return jsonify({'success': False, 'error': 'An error occurred during registration'}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    login = data.get('login', '').strip()  # Can be email or username
+    password = data.get('password', '').strip()
+    
+    # Validate inputs
+    if not login:
+        return jsonify({'success': False, 'error': 'Email or username is required'}), 400
+    if not password:
+        return jsonify({'success': False, 'error': 'Password is required'}), 400
+    
+    # Try to find user by email or username (case-insensitive)
+    user = next(
+        (u for u in users.values() 
+         if u.email.lower() == login.lower() or u.username.lower() == login.lower()),
+        None
+    )
+    
+    # Check if user exists
+    if not user:
+        return jsonify({
+            'success': False, 
+            'error': 'Invalid login credentials. Please check your email/username and password.'
+        }), 401
+    
+    # Check password
+    if not user.check_password(password):
+        return jsonify({
+            'success': False, 
+            'error': 'Invalid login credentials. Please check your email/username and password.'
+        }), 401
+    
+    # Check if user is verified
+    if not user.is_verified:
+        return jsonify({
+            'success': False, 
+            'error': 'Please verify your email address before logging in. Check your inbox for the verification link.'
+        }), 403
+    
+    # Log the user in
+    login_user(user)
+    token = user.generate_auth_token()
+    
+    # Return success response
+    return jsonify({
+        'success': True,
+        'message': 'Login successful',
+        'token': token,
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'username': user.username,
+            'is_verified': user.is_verified
+        },
+        'redirectTo': '/display'  # Redirect to display page after login
+    })
+
+@app.route('/api/auth/forgot-password/initiate', methods=['POST'])
+def api_forgot_password_initiate():
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    # Find user by email (case-insensitive)
+    user = next((u for u in users.values() if u.email.lower() == email.lower()), None)
+    if not user:
+        # Return success even if email not found to prevent user enumeration
+        return jsonify({
+            'success': True,
+            'message': 'If an account exists with this email, a verification code has been sent.',
+            'showOtpInput': False
+        })
+    
+    # Send OTP email
+    if send_otp_email(email, 'password_reset'):
+        return jsonify({
+            'success': True,
+            'message': 'A verification code has been sent to your email.',
+            'showOtpInput': True,
+            'email': email
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Failed to send verification code'}), 500
+
+@app.route('/api/auth/forgot-password/verify-otp', methods=['POST'])
+def api_verify_password_reset_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    
+    if not email or not otp:
+        return jsonify({'success': False, 'error': 'Email and OTP are required'}), 400
+    
+    if verify_otp(email, otp, 'password_reset'):
+        return jsonify({
+            'success': True,
+            'message': 'OTP verified successfully',
+            'showPasswordForm': True
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Invalid or expired OTP'}), 400
+
+@app.route('/api/auth/forgot-password/complete', methods=['POST'])
+def api_reset_password_complete():
+    data = request.get_json()
+    email = data.get('email')
+    new_password = data.get('newPassword')
+    
+    if not email or not new_password:
+        return jsonify({'success': False, 'error': 'Email and new password are required'}), 400
+    
+    # Find user by email (case-insensitive)
+    user = next((u for u in users.values() if u.email.lower() == email.lower()), None)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    # Update password
+    user.set_password(new_password)
+    save_users(users)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Password reset successful. You can now log in with your new password.',
+        'redirectTo': url_for('login')
+    })
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def api_reset_password():
+    data = request.get_json()
+    token = data.get('token')
+    new_password = data.get('newPassword')
+    
+    user = next((u for u in users.values() if u.reset_token == token and u.reset_token_expiry > datetime.utcnow()), None)
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'Invalid or expired token'}), 400
+    
+    user.set_password(new_password)
+    user.reset_token = None
+    user.reset_token_expiry = None
+    save_users(users)
+    
+    return jsonify({
+        'success': True, 
+        'message': 'Password reset successfully. You can now log in with your new password.',
+        'redirectTo': url_for('login')
+    })
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    user = next((u for u in users.values() if getattr(u, 'verification_token', None) == token), None)
+    
+    if user and not user.is_verified:
+        user.is_verified = True
+        user.verification_token = None
+        save_users(users)
+        flash('Email verified successfully! You can now log in.', 'success')
+    else:
+        flash('Invalid or expired verification link', 'error')
+    
+    return redirect(url_for('login'))
+
+# Frontend Routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # If user is already logged in, redirect to home
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+    # Handle form submission
+    if request.method == 'POST':
+        login_identifier = request.form.get('login', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        # Basic validation
+        if not login_identifier:
+            flash('Please enter your email or username', 'error')
+            return redirect(url_for('login'))
+            
+        if not password:
+            flash('Please enter your password', 'error')
+            return redirect(url_for('login'))
+        
+        # Find user by email or username (case-insensitive)
+        user = next(
+            (u for u in users.values() 
+             if u.email.lower() == login_identifier.lower() or 
+                u.username.lower() == login_identifier.lower()),
+            None
+        )
+        
+        # Check if user exists and password is correct
+        if user and user.check_password(password):
+            if user.is_verified:
+                login_user(user)
+                flash('You have been logged in successfully!', 'success')
+                
+                # Redirect to next page if it exists, otherwise to home
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('home'))
+            else:
+                flash('Please verify your email address before logging in. Check your inbox for the verification link.', 'error')
+        else:
+            # Generic error message to prevent user enumeration
+            flash('Invalid login credentials. Please check your email/username and password.', 'error')
+    
+    # Render the login page
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET'])
+def signup():
+    # If user is already logged in, redirect to home
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    return render_template('signup.html')
+
+@app.route('/forgot-password', methods=['GET'])
+def forgot_password():
+    # If user is already logged in, redirect to home
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET'])
+def reset_password(token):
+    return send_from_directory('public/reset-password', 'index.html')
+
+@app.route('/api/auth/logout')
+@login_required
+def api_logout():
+    logout_user()
+    session.pop('user_id', None)
+    return jsonify({'success': True, 'message': 'Logged out successfully'})
+
+@app.route('/display')
+@login_required_custom
+def display():
+    return render_template('display.html')
+
+@app.route('/cart')
+@login_required_custom
+def cart():
+    try:
+        print("\n=== [CART ROUTE] Loading cart data ===")
+        
+        # Get company info from URL parameters with empty defaults
+        company_name = request.args.get('company', '')
+        company_email = request.args.get('email', '')
+        
+        # If no company in URL, try to get from session
+        if not company_name:
+            company_name = session.get('company_name', 'Your Company')
+        else:
+            session['company_name'] = company_name
+            
+        if not company_email:
+            company_email = session.get('company_email', '')
+        else:
+            session['company_email'] = company_email
+            
+        print(f"[CART ROUTE] Company: {company_name}, Email: {company_email}")
+        
+        # Load cart data
+        cart_data = load_cart()
+        print(f"[CART ROUTE] Raw cart data from file: {cart_data}")
+        
+        # Initialize cart if it doesn't exist
+        if cart_data is None:
+            print("[CART ROUTE] Cart data is None, initializing empty cart")
+            cart_data = {"products": []}
+            save_cart(cart_data)
+        
+        # Ensure products is a list
+        if not isinstance(cart_data.get('products'), list):
+            print(f"[CART ROUTE] Products is not a list (type: {type(cart_data.get('products'))}), initializing empty list")
+            cart_data['products'] = []
+            save_cart(cart_data)
+        
+        # Debug output
+        print(f"[CART ROUTE] Number of products in cart: {len(cart_data.get('products', []))}")
+        for i, product in enumerate(cart_data.get('products', []), 1):
+            print(f"[CART ROUTE] Product {i}:")
+            print(f"  Name: {product.get('name', 'Unnamed')}")
+            print(f"  Type: {product.get('type', 'unknown')}")
+            print(f"  Calculations: {product.get('calculations', 'No calculations')}")
+            
+        # Ensure all products have required fields
+        for product in cart_data.get('products', []):
+            if 'id' not in product:
+                product['id'] = str(uuid.uuid4())
+            if 'added_at' not in product:
+                product['added_at'] = datetime.now().isoformat()
+                
+            # Ensure calculations exist for MPack products
+            if product.get('type') == 'mpack':
+                print(f"[CART ROUTE] Processing MPack product: {product.get('name')}")
+                # Ensure all required fields exist
+                product['unit_price'] = product.get('unit_price', 0)
+                product['quantity'] = product.get('quantity', 1)
+                product['discount_percent'] = product.get('discount_percent', 0)
+                product['gst_percent'] = product.get('gst_percent', 12)
+                
+                # Calculate derived values
+                subtotal = product['unit_price'] * product['quantity']
+                discount_amount = subtotal * (product['discount_percent'] / 100)
+                price_after_discount = subtotal - discount_amount
+                gst_amount = (price_after_discount * product['gst_percent']) / 100
+                final_total = price_after_discount + gst_amount
+                
+                # Update product with calculations
+                product['calculations'] = {
+                    'unitPrice': product['unit_price'],
+                    'quantity': product['quantity'],
+                    'subtotal': subtotal,
+                    'discountPercent': product['discount_percent'],
+                    'discountAmount': discount_amount,
+                    'priceAfterDiscount': price_after_discount,
+                    'gstPercent': product['gst_percent'],
+                    'gstAmount': gst_amount,
+                    'finalTotal': final_total
+                }
+                
+                # Update the product's total_price to match the calculated final total
+                product['total_price'] = final_total
+                
+        # Save any updates
+        save_cart(cart_data)
+            
+        # Calculate total price - use the pre-calculated total_price which already includes GST
+        total_price = 0
+        for item in cart_data['products']:
+            try:
+                # The item's total_price is already calculated with GST in the add_to_cart function
+                item_total = float(item.get('total_price', 0))
+                total_price += item_total
+                
+                # Debug log
+                print(f"Item: {item.get('name', 'Unknown')}, Total: {item_total}, Type: {item.get('type', 'unknown')}")
+                
+            except (ValueError, TypeError) as e:
+                print(f"Error processing item price: {e}")
+                continue
+                
+        print(f"Calculated total price: {total_price}")  # Debug log
+        return render_template('cart.html', 
+                            cart=cart_data, 
+                            total=round(total_price, 2),
+                            company_name=company_name,
+                            company_email=company_email)
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in cart route: {str(e)}")
+        print("Full traceback:")
+        print(traceback.format_exc())
+        # Return empty cart in case of error
+        return render_template('cart.html', 
+                            cart={"products": []}, 
+                            total=0,
+                            company_name='Your Company',
+                            company_email='email@example.com'), 500
+
+# ---------- STATIC FILE SERVING ---------- #
+
+@app.route('/blankets-data/<path:filename>')
+def blankets_data(filename):
+    return send_from_directory('static/products/blankets', filename)
+
+@app.route('/chemicals-data/<path:filename>')
+def chemicals_data(filename):
+    return send_from_directory('static/chemicals', filename)
+
+# ---------- CART HANDLING ---------- #
+
+def load_cart():
+    try:
+        # For Render, use in-memory store
+        cart = cart_store.get_cart()
+        # Ensure the cart has the products list
+        if 'products' not in cart:
+            cart = {"products": []}
+        return cart
+    except Exception as e:
+        print(f"Error loading cart: {e}")
+        return {"products": []}
+
+def save_cart(cart):
+    try:
+        # For Render, use in-memory store
+        return cart_store.save_cart(cart)
+    except Exception as e:
+        print(f"Error saving cart: {e}")
+        # For local development, you can uncomment the backup code
+        # backup_file = f"{CART_FILE}.bak.{int(datetime.now().timestamp())}"
+        # try:
+        #     with open(backup_file, 'w') as f:
+        #         json.dump(cart, f, indent=2)
+        #     print(f"Cart backup saved to {backup_file}")
+        # except Exception as backup_error:
+        #     print(f"Failed to save backup: {backup_error}")
+        return False
+
+from flask import request, jsonify
+
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    print("\n=== Add to Cart Request ===")
+    print(f"Request data: {request.data}")
+    
+    if not request.is_json:
+        error_msg = "Invalid JSON in request"
+        print(f"Error: {error_msg}")
+        return jsonify({"success": False, "message": error_msg}), 400
+    
+    try:
+        product = request.get_json()
+        print(f"Product data received: {json.dumps(product, indent=2)}")
+        
+        cart = load_cart()
+        print(f"Current cart before add: {json.dumps(cart, indent=2)}")
+        
+        # Add timestamp and ensure ID exists
+        if 'id' not in product:
+            product['id'] = str(uuid.uuid4())
+        if 'added_at' not in product:
+            product['added_at'] = datetime.now().isoformat()
+        
+        # Check if the cart has space (limit to 100 items)
+        if len(cart['products']) >= 100:
+            error_msg = "Cart is full. Maximum 100 items allowed."
+            print(error_msg)
+            return jsonify({"success": False, "message": error_msg}), 400
+        
+        # Add the new product
+        cart['products'].append(product)
+        print(f"Cart after adding product: {json.dumps(cart, indent=2)}")
+        
+        # Save the cart
+        save_cart(cart)
+        
+        # Verify the cart was saved
+        saved_cart = load_cart()
+        print(f"Cart after save (verification): {json.dumps(saved_cart, indent=2)}")
+        print(f"Number of products in saved cart: {len(saved_cart.get('products', []))}")
+        
+        response = {
+            "success": True, 
+            "message": "Product added to cart.",
+            "cart_count": len(cart['products'])
+        }
+        print(f"Sending response: {json.dumps(response, indent=2)}")
+        return jsonify(response), 201
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@app.route('/get_cart_count')
+def get_cart_count():
+    try:
+        cart = load_cart()
+        return jsonify({
+            'success': True,
+            'count': len(cart.get('products', [])),
+            'total': sum(float(item.get('total_price', 0)) for item in cart.get('products', []))
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/remove_from_cart', methods=['POST'])
+def remove_from_cart():
+    product_id = request.form['product_id']
+    cart = load_cart()
+    cart['products'] = [item for item in cart['products'] if item['id'] != product_id]
+    save_cart(cart)
+    return redirect(url_for('cart'))
+
+@app.route('/clear_cart', methods=['POST'])
+def clear_cart():
+    try:
+        cart = {"products": []}
+        save_cart(cart)
+        flash('All items have been removed from your cart.', 'success')
+    except Exception as e:
+        flash('An error occurred while clearing the cart.', 'error')
+        app.logger.error(f"Error clearing cart: {str(e)}")
+    return redirect(url_for('cart'))
+
+@app.route('/send_invoice', methods=['POST'])
+def send_invoice():
+    try:
+        cart = load_cart()
+        if not cart.get('products'):  # Check if cart is empty
+            flash('Your cart is empty. Add items before sending an invoice.', 'warning')
+            return redirect(url_for('cart'))
+            
+        # Here you would typically generate and send the invoice
+        # For now, we'll just clear the cart
+        cart = {"products": []}
+        save_cart(cart)
+        
+        flash('Invoice has been sent successfully!', 'success')
+        return redirect(url_for('cart'))
+    except Exception as e:
+        flash('An error occurred while sending the invoice.', 'error')
+        app.logger.error(f"Error sending invoice: {str(e)}")
+        return redirect(url_for('cart'))
+
+# ---------- START APP ---------- #
+
+
+
+# Ensure the instance folder exists
+try:
+    os.makedirs(app.instance_path)
+except OSError:
+    pass
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 3000))
+    if os.environ.get('FLASK_ENV') == 'production':
+        serve(app, host="0.0.0.0", port=port)
+    else:
+        app.run(host='0.0.0.0', port=port, debug=True)
