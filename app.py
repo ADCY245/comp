@@ -380,23 +380,23 @@ def request_otp():
     print(f"Generated OTP: {otp} for email: {email}")
     
     # Send OTP email
-    success = send_email(email, 
+    email_result = send_email(email, 
                         "Verification Code" if otp_type == 'verification' else "Password Reset Code",
                         f"Your verification code is: {otp}\nThis code will expire in 10 minutes.",
                         is_html=False)
     
-    if success:
+    if email_result.get('success', False):
         print(f"OTP sent successfully to {email}")
         return jsonify({
             'success': True,
-            'message': 'Verification code sent successfully',
+            'message': email_result.get('message', 'Verification code sent successfully'),
             'email': email
         }), 200
     else:
         print(f"Failed to send OTP to {email}")
         return jsonify({
             'success': False,
-            'error': 'Failed to send verification code. Please check your connection and try again.'
+            'error': email_result.get('error', 'Failed to send verification code. Please check your connection and try again.')
         }), 500
 
 @app.route('/api/verify-otp', methods=['POST'])
