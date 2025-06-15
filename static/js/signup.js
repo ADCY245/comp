@@ -11,6 +11,12 @@ const otpInput = document.getElementById('otp');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
+const messageDiv = document.querySelector('.message');
+if (!messageDiv) {
+  messageDiv = document.createElement('div');
+  messageDiv.className = 'message';
+  document.querySelector('.step').appendChild(messageDiv);
+}
 const messageDivs = document.querySelectorAll('.message');
 const resendOtpLink = document.getElementById('resendOtp');
 const countdownElement = document.getElementById('countdown');
@@ -563,32 +569,41 @@ async function handleSubmit(e) {
   }
 }
 
+// Get step-specific message div
+function getMessageDiv(stepIndex) {
+  return steps[stepIndex].querySelector('.message');
+}
+
 // Show error message
 function showError(message) {
-  clearMessages();
-  const messageDiv = steps[currentStep].querySelector('.message');
-  if (messageDiv) {
-    messageDiv.textContent = message;
-    messageDiv.style.display = 'block';
-    messageDiv.className = 'message error';
-    messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const currentMessageDiv = getMessageDiv(currentStep);
+  if (currentMessageDiv) {
+    currentMessageDiv.textContent = message;
+    currentMessageDiv.className = 'message error';
+    currentMessageDiv.style.display = 'block';
+    currentMessageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
 // Show success message
 function showSuccess(message) {
-  messageDiv.textContent = message;
-  messageDiv.className = 'message success';
-  messageDiv.style.display = 'block';
+  const currentMessageDiv = getMessageDiv(currentStep);
+  if (currentMessageDiv) {
+    currentMessageDiv.textContent = message;
+    currentMessageDiv.className = 'message success';
+    currentMessageDiv.style.display = 'block';
+    currentMessageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
-// Clear all messages
+// Clear messages for current step
 function clearMessages() {
-  messageDivs.forEach(msg => {
-    msg.textContent = '';
-    msg.style.display = 'none';
-    msg.className = 'message';
-  });
+  const currentMessageDiv = getMessageDiv(currentStep);
+  if (currentMessageDiv) {
+    currentMessageDiv.textContent = '';
+    currentMessageDiv.style.display = 'none';
+    currentMessageDiv.className = 'message';
+  }
 }
 
 // Set loading state for a button
