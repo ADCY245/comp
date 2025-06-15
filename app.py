@@ -406,6 +406,15 @@ if not os.path.exists(CART_FILE):
 
 # ---------- ROUTES ---------- #
 
+@app.route('/display')
+@login_required_custom
+def display():
+    try:
+        return render_template('display.html')
+    except Exception as e:
+        print(f"Error rendering display page: {e}")
+        return "Error loading display page", 500
+
 @app.route('/')
 def home():
     if 'user_id' in session:
