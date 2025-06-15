@@ -262,20 +262,68 @@ def send_otp_email(email, otp_type='verification'):
 
 # Email utility
 def send_email(to_email, subject, body, is_html=False):
-    if not email_config_valid:
-        print("Email configuration is not valid. Skipping email sending.")
-        return {
-            'success': False,
-            'error': 'Email configuration is not valid'
-        }
-    
     try:
+        if not email_config_valid:
+            print("Email configuration is not valid. Skipping email sending.")
+            return {
+                'success': False,
+                'error': 'Email configuration is not valid'
+            }
+        
         refresh_email_config()  # Re-check config before sending
         if not email_config_valid:
             return {
                 'success': False,
                 'error': 'Email configuration is not valid'
             }
+        
+        print(f"Attempting to send email to: {to_email}")
+        print(f"Using SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
+        print(f"From: {EMAIL_FROM_NAME} <{EMAIL_FROM}>")
+        
+        msg = MIMEMultipart()
+        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        if is_html:
+            msg.attach(MIMEText(body, 'html'))
+        else:
+            msg.attach(MIMEText(body, 'plain'))
+        
+        print("Connecting to SMTP server...")
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+            print("Starting TLS...")
+            server.starttls()
+            print("Logging in...")
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            print("Sending email...")
+            server.send_message(msg)
+            print("Email sent successfully")
+        return {
+            'success': True,
+            'message': 'Email sent successfully'
+        }
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"SMTP Authentication Error: {e}")
+        print(f"Username: {SMTP_USERNAME}")
+        print("Please check your email and password. If using Gmail, make sure you've enabled 'Less secure app access' or use an App Password.")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    except smtplib.SMTPException as e:
+        print(f"SMTP Error: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    except Exception as e:
+        print(f"Unexpected error sending email: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
     
     print(f"Attempting to send email to: {to_email}")
     print(f"Using SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
