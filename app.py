@@ -347,11 +347,21 @@ if not os.path.exists(CART_FILE):
 
 # ---------- ROUTES ---------- #
 
+@app.route('/dashboard')
+@login_required_custom
+def dashboard():
+    return render_template('display.html')
+
 @app.route('/')
 def home():
     if 'user_id' in session:
-        return redirect(url_for('display'))
+        return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
+
+@app.route('/dashboard')
+@login_required_custom
+def dashboard():
+    return render_template('dashboard.html', user=current_user)
 
 # Auth Routes
 @app.route('/api/request-otp', methods=['POST'])
