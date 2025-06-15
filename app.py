@@ -505,33 +505,44 @@ def api_register_initiate():
 
 @app.route('/api/auth/register/complete', methods=['POST'])
 def api_register_complete():
-    data = request.get_json()
-    email = data.get('email', '').strip()
-    otp = data.get('otp', '').strip()
-    username = data.get('username', '').strip()
-    password = data.get('password', '').strip()
-    confirm_password = data.get('confirmPassword', '').strip()
-    
-    # Validate inputs
-    if not all([email, otp, username, password, confirm_password]):
-        return jsonify({'success': False, 'error': 'All fields are required'}), 400
-    
-    if password != confirm_password:
-        return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
-    
-    if len(password) < 8:
-        return jsonify({'success': False, 'error': 'Password must be at least 8 characters long'}), 400
-    
-    if any(u.username.lower() == username.lower() for u in users.values()):
-        return jsonify({'success': False, 'error': 'Username already taken'}), 400
-    
-    # Verify OTP
-    if not verify_otp(email, otp, 'verification'):
-        return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
-    
-    # Create new user
     try:
+        data = request.get_json()
+        print(f"Registration data received: {data}")
+        
+        email = data.get('email', '').strip()
+        otp = data.get('otp', '').strip()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        confirm_password = data.get('confirmPassword', '').strip()
+        
+        print(f"Validating registration data: email={email}, username={username}, password length={len(password)}")
+        
+        # Validate inputs
+        if not all([email, otp, username, password, confirm_password]):
+            print("Validation failed: missing required fields")
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+        if password != confirm_password:
+            print("Validation failed: passwords do not match")
+            return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
+        
+        if len(password) < 8:
+            print("Validation failed: password too short")
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters long'}), 400
+        
+        if any(u.username.lower() == username.lower() for u in users.values()):
+            print(f"Validation failed: username {username} already exists")
+            return jsonify({'success': False, 'error': 'Username already taken'}), 400
+        
+        # Verify OTP
+        if not verify_otp(email, otp, 'verification'):
+            print("Validation failed: OTP verification failed")
+            return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
+        
+        # Create new user
         user_id = str(uuid.uuid4())
+        print(f"Creating new user with ID: {user_id}")
+        
         new_user = User(
             id=user_id,
             email=email,
@@ -540,7 +551,11 @@ def api_register_complete():
             is_verified=True,
             otp_verified=True
         )
+        
+        print(f"Adding user to users dictionary: {user_id}")
         users[user_id] = new_user
+        
+        print(f"Saving users to file with {len(users)} users")
         save_users(users)
         
         # Don't log the user in automatically, redirect to login page
@@ -552,6 +567,8 @@ def api_register_complete():
         
     except Exception as e:
         print(f"Error during registration: {str(e)}")
+        import traceback
+        print(f"Stack trace: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': 'An error occurred during registration'}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
