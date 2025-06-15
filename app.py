@@ -99,7 +99,7 @@ cart_store = CartStore()
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None):
         self.id = id
         self.email = email
         self.username = username
@@ -107,6 +107,8 @@ class User(UserMixin):
         self.is_verified = is_verified
         self.otp_verified = otp_verified
         self.cart = cart if cart is not None else []
+        self.reset_token = reset_token
+        self.reset_token_expiry = reset_token_expiry
 
     def to_dict(self):
         """Convert user object to dictionary for JSON serialization."""
