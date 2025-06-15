@@ -149,73 +149,44 @@ users = {}
 def load_users():
     global users
     try:
-        if os.path.exists(USERS_FILE):
-            try:
-                # Try to read with UTF-8 encoding
-                with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    if not content.strip():  # If file is empty
-                        content = '{}'
-                    users_data = json.loads(content)
-            except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                # If UTF-8 fails or JSON is invalid, try to fix the file
-                print(f"Attempting to fix {USERS_FILE}: {str(e)}")
-                
-                # Try to read as bytes
-                with open(USERS_FILE, 'rb') as f:
-                    content = f.read()
-                    
-                # Try different decodings
-                try:
-                    content = content.decode('utf-8-sig')  # Try with BOM
-                except UnicodeDecodeError:
-                    try:
-                        content = content.decode('latin1')  # Try with latin1
-                    except:
-                        # If all else fails, create a new empty file
-                        content = '{}'
-                
-                # Save the fixed content
-                with open(USERS_FILE, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                
-                # Try loading again
-                with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    if not content.strip():
-                        content = '{}'
-                    users_data = json.loads(content)
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+        
+        # Create or overwrite the file with proper encoding
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            f.write('{}')
             
-            users = {}
-            for user_id, user_data in users_data.items():
-                try:
-                    # Ensure all required fields exist
-                    if not all(key in user_data for key in ['email', 'username', 'password_hash']):
-                        print(f"Skipping invalid user data: missing required fields")
-                        continue
-                    
-                    users[user_id] = User(
-                        id=user_id,
-                        email=user_data['email'],
-                        username=user_data['username'],
-                        password_hash=user_data['password_hash'],
-                        is_verified=user_data.get('is_verified', False),
-                        reset_token=user_data.get('reset_token'),
-                        reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
-                        otp_verified=user_data.get('otp_verified', False)
-                    )
-                except Exception as e:
-                    print(f"Error loading user {user_id}: {e}")
+        # Read the file back to ensure it's properly created
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if not content.strip():
+                content = '{}'
+            users_data = json.loads(content)
+            
+        users = {}
+        for user_id, user_data in users_data.items():
+            try:
+                # Ensure all required fields exist
+                if not all(key in user_data for key in ['email', 'username', 'password_hash']):
+                    print(f"Skipping invalid user data: missing required fields")
                     continue
-        else:
-            # Create the file with proper encoding if it doesn't exist
-            os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
-            with open(USERS_FILE, 'w', encoding='utf-8') as f:
-                f.write('{}')
-            users = {}
+                
+                users[user_id] = User(
+                    id=user_id,
+                    email=user_data['email'],
+                    username=user_data['username'],
+                    password_hash=user_data['password_hash'],
+                    is_verified=user_data.get('is_verified', False),
+                    reset_token=user_data.get('reset_token'),
+                    reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
+                    otp_verified=user_data.get('otp_verified', False)
+                )
+            except Exception as e:
+                print(f"Error loading user {user_id}: {e}")
+                continue
     except Exception as e:
         print(f"Error loading users: {e}")
-        # Create the file with proper encoding if it doesn't exist
+        # Create a fresh empty file with proper encoding
         os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
         with open(USERS_FILE, 'w', encoding='utf-8') as f:
             f.write('{}')
