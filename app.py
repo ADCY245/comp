@@ -150,30 +150,54 @@ def load_users():
     global users
     try:
         if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users_data = json.load(f)
-                
-                users = {}
-                for user_id, user_data in users_data.items():
+            try:
+                # Try to read with UTF-8 encoding
+                with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                    users_data = json.load(f)
+            except UnicodeDecodeError:
+                # If UTF-8 fails, try to fix the file
+                print(f"Attempting to fix encoding of {USERS_FILE}")
+                with open(USERS_FILE, 'rb') as f:
+                    content = f.read()
+                # Try to decode with different encodings
+                try:
+                    content = content.decode('utf-8-sig')  # Try with BOM
+                except UnicodeDecodeError:
                     try:
-                        # Ensure all required fields exist
-                        if not all(key in user_data for key in ['email', 'username', 'password_hash']):
-                            print(f"Skipping invalid user data: missing required fields")
-                            continue
-                        
-                        users[user_id] = User(
-                            id=user_id,
-                            email=user_data['email'],
-                            username=user_data['username'],
-                            password_hash=user_data['password_hash'],
-                            is_verified=user_data.get('is_verified', False),
-                            reset_token=user_data.get('reset_token'),
-                            reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
-                            otp_verified=user_data.get('otp_verified', False)
-                        )
-                    except Exception as e:
-                        print(f"Error loading user {user_id}: {e}")
+                        content = content.decode('latin1')  # Try with latin1
+                    except:
+                        # If all else fails, create a new empty file
+                        content = '{}'
+                
+                # Save the fixed content
+                with open(USERS_FILE, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                
+                # Try loading again
+                with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                    users_data = json.load(f)
+            
+            users = {}
+            for user_id, user_data in users_data.items():
+                try:
+                    # Ensure all required fields exist
+                    if not all(key in user_data for key in ['email', 'username', 'password_hash']):
+                        print(f"Skipping invalid user data: missing required fields")
                         continue
+                    
+                    users[user_id] = User(
+                        id=user_id,
+                        email=user_data['email'],
+                        username=user_data['username'],
+                        password_hash=user_data['password_hash'],
+                        is_verified=user_data.get('is_verified', False),
+                        reset_token=user_data.get('reset_token'),
+                        reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
+                        otp_verified=user_data.get('otp_verified', False)
+                    )
+                except Exception as e:
+                    print(f"Error loading user {user_id}: {e}")
+                    continue
         else:
             users = {}
     except Exception as e:
@@ -198,9 +222,9 @@ def save_users(users_dict=None):
                 print(f"Error converting user {user_id} to dict: {e}")
                 continue
         
-        # Write to a temporary file first
+        # Write to a temporary file first with UTF-8 encoding
         temp_file = USERS_FILE + '.tmp'
-        with open(temp_file, 'w') as f:
+        with open(temp_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=2)
         
         # Atomically replace the original file
@@ -210,10 +234,10 @@ def save_users(users_dict=None):
         
         # Also update the file format if it's in old format
         try:
-            with open(USERS_FILE, 'r') as f:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
                 existing_data = json.load(f)
                 if isinstance(existing_data, dict) and 'users' in existing_data:
-                    with open(USERS_FILE, 'w') as f:
+                    with open(USERS_FILE, 'w', encoding='utf-8') as f:
                         json.dump(existing_data['users'], f, indent=2)
         except Exception as e:
             print(f"Error updating file format: {e}")
