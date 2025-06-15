@@ -459,7 +459,7 @@ def api_register_initiate():
             'success': True, 
             'message': 'Verification code sent to your email',
             'email': email,
-            'redirectTo': url_for('login')
+            'redirectTo': url_for('display')
         })
     else:
         return jsonify({'success': False, 'error': 'Failed to send verification code'}), 500
@@ -508,7 +508,7 @@ def api_register_complete():
         return jsonify({
             'success': True,
             'message': 'Registration successful! You can now log in.',
-            'redirectTo': url_for('login')
+            'redirectTo': url_for('display')
         })
         
     except Exception as e:
