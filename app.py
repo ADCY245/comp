@@ -151,15 +151,7 @@ def load_users():
     try:
         if os.path.exists(USERS_FILE):
             with open(USERS_FILE, 'r') as f:
-                data = json.load(f)
-                # Handle both formats: direct users object or {"users": {}}
-                if isinstance(data, dict) and 'users' in data:
-                    # Convert old format to new format
-                    users_data = data['users']
-                    with open(USERS_FILE, 'w') as f:
-                        json.dump(users_data, f, indent=2)
-                else:
-                    users_data = data
+                users_data = json.load(f)
                 
                 users = {}
                 for user_id, user_data in users_data.items():
