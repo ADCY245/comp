@@ -98,6 +98,33 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
 
 # Configuration
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
+
+# Initialize users dictionary
+users = {}
+
+# User loading and saving functions
+def load_users():
+    global users
+    try:
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'r') as f:
+                users_data = json.load(f)
+                users = {k: User(**v) for k, v in users_data.items()}
+        else:
+            users = {}
+    except Exception as e:
+        print(f"Error loading users: {e}")
+        users = {}
+
+def save_users():
+    try:
+        with open(USERS_FILE, 'w') as f:
+            json.dump({k: v.to_dict() for k, v in users.items()}, f, indent=2)
+    except Exception as e:
+        print(f"Error saving users: {e}")
+
+# Load users on startup
+load_users()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
@@ -124,6 +151,18 @@ class User(UserMixin):
         self.reset_token_expiry = reset_token_expiry
         self.otp_verified = otp_verified
     
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'username': self.username,
+            'password_hash': self.password_hash,
+            'is_verified': self.is_verified,
+            'reset_token': self.reset_token,
+            'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
+            'otp_verified': self.otp_verified
+        }
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -145,32 +184,7 @@ class User(UserMixin):
         except:
             return None
 
-# User storage
-def load_users():
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get('users', {})
-    return {}
 
-def save_users(users_dict):
-    users_data = {}
-    for uid, user in users_dict.items():
-        user_data = {
-            'id': user.id,
-            'email': user.email,
-            'username': user.username,
-            'password_hash': user.password_hash,
-            'is_verified': user.is_verified,
-            'reset_token': user.reset_token,
-            'reset_token_expiry': user.reset_token_expiry.isoformat() if user.reset_token_expiry else None,
-            'otp_verified': user.otp_verified
-        }
-        users_data[uid] = user_data
-    with open(USERS_FILE, 'w') as f:
-        json.dump({'users': users_data}, f, indent=2)
-
-# Initialize users
 users = load_users()
 
 # OTP storage
@@ -459,7 +473,7 @@ def api_register_initiate():
             'success': True, 
             'message': 'Verification code sent to your email',
             'email': email,
-            'redirectTo': url_for('display')
+            'redirectTo': url_for('login')
         })
     else:
         return jsonify({'success': False, 'error': 'Failed to send verification code'}), 500
@@ -508,7 +522,7 @@ def api_register_complete():
         return jsonify({
             'success': True,
             'message': 'Registration successful! You can now log in.',
-            'redirectTo': url_for('display')
+            'redirectTo': url_for('login')
         })
         
     except Exception as e:
