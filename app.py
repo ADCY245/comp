@@ -633,13 +633,21 @@ def api_register_complete():
             print(f"Failed to save user {user_id} to file")
             return jsonify({'success': False, 'error': 'Failed to save user data'}), 500
         
-        # Verify file was saved
+        # Verify file was saved and contains the user
         try:
             with open(USERS_FILE, 'r', encoding='utf-8') as f:
                 saved_data = json.load(f)
                 print(f"File contents after save: {json.dumps(saved_data, indent=2)}")
+                
+                # Verify the user exists in the file
+                if user_id in saved_data:
+                    print(f"User {user_id} successfully saved to file")
+                else:
+                    print(f"ERROR: User {user_id} not found in saved file!")
+                    return jsonify({'success': False, 'error': 'User not saved to file'}), 500
         except Exception as e:
             print(f"Error reading saved file: {e}")
+            return jsonify({'success': False, 'error': 'Failed to read saved file'}), 500
         
         # Login the user
         login_user(new_user)
