@@ -91,8 +91,8 @@ async function handleLogin(e) {
         localStorage.setItem('auth_token', data.token);
       }
       
-      // Redirect to dashboard or home page
-      window.location.href = data.redirectTo || '/dashboard';
+      // Redirect to display page
+      window.location.href = data.redirectTo || '/display';
     } else {
       // Show error message
       showError(data.error || 'Login failed. Please check your credentials.');
