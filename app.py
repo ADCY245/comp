@@ -26,10 +26,21 @@ JWT_EXPIRATION = 3600  # 1 hour
 # Email Configuration
 SMTP_SERVER = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USERNAME = os.getenv('SMTP_USER', '')
-SMTP_PASSWORD = os.getenv('SMTP_PASS', '')
+SMTP_USERNAME = os.getenv('SMTP_USER')  # Required
+SMTP_PASSWORD = os.getenv('SMTP_PASS')  # Required
 EMAIL_FROM = os.getenv('EMAIL_FROM', 'noreply@yourdomain.com')
 EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'Moneda App')
+
+# Ensure required environment variables are set
+if not all([SMTP_USERNAME, SMTP_PASSWORD]):
+    raise ValueError("SMTP_USER and SMTP_PASS environment variables must be set")
+
+# Add logging for debugging
+print(f"SMTP Configuration:\n"
+      f"SMTP_HOST: {SMTP_SERVER}\n"
+      f"SMTP_PORT: {SMTP_PORT}\n"
+      f"SMTP_USER: {SMTP_USERNAME if SMTP_USERNAME else 'Not set'}\n"
+      f"EMAIL_FROM: {EMAIL_FROM}")
 
 # File paths
 USERS_FILE = os.path.join('static', 'data', 'users.json')
