@@ -153,13 +153,19 @@ def load_users():
             try:
                 # Try to read with UTF-8 encoding
                 with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                    users_data = json.load(f)
-            except UnicodeDecodeError:
-                # If UTF-8 fails, try to fix the file
-                print(f"Attempting to fix encoding of {USERS_FILE}")
+                    content = f.read()
+                    if not content.strip():  # If file is empty
+                        content = '{}'
+                    users_data = json.loads(content)
+            except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                # If UTF-8 fails or JSON is invalid, try to fix the file
+                print(f"Attempting to fix {USERS_FILE}: {str(e)}")
+                
+                # Try to read as bytes
                 with open(USERS_FILE, 'rb') as f:
                     content = f.read()
-                # Try to decode with different encodings
+                    
+                # Try different decodings
                 try:
                     content = content.decode('utf-8-sig')  # Try with BOM
                 except UnicodeDecodeError:
@@ -175,7 +181,10 @@ def load_users():
                 
                 # Try loading again
                 with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                    users_data = json.load(f)
+                    content = f.read()
+                    if not content.strip():
+                        content = '{}'
+                    users_data = json.loads(content)
             
             users = {}
             for user_id, user_data in users_data.items():
@@ -199,9 +208,17 @@ def load_users():
                     print(f"Error loading user {user_id}: {e}")
                     continue
         else:
+            # Create the file with proper encoding if it doesn't exist
+            os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+            with open(USERS_FILE, 'w', encoding='utf-8') as f:
+                f.write('{}')
             users = {}
     except Exception as e:
         print(f"Error loading users: {e}")
+        # Create the file with proper encoding if it doesn't exist
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            f.write('{}')
         users = {}
 
 def save_users(users_dict=None):
