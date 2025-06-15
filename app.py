@@ -63,8 +63,8 @@ def refresh_email_config():
     return email_config_valid
 
 # File paths
-USERS_FILE = os.path.join('static', 'data', 'users.json')
-CART_FILE = os.path.join('static', 'data', 'cart.json')
+USERS_FILE = os.path.join(app.root_path, 'static', 'data', 'users.json')
+CART_FILE = os.path.join(app.root_path, 'static', 'data', 'cart.json')
 
 # Ensure data directory exists
 os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
@@ -89,9 +89,6 @@ class CartStore:
 # Initialize cart store
 cart_store = CartStore()
 
-# Ensure the data directory exists
-os.makedirs('static/data', exist_ok=True)
-
 # Initialize Flask app
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
@@ -109,7 +106,18 @@ def load_users():
         if os.path.exists(USERS_FILE):
             with open(USERS_FILE, 'r') as f:
                 users_data = json.load(f)
-                users = {k: User(**v) for k, v in users_data.items()}
+                users = {}
+                for user_id, user_data in users_data.items():
+                    users[user_id] = User(
+                        id=user_id,
+                        email=user_data['email'],
+                        username=user_data['username'],
+                        password_hash=user_data['password_hash'],
+                        is_verified=user_data.get('is_verified', False),
+                        reset_token=user_data.get('reset_token'),
+                        reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
+                        otp_verified=user_data.get('otp_verified', False)
+                    )
         else:
             users = {}
     except Exception as e:
@@ -360,11 +368,6 @@ if not os.path.exists(CART_FILE):
         json.dump({"products": []}, f)
 
 # ---------- ROUTES ---------- #
-
-@app.route('/display')
-@login_required_custom
-def display():
-    return render_template('display.html')
 
 @app.route('/')
 def home():
