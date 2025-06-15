@@ -310,19 +310,34 @@ def request_otp():
     otp_type = data.get('type', 'verification')
     
     if not email:
-        return jsonify({'error': 'Email is required'}), 400
+        return jsonify({
+            'success': False,
+            'error': 'Email is required'
+        }), 400
     
     # Check if user exists for password reset
     if otp_type == 'password_reset':
         user = next((u for u in users.values() if u.email == email), None)
         if not user:
-            return jsonify({'error': 'No account found with this email'}), 404
+            return jsonify({
+                'success': False,
+                'error': 'No account found with this email'
+            }), 404
     
     # Send OTP email
-    if send_otp_email(email, otp_type):
-        return jsonify({'message': 'OTP sent successfully'}), 200
+    success = send_otp_email(email, otp_type)
+    if success:
+        return jsonify({
+            'success': True,
+            'message': 'Verification code sent successfully',
+            'email': email
+        }), 200
     else:
-        return jsonify({'error': 'Failed to send OTP'}), 500
+        print(f"Failed to send OTP to {email}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to send verification code. Please check your connection and try again.'
+        }), 500
 
 @app.route('/api/verify-otp', methods=['POST'])
 def verify_otp_endpoint():
