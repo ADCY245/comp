@@ -324,9 +324,12 @@ async function handleRequestOtp(e) {
       }),
     });
     
-    const result = await response.json().catch(() => ({}));
+    const result = await response.json().catch(() => ({
+      success: false,
+      error: 'Failed to send verification code'
+    }));
     
-    if (response.ok) {
+    if (result.success) {
       currentEmail = email; // Store the email for later use
       showStep(1); // Move to OTP verification step
       
@@ -344,9 +347,9 @@ async function handleRequestOtp(e) {
       startResendCountdown();
       
       // Show success message
-      showSuccess('Verification code sent to ' + email);
+      showSuccess(result.message || 'Verification code sent successfully');
     } else {
-      const errorMessage = result.error || 'Failed to send verification code. Please try again.';
+      const errorMessage = result.error || result.message || 'Failed to send verification code. Please try again.';
       showError(errorMessage);
       
       // If email is already registered, suggest login
