@@ -443,7 +443,11 @@ def display():
 
 @app.route('/')
 def home():
-    if 'user_id' in session:
+    user_id = session.get('user_id')
+    user = users.get(user_id) if user_id else None
+    
+    if user:
+        login_user(user)
         return redirect(url_for('display'))
     return redirect(url_for('login'))
 
@@ -750,50 +754,20 @@ def verify_email(token):
     return redirect(url_for('login'))
 
 # Frontend Routes
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login')
 def login():
-    # If user is already logged in, redirect to home
-    if current_user.is_authenticated:
-        return redirect(url_for('home'))
+    # Clear any existing session
+    session.clear()
     
-    # Handle form submission
-    if request.method == 'POST':
-        login_identifier = request.form.get('login', '').strip()
-        password = request.form.get('password', '').strip()
-        
-        # Basic validation
-        if not login_identifier:
-            flash('Please enter your email or username', 'error')
-            return redirect(url_for('login'))
-            
-        if not password:
-            flash('Please enter your password', 'error')
-            return redirect(url_for('login'))
-        
-        # Find user by email or username (case-insensitive)
-        user = next(
-            (u for u in users.values() 
-             if u.email.lower() == login_identifier.lower() or 
-                u.username.lower() == login_identifier.lower()),
-            None
-        )
-        
-        # Check if user exists and password is correct
-        if user and user.check_password(password):
-            if user.is_verified:
-                login_user(user)
-                flash('You have been logged in successfully!', 'success')
-                
-                # Redirect to next page if it exists, otherwise to home
-                next_page = request.args.get('next')
-                return redirect(next_page or url_for('home'))
-            else:
-                flash('Please verify your email address before logging in. Check your inbox for the verification link.', 'error')
-        else:
-            # Generic error message to prevent user enumeration
-            flash('Invalid login credentials. Please check your email/username and password.', 'error')
+    # Get the next URL from query parameter
+    next_url = request.args.get('next')
+    if next_url and not is_safe_url(next_url):
+        next_url = url_for('display')
     
-    # Render the login page
+    # Store the next URL in session
+    if next_url:
+        session['next_url'] = next_url
+    
     return render_template('login.html')
 
 @app.route('/signup', methods=['GET'])
