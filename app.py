@@ -62,6 +62,10 @@ def refresh_email_config():
     email_config_valid = check_email_config()
     return email_config_valid
 
+# Initialize Flask app
+app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+
 # File paths
 USERS_FILE = os.path.join(app.root_path, 'static', 'data', 'users.json')
 CART_FILE = os.path.join(app.root_path, 'static', 'data', 'cart.json')
