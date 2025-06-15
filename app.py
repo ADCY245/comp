@@ -709,11 +709,6 @@ def api_logout():
     session.pop('user_id', None)
     return jsonify({'success': True, 'message': 'Logged out successfully'})
 
-@app.route('/display')
-@login_required_custom
-def display():
-    return render_template('display.html')
-
 @app.route('/blankets')
 @login_required_custom
 def blankets():
