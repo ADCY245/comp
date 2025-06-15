@@ -154,7 +154,10 @@ def load_users():
                 data = json.load(f)
                 # Handle both formats: direct users object or {"users": {}}
                 if isinstance(data, dict) and 'users' in data:
+                    # Convert old format to new format
                     users_data = data['users']
+                    with open(USERS_FILE, 'w') as f:
+                        json.dump(users_data, f, indent=2)
                 else:
                     users_data = data
                 
@@ -212,6 +215,17 @@ def save_users(users_dict=None):
         os.replace(temp_file, USERS_FILE)
         
         print(f"Successfully saved {len(user_data)} users to {USERS_FILE}")
+        
+        # Also update the file format if it's in old format
+        try:
+            with open(USERS_FILE, 'r') as f:
+                existing_data = json.load(f)
+                if isinstance(existing_data, dict) and 'users' in existing_data:
+                    with open(USERS_FILE, 'w') as f:
+                        json.dump(existing_data['users'], f, indent=2)
+        except Exception as e:
+            print(f"Error updating file format: {e}")
+        
         return True
         
     except Exception as e:
