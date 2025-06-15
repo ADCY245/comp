@@ -402,9 +402,12 @@ async function handleVerifyOtp(e) {
       }),
     });
     
-    const result = await response.json().catch(() => ({}));
+    const result = await response.json().catch(() => ({
+      success: false,
+      error: 'Failed to verify OTP'
+    }));
     
-    if (response.ok) {
+    if (result.success) {
       otpVerified = true;
       showStep(2); // Move to account setup
       usernameInput.focus();
@@ -412,7 +415,7 @@ async function handleVerifyOtp(e) {
       // Clear any previous error messages
       clearMessages();
     } else {
-      const errorMessage = result.error || 'Invalid OTP. Please try again.';
+      const errorMessage = result.error || result.message || 'Invalid OTP. Please try again.';
       showError(errorMessage);
       
       // Clear the OTP input on error
