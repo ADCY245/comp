@@ -182,7 +182,8 @@ def generate_otp(email, otp_type='verification'):
 def verify_otp(email, otp, otp_type='verification'):
     """Verify if the OTP is valid"""
     if email not in otp_store:
-        return False
+        print(f"OTP not found for email: {email}")
+        return False, "OTP not found"
     
     otp_data = otp_store[email]
     
@@ -193,7 +194,7 @@ def verify_otp(email, otp, otp_type='verification'):
         
         # Mark as verified for one-time use
         otp_data['verified'] = True
-        return True
+        return True, "OTP verified successfully"
     
     # Increment failed attempts
     otp_data['attempts'] += 1
@@ -201,8 +202,12 @@ def verify_otp(email, otp, otp_type='verification'):
     # Clear after too many attempts
     if otp_data['attempts'] >= 5:
         del otp_store[email]
+        return False, "Too many failed attempts"
     
-    return False
+    if otp_data['expiry'] < datetime.utcnow():
+        return False, "OTP has expired"
+    
+    return False, "Invalid OTP code"
 
 def send_otp_email(email, otp_type='verification'):
     """Send OTP to user's email"""
@@ -329,10 +334,18 @@ def verify_otp_endpoint():
     if not email or not otp:
         return jsonify({'error': 'Email and OTP are required'}), 400
     
-    if verify_otp(email, otp, otp_type):
-        return jsonify({'message': 'OTP verified successfully'}), 200
+    verified, message = verify_otp(email, otp, otp_type)
+    if verified:
+        return jsonify({
+            'success': True,
+            'message': message,
+            'verified': True
+        }), 200
     else:
-        return jsonify({'error': 'Invalid or expired OTP'}), 400
+        return jsonify({
+            'success': False,
+            'error': message
+        }), 400
 
 @app.route('/api/auth/register/initiate', methods=['POST'])
 def api_register_initiate():
