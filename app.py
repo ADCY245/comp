@@ -26,21 +26,27 @@ JWT_EXPIRATION = 3600  # 1 hour
 # Email Configuration
 SMTP_SERVER = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USERNAME = os.getenv('SMTP_USER')  # Required
-SMTP_PASSWORD = os.getenv('SMTP_PASS')  # Required
+SMTP_USERNAME = os.getenv('SMTP_USER', 'not-set')
+SMTP_PASSWORD = os.getenv('SMTP_PASS', 'not-set')
 EMAIL_FROM = os.getenv('EMAIL_FROM', 'noreply@yourdomain.com')
 EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'Moneda App')
-
-# Ensure required environment variables are set
-if not all([SMTP_USERNAME, SMTP_PASSWORD]):
-    raise ValueError("SMTP_USER and SMTP_PASS environment variables must be set")
 
 # Add logging for debugging
 print(f"SMTP Configuration:\n"
       f"SMTP_HOST: {SMTP_SERVER}\n"
       f"SMTP_PORT: {SMTP_PORT}\n"
-      f"SMTP_USER: {SMTP_USERNAME if SMTP_USERNAME else 'Not set'}\n"
+      f"SMTP_USER: {SMTP_USERNAME}\n"
       f"EMAIL_FROM: {EMAIL_FROM}")
+
+# Check for missing required environment variables
+def check_email_config():
+    if SMTP_USERNAME == 'not-set' or SMTP_PASSWORD == 'not-set':
+        print("Warning: SMTP_USER and/or SMTP_PASS environment variables are not set. Email functionality will be disabled.")
+        return False
+    return True
+
+# Initialize email configuration
+email_config_valid = check_email_config()
 
 # File paths
 USERS_FILE = os.path.join('static', 'data', 'users.json')
@@ -219,6 +225,10 @@ def send_otp_email(email, otp_type='verification'):
 
 # Email utility
 def send_email(to_email, subject, body, is_html=False):
+    if not email_config_valid:
+        print("Email configuration is not valid. Skipping email sending.")
+        return False
+    
     print(f"Attempting to send email to: {to_email}")
     print(f"Using SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
     print(f"From: {EMAIL_FROM_NAME} <{EMAIL_FROM}>")
