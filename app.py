@@ -481,8 +481,9 @@ def api_register_initiate():
     if not email:
         return jsonify({'success': False, 'error': 'Email is required'}), 400
         
-    if not email.endswith('@chemo.in'):
-        return jsonify({'success': False, 'error': 'Only @chemo.in emails are allowed'}), 400
+    # Allow any email for testing
+    if not '@' in email:
+        return jsonify({'success': False, 'error': 'Please enter a valid email address'}), 400
         
     if any(u.email == email for u in users.values()):
         return jsonify({'success': False, 'error': 'Email already registered'}), 400
