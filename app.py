@@ -43,13 +43,24 @@ print(f"SMTP Configuration:\n"
 
 # Check for missing required environment variables
 def check_email_config():
-    if SMTP_USERNAME == 'not-set' or SMTP_PASSWORD == 'not-set':
-        print("Warning: SMTP_USER and/or SMTP_PASS environment variables are not set. Email functionality will be disabled.")
+    if not all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM]):
+        print("Warning: Missing required email configuration. Please check your environment variables:")
+        print(f"SMTP_SERVER: {SMTP_SERVER}")
+        print(f"SMTP_PORT: {SMTP_PORT}")
+        print(f"SMTP_USERNAME: {SMTP_USERNAME}")
+        print(f"SMTP_PASSWORD: {SMTP_PASSWORD and '***' or 'not set'}")
+        print(f"EMAIL_FROM: {EMAIL_FROM}")
         return False
     return True
 
 # Initialize email configuration
 email_config_valid = check_email_config()
+
+# Re-check email config periodically
+def refresh_email_config():
+    global email_config_valid
+    email_config_valid = check_email_config()
+    return email_config_valid
 
 # File paths
 USERS_FILE = os.path.join('static', 'data', 'users.json')
@@ -211,8 +222,20 @@ def verify_otp(email, otp, otp_type='verification'):
 
 def send_otp_email(email, otp_type='verification'):
     """Send OTP to user's email"""
-    otp = generate_otp(email, otp_type)
+    # Generate OTP
+    otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
+    expiry = datetime.utcnow() + timedelta(minutes=10)
     
+    # Store OTP
+    otp_store[email] = {
+        'otp': otp,
+        'expiry': expiry,
+        'type': otp_type,
+        'attempts': 0,
+        'verified': False
+    }
+    
+    # Prepare email content
     if otp_type == 'verification':
         subject = "Verify Your Email Address"
         body = f"""
@@ -229,13 +252,30 @@ def send_otp_email(email, otp_type='verification'):
         <p>If you didn't request this, please ignore this email.</p>
         """
     
-    return send_email(email, subject, body, is_html=True)
+    # Send email and return result
+    result = send_email(email, subject, body, is_html=True)
+    if not result.get('success', False):
+        # Remove stored OTP if email sending failed
+        del otp_store[email]
+    
+    return result
 
 # Email utility
 def send_email(to_email, subject, body, is_html=False):
     if not email_config_valid:
         print("Email configuration is not valid. Skipping email sending.")
-        return False
+        return {
+            'success': False,
+            'error': 'Email configuration is not valid'
+        }
+    
+    try:
+        refresh_email_config()  # Re-check config before sending
+        if not email_config_valid:
+            return {
+                'success': False,
+                'error': 'Email configuration is not valid'
+            }
     
     print(f"Attempting to send email to: {to_email}")
     print(f"Using SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
@@ -350,31 +390,38 @@ def request_otp():
 
 @app.route('/api/verify-otp', methods=['POST'])
 def verify_otp_endpoint():
-    data = request.get_json()
-    email = data.get('email')
-    otp = data.get('otp')
-    otp_type = data.get('type', 'verification')
-    
-    if not email or not otp:
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        otp = data.get('otp')
+        otp_type = data.get('type', 'verification')
+        
+        if not email or not otp:
+            return jsonify({
+                'success': False,
+                'error': 'Email and OTP are required'
+            }), 400
+        
+        verified, message = verify_otp(email, otp, otp_type)
+        if verified:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'verified': True,
+                'email': email
+            }), 200
+        else:
+            print(f"OTP verification failed for {email}: {message}")
+            return jsonify({
+                'success': False,
+                'error': message
+            }), 400
+    except Exception as e:
+        print(f"Error in OTP verification: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Email and OTP are required'
-        }), 400
-    
-    verified, message = verify_otp(email, otp, otp_type)
-    if verified:
-        return jsonify({
-            'success': True,
-            'message': message,
-            'verified': True,
-            'email': email
-        }), 200
-    else:
-        print(f"OTP verification failed for {email}: {message}")
-        return jsonify({
-            'success': False,
-            'error': message
-        }), 400
+            'error': 'Failed to verify OTP. Please try again.'
+        }), 500
 
 @app.route('/api/auth/register/initiate', methods=['POST'])
 def api_register_initiate():
