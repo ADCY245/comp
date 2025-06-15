@@ -598,31 +598,33 @@ def api_register_complete():
         user_id = str(uuid.uuid4())
         print(f"Creating new user with ID: {user_id}")
         
+        password_hash = generate_password_hash(password)
+        
         new_user = User(
             id=user_id,
             email=email,
             username=username,
-            password_hash=generate_password_hash(password),
-            is_verified=True,
-            otp_verified=True
+            password_hash=password_hash,
+            is_verified=True,  # User is verified after OTP
+            otp_verified=True,
+            cart=[]
         )
         
-        print(f"Adding user to users dictionary: {user_id}")
+        # Add user to global users dictionary
         users[user_id] = new_user
         
-        print(f"Saving users to file with {len(users)} users")
-        if not save_users(users):
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save user data. Please try registering again.',
-                'redirectTo': url_for('login')
-            }), 500
+        # Save to file
+        if not save_users():
+            print(f"Failed to save user {user_id} to file")
+            return jsonify({'success': False, 'error': 'Failed to save user data'}), 500
         
-        # Don't log the user in automatically, redirect to login page
+        # Login the user
+        login_user(new_user)
+        
         return jsonify({
             'success': True,
-            'message': 'Registration successful! You can now log in.',
-            'redirectTo': url_for('login')
+            'message': 'Registration successful',
+            'redirectTo': url_for('display')
         })
         
     except Exception as e:
