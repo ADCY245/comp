@@ -185,10 +185,14 @@ def load_users():
         print(f"Error loading users: {e}")
         users = {}
 
-def save_users():
+def save_users(users_dict=None):
+    """Save users to JSON file. If no argument is provided, saves the global users dictionary."""
     try:
+        if users_dict is None:
+            users_dict = users
+        
         with open(USERS_FILE, 'w') as f:
-            json.dump({k: v.to_dict() for k, v in users.items()}, f, indent=2)
+            json.dump({k: v.to_dict() for k, v in users_dict.items()}, f, indent=2)
     except Exception as e:
         print(f"Error saving users: {e}")
 
