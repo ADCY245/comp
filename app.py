@@ -199,34 +199,44 @@ def save_users(users_dict=None):
     try:
         if users_dict is None:
             users_dict = users
+            print(f"Saving {len(users_dict)} users to file")
+        else:
+            print(f"Saving {len(users_dict)} users from provided dict to file")
         
         # Ensure the data directory exists
         os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+        print(f"Data directory exists: {os.path.exists(os.path.dirname(USERS_FILE))}")
         
         # Convert users to dictionary
         user_data = {}
         for user_id, user in users_dict.items():
             try:
-                user_data[user_id] = user.to_dict()
+                user_dict = user.to_dict()
+                print(f"Saving user {user_id}: {json.dumps(user_dict, indent=2)}")
+                user_data[user_id] = user_dict
             except Exception as e:
                 print(f"Error converting user {user_id} to dict: {e}")
                 continue
         
         # Write to a temporary file first with UTF-8 encoding
         temp_file = USERS_FILE + '.tmp'
+        print(f"Writing to temporary file: {temp_file}")
         with open(temp_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=2)
         
         # Atomically replace the original file
+        print(f"Replacing {USERS_FILE} with temporary file")
         os.replace(temp_file, USERS_FILE)
         
         print(f"Successfully saved {len(user_data)} users to {USERS_FILE}")
+        print(f"File contents: {json.dumps(user_data, indent=2)}")
         
         # Also update the file format if it's in old format
         try:
             with open(USERS_FILE, 'r', encoding='utf-8') as f:
                 existing_data = json.load(f)
                 if isinstance(existing_data, dict) and 'users' in existing_data:
+                    print("Updating file format from old style")
                     with open(USERS_FILE, 'w', encoding='utf-8') as f:
                         json.dump(existing_data['users'], f, indent=2)
         except Exception as e:
@@ -599,6 +609,7 @@ def api_register_complete():
         # Create new user
         user_id = str(uuid.uuid4())
         print(f"Creating new user with ID: {user_id}")
+        print(f"User data: email={email}, username={username}")
         
         password_hash = generate_password_hash(password)
         
@@ -614,11 +625,21 @@ def api_register_complete():
         
         # Add user to global users dictionary
         users[user_id] = new_user
+        print(f"Added user {user_id} to users dictionary")
+        print(f"Users dictionary now has {len(users)} users")
         
         # Save to file
         if not save_users():
             print(f"Failed to save user {user_id} to file")
             return jsonify({'success': False, 'error': 'Failed to save user data'}), 500
+        
+        # Verify file was saved
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                saved_data = json.load(f)
+                print(f"File contents after save: {json.dumps(saved_data, indent=2)}")
+        except Exception as e:
+            print(f"Error reading saved file: {e}")
         
         # Login the user
         login_user(new_user)
