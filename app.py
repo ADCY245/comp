@@ -606,12 +606,13 @@ def api_register_complete():
             print("Validation failed: OTP verification failed")
             return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
         
+        # Generate password hash before creating user
+        password_hash = generate_password_hash(password)
+        
         # Create new user
         user_id = str(uuid.uuid4())
         print(f"Creating new user with ID: {user_id}")
         print(f"User data: email={email}, username={username}")
-        
-        password_hash = generate_password_hash(password)
         
         new_user = User(
             id=user_id,
@@ -627,6 +628,7 @@ def api_register_complete():
         users[user_id] = new_user
         print(f"Added user {user_id} to users dictionary")
         print(f"Users dictionary now has {len(users)} users")
+        print(f"Users dictionary contents: {json.dumps({k: v.to_dict() for k, v in users.items()}, indent=2)}")
         
         # Save to file
         if not save_users():
