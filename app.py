@@ -194,8 +194,14 @@ def save_users(users_dict=None):
         # Ensure the data directory exists
         os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
         
-        # Ensure we have a valid dictionary
-        user_data = {k: v.to_dict() for k, v in users_dict.items()}
+        # Convert users to dictionary
+        user_data = {}
+        for user_id, user in users_dict.items():
+            try:
+                user_data[user_id] = user.to_dict()
+            except Exception as e:
+                print(f"Error converting user {user_id} to dict: {e}")
+                continue
         
         # Write to a temporary file first
         temp_file = USERS_FILE + '.tmp'
@@ -206,11 +212,13 @@ def save_users(users_dict=None):
         os.replace(temp_file, USERS_FILE)
         
         print(f"Successfully saved {len(user_data)} users to {USERS_FILE}")
+        return True
         
     except Exception as e:
         import traceback
         print(f"Error saving users: {e}")
         print(f"Stack trace: {traceback.format_exc()}")
+        return False
 
 # Load users on startup
 load_users()
@@ -581,7 +589,12 @@ def api_register_complete():
         users[user_id] = new_user
         
         print(f"Saving users to file with {len(users)} users")
-        save_users(users)
+        if not save_users(users):
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save user data. Please try registering again.',
+                'redirectTo': url_for('login')
+            }), 500
         
         # Don't log the user in automatically, redirect to login page
         return jsonify({
@@ -640,18 +653,18 @@ def api_login():
     login_user(user)
     token = user.generate_auth_token()
     
-    # Return success response
+    # Return success response with redirect to display page
     return jsonify({
         'success': True,
         'message': 'Login successful',
         'token': token,
+        'redirectTo': url_for('display'),
         'user': {
             'id': user.id,
             'email': user.email,
             'username': user.username,
             'is_verified': user.is_verified
-        },
-        'redirectTo': '/display'  # Redirect to display after login
+        }
     })
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
