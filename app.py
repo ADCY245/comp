@@ -347,16 +347,21 @@ def verify_otp_endpoint():
     otp_type = data.get('type', 'verification')
     
     if not email or not otp:
-        return jsonify({'error': 'Email and OTP are required'}), 400
+        return jsonify({
+            'success': False,
+            'error': 'Email and OTP are required'
+        }), 400
     
     verified, message = verify_otp(email, otp, otp_type)
     if verified:
         return jsonify({
             'success': True,
             'message': message,
-            'verified': True
+            'verified': True,
+            'email': email
         }), 200
     else:
+        print(f"OTP verification failed for {email}: {message}")
         return jsonify({
             'success': False,
             'error': message
