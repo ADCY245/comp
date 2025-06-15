@@ -191,10 +191,26 @@ def save_users(users_dict=None):
         if users_dict is None:
             users_dict = users
         
-        with open(USERS_FILE, 'w') as f:
-            json.dump({k: v.to_dict() for k, v in users_dict.items()}, f, indent=2)
+        # Ensure the data directory exists
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+        
+        # Ensure we have a valid dictionary
+        user_data = {k: v.to_dict() for k, v in users_dict.items()}
+        
+        # Write to a temporary file first
+        temp_file = USERS_FILE + '.tmp'
+        with open(temp_file, 'w') as f:
+            json.dump(user_data, f, indent=2)
+        
+        # Atomically replace the original file
+        os.replace(temp_file, USERS_FILE)
+        
+        print(f"Successfully saved {len(user_data)} users to {USERS_FILE}")
+        
     except Exception as e:
+        import traceback
         print(f"Error saving users: {e}")
+        print(f"Stack trace: {traceback.format_exc()}")
 
 # Load users on startup
 load_users()
