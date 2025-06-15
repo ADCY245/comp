@@ -60,11 +60,15 @@ email_config_valid = check_email_config()
 def refresh_email_config():
     global email_config_valid
     email_config_valid = check_email_config()
-    return email_config_valid
-
 # Initialize Flask app
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# Configuration
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # File paths
 USERS_FILE = os.path.join(app.root_path, 'static', 'data', 'users.json')
@@ -73,7 +77,7 @@ CART_FILE = os.path.join(app.root_path, 'static', 'data', 'cart.json')
 # Ensure data directory exists
 os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
 
-# For Render deployment - use in-memory storage
+# Initialize cart store
 class CartStore:
     _instance = None
     
@@ -93,65 +97,7 @@ class CartStore:
 # Initialize cart store
 cart_store = CartStore()
 
-# Initialize Flask app
-app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
-
-# Configuration
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
-
-# Initialize users dictionary
-users = {}
-
-# User loading and saving functions
-def load_users():
-    global users
-    try:
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users_data = json.load(f)
-                users = {}
-                for user_id, user_data in users_data.items():
-                    users[user_id] = User(
-                        id=user_id,
-                        email=user_data['email'],
-                        username=user_data['username'],
-                        password_hash=user_data['password_hash'],
-                        is_verified=user_data.get('is_verified', False),
-                        reset_token=user_data.get('reset_token'),
-                        reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
-                        otp_verified=user_data.get('otp_verified', False)
-                    )
-        else:
-            users = {}
-    except Exception as e:
-        print(f"Error loading users: {e}")
-        users = {}
-
-def save_users():
-    try:
-        with open(USERS_FILE, 'w') as f:
-            json.dump({k: v.to_dict() for k, v in users.items()}, f, indent=2)
-    except Exception as e:
-        print(f"Error saving users: {e}")
-
-# Load users on startup
-load_users()
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return users.get(user_id)
-
-# Initialize Flask-Login
-# User model
+# User class
 class User(UserMixin):
     def __init__(self, id, email, username, password_hash, is_verified=False, reset_token=None, reset_token_expiry=None, otp_verified=False):
         self.id = id
@@ -196,8 +142,60 @@ class User(UserMixin):
         except:
             return None
 
+# Initialize users dictionary
+users = {}
 
-users = load_users()
+# User loading and saving functions
+def load_users():
+    global users
+    try:
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'r') as f:
+                users_data = json.load(f)
+                users = {}
+                for user_id, user_data in users_data.items():
+                    users[user_id] = User(
+                        id=user_id,
+                        email=user_data['email'],
+                        username=user_data['username'],
+                        password_hash=user_data['password_hash'],
+                        is_verified=user_data.get('is_verified', False),
+                        reset_token=user_data.get('reset_token'),
+                        reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
+                        otp_verified=user_data.get('otp_verified', False)
+                    )
+        else:
+            users = {}
+    except Exception as e:
+        print(f"Error loading users: {e}")
+        users = {}
+
+def save_users():
+    try:
+        with open(USERS_FILE, 'w') as f:
+            json.dump({k: v.to_dict() for k, v in users.items()}, f, indent=2)
+    except Exception as e:
+        print(f"Error saving users: {e}")
+
+# Load users on startup
+load_users()
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(user_id)
+
+def login_required_custom(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # OTP storage
 otp_store = {}
