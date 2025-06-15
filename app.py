@@ -324,9 +324,18 @@ def request_otp():
                 'error': 'No account found with this email'
             }), 404
     
+    # Generate OTP first
+    otp = generate_otp(email, otp_type)
+    print(f"Generated OTP: {otp} for email: {email}")
+    
     # Send OTP email
-    success = send_otp_email(email, otp_type)
+    success = send_email(email, 
+                        "Verification Code" if otp_type == 'verification' else "Password Reset Code",
+                        f"Your verification code is: {otp}\nThis code will expire in 10 minutes.",
+                        is_html=False)
+    
     if success:
+        print(f"OTP sent successfully to {email}")
         return jsonify({
             'success': True,
             'message': 'Verification code sent successfully',
