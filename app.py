@@ -118,8 +118,8 @@ class User(UserMixin):
 def load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'r') as f:
-            users_data = json.load(f)
-            return {uid: User(**user_data) for uid, user_data in users_data.items()}
+            data = json.load(f)
+            return data.get('users', {})
     return {}
 
 def save_users(users_dict):
@@ -137,7 +137,7 @@ def save_users(users_dict):
         }
         users_data[uid] = user_data
     with open(USERS_FILE, 'w') as f:
-        json.dump(users_data, f, indent=2)
+        json.dump({'users': users_data}, f, indent=2)
 
 # Initialize users
 users = load_users()
