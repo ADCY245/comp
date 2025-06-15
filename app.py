@@ -24,12 +24,15 @@ JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION = 3600  # 1 hour
 
 # Email Configuration
-SMTP_SERVER = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+SMTP_SERVER = os.getenv('SMTP_HOST')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USERNAME = os.getenv('SMTP_USER', 'not-set')
-SMTP_PASSWORD = os.getenv('SMTP_PASS', 'not-set')
-EMAIL_FROM = os.getenv('EMAIL_FROM', 'noreply@yourdomain.com')
-EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'Moneda App')
+SMTP_USERNAME = os.getenv('SMTP_USER')
+SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+EMAIL_FROM = os.getenv('EMAIL_FROM')
+EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME')
+
+# Frontend URL for email links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # Add logging for debugging
 print(f"SMTP Configuration:\n"
