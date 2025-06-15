@@ -60,6 +60,7 @@ email_config_valid = check_email_config()
 def refresh_email_config():
     global email_config_valid
     email_config_valid = check_email_config()
+
 # Initialize Flask app
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
@@ -69,6 +70,16 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Global users dictionary
+users = {}
+
+# Initialize users from file on first request
+@app.before_first_request
+def initialize_users():
+    global users
+    users = load_users()
+    print(f"Loaded {len(users)} users from file")
 
 # File paths
 USERS_FILE = os.path.join(app.root_path, 'static', 'data', 'users.json')
@@ -118,9 +129,10 @@ class User(UserMixin):
             'username': self.username,
             'password_hash': self.password_hash,
             'is_verified': self.is_verified,
+            'otp_verified': self.otp_verified,
+            'cart': self.cart,
             'reset_token': self.reset_token,
-            'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
-            'otp_verified': self.otp_verified
+            'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None
         }
     
     def set_password(self, password):
