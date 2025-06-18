@@ -470,15 +470,16 @@ function calculateMPackPrices(container) {
 
         // Add machine, thickness, and size details
         const details = [
-            `Machine: ${container.dataset.machine || 'N/A'}`,
-            `Thickness: ${container.dataset.thickness || 'N/A'}`,
-            `Size: ${container.dataset.size || 'N/A'}`
+            { label: 'Machine', value: container.dataset.machine },
+            { label: 'Thickness', value: container.dataset.thickness },
+            { label: 'Size', value: container.dataset.size }
         ];
 
-        details.forEach(detail => {
+        details.forEach(({label, value}) => {
+            if (!value) return; // Skip if value is empty
             const detailRow = document.createElement('div');
             detailRow.className = 'price-detail';
-            detailRow.textContent = detail;
+            detailRow.innerHTML = `<strong>${label}:</strong> <span>${value}</span>`;
             leftContainer.appendChild(detailRow);
         });
 
@@ -540,6 +541,18 @@ function calculateMPackPrices(container) {
         const totalRow = createPriceRow('Total:', `₹${finalTotal.toFixed(2)}`, true);
         totalRow.classList.add('border-top', 'pt-2', 'mt-2');
         priceContainer.appendChild(totalRow);
+        
+        // Add remove button below total
+        const removeButton = document.createElement('div');
+        removeButton.className = 'mt-3';
+        removeButton.innerHTML = `
+            <form class="remove-item-form" data-index="${container.dataset.index}">
+                <button type="submit" class="btn btn-danger btn-sm w-100">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </form>
+        `;
+        priceContainer.appendChild(removeButton);
         
         return {
             unitPrice,

@@ -300,7 +300,7 @@
                     </div>
                     {% elif item.type == 'mpack' %}
                     <!-- MPack Product -->
-                    <div class="mpack-product">
+                    <div class="mpack-product w-100">
                         <div class="row">
                             <div class="col-12">
                                 <h5 class="product-title">{{ item.name }}</h5>
@@ -309,13 +309,6 @@
                                         <div class="price-grid">
                                             <!-- Price grid will be populated by JavaScript -->
                                         </div>
-                                    </div>
-                                    <div class="remove-container mt-3">
-                                        <form class="remove-item-form" data-index="{{ loop.index0 }}">
-                                            <button type="submit" class="btn btn-danger btn-sm w-100">
-                                                <i class="fas fa-trash"></i> Remove
-                                            </button>
-                                        </form>
                                     </div>
                                 </div>
                             </div>
