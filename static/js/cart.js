@@ -182,7 +182,8 @@ function initializeCartCalculations() {
 }
 
 function updateCartTotals() {
-    let subtotal = 0;
+    let subtotal = 0; // sum of discounted subtotals (before GST)
+    let gstTotal = 0;  // accumulated GST for all items
     let totalItems = 0;
     const cartItems = document.querySelectorAll('.cart-item');
     
@@ -219,9 +220,9 @@ function updateCartTotals() {
             const discountAmount = (price * quantity * discountPercent / 100);
             const priceAfterDiscount = (price * quantity) - discountAmount;
             const gstAmount = (priceAfterDiscount * gstPercent / 100);
-            const finalTotal = priceAfterDiscount + gstAmount;
             
-            subtotal += price * quantity;
+            subtotal += priceAfterDiscount;
+            gstTotal += gstAmount;
             totalItems += quantity;
             
         } else if (type === 'blanket') {
@@ -236,9 +237,9 @@ function updateCartTotals() {
             const discountAmount = subtotalItem * (discountPercent / 100);
             const discountedSubtotal = subtotalItem - discountAmount;
             const gstAmount = (discountedSubtotal * gstPercent) / 100;
-            const finalTotal = discountedSubtotal + gstAmount;
             
-            subtotal += subtotalItem;
+            subtotal += discountedSubtotal;
+            gstTotal += gstAmount;
             totalItems += quantity;
         }
     });
@@ -246,7 +247,7 @@ function updateCartTotals() {
     // Update the cart summary
     const cartSummary = document.getElementById('cartSummary');
     if (cartSummary) {
-        const gst = subtotal * 0.18; // 18% GST
+        const gst = gstTotal;
         const total = subtotal + gst;
         
         cartSummary.innerHTML = `
