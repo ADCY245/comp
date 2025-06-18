@@ -761,7 +761,7 @@ def add_to_cart():
             # Create product with all details
             product = {
                 'type': 'blanket',
-                'name': data.get('name', 'Custom Blanket'),
+                'name': data.get('blanket_name', data.get('name', 'Custom Blanket')),
                 'machine': data.get('machine', 'Unknown Machine'),
                 'thickness': data.get('thickness', ''),
                 'length': length,
