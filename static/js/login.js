@@ -184,3 +184,4 @@ function setLoading(isLoading) {
     if (btnLoader) btnLoader.style.display = 'none';
   }
 }
+// Password toggle functionality added 
