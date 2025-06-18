@@ -209,13 +209,13 @@ function updateCartTotals() {
         const type = item.dataset.type;
         const quantity = parseInt(item.dataset.quantity) || 1;
         
-        if (type === 'mpack' || type === 'blanket') {
+        if (type === 'mpack') {
             // Get price from data attributes or calculations
             const unitPrice = parseFloat(item.dataset.unitPrice) || 0;
             const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
             const gstPercent = parseFloat(item.dataset.gstPercent) || 12;
             
-            // Calculate prices
+            // Calculate prices for mpack
             const subtotal = unitPrice * quantity;
             const discountAmount = subtotal * (discountPercent / 100);
             const discountedSubtotal = subtotal - discountAmount;
@@ -223,50 +223,58 @@ function updateCartTotals() {
             const finalTotal = discountedSubtotal + gstAmount;
             
             // Update item's price display
-            const priceDisplay = item.querySelector('.price-value');
-            if (priceDisplay) {
-                priceDisplay.textContent = `₹${finalTotal.toFixed(2)}`;
-            }
+            updateItemDisplay(item, {
+                finalTotal,
+                discountAmount,
+                gstAmount,
+                quantity
+            });
             
-            // Update quantity input
-            const quantityInput = item.querySelector('.quantity-input');
-            if (quantityInput) {
-                quantityInput.value = quantity;
-            }
+            total += finalTotal;
+            totalItems += quantity;
             
-            // Update discount display if exists
-            const discountDisplay = item.querySelector('.discount-amount');
-            if (discountDisplay) {
-                discountDisplay.textContent = `-₹${discountAmount.toFixed(2)}`;
-            }
+        } else if (type === 'blanket') {
+            const basePrice = parseFloat(item.dataset.basePrice) || 0;
+            const barPrice = parseFloat(item.dataset.barPrice) || 0;
+            const pricePerUnit = basePrice + barPrice;
+            const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
+            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
             
-            // Update GST display if exists
-            const gstDisplay = item.querySelector('.gst-amount');
-            if (gstDisplay) {
-                gstDisplay.textContent = `₹${gstAmount.toFixed(2)}`;
-            }
+            // Calculate prices for blanket
+            const subtotalItem = pricePerUnit * quantity;
+            const discountAmount = subtotalItem * (discountPercent / 100);
+            const discountedSubtotal = subtotalItem - discountAmount;
+            const gstAmount = (discountedSubtotal * gstPercent) / 100;
+            const finalTotal = discountedSubtotal + gstAmount;
             
-            // Update total display
-            const totalDisplay = item.querySelector('.item-total');
-            if (totalDisplay) {
-                totalDisplay.textContent = `₹${finalTotal.toFixed(2)}`;
-            }
+            // Update item's price display
+            updateItemDisplay(item, {
+                finalTotal,
+                discountAmount,
+                gstAmount,
+                quantity
+            });
             
             total += finalTotal;
             totalItems += quantity;
         }
     });
     
-    // Update the cart summary
+    // Update the cart summary with total after GST
     const cartSummary = document.getElementById('cartSummary');
     if (cartSummary) {
+        const orderTotal = total;
         cartSummary.innerHTML = `
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Order Summary</h5>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Total (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
+<<<<<<< HEAD
                         <span>₹${total.toFixed(2)}</span>
+=======
+                        <span>₹${orderTotal.toFixed(2)}</span>
+>>>>>>> 4bff09061fbc6c30ecdae7cd99f4ec9d54f5e94d
                     </div>
                     <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
                 </div>
