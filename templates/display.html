@@ -195,8 +195,32 @@
             if (savedCompany) {
                 try {
                     const company = JSON.parse(savedCompany);
+                    // Update sessionStorage to maintain consistency
+                    if (company.name) sessionStorage.setItem('companyName', company.name);
+                    if (company.email) sessionStorage.setItem('companyEmail', company.email);
+                    
+                    // Update the UI to show the selected company
                     updateCartLink(company);
-                    select.val(company.name).trigger('change');
+                    
+                    // If we have a company name, set it in the select2
+                    if (company.name) {
+                        // Check if the company exists in the select2 options
+                        const companyExists = Array.from(select[0].options).some(option => 
+                            option.text === company.name
+                        );
+                        
+                        if (companyExists) {
+                            select.val(company.name).trigger('change');
+                        } else {
+                            // If company doesn't exist in the dropdown, add it
+                            const option = new Option(company.name, company.name, true, true);
+                            option.dataset.email = company.email || '';
+                            select.append(option).trigger('change');
+                        }
+                        
+                        // Enable product type selection
+                        productTypeSelect.disabled = false;
+                    }
                 } catch (e) {
                     console.error('Error parsing saved company:', e);
                     // If parsing fails, try to just set the value directly

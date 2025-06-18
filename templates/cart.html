@@ -286,16 +286,17 @@
                         e.preventDefault();
                         const companyName = sessionStorage.getItem('companyName') || '';
                         const companyEmail = sessionStorage.getItem('companyEmail') || '';
-                        let url = '{{ url_for("home") }}';
                         
+                        // Save company info to localStorage for the home page to access
                         if (companyName) {
-                            url += (url.includes('?') ? '&' : '?') + 'company=' + encodeURIComponent(companyName);
-                            if (companyEmail) {
-                                url += '&email=' + encodeURIComponent(companyEmail);
-                            }
+                            localStorage.setItem('selectedCompany', JSON.stringify({
+                                name: companyName,
+                                email: companyEmail
+                            }));
                         }
                         
-                        window.location.href = url;
+                        // Navigate to home page
+                        window.location.href = '{{ url_for("home") }}';
                     });
                 </script>
                 <form action="{{ url_for('clear_cart') }}" method="POST" class="d-inline">
