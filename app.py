@@ -836,10 +836,14 @@ def add_to_cart():
         # Save updated cart
         save_user_cart(cart)
         
+        # Get updated cart count
+        updated_cart = get_user_cart()
+        cart_count = len(updated_cart.get('products', [])) if updated_cart and isinstance(updated_cart, dict) else 0
+        
         return jsonify({
             'success': True,
             'message': 'Product added to cart successfully',
-            'cart_count': len(products)
+            'cart_count': cart_count
         })
     except Exception as e:
         print(f"Error adding to cart: {e}")

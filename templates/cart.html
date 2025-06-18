@@ -267,13 +267,13 @@
                                                     <!-- GST -->
                                                     <div class="price-row">
                                                         <span class="price-label">GST ({{ item.gst_percent|default(18) }}%):</span>
-                                                        <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent || 0) / 100) * item.gst_percent / 100)|default(0)) }}</span>
+                                                        <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent|default(0)) / 100) * item.gst_percent / 100)|default(0)) }}</span>
                                                     </div>
                                                     
                                                     <!-- Total -->
                                                     <div class="price-row fw-bold border-top pt-2 mt-2">
                                                         <span class="price-label">Total:</span>
-                                                        <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent || 0) / 100) * (1 + item.gst_percent / 100))|default(0)) }}</span>
+                                                        <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent|default(0)) / 100) * (1 + item.gst_percent / 100))|default(0)) }}</span>
                                                     </div>
                                                 </div>
                                             </div>
