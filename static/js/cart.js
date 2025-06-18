@@ -524,14 +524,14 @@ function calculateMPackPrices(container) {
         
         // Add discount row if applicable
         if (discountPercent > 0) {
-            priceGrid.appendChild(createPriceRow(
+            priceContainer.appendChild(createPriceRow(
                 `Discount (${discountPercent}%):`, 
                 `-₹${discountAmount.toFixed(2)}`
             ));
         }
         
         // Add GST row
-        priceGrid.appendChild(createPriceRow(
+        priceContainer.appendChild(createPriceRow(
             `GST (${gstPercent}%):`, 
             `₹${gstAmount.toFixed(2)}`
         ));
@@ -539,7 +539,7 @@ function calculateMPackPrices(container) {
         // Add total row with border top
         const totalRow = createPriceRow('Total:', `₹${finalTotal.toFixed(2)}`, true);
         totalRow.classList.add('border-top', 'pt-2', 'mt-2');
-        priceGrid.appendChild(totalRow);
+        priceContainer.appendChild(totalRow);
         
         return {
             unitPrice,
