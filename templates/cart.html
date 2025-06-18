@@ -214,37 +214,37 @@
                                 </form>
                             </div>
                         </div>
-                        
-                            {% elif item.type == 'mpack' %}
-                                <!-- MPack Product -->
-                                <div class="mpack-product" 
-                                     data-unit-price="{{ item.unit_price|default(0) }}"
-                                     data-quantity="{{ item.quantity|default(1) }}"
-                                     data-discount-percent="{{ item.discount_percent|default(0) }}"
-                                     data-gst-percent="{{ item.gst_percent|default(18) }}">
-                                    
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h5 class="product-title">MPack</h5>
-                                                    <p class="mb-1"><strong>Product Type:</strong> Underpacking Material</p>
-                                                    {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
-                                                    {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }} micron</p>{% endif %}
-                                                    {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
-                                                </div>
-                                                <button class="btn btn-sm btn-outline-danger remove-item" data-index="{{ loop.index0 }}">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                        {% else %}
+                            {% if item.type == 'mpack' %}
+                            <!-- MPack Product -->
+                            <div class="mpack-product" 
+                                 data-unit-price="{{ item.unit_price|default(0) }}"
+                                 data-quantity="{{ item.quantity|default(1) }}"
+                                 data-discount-percent="{{ item.discount_percent|default(0) }}"
+                                 data-gst-percent="{{ item.gst_percent|default(18) }}">
+                                
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h5 class="product-title">MPack</h5>
+                                                <p class="mb-1"><strong>Product Type:</strong> Underpacking Material</p>
+                                                {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
+                                                {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }} micron</p>{% endif %}
+                                                {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
                                             </div>
-                                            
-                                            <div class="price-details mt-3 p-3 bg-light rounded">
-                                                <div class="price-grid">
-                                                    <!-- Unit Price -->
-                                                    <div class="price-row">
-                                                        <span class="price-label">Unit Price:</span>
-                                                        <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
-                                                    </div>
+                                            <button class="btn btn-sm btn-outline-danger remove-item" data-index="{{ loop.index0 }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="price-details mt-3 p-3 bg-light rounded">
+                                            <div class="price-grid">
+                                                <!-- Unit Price -->
+                                                <div class="price-row">
+                                                    <span class="price-label">Unit Price:</span>
+                                                    <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
+                                                </div>
                                                     
                                                     <!-- Quantity -->
                                                     <div class="price-row">
@@ -299,7 +299,7 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/cart-fixed.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <!-- Function to update company info display -->
     <script>

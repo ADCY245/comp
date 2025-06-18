@@ -823,11 +823,18 @@ def add_to_cart():
                     'final_total': round(final_total, 2)
                 }
         
+        # Get existing cart or create new one
+        cart = get_user_cart()
+        if not isinstance(cart, dict):
+            cart = {'products': []}
+        if 'products' not in cart:
+            cart['products'] = []
+            
         # Add product to cart
-        products.append(product)
+        cart['products'].append(product)
         
         # Save updated cart
-        save_user_cart({'products': products})
+        save_user_cart(cart)
         
         return jsonify({
             'success': True,
