@@ -182,8 +182,7 @@ function initializeCartCalculations() {
 }
 
 function updateCartTotals() {
-    let subtotal = 0; // sum of discounted subtotals (before GST)
-    let gstTotal = 0;  // accumulated GST for all items
+    let total = 0; // total after GST per item
     let totalItems = 0;
     const cartItems = document.querySelectorAll('.cart-item');
     
@@ -207,7 +206,7 @@ function updateCartTotals() {
     }
     
     cartItems.forEach(item => {
-        // Get the calculations from data attributes or calculate them
+        // Calculate per-item totals and accumulate overall total
         const type = item.dataset.type;
         const quantity = parseInt(item.dataset.quantity) || 1;
         
@@ -221,8 +220,8 @@ function updateCartTotals() {
             const priceAfterDiscount = (price * quantity) - discountAmount;
             const gstAmount = (priceAfterDiscount * gstPercent / 100);
             
-            subtotal += priceAfterDiscount;
-            gstTotal += gstAmount;
+            const finalTotal = priceAfterDiscount + gstAmount;
+            total += finalTotal;
             totalItems += quantity;
             
         } else if (type === 'blanket') {
@@ -238,34 +237,24 @@ function updateCartTotals() {
             const discountedSubtotal = subtotalItem - discountAmount;
             const gstAmount = (discountedSubtotal * gstPercent) / 100;
             
-            subtotal += discountedSubtotal;
-            gstTotal += gstAmount;
+            const finalTotal = discountedSubtotal + gstAmount;
+            total += finalTotal;
             totalItems += quantity;
         }
     });
     
-    // Update the cart summary
+    // Update the cart summary with total after GST
     const cartSummary = document.getElementById('cartSummary');
     if (cartSummary) {
-        const gst = gstTotal;
-        const total = subtotal + gst;
+        const orderTotal = total;
         
         cartSummary.innerHTML = `
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Order Summary</h5>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
-                        <span>₹${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>GST (18%):</span>
-                        <span>₹${gst.toFixed(2)}</span>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between fw-bold">
-                        <span>Total:</span>
-                        <span>₹${total.toFixed(2)}</span>
+                        <span>Total (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
+                        <span>₹${orderTotal.toFixed(2)}</span>
                     </div>
                     <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
                 </div>
