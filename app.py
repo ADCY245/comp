@@ -528,15 +528,22 @@ def get_user_cart():
 def save_user_cart(cart_dict):
     """Persist cart for current user using MongoDB if available."""
     try:
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            cart_store.save_cart(current_user.id, cart_dict.get("products", []))
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and hasattr(current_user, 'id'):
+            # For MongoDB, we expect cart_dict to be a dictionary with a 'products' key
+            if isinstance(cart_dict, dict) and 'products' in cart_dict:
+                cart_store.save_cart(current_user.id, cart_dict['products'])
+            else:
+                cart_store.save_cart(current_user.id, [])
         else:
             # Fallback to JSON storage
+            if not isinstance(cart_dict, dict):
+                cart_dict = {"products": []}
             cart_store.save_cart(cart_dict)
     except Exception as e:
         print(f"Error in save_user_cart: {e}")
+        import traceback
+        traceback.print_exc()
         raise
-
 
 # Initialize users dictionary (only for JSON fallback)
 if USE_MONGO:

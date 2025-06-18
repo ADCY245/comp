@@ -220,8 +220,7 @@
                             </div>
                             
                             <div class="col-12 mt-3 pt-3 border-top text-end">
-                                <form action="{{ url_for('remove_from_cart') }}" method="POST" class="d-inline">
-                                    <input type="hidden" name="product_id" value="{{ loop.index0 }}">
+                                <form class="remove-item-form d-inline" data-index="{{ loop.index0 }}">
                                     <button type="submit" class="btn btn-danger btn-sm">
                                         <i class="fas fa-trash"></i> Remove
                                     </button>
@@ -348,6 +347,89 @@
             // Initial load
             loadCartItems();
         });
+    </script>
+    
+    <script>
+        // Add event listener for remove forms
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.remove-item-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const index = parseInt(this.getAttribute('data-index'));
+                    removeFromCart(e, index);
+                });
+            });
+        });
+
+        // Function to handle remove from cart
+        async function removeFromCart(event, productIndex) {
+            try {
+                const response = await fetch('/remove_from_cart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        index: productIndex
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success message
+                    showToast('Success', 'Item removed from cart', 'success');
+                    // Reload the page to reflect the changes
+                    window.location.reload();
+                } else {
+                    // Show error message
+                    showToast('Error', data.error || 'Failed to remove item from cart', 'error');
+                }
+            } catch (error) {
+                console.error('Error removing item from cart:', error);
+                showToast('Error', 'An error occurred while removing the item', 'error');
+            }
+        }
+
+        // Function to show toast notifications
+        function showToast(title, message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.style.position = 'fixed';
+                toastContainer.style.top = '20px';
+                toastContainer.style.right = '20px';
+                toastContainer.style.zIndex = '1100';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast
+            const toast = document.createElement('div');
+            toast.className = `toast show align-items-center text-white bg-${type} border-0`;
+            toast.role = 'alert';
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.style.marginBottom = '10px';
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong>${title}</strong><br>${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            
+            // Add to container and auto-remove after 5 seconds
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        // Rest of your existing JavaScript...
     </script>
     
     <style>
