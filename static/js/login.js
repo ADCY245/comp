@@ -5,6 +5,7 @@ const loginInput = document.getElementById('login');
 const passwordInput = document.getElementById('password');
 const errorDiv = document.getElementById('error');
 const messageDiv = document.getElementById('message');
+const togglePassword = document.querySelector('.toggle-password');
 
 // Initialize the login form
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,6 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Toggle password visibility
+function togglePasswordVisibility() {
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    togglePassword.innerHTML = '<i class="fas fa-eye-slash"></i>';
+  } else {
+    passwordInput.type = 'password';
+    togglePassword.innerHTML = '<i class="fas fa-eye"></i>';
+  }
+}
+
 // Setup event listeners
 function setupEventListeners() {
   // Login form submission
@@ -32,6 +44,11 @@ function setupEventListeners() {
   // Login button click
   if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
+  }
+  
+  // Toggle password visibility
+  if (togglePassword) {
+    togglePassword.addEventListener('click', togglePasswordVisibility);
   }
   
   // Handle Enter key in password field
