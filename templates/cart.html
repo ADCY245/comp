@@ -326,7 +326,7 @@
                                      data-discount-percent="{{ item.discount_percent|default(0) }}"
                                      data-gst-percent="{{ item.gst_percent|default(18) }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">{{ item.blanket_type }}{% if item.bar_type %} ({{ item.bar_type }}){% endif %}</h5>
+                                        <h5 class="product-title">{{ item.name }}{% if item.bar_type %} ({{ item.bar_type }}){% endif %}</h5>
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
@@ -392,7 +392,8 @@
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
-                                            {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
+                                            {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
+                                            {% elif item.length and item.width %}<p class="mb-1"><strong>Size:</strong> {{ item.length }}x{{ item.width }} {{ item.unit|default('mm') }}</p>{% endif %}
                                         </div>
                                     </div>
                                     <div class="price-details mt-3 p-3 bg-light rounded">
