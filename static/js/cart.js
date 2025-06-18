@@ -182,8 +182,7 @@ function initializeCartCalculations() {
 }
 
 function updateCartTotals() {
-    let subtotal = 0; // sum of discounted subtotals (before GST)
-    let gstTotal = 0;  // accumulated GST for all items
+    let total = 0; // total after GST per item
     let totalItems = 0;
     const cartItems = document.querySelectorAll('.cart-item');
     
@@ -207,39 +206,53 @@ function updateCartTotals() {
     }
     
     cartItems.forEach(item => {
-        // Get the calculations from data attributes or calculate them
         const type = item.dataset.type;
         const quantity = parseInt(item.dataset.quantity) || 1;
         
-        if (type === 'mpack') {
-            const price = parseFloat(item.dataset.unitPrice) || 0;
+        if (type === 'mpack' || type === 'blanket') {
+            // Get price from data attributes or calculations
+            const unitPrice = parseFloat(item.dataset.unitPrice) || 0;
             const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
-            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
+            const gstPercent = parseFloat(item.dataset.gstPercent) || 12;
             
             // Calculate prices
-            const discountAmount = (price * quantity * discountPercent / 100);
-            const priceAfterDiscount = (price * quantity) - discountAmount;
-            const gstAmount = (priceAfterDiscount * gstPercent / 100);
-            
-            subtotal += priceAfterDiscount;
-            gstTotal += gstAmount;
-            totalItems += quantity;
-            
-        } else if (type === 'blanket') {
-            const basePrice = parseFloat(item.dataset.basePrice) || 0;
-            const barPrice = parseFloat(item.dataset.barPrice) || 0;
-            const pricePerUnit = basePrice + barPrice;
-            const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
-            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
-            
-            // Calculate prices
-            const subtotalItem = pricePerUnit * quantity;
-            const discountAmount = subtotalItem * (discountPercent / 100);
-            const discountedSubtotal = subtotalItem - discountAmount;
+            const subtotal = unitPrice * quantity;
+            const discountAmount = subtotal * (discountPercent / 100);
+            const discountedSubtotal = subtotal - discountAmount;
             const gstAmount = (discountedSubtotal * gstPercent) / 100;
+            const finalTotal = discountedSubtotal + gstAmount;
             
-            subtotal += discountedSubtotal;
-            gstTotal += gstAmount;
+            // Update item's price display
+            const priceDisplay = item.querySelector('.price-value');
+            if (priceDisplay) {
+                priceDisplay.textContent = `₹${finalTotal.toFixed(2)}`;
+            }
+            
+            // Update quantity input
+            const quantityInput = item.querySelector('.quantity-input');
+            if (quantityInput) {
+                quantityInput.value = quantity;
+            }
+            
+            // Update discount display if exists
+            const discountDisplay = item.querySelector('.discount-amount');
+            if (discountDisplay) {
+                discountDisplay.textContent = `-₹${discountAmount.toFixed(2)}`;
+            }
+            
+            // Update GST display if exists
+            const gstDisplay = item.querySelector('.gst-amount');
+            if (gstDisplay) {
+                gstDisplay.textContent = `₹${gstAmount.toFixed(2)}`;
+            }
+            
+            // Update total display
+            const totalDisplay = item.querySelector('.item-total');
+            if (totalDisplay) {
+                totalDisplay.textContent = `₹${finalTotal.toFixed(2)}`;
+            }
+            
+            total += finalTotal;
             totalItems += quantity;
         }
     });
@@ -247,24 +260,12 @@ function updateCartTotals() {
     // Update the cart summary
     const cartSummary = document.getElementById('cartSummary');
     if (cartSummary) {
-        const gst = gstTotal;
-        const total = subtotal + gst;
-        
         cartSummary.innerHTML = `
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Order Summary</h5>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
-                        <span>₹${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>GST (18%):</span>
-                        <span>₹${gst.toFixed(2)}</span>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between fw-bold">
-                        <span>Total:</span>
+                        <span>Total (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
                         <span>₹${total.toFixed(2)}</span>
                     </div>
                     <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>

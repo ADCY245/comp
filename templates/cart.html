@@ -219,44 +219,40 @@
                         </div>
                     </div>
                     {% endif %}
-                    {% else %}
-    {% if item.type == 'mpack' %}
+                    {% elif item.type == 'mpack' %}
                     <!-- MPack Product -->
-                    <div class="mpack-product" data-type="mpack"
-                         data-unit-price="{{ item.unit_price|default(0) }}"
-                         data-quantity="{{ item.quantity|default(1) }}"
-                         data-discount-percent="{{ item.discount_percent|default(0) }}"
-                         data-gst-percent="{{ item.gst_percent|default(18) }}">
+                    <div class="mpack-product">
                         <div class="row">
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h5 class="product-title">MPack</h5>
+                                        <h5 class="product-title">{{ item.name }}</h5>
                                         <p class="mb-1"><strong>Product Type:</strong> Underpacking Material</p>
-                                                {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
-                                                {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }} micron</p>{% endif %}
-                                                {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
-                                                {% if item.material %}<p class="mb-1"><strong>Material:</strong> {{ item.material }}</p>{% endif %}
-                                                {% if item.color %}<p class="mb-1"><strong>Color:</strong> {{ item.color }}</p>{% endif %}
-                                                {% if item.quantity %}<p class="mb-1"><strong>Quantity:</strong> {{ item.quantity }}</p>{% endif %}
+                                        {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
+                                        {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}</p>{% endif %}
+                                        {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger remove-item" data-index="{{ loop.index0 }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <form class="remove-item-form d-inline" data-index="{{ loop.index0 }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                                 <div class="price-details mt-3 p-3 bg-light rounded">
                                     <div class="price-grid">
                                         <!-- Unit Price -->
                                         <div class="price-row">
                                             <span class="price-label">Unit Price:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.unit_price|default(0)) }}</span>
                                         </div>
                                         <!-- Quantity -->
                                         <div class="price-row">
                                             <span class="price-label">Quantity:</span>
                                             <div class="quantity-controls d-inline-flex align-items-center">
                                                 <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}">-</button>
-                                                <input type="number" class="form-control form-control-sm quantity-input" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" style="width: 60px; text-align: center;">
+                                                <input type="number" class="form-control form-control-sm quantity-input" 
+                                                       value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" 
+                                                       style="width: 60px; text-align: center;">
                                                 <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}">+</button>
                                             </div>
                                         </div>
@@ -264,18 +260,18 @@
                                         <!-- Discount -->
                                         <div class="price-row text-danger">
                                             <span class="price-label">Discount ({{ item.discount_percent }}%):</span>
-                                            <span class="price-value">-₹{{ "%.2f"|format((item.unit_price * item.quantity * item.discount_percent / 100)|default(0)) }}</span>
+                                            <span class="price-value">-₹{{ "%.2f"|format(item.calculations.discount_amount|default(0)) }}</span>
                                         </div>
                                         {% endif %}
                                         <!-- GST -->
                                         <div class="price-row">
-                                            <span class="price-label">GST ({{ item.gst_percent|default(18) }}%):</span>
-                                            <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent|default(0) / 100)) * (item.gst_percent|default(18)) / 100)|default(0)) }}</span>
+                                            <span class="price-label">GST ({{ item.gst_percent|default(12) }}%):</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.gst_amount|default(0)) }}</span>
                                         </div>
                                         <!-- Total -->
                                         <div class="price-row fw-bold mt-2 pt-2 border-top">
                                             <span class="price-label">Total:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format((item.unit_price * item.quantity * (1 - (item.discount_percent|default(0) / 100)) * (1 + (item.gst_percent|default(18)) / 100))|default(0)) }}</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.final_total|default(0)) }}</span>
                                         </div>
                                     </div>
                                 </div>

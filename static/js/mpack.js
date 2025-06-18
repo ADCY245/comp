@@ -463,23 +463,19 @@ function addMpackToCart() {
     size: sizeSelect.options[sizeSelect.selectedIndex].text,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
-    total_price: parseFloat(finalPrice.toFixed(2)),
     discount_percent: discount,
-    discount_amount: parseFloat(discountAmount.toFixed(2)),
-    gst_amount: parseFloat(gstAmount.toFixed(2)),
     gst_percent: 12,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
-      unitPrice: parseFloat(unitPrice.toFixed(2)),
+      unit_price: parseFloat(unitPrice.toFixed(2)),
       quantity: quantity,
-      subtotal: parseFloat(totalPriceBeforeDiscount.toFixed(2)),
-      discountPercent: discount,
-      discountAmount: parseFloat(discountAmount.toFixed(2)),
-      priceAfterDiscount: parseFloat(priceAfterDiscount.toFixed(2)),
-      gstPercent: 12,
-      gstAmount: parseFloat(gstAmount.toFixed(2)),
-      finalTotal: parseFloat(finalPrice.toFixed(2))
+      discounted_subtotal: parseFloat(priceAfterDiscount.toFixed(2)),
+      discount_percent: discount,
+      discount_amount: parseFloat(discountAmount.toFixed(2)),
+      gst_percent: 12,
+      gst_amount: parseFloat(gstAmount.toFixed(2)),
+      final_total: parseFloat(finalPrice.toFixed(2))
     }
   };
 
