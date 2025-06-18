@@ -326,7 +326,7 @@
                                      data-discount-percent="{{ item.discount_percent|default(0) }}"
                                      data-gst-percent="{{ item.gst_percent|default(18) }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">{{ item.blanket_type|default('Blanket') }}</h5>
+                                        <h5 class="product-title">{{ item.blanket_type|default('Blanket') }} {% if item.bar_type %}({{ item.bar_type }}){% endif %}</h5>
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
@@ -383,9 +383,12 @@
                                      data-unit-price="{{ item.unit_price|default(0) }}"
                                      data-quantity="{{ item.quantity|default(1) }}"
                                      data-discount-percent="{{ item.discount_percent|default(0) }}"
-                                     data-gst-percent="{{ item.gst_percent|default(18) }}">
+                                     data-gst-percent="{{ item.gst_percent|default(18) }}"
+                                     data-machine="{{ item.machine|default('') }}"
+                                     data-thickness="{{ item.thickness|default('') }}"
+                                     data-size="{{ item.size|default('') }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">MPack</h5>
+                                        <h5 class="product-title">MPack - {{ item.product_name|default('MPack') }}</h5>
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
