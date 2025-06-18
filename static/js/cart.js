@@ -150,13 +150,28 @@ function showToast(title, message, type = 'info') {
 // Initialize price calculations when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
+    
+    // Initialize cart handlers
     initializeCartCalculations();
     setupQuantityHandlers();
     setupRemoveHandlers();
-    updateCartTotals();
     
-    // Update cart count on page load
+    // Update cart totals and UI
+    updateCartTotals();
     updateCartCount();
+    
+    // Show/hide empty cart message based on initial cart state
+    const cartItems = document.querySelectorAll('.cart-item');
+    const emptyCart = document.getElementById('emptyCart');
+    const cartItemsContainer = document.getElementById('cartItems');
+    
+    if (cartItems.length === 0) {
+        if (emptyCart) emptyCart.style.display = 'block';
+        if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+    } else {
+        if (emptyCart) emptyCart.style.display = 'none';
+        if (cartItemsContainer) cartItemsContainer.style.display = 'block';
+    }
 });
 
 function initializeCartCalculations() {
@@ -169,21 +184,61 @@ function initializeCartCalculations() {
 function updateCartTotals() {
     let subtotal = 0;
     let totalItems = 0;
+    const cartItems = document.querySelectorAll('.cart-item');
     
-    document.querySelectorAll('.cart-item').forEach(item => {
-        if (item.dataset.type === 'mpack') {
+    // Show/hide empty cart message
+    const emptyCart = document.getElementById('emptyCart');
+    const cartItemsContainer = document.getElementById('cartItems');
+    
+    if (cartItems.length === 0) {
+        if (emptyCart) emptyCart.style.display = 'block';
+        if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+        
+        // Clear the cart summary
+        const cartSummary = document.getElementById('cartSummary');
+        if (cartSummary) {
+            cartSummary.innerHTML = '';
+        }
+        return;
+    } else {
+        if (emptyCart) emptyCart.style.display = 'none';
+        if (cartItemsContainer) cartItemsContainer.style.display = 'block';
+    }
+    
+    cartItems.forEach(item => {
+        // Get the calculations from data attributes or calculate them
+        const type = item.dataset.type;
+        const quantity = parseInt(item.dataset.quantity) || 1;
+        
+        if (type === 'mpack') {
             const price = parseFloat(item.dataset.unitPrice) || 0;
-            const quantity = parseInt(item.dataset.quantity) || 1;
             const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
-            const discountedPrice = price * (1 - (discountPercent / 100));
-            subtotal += discountedPrice * quantity;
+            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
+            
+            // Calculate prices
+            const discountAmount = (price * quantity * discountPercent / 100);
+            const priceAfterDiscount = (price * quantity) - discountAmount;
+            const gstAmount = (priceAfterDiscount * gstPercent / 100);
+            const finalTotal = priceAfterDiscount + gstAmount;
+            
+            subtotal += price * quantity;
             totalItems += quantity;
-        } else if (item.dataset.type === 'blanket') {
-            const price = parseFloat(item.dataset.basePrice) || 0;
+            
+        } else if (type === 'blanket') {
+            const basePrice = parseFloat(item.dataset.basePrice) || 0;
             const barPrice = parseFloat(item.dataset.barPrice) || 0;
-            const quantity = parseInt(item.dataset.quantity) || 1;
-            const totalPrice = (price + barPrice) * quantity;
-            subtotal += totalPrice;
+            const pricePerUnit = basePrice + barPrice;
+            const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
+            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
+            
+            // Calculate prices
+            const subtotalItem = pricePerUnit * quantity;
+            const discountAmount = subtotalItem * (discountPercent / 100);
+            const discountedSubtotal = subtotalItem - discountAmount;
+            const gstAmount = (discountedSubtotal * gstPercent) / 100;
+            const finalTotal = discountedSubtotal + gstAmount;
+            
+            subtotal += subtotalItem;
             totalItems += quantity;
         }
     });
@@ -199,7 +254,7 @@ function updateCartTotals() {
                 <div class="card-body">
                     <h5 class="card-title">Order Summary</h5>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal (${totalItems} items):</span>
+                        <span>Subtotal (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
                         <span>₹${subtotal.toFixed(2)}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
@@ -300,15 +355,20 @@ function updateCartItemQuantity(index, newQuantity) {
 }
 
 function removeCartItem(index) {
-    fetch('/remove_cart_item', {
+    fetch('/remove_from_cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCSRFToken()
         },
-        body: JSON.stringify({ index: index })
+        body: JSON.stringify({ index: parseInt(index) })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Remove the item from the DOM
@@ -316,16 +376,22 @@ function removeCartItem(index) {
             if (item) {
                 item.remove();
                 updateCartTotals();
-                showToast('Success', 'Item removed from cart', 'success');
                 updateCartCount();
+                showToast('Success', 'Item removed from cart', 'success');
+                
+                // Show empty cart message if no items left
+                if (document.querySelectorAll('.cart-item').length === 0) {
+                    document.getElementById('emptyCart').style.display = 'block';
+                    document.getElementById('cartItems').style.display = 'none';
+                }
             }
         } else {
-            showToast('Error', data.message || 'Failed to remove item', 'error');
+            showToast('Error', data.error || 'Failed to remove item', 'error');
         }
     })
     .catch(error => {
         console.error('Error removing item:', error);
-        showToast('Error', 'An error occurred while removing the item', 'error');
+        showToast('Error', error.error || 'An error occurred while removing the item', 'error');
     });
 }
 
