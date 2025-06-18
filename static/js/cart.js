@@ -273,8 +273,6 @@ function updateCartTotals() {
 
                         <span>₹${orderTotal.toFixed(2)}</span>
 
-                        <span>₹${orderTotal.toFixed(2)}</span>
-
                     </div>
                     <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
                 </div>
@@ -627,6 +625,22 @@ function calculateBlanketPrices(container) {
         gstAmount,
         finalTotal
     };
+}
+
+// Update the item's price grid based on latest calculations
+function updateItemDisplay(item, data) {
+    if (!item) return;
+
+    // Update dataset values so calculateProductPrices uses latest numbers
+    if (data) {
+        if (data.finalTotal !== undefined) item.dataset.finalTotal = data.finalTotal;
+        if (data.discountAmount !== undefined) item.dataset.discountAmount = data.discountAmount;
+        if (data.gstAmount !== undefined) item.dataset.gstAmount = data.gstAmount;
+        if (data.quantity !== undefined) item.dataset.quantity = data.quantity;
+    }
+
+    // Re-run the per-item calculation to regenerate the price-grid (this builds subtotal rows, etc.)
+    calculateProductPrices(item);
 }
 
 // End of file
