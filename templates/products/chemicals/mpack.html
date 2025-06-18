@@ -93,7 +93,7 @@
   </div>
 
   <!-- Add to Cart -->
-  <button onclick="addMpackToCart(event)" class="btn btn-warning">Add to Cart</button>
+  <button id="addToCartBtn" onclick="addMpackToCart()" class="btn btn-warning" style="display:none;">Add to Cart</button>
 
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -103,5 +103,71 @@
   <!-- App JS -->
   <script src="{{ url_for('static', filename='js/mpack.js') }}"></script>
   <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+
+  <!-- Inline helpers for size search -->
+  <script>
+    // Function to handle size search and selection
+    function initSizeSearch() {
+      const sizeInput = document.getElementById('sizeInput');
+      const sizeSelect = document.getElementById('sizeSelect');
+      const sizeSuggestions = document.getElementById('sizeSuggestions');
+      if (!sizeInput || !sizeSelect) return;
+
+      // Update hidden select and trigger change
+      function selectSize(value, text) {
+        sizeSelect.value = value;
+        sizeInput.value = text;
+        sizeSuggestions.style.display = 'none';
+        setTimeout(() => {
+          sizeSelect.dispatchEvent(new Event('change'));
+        }, 10);
+      }
+
+      // Update suggestion list
+      function updateSuggestions() {
+        const searchTerm = sizeInput.value.toLowerCase();
+        const options = Array.from(sizeSelect.options);
+        sizeSuggestions.innerHTML = '';
+        if (!searchTerm) { sizeSuggestions.style.display = 'none'; return; }
+        const matches = options.filter(opt => opt.value && (opt.text.toLowerCase().includes(searchTerm) || opt.text.replace(/[^0-9x]/g,'').includes(searchTerm)));
+        const list = matches.length ? matches : [{text:'No matching sizes found', value:''}];
+        list.forEach(opt => {
+          const el = document.createElement(matches.length ? 'button' : 'div');
+          if (matches.length) {
+            el.type='button'; el.className='list-group-item list-group-item-action'; el.textContent=opt.text;
+            el.onclick=()=>selectSize(opt.value, opt.text);
+          } else { el.className='list-group-item'; el.textContent=opt.text; }
+          sizeSuggestions.appendChild(el);
+        });
+        sizeSuggestions.style.display='block';
+      }
+
+      sizeInput.addEventListener('input', updateSuggestions);
+      document.addEventListener('click', e => { if (e.target!==sizeInput && e.target!==sizeSuggestions) sizeSuggestions.style.display='none'; });
+      sizeInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); const first=sizeSuggestions.querySelector('button'); first && first.click(); }});
+      new MutationObserver(updateSuggestions).observe(sizeSelect,{childList:true});
+      updateSuggestions();
+    }
+
+    // Preserve original loadSizes and extend to init search after data load
+    const originalLoadSizes = window.loadSizes;
+    window.loadSizes = function() {
+      const result = originalLoadSizes.apply(this, arguments);
+      if (result && typeof result.then==='function') {
+        return result.then(()=>{ initSizeSearch(); return true; });
+      }
+      initSizeSearch();
+      return Promise.resolve();
+    };
+
+    // Init observers on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      const sizeSection = document.getElementById('sizeSection');
+      if (sizeSection) {
+        new MutationObserver(()=>{ if(sizeSection.style.display!=='none') initSizeSearch(); }).observe(sizeSection,{attributes:true,attributeFilter:['style']});
+      }
+      updateCartCount();
+    });
+  </script>
 </body>
 </html>
