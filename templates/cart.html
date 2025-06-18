@@ -219,7 +219,8 @@
                         </div>
                     </div>
                     {% endif %}
-                    {% elif item.type == 'mpack' %}
+                    {% else %}
+    {% if item.type == 'mpack' %}
                     <!-- MPack Product -->
                     <div class="mpack-product" 
                          data-type="mpack"
@@ -291,6 +292,7 @@
                             </div>
                         </div>
                         {% endif %}
+                    {% endif %}
             {% endfor %}
             {% else %}
                 <div id="emptyCart" class="text-center py-5">
