@@ -542,17 +542,7 @@ function calculateMPackPrices(container) {
         totalRow.classList.add('border-top', 'pt-2', 'mt-2');
         priceContainer.appendChild(totalRow);
         
-        // Add remove button below total
-        const removeButton = document.createElement('div');
-        removeButton.className = 'mt-3';
-        removeButton.innerHTML = `
-            <form class="remove-item-form" data-index="${container.dataset.index}">
-                <button type="submit" class="btn btn-danger btn-sm w-100">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
-            </form>
-        `;
-        priceContainer.appendChild(removeButton);
+        // Remove button is now in the template
         
         return {
             unitPrice,
