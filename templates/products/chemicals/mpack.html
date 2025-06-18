@@ -49,7 +49,9 @@
 
 
 
-      <span class="price-label">Net Price Per Sheet:</span>
+      <div class="price-display mb-4">
+      <div class="price-item">
+        <span class="price-label">Net Price Per Sheet:</span>
       <span id="netPrice" class="price-value">₹0.00</span>
     </div>
     <div class="price-item">
@@ -67,10 +69,12 @@
   </div>
 
 
-  <div id="discountSection" class="d-none" style="display:none;">
+  <div id="discountSection" style="display:none;">
 
       <span class="discount-label">Select Discount:</span>
       <select id="discountSelect" class="form-select">
+  </div>
+
   <!-- Machine Selector -->
   <div class="mb-3">
     <label for="machineSelect" class="form-label">Select Machine:</label>
