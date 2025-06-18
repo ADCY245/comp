@@ -191,6 +191,11 @@
                                             <span class="price-label">Unit Price:</span>
                                             <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
                                         </div>
+                                        <!-- Subtotal -->
+                                        <div class="price-row">
+                                            <span class="price-label">Subtotal:</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.subtotal|default((item.unit_price|default(0)) * (item.quantity|default(1)))) }}</span>
+                                        </div>
                                         <div class="price-row">
                                             <span class="price-label">Quantity:</span>
                                             <div class="quantity-controls d-inline-flex align-items-center">
@@ -243,6 +248,11 @@
                                         <div class="price-row">
                                             <span class="price-label">Unit Price:</span>
                                             <span class="price-value">₹{{ "%.2f"|format(item.calculations.unit_price|default(0)) }}</span>
+                                        </div>
+                                        <!-- Subtotal -->
+                                        <div class="price-row">
+                                            <span class="price-label">Subtotal:</span>
+                                            <span class="price-value">₹{{ "%.2f"|format((item.calculations.unit_price|default(0)) * (item.quantity|default(1))) }}</span>
                                         </div>
                                         <!-- Quantity -->
                                         <div class="price-row">
