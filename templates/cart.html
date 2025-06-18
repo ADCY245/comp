@@ -171,9 +171,7 @@
                                         <p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }} (₹{{ "%.2f"|format(item.bar_price|default(0)) }})</p>
                                         {% endif %}
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger remove-item" data-index="{{ loop.index0 }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+
                                 </div>
                                 <div class="price-details mt-3 p-3 bg-light rounded">
                                     <div class="price-grid">
@@ -236,11 +234,7 @@
                                         {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}</p>{% endif %}
                                         {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>{% endif %}
                                     </div>
-                                    <form class="remove-item-form d-inline" data-index="{{ loop.index0 }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+
                                 </div>
                                 <div class="price-details mt-3 p-3 bg-light rounded">
                                     <div class="price-grid">
