@@ -263,7 +263,7 @@ function updateCartTotals() {
     // Update the cart summary with total after GST
     const cartSummary = document.getElementById('cartSummary');
     if (cartSummary) {
-        const orderTotal = total;
+        const orderTotal = Math.round(total * 100) / 100;
         cartSummary.innerHTML = `
             <div class="card">
                 <div class="card-body">
