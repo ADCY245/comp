@@ -152,13 +152,13 @@
                         <div class="col-12">
                             {% if item.type == 'blanket' %}
                             <div class="blanket-product"
-                                 data-area="{{ item.calculations.areaSqM|default(0) }}"
-                                 data-rate="{{ item.calculations.ratePerSqMt|default(0) }}"
-                                 data-base-price="{{ item.calculations.basePrice|default(0) }}"
+                                 data-area="{{ item.calculations.areaSqM|default(0) if item.calculations else 0 }}"
+                                 data-rate="{{ item.calculations.ratePerSqMt|default(0) if item.calculations else 0 }}"
+                                 data-base-price="{{ item.calculations.basePrice|default(0) if item.calculations else 0 }}"
                                  data-bar-price="{{ item.bar_price|default(0) }}"
                                  data-quantity="{{ item.quantity|default(1) }}"
-                                 data-discount-percent="{{ item.calculations.discount_percent|default(0) }}"
-                                 data-gst-percent="{{ item.calculations.gst_percent|default(18) }}">
+                                 data-discount-percent="{{ item.calculations.discount_percent|default(0) if item.calculations else 0 }}"
+                                 data-gst-percent="{{ item.calculations.gst_percent|default(18) if item.calculations else 18 }}">
                                 
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
@@ -178,19 +178,19 @@
                                     <div class="price-grid">
                                         <div class="price-row">
                                             <span class="price-label">Base Price:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.basePrice|default(0)) }}</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.basePrice|default(0) if item.calculations else 0) }}</span>
                                         </div>
                                         
                                         {% if item.bar_price and item.bar_price > 0 %}
                                         <div class="price-row">
-                                            <span class="price-label">Bar ({{ item.bar_type }}):</span>
+                                            <span class="price-label">Bar ({{ item.bar_type|default('') }}):</span>
                                             <span class="price-value">+ ₹{{ "%.2f"|format(item.bar_price|default(0)) }}</span>
                                         </div>
                                         {% endif %}
                                         
                                         <div class="price-row border-top pt-2">
                                             <span class="price-label fw-bold">Unit Price:</span>
-                                            <span class="price-value fw-bold">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0)) }}</span>
+                                            <span class="price-value fw-bold">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0) if item.calculations else 0) }}</span>
                                         </div>
                                         
                                         <div class="price-row">
@@ -200,10 +200,10 @@
                                         
                                         <div class="price-row">
                                             <span class="price-label">Subtotal:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0) * item.quantity|default(1)) }}</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0) if item.calculations else 0) * item.quantity|default(1) }}</span>
                                         </div>
                                         
-                                        {% if item.calculations.discount_percent and item.calculations.discount_percent > 0 %}
+                                        {% if item.calculations and item.calculations.discount_percent and item.calculations.discount_percent > 0 %}
                                         <div class="col-12 mt-2 pt-2 border-top">
                                             <div class="d-flex justify-content-between text-danger">
                                                 <span>Discount ({{ item.calculations.discount_percent|default(0) }}%):</span>
