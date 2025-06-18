@@ -1,27 +1,53 @@
 function calculateItemPrices(item) {
-    if (item.type === 'mpack') {
-        const price = parseFloat(item.unit_price) || 0;
-        const quantity = parseInt(item.quantity) || 1;
-        const discountPercent = parseFloat(item.discount_percent) || 0;
-        const gstPercent = parseFloat(item.gst_percent) || 18;
-        
-        const discountAmount = (price * discountPercent / 100);
-        const priceAfterDiscount = price - discountAmount;
-        const gstAmount = (priceAfterDiscount * gstPercent / 100);
-        const finalUnitPrice = priceAfterDiscount + gstAmount;
-        const finalTotal = finalUnitPrice * quantity;
-        
-        item.calculations = {
-            unitPrice: parseFloat(price.toFixed(2)),
-            quantity: quantity,
-            discountPercent: discountPercent,
-            discountAmount: parseFloat(discountAmount.toFixed(2)),
-            priceAfterDiscount: parseFloat(priceAfterDiscount.toFixed(2)),
-            gstPercent: gstPercent,
-            gstAmount: parseFloat(gstAmount.toFixed(2)),
-            finalUnitPrice: parseFloat(finalUnitPrice.toFixed(2)),
-            finalTotal: parseFloat(finalTotal.toFixed(2))
-        };
+    // This function is no longer needed as calculations are done server-side
+    // We'll keep it for backward compatibility
+    if (!item.calculations) {
+        if (item.type === 'mpack') {
+            const price = parseFloat(item.unit_price) || 0;
+            const quantity = parseInt(item.quantity) || 1;
+            const discountPercent = parseFloat(item.discount_percent) || 0;
+            const gstPercent = parseFloat(item.gst_percent) || 18;
+            
+            const discountAmount = (price * discountPercent / 100);
+            const priceAfterDiscount = price - discountAmount;
+            const gstAmount = (priceAfterDiscount * gstPercent / 100);
+            const finalUnitPrice = priceAfterDiscount + gstAmount;
+            const finalTotal = finalUnitPrice * quantity;
+            
+            item.calculations = {
+                unitPrice: parseFloat(price.toFixed(2)),
+                quantity: quantity,
+                discountPercent: discountPercent,
+                discountAmount: parseFloat(discountAmount.toFixed(2)),
+                priceAfterDiscount: parseFloat(priceAfterDiscount.toFixed(2)),
+                gstPercent: gstPercent,
+                gstAmount: parseFloat(gstAmount.toFixed(2)),
+                finalUnitPrice: parseFloat(finalUnitPrice.toFixed(2)),
+                finalTotal: parseFloat(finalTotal.toFixed(2))
+            };
+        } else if (item.type === 'blanket') {
+            const basePrice = parseFloat(item.base_price) || 0;
+            const barPrice = parseFloat(item.bar_price) || 0;
+            const quantity = parseInt(item.quantity) || 1;
+            const discountPercent = parseFloat(item.discount_percent) || 0;
+            const gstPercent = parseFloat(item.gst_percent) || 18;
+            
+            const pricePerUnit = basePrice + barPrice;
+            const subtotal = pricePerUnit * quantity;
+            const discountAmount = subtotal * (discountPercent / 100);
+            const discountedSubtotal = subtotal - discountAmount;
+            const gstAmount = (discountedSubtotal * gstPercent) / 100;
+            const finalTotal = discountedSubtotal + gstAmount;
+            
+            item.calculations = {
+                pricePerUnit: round(pricePerUnit, 2),
+                subtotal: round(subtotal, 2),
+                discountAmount: round(discountAmount, 2),
+                discountedSubtotal: round(discountedSubtotal, 2),
+                gstAmount: round(gstAmount, 2),
+                finalTotal: round(finalTotal, 2)
+            };
+        }
     }
     
     return item;
@@ -389,27 +415,197 @@ function calculateBlanketPrices(container) {
     }
 }
 
+// Helper function to format currency values
+function formatCurrency(amount) {
+    return parseFloat(amount).toFixed(2);
+}
+
 // Initialize price calculations when the page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded, initializing price calculations...');
+    console.log('DOM fully loaded, initializing cart...');
     
     // Initialize cart count
     updateCartCount();
     
-    // Calculate prices for all products
+    // Initialize cart calculations
     initializeCartCalculations();
+    
+    // Set up event listeners for quantity changes
+    setupQuantityHandlers();
+    
+    // Set up event listeners for remove buttons
+    setupRemoveHandlers();
 });
 
 function initializeCartCalculations() {
-    // Handle MPack products
-    document.querySelectorAll('.mpack-product').forEach(container => {
-        console.log('Initializing MPack product:', container);
-        calculateMPackPrices(container);
-    });
+    // Update cart totals from server-calculated values
+    updateCartTotals();
     
-    // Handle Blanket products
-    document.querySelectorAll('.blanket-product').forEach(container => {
-        console.log('Initializing Blanket product:', container);
-        calculateBlanketPrices(container);
+    // Update individual product displays
+    document.querySelectorAll('.cart-item').forEach(item => {
+        updateItemDisplay(item);
     });
+}
+
+function updateCartTotals() {
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const discountEl = document.getElementById('cart-discount');
+    const gstEl = document.getElementById('cart-gst');
+    const totalEl = document.getElementById('cart-total');
+    
+    // These values are now calculated server-side and embedded in the template
+    // This function is kept for backward compatibility
+    if (!subtotalEl || !totalEl) return;
+    
+    // If we need to calculate client-side as fallback
+    if (subtotalEl && subtotalEl.dataset.calculated === 'false') {
+        let subtotal = 0;
+        let discount = 0;
+        let gst = 0;
+        
+        document.querySelectorAll('.cart-item').forEach(item => {
+            const price = parseFloat(item.dataset.price || 0);
+            const quantity = parseInt(item.dataset.quantity || 1);
+            const discountPercent = parseFloat(item.dataset.discountPercent || 0);
+            const gstPercent = parseFloat(item.dataset.gstPercent || 18);
+            
+            const itemSubtotal = price * quantity;
+            const itemDiscount = itemSubtotal * (discountPercent / 100);
+            const itemAfterDiscount = itemSubtotal - itemDiscount;
+            const itemGst = itemAfterDiscount * (gstPercent / 100);
+            
+            subtotal += itemSubtotal;
+            discount += itemDiscount;
+            gst += itemGst;
+        });
+        
+        subtotalEl.textContent = formatCurrency(subtotal);
+        if (discountEl) discountEl.textContent = `-${formatCurrency(discount)}`;
+        if (gstEl) gstEl.textContent = formatCurrency(gst);
+        if (totalEl) totalEl.textContent = formatCurrency(subtotal - discount + gst);
+    }
+}
+
+function updateItemDisplay(item) {
+    const type = item.dataset.type;
+    const calculations = JSON.parse(item.dataset.calculations || '{}');
+    
+    if (type === 'mpack') {
+        // Update MPack item display
+        const unitPriceEl = item.querySelector('.unit-price');
+        const discountEl = item.querySelector('.discount-amount');
+        const gstEl = item.querySelector('.gst-amount');
+        const totalEl = item.querySelector('.item-total');
+        
+        if (unitPriceEl) unitPriceEl.textContent = formatCurrency(calculations.unitPrice || 0);
+        if (discountEl) discountEl.textContent = `-${formatCurrency(calculations.discountAmount || 0)}`;
+        if (gstEl) gstEl.textContent = formatCurrency(calculations.gstAmount || 0);
+        if (totalEl) totalEl.textContent = formatCurrency(calculations.finalTotal || 0);
+        
+    } else if (type === 'blanket') {
+        // Update Blanket item display
+        const pricePerUnitEl = item.querySelector('.price-per-unit');
+        const subtotalEl = item.querySelector('.item-subtotal');
+        const discountEl = item.querySelector('.discount-amount');
+        const gstEl = item.querySelector('.gst-amount');
+        const totalEl = item.querySelector('.item-total');
+        
+        if (pricePerUnitEl) pricePerUnitEl.textContent = formatCurrency(calculations.pricePerUnit || 0);
+        if (subtotalEl) subtotalEl.textContent = formatCurrency(calculations.subtotal || 0);
+        if (discountEl) discountEl.textContent = `-${formatCurrency(calculations.discountAmount || 0)}`;
+        if (gstEl) gstEl.textContent = formatCurrency(calculations.gstAmount || 0);
+        if (totalEl) totalEl.textContent = formatCurrency(calculations.finalTotal || 0);
+    }
+}
+
+function setupQuantityHandlers() {
+    // Handle quantity changes
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const itemId = this.dataset.itemId;
+            const newQuantity = parseInt(this.value) || 1;
+            
+            if (newQuantity < 1) {
+                this.value = 1;
+                return;
+            }
+            
+            updateCartItemQuantity(itemId, newQuantity);
+        });
+    });
+}
+
+function setupRemoveHandlers() {
+    // Handle remove item buttons
+    document.querySelectorAll('.remove-item').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const itemId = this.dataset.itemId;
+            removeCartItem(itemId);
+        });
+    });
+}
+
+function updateCartItemQuantity(itemId, newQuantity) {
+    fetch(`/update_cart_item/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({ quantity: newQuantity })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the UI with the new data
+            location.reload(); // Reload to get fresh data from server
+        } else {
+            showToast('Error', data.error || 'Failed to update item quantity', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating cart item:', error);
+        showToast('Error', 'An error occurred while updating the cart', 'error');
+    });
+}
+
+function removeCartItem(itemId) {
+    if (!confirm('Are you sure you want to remove this item from your cart?')) {
+        return;
+    }
+    
+    fetch(`/remove_from_cart/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the item from the UI or reload the page
+            document.querySelector(`.cart-item[data-item-id="${itemId}"]`).remove();
+            updateCartTotals();
+            updateCartCount();
+            showToast('Success', 'Item removed from cart', 'success');
+        } else {
+            showToast('Error', data.error || 'Failed to remove item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing cart item:', error);
+        showToast('Error', 'An error occurred while removing the item', 'error');
+    });
+}
+
+function getCSRFToken() {
+    // Get CSRF token from cookie or meta tag
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    
+    return cookieValue || document.querySelector('meta[name="csrf-token"]')?.content;
 }

@@ -509,41 +509,92 @@ else:
 # -------------------- Cart helper wrappers --------------------
 
 def get_user_cart():
-    """Return a dict with a products list for the current user, using MongoDB if available."""
+    """Return a dict with a products list for the current user using MongoDB."""
     try:
+        if not hasattr(current_user, 'id'):
+            return {"products": []}
+            
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             products = cart_store.get_cart(current_user.id)
+            # Ensure all products have the correct structure
+            for product in products:
+                if 'calculations' not in product:
+                    # If calculations are missing, recalculate them
+                    if product.get('type') == 'blanket':
+                        base_price = float(product.get('base_price', 0))
+                        bar_price = float(product.get('bar_price', 0))
+                        quantity = int(product.get('quantity', 1))
+                        discount_percent = float(product.get('discount_percent', 0))
+                        gst_percent = float(product.get('gst_percent', 18))
+                        
+                        price_per_unit = base_price + bar_price
+                        subtotal = price_per_unit * quantity
+                        discount_amount = subtotal * (discount_percent / 100)
+                        discounted_subtotal = subtotal - discount_amount
+                        gst_amount = (discounted_subtotal * gst_percent) / 100
+                        final_total = discounted_subtotal + gst_amount
+                        
+                        product['calculations'] = {
+                            'price_per_unit': round(price_per_unit, 2),
+                            'subtotal': round(subtotal, 2),
+                            'discount_amount': round(discount_amount, 2),
+                            'discounted_subtotal': round(discounted_subtotal, 2),
+                            'gst_amount': round(gst_amount, 2),
+                            'final_total': round(final_total, 2)
+                        }
+                    elif product.get('type') == 'mpack':
+                        price = float(product.get('unit_price', 0))
+                        quantity = int(product.get('quantity', 1))
+                        discount_percent = float(product.get('discount_percent', 0))
+                        gst_percent = float(product.get('gst_percent', 18))
+                        
+                        discount_amount = (price * discount_percent / 100)
+                        price_after_discount = price - discount_amount
+                        gst_amount = (price_after_discount * gst_percent / 100)
+                        final_unit_price = price_after_discount + gst_amount
+                        final_total = final_unit_price * quantity
+                        
+                        product['calculations'] = {
+                            'unit_price': round(price, 2),
+                            'discount_amount': round(discount_amount, 2),
+                            'price_after_discount': round(price_after_discount, 2),
+                            'gst_amount': round(gst_amount, 2),
+                            'final_unit_price': round(final_unit_price, 2),
+                            'final_total': round(final_total, 2)
+                        }
+            
             return {"products": products or []}
-        else:
-            # Fallback to JSON storage
-            cart = cart_store.get_cart()
-            if not isinstance(cart, dict):
-                cart = {"products": []}
-            cart.setdefault("products", [])
-            return cart
+            
+        # If we get here, MongoDB is not available
+        print("MongoDB is not available for cart storage")
+        return {"products": []}
+        
     except Exception as e:
         print(f"Error in get_user_cart: {e}")
+        import traceback
+        traceback.print_exc()
         return {"products": []}
 
 def save_user_cart(cart_dict):
-    """Persist cart for current user using MongoDB if available."""
+    """Persist cart for current user using MongoDB."""
     try:
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and hasattr(current_user, 'id'):
-            # For MongoDB, we expect cart_dict to be a dictionary with a 'products' key
-            if isinstance(cart_dict, dict) and 'products' in cart_dict:
-                cart_store.save_cart(current_user.id, cart_dict['products'])
-            else:
-                cart_store.save_cart(current_user.id, [])
+        if not hasattr(current_user, 'id'):
+            print("Cannot save cart: No user ID available")
+            return
+            
+        if not isinstance(cart_dict, dict) or 'products' not in cart_dict:
+            print("Invalid cart format")
+            return
+            
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            cart_store.save_cart(current_user.id, cart_dict['products'])
         else:
-            # Fallback to JSON storage
-            if not isinstance(cart_dict, dict):
-                cart_dict = {"products": []}
-            cart_store.save_cart(cart_dict)
+            print("MongoDB is not available for cart storage")
+            
     except Exception as e:
         print(f"Error in save_user_cart: {e}")
         import traceback
         traceback.print_exc()
-        raise
 
 # Initialize users dictionary (only for JSON fallback)
 if USE_MONGO:
@@ -597,24 +648,59 @@ def display():
 @app.route('/cart')
 @login_required
 def cart():
-    """Render the cart page."""
-    cart_data = get_user_cart()
-    return render_template('cart.html', cart=cart_data)
-    """Render the cart page with current cart contents.
-
-    The Jinja template expects a ``cart`` object with a ``products`` list. We
-    fetch the persisted cart from ``cart_store`` and guarantee the structure so
-    that template rendering never fails even when the cart is empty.
+    """Render the cart page with current cart contents and calculated totals.
+    
+    The Jinja template expects a cart object with products list and calculated totals.
     """
-    # Get the current cart; fall back to an empty structure if something goes wrong
-    cart_data = cart_store.get_cart()
-    if not isinstance(cart_data, dict):
-        cart_data = {"products": []}
-
-    # Ensure required keys exist
-    cart_data.setdefault("products", [])
-
-    return render_template('cart.html', cart=cart_data)
+    try:
+        # Get the current cart
+        cart_data = get_user_cart()
+        if not isinstance(cart_data, dict):
+            cart_data = {"products": []}
+        
+        # Ensure products list exists
+        cart_data.setdefault("products", [])
+        
+        # Calculate cart totals
+        subtotal = sum(
+            float(p.get('calculations', {}).get('subtotal', 
+                  p.get('calculations', {}).get('price_after_discount', 
+                  float(p.get('price', 0)) * int(p.get('quantity', 1)))))
+            for p in cart_data['products']
+        )
+        
+        gst_amount = sum(
+            float(p.get('calculations', {}).get('gst_amount', 0))
+            for p in cart_data['products']
+        )
+        
+        total = sum(
+            float(p.get('calculations', {}).get('final_total', 0))
+            for p in cart_data['products']
+        )
+        
+        # Calculate discount amount if needed
+        discount_amount = sum(
+            float(p.get('calculations', {}).get('discount_amount', 0))
+            for p in cart_data['products']
+        )
+        
+        # Add calculated totals to the cart data
+        cart_data['calculations'] = {
+            'subtotal': round(subtotal, 2),
+            'discount_amount': round(discount_amount, 2),
+            'gst_amount': round(gst_amount, 2),
+            'total': round(total, 2)
+        }
+        
+        return render_template('cart.html', cart=cart_data)
+        
+    except Exception as e:
+        print(f"Error in cart route: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return empty cart on error
+        return render_template('cart.html', cart={"products": [], "error": str(e)})
 
 @app.route('/clear_cart', methods=['POST'])
 @login_required
@@ -639,40 +725,84 @@ def clear_cart():
 @login_required
 def add_to_cart():
     try:
-        product = request.get_json() or {}
-        cart = get_user_cart()
-        cart['products'].append(product)
-        save_user_cart(cart)
-        return jsonify({
-            'success': True,
-            'cart_count': len(cart['products'])
-        })
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-
-        product = {
-            'id': data.get('id'),
-            'name': data.get('name'),
-            'price': float(data.get('price', 0)),
-            'quantity': int(data.get('quantity', 1)),
-            'image': data.get('image', '')
-        }
 
         # Get current cart
         cart = get_user_cart()
         products = cart.get('products', [])
         
-        # Check if product already exists in cart
-        product_exists = False
-        for i, item in enumerate(products):
-            if item.get('id') == product['id']:
-                products[i]['quantity'] += product['quantity']  # Update quantity if exists
-                product_exists = True
-                break
+        # Calculate prices based on product type
+        if data.get('type') == 'blanket':
+            # Calculate blanket prices
+            base_price = float(data.get('base_price', 0))
+            bar_price = float(data.get('bar_price', 0))
+            quantity = int(data.get('quantity', 1))
+            discount_percent = float(data.get('discount_percent', 0))
+            gst_percent = float(data.get('gst_percent', 18))
+            
+            price_per_unit = base_price + bar_price
+            subtotal = price_per_unit * quantity
+            discount_amount = subtotal * (discount_percent / 100)
+            discounted_subtotal = subtotal - discount_amount
+            gst_amount = (discounted_subtotal * gst_percent) / 100
+            final_total = discounted_subtotal + gst_amount
+            
+            # Create product with calculations
+            product = {
+                'type': 'blanket',
+                'machine': data.get('machine'),
+                'thickness': data.get('thickness'),
+                'base_price': base_price,
+                'bar_price': bar_price,
+                'quantity': quantity,
+                'discount_percent': discount_percent,
+                'gst_percent': gst_percent,
+                'calculations': {
+                    'price_per_unit': round(price_per_unit, 2),
+                    'subtotal': round(subtotal, 2),
+                    'discount_amount': round(discount_amount, 2),
+                    'discounted_subtotal': round(discounted_subtotal, 2),
+                    'gst_amount': round(gst_amount, 2),
+                    'final_total': round(final_total, 2)
+                }
+            }
+        else:
+            # Handle other product types (mpack, etc.)
+            product = {
+                'type': data.get('type'),
+                'name': data.get('name'),
+                'unit_price': float(data.get('unit_price', 0)),
+                'quantity': int(data.get('quantity', 1)),
+                'discount_percent': float(data.get('discount_percent', 0)),
+                'gst_percent': float(data.get('gst_percent', 18))
+            }
+            
+            # Calculate prices for other product types if needed
+            if product['type'] == 'mpack':
+                price = product['unit_price']
+                quantity = product['quantity']
+                discount_percent = product['discount_percent']
+                gst_percent = product['gst_percent']
                 
-        if not product_exists:
-            products.append(product)
+                discount_amount = (price * discount_percent / 100)
+                price_after_discount = price - discount_amount
+                gst_amount = (price_after_discount * gst_percent / 100)
+                final_unit_price = price_after_discount + gst_amount
+                final_total = final_unit_price * quantity
+                
+                product['calculations'] = {
+                    'unit_price': round(price, 2),
+                    'discount_amount': round(discount_amount, 2),
+                    'price_after_discount': round(price_after_discount, 2),
+                    'gst_amount': round(gst_amount, 2),
+                    'final_unit_price': round(final_unit_price, 2),
+                    'final_total': round(final_total, 2)
+                }
+        
+        # Add product to cart
+        products.append(product)
         
         # Save updated cart
         save_user_cart({'products': products})
@@ -684,7 +814,9 @@ def add_to_cart():
         })
     except Exception as e:
         print(f"Error adding to cart: {e}")
-        return jsonify({'error': 'Failed to add to cart'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/get_cart')
 @login_required
