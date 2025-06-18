@@ -270,11 +270,11 @@ function updateCartTotals() {
                     <h5 class="card-title">Order Summary</h5>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Total (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
-<<<<<<< HEAD
-                        <span>₹${total.toFixed(2)}</span>
-=======
+
                         <span>₹${orderTotal.toFixed(2)}</span>
->>>>>>> 4bff09061fbc6c30ecdae7cd99f4ec9d54f5e94d
+
+                        <span>₹${orderTotal.toFixed(2)}</span>
+
                     </div>
                     <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
                 </div>
@@ -472,6 +472,8 @@ function calculateMPackPrices(container) {
         
         // Add unit price row
         priceGrid.appendChild(createPriceRow('Unit Price:', `₹${unitPrice.toFixed(2)}`));
+        // Add subtotal row
+        priceGrid.appendChild(createPriceRow('Subtotal:', `₹${subtotal.toFixed(2)}`));
         
         // Add quantity row with controls
         const quantityRow = document.createElement('div');
@@ -573,6 +575,8 @@ function calculateBlanketPrices(container) {
         
         // Add unit price row
         priceGrid.appendChild(createPriceRow('Unit Price:', `₹${pricePerUnit.toFixed(2)}`));
+        // Add subtotal row
+        priceGrid.appendChild(createPriceRow('Subtotal:', `₹${subtotal.toFixed(2)}`));
         
         // Add quantity row with controls
         const quantityRow = document.createElement('div');
