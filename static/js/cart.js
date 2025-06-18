@@ -457,11 +457,16 @@ function calculateMPackPrices(container) {
             priceGrid.innerHTML = ''; // Clear existing content
         }
         
+        // Create a container for the left-aligned content
+        const leftContainer = document.createElement('div');
+        leftContainer.className = 'mpack-left-content';
+        priceGrid.appendChild(leftContainer);
+
         // Add heading
         const heading = document.createElement('div');
-        heading.className = 'price-heading fw-bold text-center mb-2';
+        heading.className = 'price-heading fw-bold mb-2';
         heading.textContent = 'MPack';
-        priceGrid.appendChild(heading);
+        leftContainer.appendChild(heading);
 
         // Add machine, thickness, and size details
         const details = [
@@ -474,15 +479,19 @@ function calculateMPackPrices(container) {
             const detailRow = document.createElement('div');
             detailRow.className = 'price-detail';
             detailRow.textContent = detail;
-            priceGrid.appendChild(detailRow);
+            leftContainer.appendChild(detailRow);
         });
 
         // Add a divider
         const divider = document.createElement('div');
         divider.className = 'border-top my-2';
-        priceGrid.appendChild(divider);
+        leftContainer.appendChild(divider);
 
-        // Create price rows
+        // Create price rows container
+        const priceContainer = document.createElement('div');
+        priceContainer.className = 'price-container';
+        leftContainer.appendChild(priceContainer);
+
         const createPriceRow = (label, value, isBold = false) => {
             const row = document.createElement('div');
             row.className = `price-row d-flex justify-content-between ${isBold ? 'fw-bold' : ''}`;
@@ -493,14 +502,9 @@ function calculateMPackPrices(container) {
             return row;
         };
         
-        // Add unit price row
-        priceGrid.appendChild(createPriceRow('Unit Price:', `₹${unitPrice.toFixed(2)}`));
-        // Add subtotal row
-        priceGrid.appendChild(createPriceRow('Subtotal:', `₹${subtotal.toFixed(2)}`));
-        
-        // Add quantity row with controls
+        // Add quantity row with controls first
         const quantityRow = document.createElement('div');
-        quantityRow.className = 'price-row d-flex justify-content-between align-items-center';
+        quantityRow.className = 'price-row d-flex justify-content-between align-items-center mb-2';
         quantityRow.innerHTML = `
             <span class="price-label">Quantity:</span>
             <div class="d-flex align-items-center">
@@ -511,7 +515,12 @@ function calculateMPackPrices(container) {
                 <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="${container.dataset.index}">+</button>
             </div>
         `;
-        priceGrid.appendChild(quantityRow);
+        priceContainer.appendChild(quantityRow);
+        
+        // Add unit price row
+        priceContainer.appendChild(createPriceRow('Unit Price:', `₹${unitPrice.toFixed(2)}`));
+        // Add subtotal row
+        priceContainer.appendChild(createPriceRow('Subtotal:', `₹${subtotal.toFixed(2)}`));
         
         // Add discount row if applicable
         if (discountPercent > 0) {

@@ -100,6 +100,30 @@
             color: #333;
         }
         
+        .mpack-left-content {
+            width: 100%;
+        }
+        
+        .price-container {
+            margin-top: 1rem;
+        }
+        
+        /* Ensure the remove button appears below the price grid */
+        .mpack-product .row.mt-3 {
+            margin-top: 1rem !important;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .mpack-product .remove-item-form {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .mpack-product .btn-danger {
+            width: 100%;
+        }
+        
         .quantity-controls {
             display: flex;
             align-items: center;
@@ -280,21 +304,20 @@
                         <div class="row">
                             <div class="col-12">
                                 <h5 class="product-title">{{ item.name }}</h5>
-                                <div class="price-details mt-3 p-3 bg-light rounded">
-                                    <div class="price-grid">
-                                        <!-- Price grid will be populated by JavaScript -->
+                                <div class="details-container">
+                                    <div class="price-details p-3 bg-light rounded">
+                                        <div class="price-grid">
+                                            <!-- Price grid will be populated by JavaScript -->
+                                        </div>
+                                    </div>
+                                    <div class="remove-container mt-3">
+                                        <form class="remove-item-form" data-index="{{ loop.index0 }}">
+                                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                                                <i class="fas fa-trash"></i> Remove
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
-
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-12 text-end">
-                                <form class="remove-item-form d-inline" data-index="{{ loop.index0 }}">
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i> Remove
-                                    </button>
-                                </form>
                             </div>
                         </div>
                         {% endif %}
