@@ -274,7 +274,7 @@ function updateCartTotals() {
                         <span>₹${orderTotal.toFixed(2)}</span>
 
                     </div>
-                    <button class="btn btn-primary w-100 mt-3">Proceed to Checkout</button>
+                    <button class="btn btn-primary w-100 mt-3">Send Quotation</button>
                 </div>
             </div>
         `;
@@ -457,6 +457,12 @@ function calculateMPackPrices(container) {
             priceGrid.innerHTML = ''; // Clear existing content
         }
         
+        // Add heading for MPack
+        const heading = document.createElement('div');
+        heading.className = 'price-heading fw-bold text-center mb-2';
+        heading.textContent = 'MPack';
+        priceGrid.appendChild(heading);
+
         // Create price rows
         const createPriceRow = (label, value, isBold = false) => {
             const row = document.createElement('div');
@@ -549,9 +555,16 @@ function calculateBlanketPrices(container) {
     container.dataset.gstPercent = gstPercent;
     
     // Update the UI
-    const priceGrid = container.querySelector('.price-grid');
-    if (priceGrid) {
+    let priceGrid = container.querySelector('.price-grid');
+    if (!priceGrid) {
+        // Create a new grid if it doesn't exist (keeps layout consistent with MPack products)
+        priceGrid = document.createElement('div');
+        priceGrid.className = 'price-grid';
+        container.appendChild(priceGrid);
+    } else {
+        // Clear existing content before re-building
         priceGrid.innerHTML = '';
+    }
         
         const createPriceRow = (label, value, isBold = false) => {
             const row = document.createElement('div');
@@ -611,7 +624,6 @@ function calculateBlanketPrices(container) {
             `₹${finalTotal.toFixed(2)}`,
             true
         ));
-    }
     
     return {
         basePrice,
