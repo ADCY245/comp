@@ -482,7 +482,8 @@ function addBlanketToCart() {
   const product = {
     id: 'blanket_' + Date.now(),
     type: 'blanket',
-    name: selectedBlanket.name,
+    name: selectedBlanket.name || 'Custom Blanket',
+    blanket_name: selectedBlanket.name || 'Custom Blanket',
     machine: machineSelect.options[machineSelect.selectedIndex].text,
     thickness: thicknessSelect ? thicknessSelect.value : '',
     length: length,

@@ -326,7 +326,7 @@
                                      data-discount-percent="{{ item.discount_percent|default(0) }}"
                                      data-gst-percent="{{ item.gst_percent|default(18) }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">{{ item.name }}{% if item.bar_type %} ({{ item.bar_type }}){% endif %}</h5>
+                                        <h5 class="product-title">{% if item.blanket_name %}{{ item.blanket_name }}{% else %}{{ item.name }}{% endif %}{% if item.bar_type %} ({{ item.bar_type }}){% endif %}</h5>
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
