@@ -729,19 +729,16 @@ def add_to_cart():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        # Get current cart
-        cart = get_user_cart()
-        products = cart.get('products', [])
-        
         # Calculate prices based on product type
         if data.get('type') == 'blanket':
-            # Calculate blanket prices
+            # Get all required fields with proper defaults
             base_price = float(data.get('base_price', 0))
             bar_price = float(data.get('bar_price', 0))
             quantity = int(data.get('quantity', 1))
             discount_percent = float(data.get('discount_percent', 0))
             gst_percent = float(data.get('gst_percent', 18))
             
+            # Calculate prices
             price_per_unit = base_price + bar_price
             subtotal = price_per_unit * quantity
             discount_amount = subtotal * (discount_percent / 100)
@@ -749,24 +746,49 @@ def add_to_cart():
             gst_amount = (discounted_subtotal * gst_percent) / 100
             final_total = discounted_subtotal + gst_amount
             
-            # Create product with calculations
+            # Get dimensions and other details
+            length = float(data.get('length', 0))
+            width = float(data.get('width', 0))
+            unit = data.get('unit', 'mm')
+            
+            # Convert area to square meters if needed
+            area_sq_m = length * width
+            if unit == 'mm':
+                area_sq_m = (length / 1000) * (width / 1000)
+            elif unit == 'in':
+                area_sq_m = (length * 0.0254) * (width * 0.0254)
+            
+            # Create product with all details
             product = {
                 'type': 'blanket',
-                'machine': data.get('machine'),
-                'thickness': data.get('thickness'),
-                'base_price': base_price,
+                'name': data.get('name', 'Custom Blanket'),
+                'machine': data.get('machine', 'Unknown Machine'),
+                'thickness': data.get('thickness', ''),
+                'length': length,
+                'width': width,
+                'unit': unit,
+                'bar_type': data.get('bar_type', 'None'),
                 'bar_price': bar_price,
                 'quantity': quantity,
+                'base_price': base_price,
                 'discount_percent': discount_percent,
                 'gst_percent': gst_percent,
+                'unit_price': round(price_per_unit, 2),
+                'total_price': round(final_total, 2),
                 'calculations': {
-                    'price_per_unit': round(price_per_unit, 2),
+                    'areaSqM': round(area_sq_m, 4),
+                    'ratePerSqMt': round(base_price / area_sq_m, 2) if area_sq_m > 0 else 0,
+                    'basePrice': round(base_price, 2),
+                    'pricePerUnit': round(price_per_unit, 2),
                     'subtotal': round(subtotal, 2),
+                    'discount_percent': discount_percent,
                     'discount_amount': round(discount_amount, 2),
                     'discounted_subtotal': round(discounted_subtotal, 2),
+                    'gst_percent': gst_percent,
                     'gst_amount': round(gst_amount, 2),
-                    'final_total': round(final_total, 2)
-                }
+                    'final_price': round(final_total, 2)
+                },
+                'added_at': datetime.utcnow().isoformat()
             }
         else:
             # Handle other product types (mpack, etc.)

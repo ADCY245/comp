@@ -487,9 +487,17 @@ function addBlanketToCart() {
     thickness: thicknessSelect ? thicknessSelect.value : '',
     length: length,
     width: width,
+    unit: unit,
     bar_type: barType,
     bar_price: barPrice,
     quantity: quantity,
+    gst_percent: gstPercent,
+    
+    // Price calculations
+    base_price: parseFloat(basePrice.toFixed(2)),
+    bar_price: barPrice,
+    discount_percent: currentDiscount,
+    gst_percent: gstPercent,
     
     // Pre-calculated values for display
     calculations: {
@@ -532,12 +540,19 @@ function addBlanketToCart() {
       type: 'blanket',
       machine: product.machine,
       thickness: product.thickness,
-      size: `${product.length}x${product.width}`,
+      length: product.length,
+      width: product.width,
+      unit: product.unit,
+      bar_type: product.bar_type,
+      bar_price: product.bar_price,
       quantity: product.quantity,
-      price_per_sheet: product.unit_price, // final unit price incl. GST
+      base_price: product.base_price,
+      discount_percent: product.discount_percent,
+      gst_percent: product.gst_percent,
+      unit_price: product.unit_price, // final unit price incl. GST
       total_price: product.total_price,
-      discount: product.calculations.discount_percent,
-      final_price: product.total_price // same as total_price for now
+      // Include all calculations for server-side verification
+      calculations: product.calculations
     };
 
     fetch('/add_to_cart', {

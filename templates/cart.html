@@ -154,60 +154,47 @@
                             <div class="blanket-product"
                                  data-area="{{ item.calculations.areaSqM|default(0) if item.calculations else 0 }}"
                                  data-rate="{{ item.calculations.ratePerSqMt|default(0) if item.calculations else 0 }}"
-                                 data-base-price="{{ item.calculations.basePrice|default(0) if item.calculations else 0 }}"
+                                 data-base-price="{{ item.base_price|default(0) }}"
                                  data-bar-price="{{ item.bar_price|default(0) }}"
                                  data-quantity="{{ item.quantity|default(1) }}"
-                                 data-discount-percent="{{ item.calculations.discount_percent|default(0) if item.calculations else 0 }}"
-                                 data-gst-percent="{{ item.calculations.gst_percent|default(18) if item.calculations else 18 }}">
-                                
+                                 data-discount-percent="{{ item.discount_percent|default(0) }}"
+                                 data-gst-percent="{{ item.gst_percent|default(18) }}">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h5 class="mb-2">{{ item.name }}</h5>
-                                        <p class="mb-1"><strong>Product Type:</strong> Blanket</p>
-                                        {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
-                                        {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }} mm</p>{% endif %}
-                                        {% if item.bar_type and item.bar_type|lower != 'none' %}<p class="mb-1"><strong>Bar Type:</strong> {{ item.bar_type }}</p>{% endif %}
-                                        {% if item.length and item.width %}<p class="mb-2"><strong>Dimensions:</strong> {{ item.length }} x {{ item.width }} mm</p>{% endif %}
+                                        <h5 class="product-title">{{ item.name }}</h5>
+                                        <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
+                                        <p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>
+                                        <p class="mb-1"><strong>Size:</strong> {{ item.length }}x{{ item.width }} {{ item.unit }}</p>
+                                        {% if item.bar_type %}
+                                        <p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }} (₹{{ "%.2f"|format(item.bar_price|default(0)) }})</p>
+                                        {% endif %}
                                     </div>
-                                    {% if item.image %}
-                                    <img src="{{ item.image }}" alt="{{ item.name }}" class="img-fluid" style="max-width: 100px; height: auto;">
-                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-danger remove-item" data-index="{{ loop.index0 }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
-                                
                                 <div class="price-details mt-3 p-3 bg-light rounded">
                                     <div class="price-grid">
                                         <div class="price-row">
                                             <span class="price-label">Base Price:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.basePrice|default(0) if item.calculations else 0) }}</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.base_price|default(0)) }}</span>
                                         </div>
-                                        
                                         {% if item.bar_price and item.bar_price > 0 %}
                                         <div class="price-row">
-                                            <span class="price-label">Bar ({{ item.bar_type|default('') }}):</span>
-                                            <span class="price-value">+ ₹{{ "%.2f"|format(item.bar_price|default(0)) }}</span>
+                                            <span class="price-label">Barring:</span>
+                                            <span class="price-value">+₹{{ "%.2f"|format(item.bar_price|default(0)) }}</span>
                                         </div>
                                         {% endif %}
-                                        
-                                        <div class="price-row border-top pt-2">
-                                            <span class="price-label fw-bold">Unit Price:</span>
-                                            <span class="price-value fw-bold">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0) if item.calculations else 0) }}</span>
+                                        <div class="price-row">
+                                            <span class="price-label">Unit Price:</span>
+                                            <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
                                         </div>
-                                        
                                         <div class="price-row">
                                             <span class="price-label">Quantity:</span>
-                                            <span class="price-value">{{ item.quantity|default(1) }}</span>
-                                        </div>
-                                        
-                                        <div class="price-row">
-                                            <span class="price-label">Subtotal:</span>
-                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.pricePerUnit|default(0) if item.calculations else 0) * item.quantity|default(1) }}</span>
-                                        </div>
-                                        
-                                        {% if item.calculations and item.calculations.discount_percent and item.calculations.discount_percent > 0 %}
-                                        <div class="col-12 mt-2 pt-2 border-top">
-                                            <div class="d-flex justify-content-between text-danger">
-                                                <span>Discount ({{ item.calculations.discount_percent|default(0) }}%):</span>
-                                                <span>- ₹{{ "%.2f"|format(item.calculations.discount_amount|default(0)) }}</span>
+                                            <div class="quantity-controls d-inline-flex align-items-center">
+                                                <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}">-</button>
+                                                <input type="number" class="form-control form-control-sm quantity-input" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" style="width: 60px; text-align: center;">
+                                                <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}">+</button>
                                             </div>
                                             <div class="d-flex justify-content-between fw-bold mt-1">
                                                 <span>After Discount:</span>
