@@ -245,9 +245,26 @@
                 {% endif %}
             </div>
             <div>
-                <a href="{{ url_for('home') }}" class="btn btn-outline-secondary me-2">
+                <a href="#" id="continueShoppingBtn" class="btn btn-outline-secondary me-2">
                     <i class="fas fa-arrow-left me-1"></i> Continue Shopping
                 </a>
+                <script>
+                    document.getElementById('continueShoppingBtn').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const companyName = sessionStorage.getItem('companyName') || '';
+                        const companyEmail = sessionStorage.getItem('companyEmail') || '';
+                        let url = '{{ url_for("home") }}';
+                        
+                        if (companyName) {
+                            url += (url.includes('?') ? '&' : '?') + 'company=' + encodeURIComponent(companyName);
+                            if (companyEmail) {
+                                url += '&email=' + encodeURIComponent(companyEmail);
+                            }
+                        }
+                        
+                        window.location.href = url;
+                    });
+                </script>
                 <form action="{{ url_for('clear_cart') }}" method="POST" class="d-inline">
                     <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to remove all items from your cart?')">
                         <i class="fas fa-trash me-1"></i> Remove All
@@ -412,10 +429,24 @@
                 }
             }
 
-            // Get company info from URL parameters
+            // Get company info from URL parameters or session storage
             const urlParams = new URLSearchParams(window.location.search);
-            const companyName = urlParams.get('company');
-            const companyEmail = urlParams.get('email');
+            let companyName = urlParams.get('company');
+            let companyEmail = urlParams.get('email');
+            
+            // If we have company info in URL, save it to session storage
+            if (companyName && companyName !== 'undefined') {
+                sessionStorage.setItem('companyName', companyName);
+            }
+            if (companyEmail && companyEmail !== 'undefined') {
+                sessionStorage.setItem('companyEmail', companyEmail);
+            }
+            
+            // Get company info from session storage if not in URL
+            companyName = companyName || sessionStorage.getItem('companyName') || 'Your Company';
+            companyEmail = companyEmail || sessionStorage.getItem('companyEmail') || '';
+            
+            // Update the display with the company info
             updateCompanyDisplay(companyName, companyEmail);
 
             // Load cart items from localStorage
