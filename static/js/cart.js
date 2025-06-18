@@ -457,11 +457,30 @@ function calculateMPackPrices(container) {
             priceGrid.innerHTML = ''; // Clear existing content
         }
         
-        // Add heading for MPack
+        // Add heading
         const heading = document.createElement('div');
         heading.className = 'price-heading fw-bold text-center mb-2';
         heading.textContent = 'MPack';
         priceGrid.appendChild(heading);
+
+        // Add machine, thickness, and size details
+        const details = [
+            `Machine: ${container.dataset.machine || 'N/A'}`,
+            `Thickness: ${container.dataset.thickness || 'N/A'}`,
+            `Size: ${container.dataset.size || 'N/A'}`
+        ];
+
+        details.forEach(detail => {
+            const detailRow = document.createElement('div');
+            detailRow.className = 'price-detail';
+            detailRow.textContent = detail;
+            priceGrid.appendChild(detailRow);
+        });
+
+        // Add a divider
+        const divider = document.createElement('div');
+        divider.className = 'border-top my-2';
+        priceGrid.appendChild(divider);
 
         // Create price rows
         const createPriceRow = (label, value, isBold = false) => {
