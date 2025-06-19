@@ -1162,10 +1162,7 @@ def quotation_preview():
         item.setdefault('unit_price', 0)
         
         # Calculate item total
-        if item['type'] == 'blanket':
-            item_subtotal = float(item.get('total', 0))
-        else:
-            item_subtotal = float(item['unit_price']) * int(item['quantity']) * (1 - (float(item['discount_percent']) / 100))
+        item_subtotal = item.get('total', 0) or (float(item['unit_price']) * int(item['quantity']) * (1 - (float(item['discount_percent']) / 100)))
         
         # Update item with calculated values
         item['subtotal'] = round(item_subtotal, 2)

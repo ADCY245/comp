@@ -26,14 +26,12 @@
     <div style="text-align:right">
         <strong>Quote #:</strong> {{ quote_id }}<br>
         <strong>Date:</strong> {{ today }}<br>
-        <strong>Customer ID:</strong> {{ customer_email }}
+        <strong>Customer:</strong> {{ customer_name }}<br>
+        <strong>Email:</strong> {{ customer_email }}
     </div>
   </div>
   
-  <div class="customer-info">
-    <p><strong>To:</strong> {{ customer_name }}</p>
-    <p><strong>Email:</strong> {{ customer_email }}</p>
-  </div>
+
   
   <p>Hello,<br><br>This is <strong>{{ current_user.username }}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
   
@@ -61,7 +59,7 @@
           <td>{{ loop_index }}</td>
           <td>{{ item.get('machine', '') }}</td>
           <td>{{ prod_type }}</td>
-          <td>{{ item.get('blanket_type', 'N/A') if prod_type == 'blanket' else 'N/A' }}</td>
+          <td>{{ item.get('blanket_type') or item.get('name','----') if prod_type == 'blanket' else '----' }}</td>
           <td>{{ item.get('thickness', 'N/A') }}</td>
           <td>
             {% if item.get('size') %}
