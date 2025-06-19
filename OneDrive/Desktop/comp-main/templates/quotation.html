@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Quotation Preview - WQA{% endblock %}
+{% block extra_css %}
+<style>
+    .quote-container{max-width:900px;margin:0 auto;padding:20px;border:1px solid #ddd;background:#fff}
+    .quote-header{display:flex;justify-content:space-between;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #ccc;padding:6px;text-align:center;font-size:0.9rem}
+    thead{background:#f2f2f2}
+    .notes-area{width:100%;min-height:100px;margin-top:15px}
+    .btn-send{margin-top:15px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="quote-container">
+  <h2 style="text-align:center">QUOTATION</h2>
+  <div class="quote-header">
+    <div>
+        <strong>CGI - Chemo Graphics India</strong><br>
+        123 Print Lane, Mumbai, India<br>
+        Phone: +91-9999999999<br>
+        Email: md.desk@chemo.in
+    </div>
+    <div style="text-align:right">
+        <strong>Quote #:</strong> {{ quote_id }}<br>
+        <strong>Date:</strong> {{ today }}<br>
+        <strong>Customer ID:</strong> {{ customer_email }}<br>
+        <strong>Valid Until:</strong> {{ valid_until }}
+    </div>
+  </div>
+  <p>Hello,<br><br>This is <strong>{{ current_user.username }}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Sr No</th><th>Machine</th><th>Product Type</th><th>Blanket Type</th><th>Dimensions</th><th>Barring Type</th><th>Quantity</th><th>Discount</th><th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set subtotal = 0 %}
+      {% for item in cart.products %}
+        {% set loop_index = loop.index %}
+        {% set prod_type = item.type %}
+        {% set total_val = item.calculations.final_total if item.calculations and 'final_total' in item.calculations else 
+                 item.calculations.final_price if item.calculations and 'final_price' in item.calculations else 
+                 item.total_price if 'total_price' in item else 
+                 item.unit_price * item.quantity %}
+        {% set subtotal = subtotal + total_val %}
+        <tr>
+          <td>{{ loop_index }}</td>
+          <td>{{ item.machine or '' }}</td>
+          <td>{{ prod_type }}</td>
+          <td>{{ item.blanket_type if prod_type=='blanket' else '----' }}</td>
+          <td>{{ item.size if item.size else (item.length ~ 'x' ~ item.width ~ (item.unit or '')) }}</td>
+          <td>{{ item.bar_type if prod_type=='blanket' else '----' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.discount_percent }}%</td>
+          <td>₹{{ '%.2f'|format(total_val) }}</td>
+        </tr>
+      {% endfor %}
+      <tr>
+        <td colspan="8" style="text-align:right"><strong>Subtotal:</strong></td>
+        <td><strong>₹{{ '%.2f'|format(subtotal) }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="mt-3">Additional Notes (optional)</h5>
+  <textarea id="quotationNotes" class="notes-area" placeholder="Add any extra details..."></textarea>
+  <button class="btn btn-primary btn-send" id="sendQuotationBtn"><i class="fas fa-paper-plane me-1"></i> Send Quotation</button>
+  <p class="mt-3 text-muted" style="font-size:0.8rem">This quotation is not a contract or invoice. It is our best estimate and valid until {{ valid_until }}.</p>
+</div>
+<script src="{{ url_for('static', filename='js/quotation.js') }}"></script>
+{% endblock %}
