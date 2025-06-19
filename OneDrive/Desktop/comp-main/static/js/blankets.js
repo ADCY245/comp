@@ -21,7 +21,7 @@ window.onload = () => {
       });
     });
 
-  fetch("/static/data/blankets.json")
+  fetch("/static/products/blankets/blankets.json")
     .then(res => res.json())
     .then(data => {
       blanketData = data.products;
@@ -208,9 +208,10 @@ function convertToMeters(value, unit) {
 function displayRates() {
   const selected = blanketData.find(p => p.id == document.getElementById("blanketSelect").value);
   if (selected) {
-    const ratePerSqMeter = parseFloat(selected.base_rate) || 0;
+    const ratePerSqMeter = parseFloat(selected.ratePerSqMt || selected.base_rate || 0);
     document.getElementById("rateSqMeter").innerText = `₹${ratePerSqMeter}`;
-    const ratePerSqYard = (ratePerSqMeter / 1.19599).toFixed(2);
+    // 1 sq.m = 1.19599 sq.yd, derive yard rate on the fly if not provided
+    const ratePerSqYard = parseFloat(selected.ratePerSqYard || (ratePerSqMeter ? (ratePerSqMeter / 1.19599).toFixed(2) : 0));
     document.getElementById("rateSqYard").innerText = `₹${ratePerSqYard}`;
     
   } else {
@@ -262,11 +263,12 @@ function calculatePrice() {
   // Calculate base price using ratePerSqMt (rate per square meter)
   console.log('Calculating base price:', {
     areaSqM,
-    ratePerSqMt: parseFloat(selectedBlanket.base_rate) || 0,
+    ratePerSqMt: parseFloat(selectedBlanket.ratePerSqMt) || 0,
     currentBarRate
   });
   
-  const ratePerSqMt = parseFloat(selectedBlanket.base_rate) || 0;
+  // Prefer ratePerSqMt if provided, otherwise fallback to base_rate
+    const ratePerSqMt = parseFloat(selectedBlanket.ratePerSqMt || selectedBlanket.base_rate || 0);
   basePrice = areaSqM * ratePerSqMt;
   console.log('Base price calculated:', basePrice);
   
@@ -462,7 +464,8 @@ function addBlanketToCart() {
   const areaSqM = lengthM * widthM;
   
   // Calculate base price (area * rate per sq.meter)
-  const ratePerSqMt = parseFloat(selectedBlanket.base_rate) || 0;
+  // Prefer ratePerSqMt, fallback to base_rate for backward compatibility
+  const ratePerSqMt = parseFloat(selectedBlanket.ratePerSqMt || selectedBlanket.base_rate || 0);
   basePrice = areaSqM * ratePerSqMt;
   
   // Apply discount to base price only
@@ -539,6 +542,7 @@ function addBlanketToCart() {
   try {
     const payload = {
       type: 'blanket',
+      name: product.name, // Add the name field
       machine: product.machine,
       thickness: product.thickness,
       length: product.length,
