@@ -1147,6 +1147,11 @@ def forgot_password():
 @app.route('/quotation_preview')
 @login_required
 def quotation_preview():
+    # Get current date and time
+    current_datetime = datetime.now()
+    quote_date = current_datetime.strftime('%d-%m-%Y')
+    quote_time = current_datetime.strftime('%H:%M:%S')
+    
     cart = get_user_cart()
     if not cart.get('products'):
         flash('Your cart is empty', 'warning')
@@ -1276,7 +1281,8 @@ def quotation_preview():
     context = {
         'cart': cart,
         'quote_id': f"CGI-{int(datetime.utcnow().timestamp()*1000)}",
-        'today': datetime.utcnow().strftime('%d/%m/%Y'),
+        'quote_date': quote_date,
+        'quote_time': quote_time,
         'customer_email': customer_email,
         'customer_name': customer_name,
         'calculations': {
