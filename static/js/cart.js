@@ -147,13 +147,12 @@ function showToast(title, message, type = 'info') {
     }, 5000);
 }
 
-// Initialize price calculations when the page loads
+// Initialize cart when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
     
     // Initialize cart handlers
     initializeCartCalculations();
-    setupQuantityHandlers();
     setupRemoveHandlers();
     
     // Update cart totals and UI
@@ -177,7 +176,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeCartCalculations() {
     const cartItems = document.querySelectorAll('.cart-item');
     cartItems.forEach(item => {
-        calculateProductPrices(item);
+        // Only calculate prices, no quantity handlers
+        if (item.dataset.type === 'mpack') {
+            calculateMPackPrices(item);
+        } else if (item.dataset.type === 'blanket') {
+            calculateBlanketPrices(item);
+        }
     });
 }
 
@@ -282,84 +286,26 @@ function updateCartTotals() {
 }
 
 function setupQuantityHandlers() {
-    // Handle quantity increase
-    document.querySelectorAll('.quantity-increase').forEach(button => {
-        button.addEventListener('click', function() {
-            const index = this.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
-            if (input) {
-                input.value = parseInt(input.value) + 1;
-                updateCartItemQuantity(index, input.value);
-            }
-        });
-    });
-    
-    // Handle quantity decrease
-    document.querySelectorAll('.quantity-decrease').forEach(button => {
-        button.addEventListener('click', function() {
-            const index = this.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
-            if (input && parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-                updateCartItemQuantity(index, input.value);
-            }
-        });
-    });
-    
-    // Handle direct input
-    document.querySelectorAll('.quantity-input').forEach(input => {
-        input.addEventListener('change', function() {
-            const index = this.dataset.index;
-            const value = parseInt(this.value) || 1;
-            this.value = Math.max(1, value);
-            updateCartItemQuantity(index, this.value);
-        });
-    });
+    // Quantity change functionality removed as per requirements
 }
 
 function setupRemoveHandlers() {
-    // Handle remove item
-    document.querySelectorAll('.remove-item').forEach(button => {
-        button.addEventListener('click', function() {
-            const index = this.dataset.index;
+    // Use event delegation for remove item buttons
+    document.addEventListener('click', function(event) {
+        // Check if the clicked element or any of its parents have the remove-item-form class
+        const removeForm = event.target.closest('.remove-item-form');
+        if (removeForm) {
+            event.preventDefault();
+            const index = removeForm.dataset.index;
             if (confirm('Are you sure you want to remove this item from your cart?')) {
                 removeCartItem(index);
             }
-        });
+        }
     });
 }
 
 function updateCartItemQuantity(index, newQuantity) {
-    fetch('/update_cart_item', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({
-            index: index,
-            quantity: newQuantity
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update the cart display
-            const item = document.querySelector(`.cart-item[data-index="${index}"]`);
-            if (item) {
-                item.dataset.quantity = newQuantity;
-                calculateProductPrices(item);
-                updateCartTotals();
-            }
-            showToast('Success', 'Cart updated', 'success');
-        } else {
-            showToast('Error', data.message || 'Failed to update cart', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating cart:', error);
-        showToast('Error', 'An error occurred while updating the cart', 'error');
-    });
+    // Quantity updates are not allowed
 }
 
 function removeCartItem(index) {
@@ -413,16 +359,13 @@ function getCSRFToken() {
     return cookieValue || document.querySelector('meta[name="csrf-token"]')?.content;
 }
 
-// Calculate product prices based on type
+// Calculate product prices based on type (without quantity handling)
 function calculateProductPrices(container) {
-    if (!container || !container.dataset) return null;
-    
     if (container.dataset.type === 'mpack') {
-        return calculateMPackPrices(container);
+        calculateMPackPrices(container);
     } else if (container.dataset.type === 'blanket') {
-        return calculateBlanketPrices(container);
+        calculateBlanketPrices(container);
     }
-    return null;
 }
 
 // Calculate MPack prices

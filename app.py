@@ -8,6 +8,7 @@ import uuid
 import hashlib
 import secrets
 import smtplib
+import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
@@ -428,9 +429,48 @@ def refresh_email_config():
     global email_config_valid
     email_config_valid = check_email_config()
 
-# Initialize Flask app
+# Initialize Flask app with logging
+import logging
+import sys
+from logging.handlers import RotatingFileHandler
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
+    ]
+)
+
+# Suppress Flask debug pin console output
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+# Ensure app is only initialized once
+if not hasattr(sys, 'app_initialized'):
+    sys.app_initialized = True
+    app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
+    app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+    app.logger.info("Flask app initialized")
+    app.logger.info("Registering routes...")
+else:
+    app.logger.warning("App already initialized - skipping initialization")
+
+# Get the existing app instance
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# Add regex_search filter to Jinja2 environment
+@app.template_filter('regex_search')
+def regex_search_filter(s, pattern):
+    """Check if the pattern matches the string."""
+    if not s or not pattern:
+        return False
+    return bool(re.search(pattern, str(s)))
+
+app.logger.info("Flask app initialized")
+app.logger.info("Registering routes...")
 
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
@@ -643,6 +683,11 @@ def home():
 @app.route('/display')
 @login_required
 def display():
+    # Check if company is selected
+    selected_company = session.get('selected_company')
+    if not selected_company:
+        return redirect(url_for('company_selection'))
+    
     return render_template('display.html')
 
 @app.route('/cart')
@@ -705,21 +750,28 @@ def cart():
 @app.route('/clear_cart', methods=['POST'])
 @login_required
 def clear_cart():
-    try:
-        save_user_cart({'products': []})
-        flash('Cart cleared', 'success')
-    except Exception as e:
-        print(f"Error clear_cart: {e}")
-        flash('Error clearing cart', 'danger')
-    return redirect(url_for('cart'))
     """Clear current user's cart"""
     try:
-        cart_store.save_cart({'products': []})
-        flash('Cart cleared', 'success')
+        if current_user.is_authenticated:
+            # For logged-in users, clear the cart from the database
+            if USE_MONGO and MONGO_AVAILABLE and mongo_db is not None:
+                mongo_db.carts.update_one(
+                    {'user_id': str(current_user.id)},
+                    {'$set': {'products': []}},
+                    upsert=True
+                )
+            else:
+                # Fallback to session for non-MongoDB
+                session['cart'] = {'products': []}
+        else:
+            # For non-logged-in users, clear the session cart
+            session['cart'] = {'products': []}
+        
+        session.modified = True
+        return jsonify({'success': True, 'message': 'Cart cleared successfully'})
     except Exception as e:
         print(f"Error clearing cart: {e}")
-        flash('Error clearing cart', 'danger')
-    return redirect(url_for('cart'))
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/add_to_cart', methods=['POST'])
 @login_required
@@ -798,7 +850,11 @@ def add_to_cart():
                 'unit_price': float(data.get('unit_price', 0)),
                 'quantity': int(data.get('quantity', 1)),
                 'discount_percent': float(data.get('discount_percent', 0)),
-                'gst_percent': float(data.get('gst_percent', 18))
+                'gst_percent': float(data.get('gst_percent', 12)),  # 12% GST for MPack
+                # Include MPack specific details
+                'machine': data.get('machine', ''),
+                'thickness': data.get('thickness', ''),
+                'size': data.get('size', '')
             }
             
             # Calculate prices for other product types if needed
@@ -820,7 +876,10 @@ def add_to_cart():
                     'price_after_discount': round(price_after_discount, 2),
                     'gst_amount': round(gst_amount, 2),
                     'final_unit_price': round(final_unit_price, 2),
-                    'final_total': round(final_total, 2)
+                    'final_total': round(final_total, 2),
+                    'machine': product.get('machine', ''),
+                    'thickness': product.get('thickness', ''),
+                    'size': product.get('size', '')
                 }
         
         # Get existing cart or create new one
@@ -909,6 +968,104 @@ def login():
 def signup():
     return render_template('signup.html')
 
+@app.route('/company_selection', methods=['GET', 'POST'])
+@login_required
+def company_selection():
+    if request.method == 'POST':
+        company = request.form.get('company')
+        email = request.form.get('email')
+        
+        if not company or not email:
+            flash('Please select a company and enter an email', 'error')
+            return redirect(url_for('company_selection'))
+        
+        # Save company info in session for convenience
+        session['company'] = company
+        session['email'] = email
+
+        # Store a consistent dict for selected_company used by downstream routes
+        session['selected_company'] = {
+            'name': company,
+            'email': email
+        }
+        
+        # Redirect to product selection
+        return redirect(url_for('product_selection'))
+    
+    return render_template('company_selection.html')
+
+@app.route('/product_selection', methods=['GET', 'POST'])
+@login_required
+def product_selection():
+    if request.method == 'POST':
+        product_type = request.form.get('product_type')
+        
+        if not product_type:
+            flash('Please select a product type', 'error')
+            return redirect(url_for('product_selection'))
+            
+        # Save product type in session
+        session['product_type'] = product_type
+        
+        # Redirect to appropriate product details page
+        if product_type == 'blanket':
+            return redirect(url_for('blankets'))
+        elif product_type == 'mpack':
+            return redirect(url_for('mpacks'))
+            
+    # Check if company is selected
+    selected_company = session.get('selected_company')
+    if not selected_company:
+        return redirect(url_for('company_selection'))
+    
+    return render_template('product_selection.html')
+
+@app.route('/blankets')
+@login_required
+def blankets():
+    # Check if company and product type are selected
+    selected_company = session.get('selected_company')
+    product_type = session.get('product_type')
+    
+    if not selected_company or product_type != 'blanket':
+        return redirect(url_for('product_selection'))
+    
+    return render_template('products/blankets/blankets.html')
+
+
+
+@app.route('/select_company', methods=['POST'])
+@login_required
+def select_company():
+    company_id = request.form.get('company')
+    if not company_id:
+        flash('Please select a company', 'danger')
+        return redirect(url_for('company_selection'))
+    
+    # Save company in session as dict with name placeholder (lookup by id could be added)
+    session['selected_company'] = {
+        'name': company_id,
+        'email': ''
+    }
+    return redirect(url_for('product_selection'))
+
+@app.route('/get_companies')
+def get_companies():
+    try:
+        # Load companies from static JSON file
+        with open('static/data/company_emails.json', 'r') as f:
+            companies = json.load(f)
+            # Transform data to match expected format
+            formatted_companies = [{
+                'id': str(i + 1),
+                'name': company['Company Name'],
+                'email': company['EmailID']
+            } for i, company in enumerate(companies)]
+            return jsonify(formatted_companies)
+    except Exception as e:
+        print(f"Error loading companies: {e}")
+        return jsonify([]), 500
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -974,6 +1131,187 @@ def forgot_password():
     return render_template('forgot_password.html')
 
 # API Routes
+
+# ---------------------------------------------------------------------------
+# Quotation Preview Page
+# ---------------------------------------------------------------------------
+@app.route('/quotation_preview')
+@login_required
+def quotation_preview():
+    cart = get_user_cart()
+    if not cart.get('products'):
+        flash('Your cart is empty', 'warning')
+        return redirect(url_for('cart'))
+
+    selected_company = session.get('selected_company')
+    if not isinstance(selected_company, dict):
+        selected_company = {}
+    customer_email = selected_company.get('email') or current_user.email
+
+    context = {
+        'cart': cart,
+        'quote_id': f"CGI-{int(datetime.utcnow().timestamp()*1000)}",
+        'today': datetime.utcnow().strftime('%d/%m/%Y'),
+        'valid_until': (datetime.utcnow() + timedelta(days=7)).strftime('%d/%m/%Y'),
+        'customer_email': customer_email
+    }
+    return render_template('quotation.html', **context)
+
+# ---------------------------------------------------------------------------
+# Send Quotation Route
+# ---------------------------------------------------------------------------
+@app.route('/send_quotation', methods=['POST'])
+@login_required
+def send_quotation():
+    """Generate quotation from current cart and email it to customer and CGI."""
+    try:
+        # Parse optional notes from request body
+        data = request.get_json() or {}
+        notes = (data.get('notes') or '').strip()
+
+        # Fetch cart
+        cart = get_user_cart()
+        products = cart.get('products', [])
+        if not products:
+            return jsonify({'error': 'Cart is empty'}), 400
+
+        # Determine recipient emails
+        selected_company = session.get('selected_company')
+        if not isinstance(selected_company, dict):
+            selected_company = {}
+        customer_email = selected_company.get('email') or current_user.email
+        if not customer_email:
+            return jsonify({'error': 'Customer email not available'}), 400
+
+        recipients = [customer_email, 'md.desk@chemo.in']
+
+        # Build quotation HTML
+        quote_id = f"CGI-{int(datetime.utcnow().timestamp()*1000)}"
+        today = datetime.utcnow().strftime('%d/%m/%Y')
+        valid_until = (datetime.utcnow() + timedelta(days=7)).strftime('%d/%m/%Y')
+
+        # Table rows
+        rows_html = ""
+        subtotal = 0
+        for idx, p in enumerate(products, start=1):
+            machine = p.get('machine', '')
+            prod_type = p.get('type', '')
+            blanket_type = p.get('blanket_type', '----') if prod_type == 'blanket' else '----'
+            # Dimensions
+            if p.get('size'):
+                dimensions = p['size']
+            else:
+                length = p.get('length') or ''
+                width = p.get('width') or ''
+                unit = p.get('unit', '')
+                dimensions = f"{length}x{width}{unit}" if length and width else ''
+            barring_type = p.get('bar_type', '----') if prod_type == 'blanket' else '----'
+            qty = p.get('quantity', 1)
+            discount_percent = p.get('discount_percent', 0)
+            # Total
+            total_val = 0
+            calcs = p.get('calculations', {})
+            if calcs:
+                total_val = calcs.get('final_total') or calcs.get('finalTotal') or calcs.get('discountedSubtotal') or 0
+            else:
+                total_val = p.get('unit_price', 0) * qty
+            subtotal += total_val
+            rows_html += f"""
+            <tr>
+                <td>{idx}</td>
+                <td>{machine}</td>
+                <td>{prod_type}</td>
+                <td>{blanket_type}</td>
+                <td>{dimensions}</td>
+                <td>{barring_type}</td>
+                <td>{qty}</td>
+                <td>{discount_percent}%</td>
+                <td>₹{total_val:,.2f}</td>
+            </tr>
+            """
+
+        # Build full HTML
+        quotation_html = f"""
+        <div style='font-family: Arial, sans-serif; color: #333; border: 1px solid #ddd; padding: 20px; max-width: 800px; margin: auto;'>
+          <h2 style='text-align: center;'>QUOTATION</h2>
+          <table style='width: 100%; margin-bottom: 20px;'>
+            <tr>
+              <td>
+                <strong>CGI - Chemo Graphics India</strong><br>
+                123 Print Lane, Mumbai, India<br>
+                Phone: +91-9999999999<br>
+                Email: md.desk@chemo.in
+              </td>
+              <td style='text-align: right;'>
+                <strong>Quote #:</strong> {quote_id}<br>
+                <strong>Date:</strong> {today}<br>
+                <strong>Customer ID:</strong> {customer_email}<br>
+                <strong>Valid Until:</strong> {valid_until}
+              </td>
+            </tr>
+          </table>
+          <p>Hello,<br><br>
+          This is <strong>{current_user.username}</strong> from CGI.<br>
+          Here is the proposed quotation for the required products:</p>
+          {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
+          <table border='1' cellspacing='0' cellpadding='5' style='border-collapse: collapse; width: 100%; margin-top: 15px;'>
+            <thead style='background-color: #f2f2f2;'>
+              <tr>
+                <th>Sr No</th>
+                <th>Machine</th>
+                <th>Product Type</th>
+                <th>Blanket Type</th>
+                <th>Dimensions</th>
+                <th>Barring Type</th>
+                <th>Quantity</th>
+                <th>Discount</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows_html}
+              <tr>
+                <td colspan='8' style='text-align: right;'><strong>Subtotal:</strong></td>
+                <td><strong>₹{subtotal:,.2f}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <p style='margin-top: 20px;'>Thank you for your business!<br>— Team CGI</p>
+          <hr>
+          <small>
+            This quotation is not a contract or invoice. It is our best estimate and valid until {valid_until}.
+          </small>
+        </div>
+        """
+
+        # Email sending
+        if not email_config_valid:
+            return jsonify({'error': 'Email configuration invalid'}), 500
+
+        subject = f"CGI Quotation - {quote_id}"
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f"{EMAIL_FROM_NAME or 'CGI'} <{EMAIL_FROM}>"
+            msg['To'] = ', '.join(recipients)
+            msg.attach(MIMEText(quotation_html, 'html'))
+
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                if SMTP_USERNAME and SMTP_PASSWORD:
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(EMAIL_FROM, recipients, msg.as_string())
+        except Exception as e:
+            print(f"Error sending quotation email: {e}")
+            return jsonify({'error': 'Failed to send email'}), 500
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print(f"send_quotation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/api/request-otp', methods=['POST'])
 def api_request_otp():
     try:
@@ -1307,14 +1645,21 @@ def api_login():
         traceback.print_exc()
         return jsonify({'error': 'An unexpected error occurred during login'}), 500
 
-@app.route('/api/auth/logout', methods=['POST'])
+@app.route('/api/auth/logout', methods=['GET', 'POST'])
+@login_required
 def api_logout():
     try:
         logout_user()
-        return jsonify({'success': True, 'message': 'Logged out successfully'})
+        session.clear()  # Clear the session data
+        if request.method == 'POST':
+            return jsonify({'success': True, 'message': 'Logged out successfully'})
+        return redirect(url_for('login'))
     except Exception as e:
         print(f"Logout error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        if request.method == 'POST':
+            return jsonify({'error': 'Internal server error'}), 500
+        flash('An error occurred during logout', 'error')
+        return redirect(url_for('home'))
 
 @app.route('/api/auth/user', methods=['GET'])
 def api_user():
@@ -1592,15 +1937,48 @@ def static_chemicals(filename):
     return send_from_directory('static/data/chemicals', filename)
 
 # Product pages
-@app.route('/mpack')
+@app.route('/mpacks')
 @login_required
-def mpack_page():
-    return render_template('products/chemicals/mpack.html')
+def mpacks():
+    app.logger.info("\n=== ACCESSING MPACKS ROUTE ===")
+    
+    # Debug: Log all session variables
+    app.logger.info(f"Session data: {dict(session)}")
+    
+    # Check if company and product type are selected
+    company = session.get('selected_company')
+    product_type = session.get('product_type')
+    
+    app.logger.info(f"Company: {company}")
+    app.logger.info(f"Product type: {product_type}")
+    
+    if not company or product_type != 'mpack':
+        app.logger.warning("\n!!! REDIRECTING TO PRODUCT SELECTION !!!")
+        app.logger.warning(f"Reason: company={company}, product_type={product_type}")
+        return redirect(url_for('product_selection'))
+    
+    template_path = 'products/chemicals/mpack.html'
+    app.logger.info(f"\n--- RENDERING TEMPLATE ---")
+    app.logger.info(f"Template path: {template_path}")
+    
+    # Verify template exists
+    import os
+    template_full_path = os.path.join('templates', template_path)
+    template_exists = os.path.exists(template_full_path)
+    
+    app.logger.info(f"Template exists: {template_exists}")
+    app.logger.info(f"Absolute path: {os.path.abspath(template_full_path)}")
+    
+    if not template_exists:
+        app.logger.error("ERROR: Template not found!")
+        return "Template not found", 500
+    
+    app.logger.info("Attempting to render template...")
+    response = render_template(template_path)
+    app.logger.info("Template rendered successfully")
+    
+    return response
 
-@app.route('/blankets')
-@login_required
-def blankets_page():
-    return render_template('products/blankets/blankets.html')
 
 @app.route('/reset-password')
 def reset_password_page():

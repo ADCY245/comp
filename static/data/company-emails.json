@@ -1,0 +1,52 @@
+[
+    {
+        "id": "1",
+        "name": "CHEMO GRAPHIC INTERNATIONAL",
+        "email": "info@chemo.in"
+    },
+    {
+        "id": "2",
+        "name": "ACME CORPORATION",
+        "email": "contact@acme.com"
+    },
+    {
+        "id": "3",
+        "name": "ABC PVT LTD",
+        "email": "info@abc.com"
+    },
+    {
+        "id": "4",
+        "name": "XYZ TECHNOLOGIES",
+        "email": "info@xyztech.com"
+    },
+    {
+        "id": "5",
+        "name": "ALPHA INDUSTRIES",
+        "email": "contact@alpha-industries.com"
+    },
+    {
+        "id": "6",
+        "name": "BETA SOLUTIONS",
+        "email": "info@betasolutions.com"
+    },
+    {
+        "id": "7",
+        "name": "GAMMA ENTERPRISES",
+        "email": "contact@gamma-enterprises.com"
+    },
+    {
+        "id": "8",
+        "name": "DELTA CORPORATION",
+        "email": "info@deltacorp.com"
+    },
+    {
+        "id": "9",
+        "name": "ECHO LIMITED",
+        "email": "contact@echolimited.com"
+    },
+    {
+        "id": "10",
+        "name": "FOXTROT PVT LTD",
+        "email": "info@foxtrotpvt.com"
+    }
+]
