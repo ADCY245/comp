@@ -1161,16 +1161,19 @@ def quotation_preview():
         item.setdefault('discount_percent', 0)
         item.setdefault('gst_percent', 18)  # Default GST for mpack
         item.setdefault('unit_price', 0)
+        item.setdefault('base_price', 0)
+        item.setdefault('bar_price', 0)
         
         if item['type'] == 'mpack':
-            # Calculate mpack total with GST and discount
+            # Calculate mpack total matching cart template's approach
             price = float(item['unit_price'])
             quantity = int(item['quantity'])
             discount_percent = float(item['discount_percent'])
             gst_percent = float(item['gst_percent'])
             
-            discount_amount = (price * quantity * discount_percent / 100) if discount_percent else 0
-            price_after_discount = (price * quantity) - discount_amount
+            subtotal = price * quantity
+            discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
+            price_after_discount = subtotal - discount_amount
             gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
             final_total = price_after_discount + gst_amount
             
@@ -1178,6 +1181,7 @@ def quotation_preview():
             item['calculations'] = {
                 'unit_price': round(price, 2),
                 'quantity': quantity,
+                'subtotal': round(subtotal, 2),
                 'discount_percent': discount_percent,
                 'discount_amount': round(discount_amount, 2),
                 'price_after_discount': round(price_after_discount, 2),
@@ -1188,30 +1192,41 @@ def quotation_preview():
             item_subtotal = final_total
             
         elif item['type'] == 'blanket':
-            # Calculate blanket total with bar price, GST, and discount
+            # Calculate blanket total matching cart template's approach
             base_price = float(item.get('base_price', 0))
             bar_price = float(item.get('bar_price', 0))
             quantity = int(item.get('quantity', 1))
             discount_percent = float(item.get('discount_percent', 0))
             gst_percent = float(item.get('gst_percent', 18))
             
-            price_per_unit = base_price + bar_price
-            subtotal = price_per_unit * quantity
+            # Calculate unit price as base + bar price
+            unit_price = base_price + bar_price
+            
+            # Calculate subtotal (unit price * quantity)
+            subtotal = unit_price * quantity
+            
+            # Calculate discount amount
             discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
-            discounted_subtotal = subtotal - discount_amount
-            gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
-            final_total = discounted_subtotal + gst_amount
+            
+            # Calculate price after discount
+            price_after_discount = subtotal - discount_amount
+            
+            # Calculate GST on discounted amount
+            gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
+            
+            # Calculate final total including GST
+            final_total = price_after_discount + gst_amount
             
             # Store calculations in the item
             item['calculations'] = {
                 'base_price': round(base_price, 2),
                 'bar_price': round(bar_price, 2),
-                'price_per_unit': round(price_per_unit, 2),
+                'unit_price': round(unit_price, 2),
                 'quantity': quantity,
                 'subtotal': round(subtotal, 2),
                 'discount_percent': discount_percent,
                 'discount_amount': round(discount_amount, 2),
-                'discounted_subtotal': round(discounted_subtotal, 2),
+                'discounted_subtotal': round(price_after_discount, 2),
                 'gst_percent': gst_percent,
                 'gst_amount': round(gst_amount, 2),
                 'final_total': round(final_total, 2)
@@ -1245,9 +1260,14 @@ def quotation_preview():
         
         subtotal += item_subtotal
     
-    # Calculate final totals
-    total = round(subtotal, 2)
-    subtotal = round(subtotal, 2)
+    # Calculate final totals by summing up all item final_totals
+    final_subtotal = 0
+    for item in cart.get('products', []):
+        final_subtotal += item.get('calculations', {}).get('final_total', 0)
+    
+    # Round to 2 decimal places for display
+    final_subtotal = round(final_subtotal, 2)
+    total = final_subtotal  # In this case, subtotal and total are the same
 
     context = {
         'cart': cart,
@@ -1256,8 +1276,8 @@ def quotation_preview():
         'customer_email': customer_email,
         'customer_name': customer_name,
         'calculations': {
-            'subtotal': round(subtotal, 2),
-            'total': round(total, 2)
+            'subtotal': final_subtotal,
+            'total': total
         }
     }
     return render_template('quotation.html', **context)
