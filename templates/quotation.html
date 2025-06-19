@@ -33,8 +33,8 @@
         <strong>Quote #:</strong> {{ quote_id }}<br>
         <strong>Date:</strong> {{ quote_date }}<br>
         <strong>Time:</strong> {{ quote_time }}<br>
-        <strong>Customer:</strong> {{ customer_name }}<br>
-        <strong>Email:</strong> {{ customer_email }}
+        <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}<br>
+        <strong>Email:</strong> {{ session.get('selected_company', {}).get('email', 'Not provided') }}
     </div>
   </div>
 
