@@ -1137,19 +1137,28 @@ def quotation_preview():
     customer_email = selected_company.get('email', '')
     customer_name = selected_company.get('name', '')
 
-    # Calculate subtotal for each item
+    # Ensure all items have required fields and calculate subtotal
     subtotal = 0
     for item in cart.get('products', []):
-        if item.get('type') == 'blanket':
-            # For blankets, use the calculated total from the cart
-            item_subtotal = item.get('total', 0)
+        # Ensure all required fields exist with defaults
+        item.setdefault('type', '')
+        item.setdefault('quantity', 1)
+        item.setdefault('discount_percent', 0)
+        item.setdefault('unit_price', 0)
+        
+        # Calculate item total
+        if item['type'] == 'blanket':
+            item_subtotal = float(item.get('total', 0))
         else:
-            # For other items, calculate price * quantity
-            item_subtotal = item.get('price', 0) * item.get('quantity', 1)
-        item['subtotal'] = item_subtotal
+            item_subtotal = float(item['unit_price']) * int(item['quantity']) * (1 - (float(item['discount_percent']) / 100))
+        
+        # Update item with calculated values
+        item['subtotal'] = round(item_subtotal, 2)
         subtotal += item_subtotal
     
-    total = subtotal  # Total is same as subtotal since amounts already include any taxes
+    # Calculate final totals
+    total = round(subtotal, 2)
+    subtotal = round(subtotal, 2)
 
     context = {
         'cart': cart,

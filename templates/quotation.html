@@ -56,18 +56,26 @@
       {% for item in cart.products %}
         {% set loop_index = loop.index %}
         {% set prod_type = item.type %}
-        {% set total_val = item.total if item.type == 'blanket' else (item.unit_price * item.quantity) * (1 - (item.discount_percent or 0) / 100) %}
+        {% set total_val = item.get('total') or (item.get('unit_price', 0) * item.get('quantity', 1)) * (1 - (item.get('discount_percent', 0) / 100)) %}
         <tr>
           <td>{{ loop_index }}</td>
-          <td>{{ item.machine or '' }}</td>
+          <td>{{ item.get('machine', '') }}</td>
           <td>{{ prod_type }}</td>
-          <td>{{ item.blanket_type if prod_type=='blanket' else 'N/A' }}</td>
-          <td>{{ item.thickness if item.thickness else 'N/A' }}</td>
-          <td>{{ item.size if item.size else (item.length ~ 'x' ~ item.width ~ (item.unit or '')) if item.length and item.width else 'N/A' }}</td>
-          <td>{{ item.bar_type if prod_type=='blanket' else 'N/A' }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.discount_percent }}%</td>
-          <td>₹{{ '%.2f'|format(total_val) }}</td>
+          <td>{{ item.get('blanket_type', 'N/A') if prod_type == 'blanket' else 'N/A' }}</td>
+          <td>{{ item.get('thickness', 'N/A') }}</td>
+          <td>
+            {% if item.get('size') %}
+              {{ item.size }}
+            {% elif item.get('length') and item.get('width') %}
+              {{ '%sx%s%s'|format(item.length, item.width, item.get('unit', '')) }}
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+          <td>{{ item.get('bar_type', 'N/A') if prod_type == 'blanket' else 'N/A' }}</td>
+          <td>{{ item.get('quantity', 1) }}</td>
+          <td>{{ item.get('discount_percent', 0) }}%</td>
+          <td>₹{{ '%.2f'|format(total_val|float) }}</td>
         </tr>
       {% endfor %}
       <tr>
