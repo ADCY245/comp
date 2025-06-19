@@ -950,9 +950,24 @@ def get_cart_count():
         print(f"Error in get_cart_count: {e}")
         return jsonify({'count': 0}), 500
 
+@app.route('/display')
+@login_required
+def display():
+    return render_template('display.html')
+
 @app.route('/login')
 def login():
+    if current_user.is_authenticated:
+        # If user is already logged in, redirect to display page
+        return redirect(url_for('display'))
     return render_template('login.html')
+
+# Add a route to handle root URL
+@app.route('/')
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for('display'))
+    return redirect(url_for('login'))
 
 @app.route('/signup')
 def signup():
@@ -1681,7 +1696,7 @@ def api_login():
                 return jsonify({
                     'success': True,
                     'message': 'Login successful',
-                    'redirectTo': '/company_selection',
+                    'redirectTo': '/display',  # Changed from '/company_selection' to '/display'
                     'user': {
                         'id': str(user.id),  # Ensure ID is string for JSON serialization
                         'email': user.email,
