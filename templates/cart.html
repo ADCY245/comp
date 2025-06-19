@@ -289,19 +289,54 @@
 
 {% block content %}
     <div class="cart-container">
-        <div class="cart-header">
-            <div>
-                <h2>Cart for <span id="companyName">{{ company_name if company_name and company_name != 'undefined' else 'Your Company' }}</span></h2>
-                {% if company_email and company_email != 'undefined' and company_email != 'email@example.com' %}
-                <a href="mailto:{{ company_email }}" id="companyEmail" class="text-muted mb-0" style="text-decoration: none;">
-                    {{ company_email }}
-                </a>
-                {% else %}
-                <p class="text-muted mb-0" id="companyEmail">No email provided</p>
-                {% endif %}
+        <div class="row">
+            <!-- Left Side: Company and User Info -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Company Information</h5>
+                        <div class="mb-2">
+                            <strong>Company Name:</strong> Chemo Graphic International
+                        </div>
+                        <div class="mb-2">
+                            <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060
+                        </div>
+                        <div>
+                            <strong>User Email:</strong> {{ current_user.email if current_user.is_authenticated else 'Not logged in' }}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <a href="#" id="continueShoppingBtn" class="btn btn-outline-secondary me-2">
+
+            <!-- Right Side: Quotation Details -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Quotation Details</h5>
+                        <div class="mb-2">
+                            <strong>Date:</strong> {{ datetime.now().strftime('%d-%m-%Y') }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Time:</strong> {{ datetime.now().strftime('%H:%M:%S') }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Notes -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Additional Notes</h5>
+                <p class="mb-0">For more information email info@chemo.in</p>
+            </div>
+        </div>
+
+        <!-- Cart Items -->
+        <div class="cart-items">
                     <i class="fas fa-arrow-left me-1"></i> Continue Shopping
                 </a>
                 <script>
