@@ -40,7 +40,7 @@
       {% for item in cart.products %}
         {% set loop_index = loop.index %}
         {% set prod_type = item.type %}
-        {% set total_val = item.calculations.final_total if item.calculations else item.unit_price * item.quantity %}
+        {% set total_val = item.calculations.final_total if item.calculations and 'final_total' in item.calculations else item.unit_price * item.quantity %}
         {% set subtotal = subtotal + total_val %}
         <tr>
           <td>{{ loop_index }}</td>
