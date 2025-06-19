@@ -17,31 +17,47 @@
 <div class="quote-container">
   <h2 style="text-align:center">QUOTATION</h2>
   
-  <!-- Company Information -->
-  <div class="mb-4">
-    <h4>Company Information</h4>
-    <div>
-        <strong>Company Name:</strong> Chemo Graphic International<br>
-        <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
-        <strong>Email:</strong> operations@chemo.in
+  <!-- Two-column layout -->
+  <div class="row">
+    <!-- Left Side: Company Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Company Information</h5>
+          <div class="mb-2">
+            <strong>Company Name:</strong> Chemo Graphic International<br>
+            <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
+            <strong>Email:</strong> operations@chemo.in
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side: Customer Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Customer Information</h5>
+          <div class="mb-2">
+            <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}<br>
+            <strong>Email:</strong> {{ session.get('selected_company', {}).get('email', 'Not provided') }}<br>
+            <strong>ETC:</strong> 36
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Quotation Header -->
-  <div class="quote-header">
-    <div style="text-align:right">
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Quotation Details</h5>
+      <div>
         <strong>Quote #:</strong> {{ quote_id }}<br>
         <strong>Date:</strong> {{ quote_date }}<br>
-        <strong>Time:</strong> {{ quote_time }}<br>
-        <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}<br>
-        <strong>Email:</strong> {{ session.get('selected_company', {}).get('email', 'Not provided') }}
+        <strong>Time:</strong> {{ quote_time }}
+      </div>
     </div>
-  </div>
-
-  <!-- Additional Notes -->
-  <div class="mb-4">
-    <h4>Additional Notes</h4>
-    <p>For more information email info@chemo.in</p>
   </div>
   
 
