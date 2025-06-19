@@ -4,6 +4,12 @@
 
 {% block extra_css %}
 <style>
+        /* Consistent remove button styles */
+        .remove-item-form .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
         html, body {
             margin: 0;
             padding: 0;
@@ -52,6 +58,18 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+        }
+        
+        /* Ensure quantity display is consistent and non-editable */
+        .quantity-display {
+            display: inline-block;
+            min-width: 30px;
+            text-align: right;
+            font-weight: 500;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         .cart-item .col-12 {
@@ -295,16 +313,24 @@
                             }));
                         }
                         
-                        // Navigate to home page
-                        window.location.href = '{{ url_for("home") }}';
+                        // Navigate to product selection page
+                        window.location.href = '{{ url_for("product_selection") }}';
                     });
                 </script>
-                <form action="{{ url_for('clear_cart') }}" method="POST" class="d-inline">
-                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to remove all items from your cart?')">
-                        <i class="fas fa-trash me-1"></i> Remove All
-                    </button>
-                </form>
+                <button type="button" class="btn btn-outline-danger" id="clearCartBtnTop"><i class="fas fa-trash me-1"></i> Clear Cart</button>
+
+                <!-- Send Quotation Button (top) -->
+                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary ms-2" id="sendQuotationBtnTop">
+                    <i class="fas fa-paper-plane me-1"></i> Send Quotation
+                </a>
             </div>
+        </div>
+
+        <!-- Button to remove second MPack entry -->
+        <div class="mb-3" id="removeDuplicateMpackBtn" style="display: none;">
+            <button type="button" class="btn btn-warning" onclick="removeSecondMpack()">
+                <i class="fas fa-trash me-1"></i> Remove Duplicate MPack
+            </button>
         </div>
 
         <div id="cartItems" class="cart-items" {% if not cart.products or cart.products|length == 0 %}style="display: none;"{% endif %}>
@@ -326,7 +352,7 @@
                                      data-discount-percent="{{ item.discount_percent|default(0) }}"
                                      data-gst-percent="{{ item.gst_percent|default(18) }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">{% if item.blanket_name %}{{ item.blanket_name }}{% else %}{{ item.name }}{% endif %}{% if item.bar_type %} ({{ item.bar_type }}){% endif %}</h5>
+                                        <h5 class="product-title">{{ item.name }}</h5>
                                         <div class="product-details mb-3">
                                             {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
                                             {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
@@ -357,11 +383,7 @@
                                             </div>
                                             <div class="price-row">
                                                 <span class="price-label">Quantity:</span>
-                                                <div class="quantity-controls d-inline-flex align-items-center">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}">-</button>
-                                                    <input type="number" class="form-control form-control-sm quantity-input" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" style="width: 60px; text-align: center;">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}">+</button>
-                                                </div>
+                                                <span class="price-value">{{ item.quantity }}</span>
                                                 <div class="d-flex justify-content-between fw-bold mt-1">
                                                     <span>After Discount:</span>
                                                     <span>₹{{ "%.2f"|format(item.calculations.discounted_subtotal|default(0)) }}</span>
@@ -388,12 +410,20 @@
                                      data-thickness="{{ item.thickness|default('') }}"
                                      data-size="{{ item.size|default('') }}">
                                     <div class="d-flex flex-column">
-                                        <h5 class="product-title">MPack - {{ item.product_name|default('MPack') }}</h5>
+                                        <h5 class="product-title">MPack - {{ item.name|default('MPack') }}</h5>
                                         <div class="product-details mb-3">
-                                            {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
-                                            {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
-                                            {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
-                                            {% elif item.length and item.width %}<p class="mb-1"><strong>Size:</strong> {{ item.length }}x{{ item.width }} {{ item.unit|default('mm') }}</p>{% endif %}
+                                            {% if item.machine %}
+                                                <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
+                                            {% endif %}
+                                            
+                                            {% if item.thickness %}
+                                                {% set thickness = item.thickness|string %}
+                                                <p class="mb-1"><strong>Thickness:</strong> {{ thickness }}{% if not (thickness.endswith('mm') or thickness.endswith('in') or thickness.endswith('cm') or thickness.endswith('micron')) %}{% if thickness|float >= 1 %}mm{% else %}micron{% endif %}{% endif %}</p>
+                                            {% endif %}
+                                            
+                                            {% if item.size %}
+                                                <p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="price-details mt-3 p-3 bg-light rounded">
@@ -404,11 +434,9 @@
                                             </div>
                                             <div class="price-row">
                                                 <span class="price-label">Quantity:</span>
-                                                <div class="quantity-controls d-inline-flex align-items-center">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}">-</button>
-                                                    <input type="number" class="form-control form-control-sm quantity-input" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" style="width: 60px; text-align: center;">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}">+</button>
-                                                </div>
+                                                <span class="price-value">
+                                                    <span class="quantity-display">{{ item.quantity }}</span>
+                                                </span>
                                             </div>
                                             <div class="price-row">
                                                 <span class="price-label">Subtotal:</span>
@@ -432,10 +460,11 @@
                                     </div>
                                     <div class="mt-3 pt-3 border-top text-end">
                                         <form class="remove-item-form d-inline" data-index="{{ loop.index0 }}">
-                                            <button type="submit" class="btn btn-danger btn-sm">
+                                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="fas fa-trash"></i> Remove
                                             </button>
                                         </form>
+                                    </div>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -450,7 +479,7 @@
                     <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
                     <h4>Your cart is empty</h4>
                     <p class="text-muted">Browse our products and add some items to your cart</p>
-                    <a href="{{ url_for('blankets_page') }}" class="btn btn-primary">Continue Shopping</a>
+                    <a href="{{ url_for('product_selection') }}" class="btn btn-outline-secondary">Continue Shopping</a>
                 </div>
             {% endif %}
             
@@ -458,8 +487,29 @@
             <div class="cart-summary mt-4" id="cartSummary">
                 <!-- Cart summary will be dynamically updated -->
             </div>
+            
+            <!-- Cart Footer -->
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{{ url_for('product_selection') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Continue Shopping
+                </a>
+                <div>
+                    <button type="button" class="btn btn-danger" id="clearCartBtn">
+                        <i class="fas fa-trash me-1"></i> Clear Cart
+                    </button>
+                </div>
+            </div>
             {% endif %}
         </div>
+
+    <!-- Quotation Notes & Send Section (bottom) -->
+    <div class="mt-4">
+        <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary" id="sendQuotationBtnBottom">
+            <i class="fas fa-paper-plane me-1"></i> Send Quotation
+        </a>
+    </div>
+
+
     </div>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -470,7 +520,59 @@
     <script>
         // DOM fully loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Function to update company info display
+            // Function to check for duplicate MPack entries
+            function checkForDuplicateMpacks() {
+                const mpackItems = Array.from(document.querySelectorAll('.cart-item[data-type="mpack"]'));
+                const removeBtn = document.getElementById('removeDuplicateMpackBtn');
+                
+                if (mpackItems.length > 1) {
+                    removeBtn.style.display = 'block';
+                } else {
+                    removeBtn.style.display = 'none';
+                }
+            }
+            
+            // Function to remove the second MPack entry
+            async function removeSecondMpack() {
+                try {
+                    const mpackItems = Array.from(document.querySelectorAll('.cart-item[data-type="mpack"]'));
+                    if (mpackItems.length > 1) {
+                        const secondMpackIndex = mpackItems[1].getAttribute('data-index');
+                        await removeFromCart(null, secondMpackIndex);
+                    }
+                } catch (error) {
+                    console.error('Error removing duplicate MPack:', error);
+                    showToast('Error', 'Failed to remove duplicate MPack', 'error');
+                }
+            }
+
+// ---------------------------------------------
+            // Quotation preview redirection
+            // ---------------------------------------------
+        async function goToQuotationPreview() {
+            window.location.href = '/quotation_preview';
+        }
+
+        // Show quotation section if cart has items
+        function toggleQuotationSection() {
+            const cartItems = document.querySelectorAll('.cart-item');
+            const section = document.getElementById('quotationSection');
+            if (cartItems.length > 0) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        // Attach handlers for Send Quotation buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach click listeners to any present Send Quotation buttons
+           // .forEach(btn => {
+               // if (btn) btn.addEventListener('click', goToQuotationPreview);
+           // });
+        });
+
+        // Function to update company info display
             function updateCompanyDisplay(name, email) {
                 // Update company name
                 const nameEl = document.getElementById('companyName');
@@ -625,7 +727,77 @@
             }, 5000);
         }
 
-        // Rest of your existing JavaScript...
+        // Function to handle clearing the cart
+        function handleClearCart(event) {
+            if (event) event.preventDefault();
+            
+            if (!confirm('Are you sure you want to clear your cart?')) {
+                return false;
+            }
+            
+            const csrfToken = getCSRFToken();
+            
+            fetch('/clear_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showToast('Success', 'Cart cleared successfully', 'success');
+                    
+                    // Hide cart items and show empty cart message
+                    const cartItems = document.getElementById('cartItems');
+                    const emptyCart = document.getElementById('emptyCart');
+                    
+                    if (cartItems) cartItems.style.display = 'none';
+                    if (emptyCart) emptyCart.style.display = 'block';
+                    
+                    // Update cart count and totals
+                    updateCartCount();
+                    updateCartTotals();
+                } else {
+                    throw new Error(data.error || 'Failed to clear cart');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', error.message || 'An error occurred while clearing the cart', 'error');
+            });
+            
+            return false;
+        }
+
+        // Add event listeners when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Use event delegation for clear cart buttons
+            document.addEventListener('click', function(event) {
+                const clearBtn = event.target.closest('#clearCartBtn, #clearCartBtnTop');
+                if (clearBtn) {
+                    event.preventDefault();
+                    handleClearCart(event);
+                }
+            });
+
+            // Existing remove form listeners
+            document.querySelectorAll('.remove-item-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const index = parseInt(this.getAttribute('data-index'));
+                    removeFromCart(e, index);
+                });
+            });
+        });
     </script>
     
     <style>
