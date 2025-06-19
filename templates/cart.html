@@ -314,10 +314,10 @@
                     <div class="card-body">
                         <h5 class="card-title mb-3">Quotation Details</h5>
                         <div class="mb-2">
-                            <strong>Date:</strong> {{ datetime.now().strftime('%d-%m-%Y') }}
+                            <strong>Quotation Date:</strong> Will be generated during checkout
                         </div>
                         <div class="mb-2">
-                            <strong>Time:</strong> {{ datetime.now().strftime('%H:%M:%S') }}
+                            <strong>Quotation Time:</strong> Will be generated during checkout
                         </div>
                         <div class="mb-2">
                             <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}
