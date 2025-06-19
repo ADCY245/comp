@@ -1133,17 +1133,34 @@ def quotation_preview():
         flash('Your cart is empty', 'warning')
         return redirect(url_for('cart'))
 
-    selected_company = session.get('selected_company')
-    if not isinstance(selected_company, dict):
-        selected_company = {}
-    customer_email = selected_company.get('email') or current_user.email
+    selected_company = session.get('selected_company', {})
+    customer_email = selected_company.get('email', '')
+    customer_name = selected_company.get('name', '')
+
+    # Calculate subtotal for each item
+    subtotal = 0
+    for item in cart.get('products', []):
+        if item.get('type') == 'blanket':
+            # For blankets, use the calculated total from the cart
+            item_subtotal = item.get('total', 0)
+        else:
+            # For other items, calculate price * quantity
+            item_subtotal = item.get('price', 0) * item.get('quantity', 1)
+        item['subtotal'] = item_subtotal
+        subtotal += item_subtotal
+    
+    total = subtotal  # Total is same as subtotal since amounts already include any taxes
 
     context = {
         'cart': cart,
         'quote_id': f"CGI-{int(datetime.utcnow().timestamp()*1000)}",
         'today': datetime.utcnow().strftime('%d/%m/%Y'),
-        'valid_until': (datetime.utcnow() + timedelta(days=7)).strftime('%d/%m/%Y'),
-        'customer_email': customer_email
+        'customer_email': customer_email,
+        'customer_name': customer_name,
+        'calculations': {
+            'subtotal': round(subtotal, 2),
+            'total': round(total, 2)
+        }
     }
     return render_template('quotation.html', **context)
 
@@ -1173,7 +1190,7 @@ def send_quotation():
         if not customer_email:
             return jsonify({'error': 'Customer email not available'}), 400
 
-        recipients = [customer_email, 'md.desk@chemo.in']
+        recipients = [customer_email, 'info@chemo.in']
 
         # Build quotation HTML
         quote_id = f"CGI-{int(datetime.utcnow().timestamp()*1000)}"
@@ -1229,51 +1246,59 @@ def send_quotation():
               <td>
                 <strong>CGI - Chemo Graphics India</strong><br>
                 123 Print Lane, Mumbai, India<br>
-                Phone: +91-9999999999<br>
-                Email: md.desk@chemo.in
+                Email: info@chemo.in
               </td>
               <td style='text-align: right;'>
                 <strong>Quote #:</strong> {quote_id}<br>
-                <strong>Date:</strong> {today}<br>
-                <strong>Customer ID:</strong> {customer_email}<br>
-                <strong>Valid Until:</strong> {valid_until}
+                <strong>Date:</strong> {today}
               </td>
             </tr>
           </table>
-          <p>Hello,<br><br>
-          This is <strong>{current_user.username}</strong> from CGI.<br>
-          Here is the proposed quotation for the required products:</p>
+          <div style='margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;'>
+            <p><strong>To:</strong> {selected_company.get('name', '')}</p>
+            <p><strong>Email:</strong> {customer_email}</p>
+          </div>
+          <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
           {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
-          <table border='1' cellspacing='0' cellpadding='5' style='border-collapse: collapse; width: 100%; margin-top: 15px;'>
-            <thead style='background-color: #f2f2f2;'>
-              <tr>
-                <th>Sr No</th>
-                <th>Machine</th>
-                <th>Product Type</th>
-                <th>Blanket Type</th>
-                <th>Dimensions</th>
-                <th>Barring Type</th>
-                <th>Quantity</th>
-                <th>Discount</th>
-                <th>Total</th>
+          <table style='width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;'>
+            <thead>
+              <tr style='background-color: #2c3e50; color: white;'>
+                <th style='padding: 10px; text-align: left;'>#</th>
+                <th style='padding: 10px; text-align: left;'>Machine</th>
+                <th style='padding: 10px; text-align: left;'>Product</th>
+                <th style='padding: 10px; text-align: left;'>Type</th>
+                <th style='padding: 10px; text-align: left;'>Size</th>
+                <th style='padding: 10px; text-align: left;'>Barring</th>
+                <th style='padding: 10px; text-align: right;'>Qty</th>
+                <th style='padding: 10px; text-align: right;'>Disc %</th>
+                <th style='padding: 10px; text-align: right;'>Amount</th>
               </tr>
             </thead>
             <tbody>
               {rows_html}
-              <tr>
-                <td colspan='8' style='text-align: right;'><strong>Subtotal:</strong></td>
-                <td><strong>₹{subtotal:,.2f}</strong></td>
-              </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td colspan='8' style='text-align: right; padding: 10px; border-top: 2px solid #ddd;'><strong>Subtotal:</strong></td>
+                <td style='text-align: right; padding: 10px; border-top: 2px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
+              </tr>
+              <tr>
+                <td colspan='8' style='text-align: right; padding: 10px;'><strong>Total:</strong></td>
+                <td style='text-align: right; padding: 10px; font-size: 1.1em;'><strong>₹{subtotal:,.2f}</strong></td>
+              </tr>
+            </tfoot>
           </table>
           <p style='margin-top: 20px;'>Thank you for your business!<br>— Team CGI</p>
           <hr>
           <small>
-            This quotation is not a contract or invoice. It is our best estimate and valid until {valid_until}.
+            This quotation is not a contract or invoice. It is our best estimate.
           </small>
         </div>
         """
 
+        # Total is same as subtotal since amounts already include any taxes
+        total = subtotal
+        
         # Email sending
         if not email_config_valid:
             return jsonify({'error': 'Email configuration invalid'}), 500
@@ -1284,7 +1309,96 @@ def send_quotation():
             msg['Subject'] = subject
             msg['From'] = f"{EMAIL_FROM_NAME or 'CGI'} <{EMAIL_FROM}>"
             msg['To'] = ', '.join(recipients)
-            msg.attach(MIMEText(quotation_html, 'html'))
+            
+            # Build email body with proper styling
+            email_body = f"""
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto;">
+                <h2 style="text-align: center; color: #2c3e50;">QUOTATION</h2>
+                
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+                    <div>
+                        <strong>CGI - Chemo Graphics India</strong><br>
+                        123 Print Lane, Mumbai, India<br>
+                        Email: info@chemo.in
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>Quote #:</strong> {quote_id}<br>
+                        <strong>Date:</strong> {today}<br>
+                        <strong>Customer ID:</strong> {customer_email}
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+                    <p><strong>To:</strong> {selected_company.get('name', '')}</p>
+                    <p><strong>Email:</strong> {customer_email}</p>
+                </div>
+                
+                <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
+                
+                {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
+                
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #2c3e50; color: white;">
+                            <th style="padding: 10px; text-align: left;">#</th>
+                            <th style="padding: 10px; text-align: left;">Description</th>
+                            <th style="padding: 10px; text-align: right;">Qty</th>
+                            <th style="padding: 10px; text-align: right;">Rate</th>
+                            <th style="padding: 10px; text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+            
+            # Add products to email body
+            for idx, p in enumerate(products, 1):
+                description = f"{p.get('machine', '')} - {p.get('type', '')}"
+                if p.get('blanket_type'):
+                    description += f" ({p.get('blanket_type')})"
+                if p.get('size'):
+                    description += f" - {p['size']}"
+                elif p.get('length') and p.get('width'):
+                    description += f" - {p['length']}x{p['width']}{p.get('unit', '')}"
+                
+                qty = p.get('quantity', 1)
+                rate = p.get('unit_price', 0)
+                amount = p.get('total', 0) if p.get('type') == 'blanket' else rate * qty
+                
+                email_body += f"""
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px;">{idx}</td>
+                    <td style="padding: 10px;">{description}</td>
+                    <td style="padding: 10px; text-align: right;">{qty}</td>
+                    <td style="padding: 10px; text-align: right;">₹{rate:,.2f}</td>
+                    <td style="padding: 10px; text-align: right;">₹{amount:,.2f}</td>
+                </tr>
+                """
+            
+            # Add totals (GST already included in item totals)
+            email_body += f"""
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
+                            <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
+                            <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                
+                <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 0.9em; color: #666;">
+                    <p>Thank you for your business!<br>— Team CGI</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">
+                        <em>This quotation is not a contract or invoice. It is our best estimate.</em>
+                    </p>
+                </div>
+            </div>
+            """
+            
+            msg.attach(MIMEText(email_body, 'html'))
 
             with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
                 if SMTP_USERNAME and SMTP_PASSWORD:
