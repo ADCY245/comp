@@ -16,13 +16,19 @@
 {% block content %}
 <div class="quote-container">
   <h2 style="text-align:center">QUOTATION</h2>
-  <div class="quote-header">
+  
+  <!-- Company Information -->
+  <div class="mb-4">
+    <h4>Company Information</h4>
     <div>
-        <strong>CGI - Chemo Graphics India</strong><br>
-        123 Print Lane, Mumbai, India<br>
-        Phone: <br>
-        Email: info@chemo.in
+        <strong>Company Name:</strong> Chemo Graphic International<br>
+        <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
+        <strong>Email:</strong> operations@chemo.in
     </div>
+  </div>
+
+  <!-- Quotation Header -->
+  <div class="quote-header">
     <div style="text-align:right">
         <strong>Quote #:</strong> {{ quote_id }}<br>
         <strong>Date:</strong> {{ quote_date }}<br>
@@ -30,6 +36,12 @@
         <strong>Customer:</strong> {{ customer_name }}<br>
         <strong>Email:</strong> {{ customer_email }}
     </div>
+  </div>
+
+  <!-- Additional Notes -->
+  <div class="mb-4">
+    <h4>Additional Notes</h4>
+    <p>For more information email info@chemo.in</p>
   </div>
   
 
