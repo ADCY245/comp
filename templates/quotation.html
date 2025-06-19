@@ -73,7 +73,7 @@
           <td>{{ item.get('bar_type', 'N/A') if prod_type == 'blanket' else 'N/A' }}</td>
           <td>{{ item.get('quantity', 1) }}</td>
           <td>{{ item.get('discount_percent', 0) }}%</td>
-          <td>₹{{ '%.2f'|format(item.calculations.final_total|default(item.total_price|default(total_val|float))) }}</td>
+          <td>₹{{ '%.2f'|format(item.calculations.final_total|default(item.total_price|default(0))) }}</td>
         </tr>
       {% endfor %}
       <tr>
