@@ -965,9 +965,7 @@ def login():
 # Add a route to handle root URL
 @app.route('/')
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('display'))
-    return redirect(url_for('login'))
+    return redirect(url_for('display'))
 
 @app.route('/signup')
 def signup():
