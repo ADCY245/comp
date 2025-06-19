@@ -278,7 +278,6 @@ function updateCartTotals() {
                         <span>₹${orderTotal.toFixed(2)}</span>
 
                     </div>
-                    <button class="btn btn-primary w-100 mt-3">Send Quotation</button>
                 </div>
             </div>
         `;
