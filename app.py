@@ -1290,6 +1290,19 @@ def quotation_preview():
             'total': total
         }
     }
+    # Generate current date and time
+    current_time = datetime.now()
+    quote_id = current_time.strftime('%Y%m%d%H%M%S')
+    quote_date = current_time.strftime('%d-%m-%Y')
+    quote_time = current_time.strftime('%H:%M:%S')
+    
+    # Add date/time and quote ID to context
+    context.update({
+        'quote_id': quote_id,
+        'quote_date': quote_date,
+        'quote_time': quote_time
+    })
+    
     return render_template('quotation.html', **context)
 
 # ---------------------------------------------------------------------------
