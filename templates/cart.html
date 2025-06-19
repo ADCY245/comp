@@ -4,56 +4,211 @@
 
 {% block extra_css %}
 <style>
-        /* Consistent remove button styles */
-        .remove-item-form .btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            width: auto;
-        }
-        
-        .mpack-product .remove-item-form {
-            width: auto;
-        }
-        
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            min-height: 100vh;
-        }
-        
-        .cart-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            min-height: calc(100vh - 80px);
-        }
-        .cart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
+    /* Reset body margin */
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Container styling */
+    .cart-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        min-height: calc(100vh - 80px);
+    }
+
+    /* Header styling */
+    .cart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    /* Cart item container */
+    .cart-item {
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+
+    .cart-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Product details */
+    .item-details {
+        margin-bottom: 10px;
+    }
+
+    .item-details h5 {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+    }
+
+    .item-details p {
+        margin: 5px 0;
+        color: #666;
+    }
+
+    /* Ensure all cart items have the same structure */
+    .cart-item > .item-details,
+    .mpack-product {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .cart-item .row {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Ensure quantity display is consistent and non-editable */
+    .quantity-display {
+        display: inline-block;
+        min-width: 30px;
+        text-align: right;
+        font-weight: 500;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    .cart-item .col-12 {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cart-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .mpack-product {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .product-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-right: 15px;
+    }
+
+    .product-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .product-details {
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .price-breakdown {
+        font-size: 0.85rem;
+    }
+
+    .price-grid {
+        font-size: 0.9rem;
+    }
+
+    .price-detail {
+        color: #555;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+    }
+
+    .price-heading {
+        font-size: 1.1rem;
+        color: #333;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 0.75rem;
+    }
+
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.25rem 0;
+    }
+
+    .price-label {
+        color: #666;
+    }
+
+    .price-value {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .mpack-left-content {
+        width: 100%;
+    }
+
+    .price-container {
+        margin-top: 1rem;
+    }
+
+    /* Ensure the remove button appears below the price grid */
+    .mpack-product .row.mt-3 {
+        margin-top: 1rem !important;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .mpack-product .remove-item-form {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .mpack-product .btn-danger {
+        width: 100%;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .quantity-controls .btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .quantity-controls .form-control {
+        height: 28px;
+        text-align: center;
+        padding: 0.25rem;
+    }
+
+    @media (max-width: 767.98px) {
         .cart-item {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            width: 100%;
+            padding: 15px;
         }
-        
-        /* Ensure all cart items have the same structure */
-        .cart-item > .item-details,
-        .mpack-product {
+
             display: flex;
             flex-direction: column;
             height: 100%;

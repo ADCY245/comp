@@ -41,21 +41,11 @@
           <div class="mb-2">
             <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}<br>
             <strong>Email:</strong> {{ session.get('selected_company', {}).get('email', 'Not provided') }}<br>
-            <strong>ETC:</strong> 36
+            <strong>Quote #:</strong> {{ quote_id }}<br>
+            <strong>Date:</strong> {{ quote_date }}<br>
+            <strong>Time:</strong> {{ quote_time }}
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quotation Header -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">Quotation Details</h5>
-      <div>
-        <strong>Quote #:</strong> {{ quote_id }}<br>
-        <strong>Date:</strong> {{ quote_date }}<br>
-        <strong>Time:</strong> {{ quote_time }}
       </div>
     </div>
   </div>
