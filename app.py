@@ -1282,8 +1282,8 @@ def quotation_preview():
         'cart': cart,
         'quote_date': quote_date,
         'quote_time': quote_time,
-        'customer_email': customer_email,
-        'customer_name': customer_name,
+        'company_name': selected_company.get('name', ''),
+        'company_email': selected_company.get('email', ''),
         'calculations': {
             'subtotal': final_subtotal,
             'total': total

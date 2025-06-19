@@ -39,8 +39,12 @@
         <div class="card-body">
           <h5 class="card-title mb-3">Customer Information</h5>
           <div class="mb-2">
-            <strong>Customer:</strong> {{ company_name if company_name and company_name != 'undefined' else 'Not selected' }}<br>
-            <strong>Email:</strong> {{ company_email if company_email and company_email != 'undefined' and company_email != 'email@example.com' else 'Not provided' }}<br>
+            <strong>Customer:</strong> {{ company_name if company_name and company_name != 'undefined' else 'Your Company' }}<br>
+            {% if company_email and company_email != 'undefined' and company_email != 'email@example.com' %}
+            <strong>Email:</strong> {{ company_email }}<br>
+            {% else %}
+            <strong>Email:</strong> Not provided<br>
+            {% endif %}
             <strong>Date:</strong> {{ quote_date }}<br>
             <strong>Time:</strong> {{ quote_time }}
           </div>
