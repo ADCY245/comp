@@ -39,11 +39,11 @@
         <div class="card-body">
           <h5 class="card-title mb-3">Customer Information</h5>
           <div class="mb-2">
-            <strong>Customer:</strong> {{ session.get('selected_company', {}).get('name', 'Not selected') }}<br>
-            <strong>Email:</strong> {{ session.get('selected_company', {}).get('email', 'Not provided') }}<br>
-            <strong>Quote #:</strong> {{ quote_id }}<br>
-            <strong>Date:</strong> {{ quote_date }}<br>
-            <strong>Time:</strong> {{ quote_time }}
+            <strong>Customer:</strong> {{ company_name if company_name and company_name != 'undefined' else 'Not selected' }}<br>
+            <strong>Email:</strong> {{ company_email if company_email and company_email != 'undefined' and company_email != 'email@example.com' else 'Not provided' }}<br>
+            <strong>Quote #:</strong> CGI-{{ now().strftime('%Y%m%d%H%M%S') }}<br>
+            <strong>Date:</strong> {{ now().strftime('%d-%m-%Y') }}<br>
+            <strong>Time:</strong> {{ now().strftime('%H:%M:%S') }}
           </div>
         </div>
       </div>
