@@ -123,227 +123,54 @@
         color: #666;
     }
 
-    .price-breakdown {
-        font-size: 0.85rem;
-    }
-
+    /* Price Grid Layout */
     .price-grid {
-        font-size: 0.9rem;
-    }
-
-    .price-detail {
-        color: #555;
-        margin-bottom: 0.25rem;
-        font-size: 0.85rem;
-    }
-
-    .price-heading {
-        font-size: 1.1rem;
-        color: #333;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
     }
 
     .price-row {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         padding: 0.25rem 0;
     }
 
     .price-label {
-        color: #666;
+        color: #6c757d;
+        font-size: 0.875rem;
     }
 
     .price-value {
         font-weight: 500;
-        color: #333;
-    }
-
-    .mpack-left-content {
-        width: 100%;
-    }
-
-    .price-container {
-        margin-top: 1rem;
-    }
-
-    /* Ensure the remove button appears below the price grid */
-    .mpack-product .row.mt-3 {
-        margin-top: 1rem !important;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-
-    .mpack-product .remove-item-form {
-        width: 100%;
-        margin-top: 1rem;
-    }
-
-    .mpack-product .btn-danger {
-        width: 100%;
-    }
-
-    .quantity-controls {
-        display: flex;
-        align-items: center;
-    }
-
-    .quantity-controls .btn {
-        width: 28px;
-        height: 28px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .quantity-controls .form-control {
-        height: 28px;
-        text-align: center;
-        padding: 0.25rem;
-    }
-
-    @media (max-width: 767.98px) {
-        .cart-item {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-    }
-
-    /* Ensure quantity display is consistent and non-editable */
-    .quantity-display {
-        display: inline-block;
-        min-width: 30px;
         text-align: right;
-        font-weight: 500;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
     }
 
-    .cart-item .col-12 {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+    .border-top {
+        border-top: 1px solid #dee2e6;
     }
 
-    .cart-item:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    .pt-2 {
+        padding-top: 0.5rem !important;
     }
 
-    .cart-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .mpack-product {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-
-    .product-image {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 4px;
-        margin-right: 15px;
-    }
-
-    .product-title {
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-
-    .product-details {
-        font-size: 0.9rem;
-        color: #666;
-    }
-
-    .price-breakdown {
-        font-size: 0.85rem;
-    }
-
-    .price-grid {
-        font-size: 0.9rem;
-    }
-
-    .price-detail {
-        color: #555;
-        margin-bottom: 0.25rem;
-        font-size: 0.85rem;
-    }
-
-    .price-heading {
-        font-size: 1.1rem;
-        color: #333;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 0.75rem;
-    }
-
-    .price-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.25rem 0;
-    }
-
-    .price-label {
-        color: #666;
-    }
-
-    .price-value {
-        font-weight: 500;
-        color: #333;
-    }
-
-    .mpack-left-content {
-        width: 100%;
-    }
-
-    .price-container {
-        margin-top: 1rem;
-    }
-
-    /* Ensure the remove button appears below the price grid */
-    .mpack-product .row.mt-3 {
-        margin-top: 1rem !important;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-
-    .mpack-product .remove-item-form {
-        width: 100%;
-        margin-top: 1rem;
-    }
-
-    .mpack-product .btn-danger {
-        width: 100%;
-    }
-
-    .quantity-controls {
-        display: flex;
-        align-items: center;
-    }
-
-    .quantity-controls .btn {
-        width: 28px;
-        height: 28px;
+    .remove-btn {
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
         padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        font-size: 1.25rem;
     }
 
-    .quantity-controls .form-control {
-        height: 28px;
-        text-align: center;
-        padding: 0.25rem;
+    .remove-btn:hover {
+        color: #a02d36;
+    }
+
+    .remove-btn:focus {
+        outline: none;
+        box-shadow: none;
     }
 
     @media (max-width: 768px) {
@@ -353,6 +180,7 @@
             flex-direction: column;
             height: 100%;
         }
+
         .remove-btn {
             background: none;
             border: none;
@@ -361,9 +189,11 @@
             padding: 5px;
             font-size: 1.25rem;
         }
+
         .remove-btn:hover {
             color: #a02d36;
         }
+
         .cart-items {
             margin-top: 20px;
             display: grid;
@@ -371,15 +201,18 @@
             gap: 20px;
             align-items: start;
         }
+
         .cart-items {
             grid-template-columns: 1fr;
         }
+
         .details-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             height: 100%;
         }
+
         .price-details {
             flex: 1;
             display: flex;
@@ -387,25 +220,30 @@
             height: 100%;
             margin-top: 15px;
         }
+
         .price-grid {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
+
         .cart-summary {
             margin-top: 30px;
             padding: 20px;
             background-color: #f8f9fa;
             border-radius: 5px;
         }
+
         .empty-cart {
             text-align: center;
             padding: 50px 20px;
         }
+
         .empty-cart h3 {
             color: #6c757d;
             margin-bottom: 15px;
         }
+
         .price-breakdown {
             background-color: #f8f9fa;
             padding: 15px;
@@ -413,11 +251,14 @@
             margin-top: 15px;
             font-size: 0.9rem;
         }
+
         .price-breakdown div {
             margin-bottom: 5px;
         }
     }
 </style>
+{% endblock %}
+
 {% block content %}
     <div class="cart-container">
         <div class="cart-header">
@@ -433,71 +274,90 @@
 
         <!-- Cart Items -->
         <div class="cart-items">
-                    <i class="fas fa-arrow-left me-1"></i> Continue Shopping
-                </a>
-                <script>
-                    document.getElementById('continueShoppingBtn').addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const companyName = sessionStorage.getItem('companyName') || '';
-                        const companyEmail = sessionStorage.getItem('companyEmail') || '';
-                        
-                        // Save company info to localStorage for the home page to access
-                        if (companyName) {
-                            localStorage.setItem('selectedCompany', JSON.stringify({
-                                name: companyName,
-                                email: companyEmail
-                            }));
-                        }
-                        
-                        // Navigate to product selection page
-                        window.location.href = '{{ url_for("product_selection") }}';
-                    });
-                </script>
-                <button type="button" class="btn btn-outline-danger" id="clearCartBtnTop"><i class="fas fa-trash me-1"></i> Clear Cart</button>
-
-                <!-- Send Quotation Button (top) -->
-                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary ms-2" id="sendQuotationBtnTop">
-                    <i class="fas fa-paper-plane me-1"></i> Send Quotation
-                </a>
-            </div>
-        </div>
-
-        <!-- Button to remove second MPack entry -->
-        <div class="mb-3" id="removeDuplicateMpackBtn" style="display: none;">
-            <button type="button" class="btn btn-warning" onclick="removeSecondMpack()">
-                <i class="fas fa-trash me-1"></i> Remove Duplicate MPack
-            </button>
-        </div>
-
-        <div id="cartItems" class="cart-items" {% if not cart.products or cart.products|length == 0 %}style="display: none;"{% endif %}>
             {% if cart.products %}
                 {% for item in cart.products %}
-                {% if item %}
-                <div class="cart-item" data-type="{{ item.type|default('') }}" data-index="{{ loop.index0 }}" {% if item.type == 'blanket' %}data-base-price="{{ item.base_price|default(0) }}" data-bar-price="{{ item.bar_price|default(0) }}" data-quantity="{{ item.quantity|default(1) }}" data-discount-percent="{{ item.discount_percent|default(0) }}" data-gst-percent="{{ item.gst_percent|default(18) }}"{% elif item.type == 'mpack' %}data-unit-price="{{ item.unit_price|default(0) }}" data-quantity="{{ item.quantity|default(1) }}" data-discount-percent="{{ item.discount_percent|default(0) }}" data-gst-percent="{{ item.gst_percent|default(18) }}" data-machine="{{ item.machine|default('') }}" data-thickness="{{ item.thickness|default('') }}" data-size="{{ item.size|default('') }}"{% endif %}>
-                    <div class="item-details w-100">
-                        <div class="row">
-                            <div class="col-12">
-                                {% if item.type == 'blanket' %}
-                                <!-- Blanket Product -->
-                                <div class="blanket-product"
-                                     data-area="{{ item.calculations.areaSqM|default(0) if item.calculations else 0 }}"
-                                     data-rate="{{ item.calculations.ratePerSqMt|default(0) if item.calculations else 0 }}"
-                                     data-base-price="{{ item.base_price|default(0) }}"
-                                     data-bar-price="{{ item.bar_price|default(0) }}"
-                                     data-quantity="{{ item.quantity|default(1) }}"
-                                     data-discount-percent="{{ item.discount_percent|default(0) }}"
-                                     data-gst-percent="{{ item.gst_percent|default(18) }}">
-                                    <div class="d-flex flex-column">
-                                        <h5 class="product-title">{{ item.name }}</h5>
-                                        <div class="product-details mb-3">
-                                            {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
-                                            {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
-                                            {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
-                                            {% elif item.length and item.width %}<p class="mb-1"><strong>Size:</strong> {{ item.length }}x{{ item.width }} {{ item.unit|default('mm') }}</p>{% endif %}
-                                            {% if item.bar_type %}<p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }} (₹{{ "%.2f"|format(item.bar_price|default(0)) }})</p>{% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="price-details mt-3 p-3 bg-light rounded">
+                    {% if item %}
+                        <div class="cart-item" data-type="{{ item.type|default('') }}" data-index="{{ loop.index0 }}">
+                            <div class="item-details">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <!-- Product details based on type -->
+                                        {% if item.type == 'blanket' %}
+                                            <!-- Blanket Product -->
+                                            <div class="blanket-product"
+                                                 data-area="{{ item.calculations.areaSqM|default(0) if item.calculations else 0 }}"
+                                                 data-rate="{{ item.calculations.ratePerSqMt|default(0) if item.calculations else 0 }}"
+                                                 data-base-price="{{ item.base_price|default(0) }}"
+                                                 data-bar-price="{{ item.bar_price|default(0) }}"
+                                                 data-quantity="{{ item.quantity|default(1) }}"
+                                                 data-discount-percent="{{ item.discount_percent|default(0) }}"
+                                                 data-gst-percent="{{ item.gst_percent|default(18) }}">
+                                                <div class="d-flex flex-column">
+                                                    <h5 class="product-title">{{ item.name }}</h5>
+                                                    <div class="product-details mb-3">
+                                                        {% if item.machine %}<p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>{% endif %}
+                                                        {% if item.thickness %}<p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}mm</p>{% endif %}
+                                                        {% if item.size %}<p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
+                                                        {% elif item.length and item.width %}<p class="mb-1"><strong>Size:</strong> {{ item.length }}x{{ item.width }} {{ item.unit|default('mm') }}</p>{% endif %}
+                                                        {% if item.bar_type %}<p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }} (₹{{ "%.2f"|format(item.bar_price|default(0)) }})</p>{% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="price-details mt-3 p-3 bg-light rounded">
+                                                    <div class="price-grid">
+                                                        <div class="price-row">
+                                                            <span class="price-label">Base Price:</span>
+                                                            <span class="price-value">₹{{ "%.2f"|format(item.base_price|default(0)) }}</span>
+                                                        </div>
+                                                        {% if item.bar_price and item.bar_price > 0 %}
+                                                        <div class="price-row">
+                                                            <span class="price-label">Barring:</span>
+                                                            <span class="price-value">+₹{{ "%.2f"|format(item.bar_price|default(0)) }}</span>
+                                                        </div>
+                                                        {% endif %}
+                                                        <div class="price-row">
+                                                            <span class="price-label">Unit Price:</span>
+                                                            <span class="price-value">₹{{ "%.2f"|format(item.unit_price|default(0)) }}</span>
+                                                        </div>
+                                                        <div class="price-row">
+                                                            <span class="price-label">Subtotal:</span>
+                                                            <span class="price-value">₹{{ "%.2f"|format(item.calculations.subtotal|default((item.unit_price|default(0)) * (item.quantity|default(1)))) }}</span>
+                                                        </div>
+                                                        <div class="price-row">
+                                                            <span class="price-label">Quantity:</span>
+                                                            <span class="price-value">{{ item.quantity }}</span>
+                                                            <div class="d-flex justify-content-between fw-bold mt-1">
+                                                                <span>After Discount:</span>
+                                                                <span>₹{{ "%.2f"|format(item.calculations.discounted_subtotal|default(0)) }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% elif item.type == 'mpack' %}
+                                        <!-- MPack Product -->
+                                        <div class="mpack-product"
+                                             data-unit-price="{{ item.unit_price|default(0) }}"
+                                             data-quantity="{{ item.quantity|default(1) }}"
+                                             data-discount-percent="{{ item.discount_percent|default(0) }}"
+                                             data-gst-percent="{{ item.gst_percent|default(18) }}"
+                                             data-machine="{{ item.machine|default('') }}"
+                                             data-thickness="{{ item.thickness|default('') }}"
+                                             data-size="{{ item.size|default('') }}">
+                                            <div class="d-flex flex-column">
+                                                <h5 class="product-title">MPack - {{ item.name|default('MPack') }}</h5>
+                                                <div class="product-details mb-3">
+                                                    {% if item.machine %}
+                                                        <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
+                                                    {% endif %}
+                                                    
+                                                    {% if item.thickness %}
+                                                        {% set thickness = item.thickness|string %}
+                                                        <p class="mb-1"><strong>Thickness:</strong> {{ thickness }}{% if not (thickness.endswith('mm') or thickness.endswith('in') or thickness.endswith('cm') or thickness.endswith('micron')) %}{% if thickness|float >= 1 %}mm{% else %}micron{% endif %}{% endif %}</p>
+                                                    {% endif %}
+                                                    
+                                                    {% if item.size %}
+                                                        <p class="mb-1"><strong>Size:</strong> {{ item.size }}</p>
+                                                    {% endif %}
                                         <div class="price-grid">
                                             <div class="price-row">
                                                 <span class="price-label">Base Price:</span>
@@ -935,7 +795,7 @@
             });
         });
     </script>
-    
+
     <style>
         .remove-btn {
             background: none;
@@ -985,4 +845,46 @@
             padding-top: 0.5rem !important;
         }
     </style>
-{% endblock %}
+        padding: 0;
+        font-size: 1.25rem;
+    }
+    .remove-btn:hover {
+        color: #a02d36;
+    }
+    .remove-btn:focus {
+        outline: none;
+        box-shadow: none;
+    }
+    
+    /* Price Grid Layout */
+    .price-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.25rem 0;
+    }
+    
+    .price-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .price-value {
+        font-weight: 500;
+        text-align: right;
+    }
+    
+    .border-top {
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .pt-2 {
+        padding-top: 0.5rem !important;
+    }
+</style>
