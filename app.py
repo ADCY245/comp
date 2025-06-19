@@ -677,18 +677,8 @@ def load_user(user_id):
 @app.route('/')
 def home():
     if current_user.is_authenticated:
-        return redirect(url_for('display'))
-    return redirect(url_for('login'))
-
-@app.route('/display')
-@login_required
-def display():
-    # Check if company is selected
-    selected_company = session.get('selected_company')
-    if not selected_company:
         return redirect(url_for('company_selection'))
-    
-    return render_template('display.html')
+    return redirect(url_for('login'))
 
 @app.route('/cart')
 @login_required
@@ -1568,7 +1558,7 @@ def api_login():
                 return jsonify({
                     'success': True,
                     'message': 'Login successful',
-                    'redirectTo': '/display',
+                    'redirectTo': '/company_selection',
                     'user': {
                         'id': str(user.id),  # Ensure ID is string for JSON serialization
                         'email': user.email,
@@ -1631,7 +1621,7 @@ def api_login():
         return jsonify({
             'success': True,
             'message': 'Login successful',
-            'redirectTo': '/display',
+            'redirectTo': '/company_selection',
             'user': {
                 'id': user.id,
                 'email': user.email,
