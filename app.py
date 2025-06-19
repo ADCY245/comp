@@ -677,7 +677,7 @@ def load_user(user_id):
 @app.route('/')
 def home():
     if current_user.is_authenticated:
-        return redirect(url_for('company_selection'))
+        return redirect(url_for('display'))
     return redirect(url_for('login'))
 
 @app.route('/cart')
@@ -976,6 +976,10 @@ def signup():
 @app.route('/company_selection', methods=['GET', 'POST'])
 @login_required
 def company_selection():
+    # If user is not authenticated, redirect to login
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     if request.method == 'POST':
         company = request.form.get('company')
         email = request.form.get('email')
