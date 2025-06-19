@@ -1159,13 +1159,38 @@ def quotation_preview():
         item.setdefault('type', '')
         item.setdefault('quantity', 1)
         item.setdefault('discount_percent', 0)
+        item.setdefault('gst_percent', 18)  # Default GST for mpack
         item.setdefault('unit_price', 0)
         
-        # Calculate item total
-        item_subtotal = item.get('total', 0) or (float(item['unit_price']) * int(item['quantity']) * (1 - (float(item['discount_percent']) / 100)))
+        if item['type'] == 'mpack':
+            # Calculate mpack total with GST and discount
+            price = float(item['unit_price'])
+            quantity = int(item['quantity'])
+            discount_percent = float(item['discount_percent'])
+            gst_percent = float(item['gst_percent'])
+            
+            discount_amount = (price * quantity * discount_percent / 100) if discount_percent else 0
+            price_after_discount = (price * quantity) - discount_amount
+            gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
+            final_total = price_after_discount + gst_amount
+            
+            # Store calculations in the item
+            item['calculations'] = {
+                'unit_price': round(price, 2),
+                'quantity': quantity,
+                'discount_percent': discount_percent,
+                'discount_amount': round(discount_amount, 2),
+                'price_after_discount': round(price_after_discount, 2),
+                'gst_percent': gst_percent,
+                'gst_amount': round(gst_amount, 2),
+                'final_total': round(final_total, 2)
+            }
+            item_subtotal = final_total
+        else:
+            # Handle other product types
+            item_subtotal = item.get('total', 0) or (float(item['unit_price']) * int(item['quantity']) * (1 - (float(item['discount_percent']) / 100)))
+            item['subtotal'] = round(item_subtotal, 2)
         
-        # Update item with calculated values
-        item['subtotal'] = round(item_subtotal, 2)
         subtotal += item_subtotal
     
     # Calculate final totals

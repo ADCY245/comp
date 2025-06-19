@@ -60,7 +60,7 @@
           <td>{{ item.get('machine', '') }}</td>
           <td>{{ prod_type }}</td>
           <td>{{ item.get('blanket_type') or item.get('name','----') if prod_type == 'blanket' else '----' }}</td>
-          <td>{% if item.get('thickness') %}{% if item.type == 'blanket' %}{{ item.thickness }}mm{% else %}{{ item.thickness }} micron{% endif %}{% else %}N/A{% endif %}</td>
+          <td>{% if item.get('thickness') %}{{ item.thickness }}{% if item.type == 'blanket' and not (item.thickness|string).endswith('mm') and not (item.thickness|string).endswith('in') and not (item.thickness|string).endswith('cm') and not (item.thickness|string).endswith('micron') %}mm{% elif item.type == 'mpack' and not (item.thickness|string).endswith('mm') and not (item.thickness|string).endswith('in') and not (item.thickness|string).endswith('cm') and not (item.thickness|string).endswith('micron') %} micron{% endif %}{% else %}N/A{% endif %}</td>
           <td>
             {% if item.get('size') %}
               {{ item.size }}
@@ -73,14 +73,7 @@
           <td>{{ item.get('bar_type', 'N/A') if prod_type == 'blanket' else 'N/A' }}</td>
           <td>{{ item.get('quantity', 1) }}</td>
           <td>{{ item.get('discount_percent', 0) }}%</td>
-          <td>{% if item.type == 'mpack' %}
-            {% set subtotal = item.unit_price * item.quantity %}
-            {% set discount = (subtotal * (item.discount_percent / 100)) if item.discount_percent else 0 %}
-            {% set final_total = subtotal - discount %}
-            ₹{{ '%.2f'|format(final_total) }}
-          {% else %}
-            ₹{{ '%.2f'|format(total_val|float) }}
-          {% endif %}</td>
+          <td>₹{{ '%.2f'|format(item.calculations.final_total|default(item.total_price|default(total_val|float))) }}</td>
         </tr>
       {% endfor %}
       <tr>
