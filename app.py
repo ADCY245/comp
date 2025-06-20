@@ -697,22 +697,20 @@ def cart():
         cart_data.setdefault("products", [])
         
         # Calculate cart totals using the actual total field from each product
-        # Initialize variables with default values
-        subtotal = 0
-        gst_percent = 18  # Default GST percentage
-        gst_amount = 0
+        # Calculate total by summing up final prices from calculations
         total = 0
-        
-        # Only calculate if there are products
         if cart_data.get('products'):
-            subtotal = sum(
-                float(p.get('calculations', {}).get('final_total', p.get('total', 0)))
+            total = sum(
+                float(p.get('calculations', {}).get('final_total', 0))
                 for p in cart_data['products']
             )
             
-            # Calculate GST
-            gst_amount = (subtotal * gst_percent) / 100
-            total = subtotal + gst_amount
+            # If no calculations exist, fall back to total field
+            if not total:
+                total = sum(
+                    float(p.get('total', 0))
+                    for p in cart_data['products']
+                )
             
             # Calculate discount amount if needed
             discount_amount = sum(
@@ -722,10 +720,7 @@ def cart():
             
             # Add calculated totals to the cart data
             cart_data['calculations'] = {
-                'subtotal': round(subtotal, 2),
                 'discount_amount': round(discount_amount, 2),
-                'gst_percent': gst_percent,
-                'gst_amount': round(gst_amount, 2),
                 'total': round(total, 2)
             }
         
@@ -1568,7 +1563,7 @@ def send_quotation():
         if not email_config_valid:
             return jsonify({'error': 'Email configuration invalid'}), 500
 
-        subject = f"CGI Quotation - {quote_id}"
+        subject = f"CGI Quotation - {today}"
         try:
             # Create message container
             msg = MIMEMultipart('alternative')
@@ -1706,22 +1701,23 @@ def send_quotation():
                         <td style="padding: 10px;">{idx}</td>
                         <td style="padding: 10px;">{p.get('machine', '')}</td>
                         <td style="padding: 10px;">{p.get('type', '')}</td>
-                        <td style="padding: 10px;">{p.get('blanket_type', '----')}</td>
+                        <td style="padding: 10px;">{p.get('blanket_type', '----') if p.get('type') == 'blanket' else '----'}</td>
                         <td style="padding: 10px;">{p.get('thickness', '----')}</td>
-                        <td style="padding: 10px;">{p.get('size', '') or (f"{p.get('length', '')} x {p.get('width', '')} {p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
-                        <td style="padding: 10px;">{p.get('bar_type', '----')}</td>
+                        <td style="padding: 10px;">
+                            {p.get('size', '').replace('.0 mm', ' mm').replace('.0mm', 'mm') if p.get('size') else 
+                            ('%sx%s mm' % (p.get('length', '').replace('.0', ''), p.get('width', '').replace('.0', '')) if p.get('type') == 'mpack' else 
+                            ('%sx%s%s' % (p.get('length', '').replace('.0', ''), p.get('width', '').replace('.0', ''), p.get('unit', '').replace('mm', ' mm')) if p.get('length') and p.get('width') else '----'))}
+                        </td>
+                        <td style="padding: 10px;">{p.get('bar_type', '----') if p.get('type') == 'blanket' else '----'}</td>
                         <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
                         <td style="padding: 10px; text-align: right;">{p.get('discount_percent', 0)}%</td>
-                        <td style="padding: 10px; text-align: right;">₹{p.get('total', 0):,.2f}</td>
-                      </tr>''' for idx, p in enumerate(products, 1)])}
+                        <td style="padding: 10px; text-align: right;">₹{p.get('calculations', {}).get('final_total', p.get('total', 0)):,.2f}</td>
+                      </tr>
+                      ''' for idx, p in enumerate(products, 1)])}
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colspan="9" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
-                        <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
-                      </tr>
-                      <tr>
-                        <td colspan="9" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
+                        <td colspan="9" style="text-align: right; padding: 10px; font-weight: bold; border-top: 2px solid #ddd;"><strong>Total:</strong></td>
                         <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
                       </tr>
                     </tfoot>
