@@ -1368,26 +1368,24 @@ def send_quotation():
         # Send to customer and MD's desk
         recipients = [customer_email, 'md.desk@chemo.in']
 
-        # Build quotation HTML
-        quote_id = f"CGI-{int(datetime.utcnow().timestamp()*1000)}"
+        # Get current date
         today = datetime.utcnow().strftime('%d/%m/%Y')
-        valid_until = (datetime.utcnow() + timedelta(days=7)).strftime('%d/%m/%Y')
 
         # Table rows
         rows_html = """
-        <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+        <table style='width: 100%; border-collapse: collapse; margin: 20px 0; font-family: Arial, sans-serif;'>
             <thead>
-                <tr style='background-color: #f2f2f2;'>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Sr No</th>
+                <tr>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>#</th>
                     <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Machine</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Product Type</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Blanket Type</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Product</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Type</th>
                     <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Thickness</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Dimensions</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Barring Type</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Size</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Barring</th>
                     <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Qty</th>
-                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Discount</th>
-                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Total</th>
+                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Disc %</th>
+                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Amount (₹)</th>
                 </tr>
             </thead>
             <tbody>
@@ -1409,13 +1407,34 @@ def send_quotation():
             
             qty = p.get('quantity', 1)
             
-            # Calculate total
-            total_val = 0
-            calcs = p.get('calculations', {})
-            if calcs:
-                total_val = calcs.get('final_total') or calcs.get('finalTotal') or calcs.get('discountedSubtotal') or 0
-            else:
-                total_val = p.get('unit_price', 0) * qty
+            # Calculate total based on product type
+            if prod_type == 'mpack':
+                # For mpack, use unit_price * quantity
+                unit_price = p.get('unit_price', 0)
+                discount_percent = p.get('discount_percent', 0)
+                gst_percent = p.get('gst_percent', 18)
+                
+                subtotal_val = unit_price * qty
+                discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
+                taxable_amount = subtotal_val - discount_amount
+                gst_amount = (taxable_amount * gst_percent / 100)
+                total_val = taxable_amount + gst_amount
+                
+            elif prod_type == 'blanket':
+                # For blanket, use calculations from the cart
+                calcs = p.get('calculations', {})
+                if calcs:
+                    total_val = calcs.get('final_total', 0)
+                else:
+                    unit_price = p.get('unit_price', 0)
+                    discount_percent = p.get('discount_percent', 0)
+                    gst_percent = p.get('gst_percent', 18)
+                    
+                    subtotal_val = unit_price * qty
+                    discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
+                    taxable_amount = subtotal_val - discount_amount
+                    gst_amount = (taxable_amount * gst_percent / 100)
+                    total_val = taxable_amount + gst_amount
             
             subtotal += total_val
             
@@ -1425,9 +1444,9 @@ def send_quotation():
                     <td style='padding: 8px; border: 1px solid #ddd;'>{machine}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{prod_type}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('blanket_type', '----') if prod_type == 'blanket' else '----'}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('thickness', '')}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('thickness', '----')}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{dimensions}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('bar_type', '------') if prod_type == 'blanket' else '------'}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('bar_type', '----') if prod_type == 'blanket' else '----'}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{qty}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{p.get('discount_percent', 0)}%</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{total_val:,.2f}</td>
@@ -1438,6 +1457,16 @@ def send_quotation():
         rows_html += f"""
             </tbody>
             <tfoot>
+                <tr>
+                    <td colspan='8' style='border: none;'></td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd; font-weight: bold;'>Subtotal:</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd; font-weight: bold;'>₹{subtotal:,.2f}</td>
+                </tr>
+                <tr>
+                    <td colspan='8' style='border: none;'></td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd; font-weight: bold;'>Total:</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd; font-weight: bold;'>₹{subtotal:,.2f}</td>
+                </tr>
                 <tr>
                     <td colspan='9' style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>Subtotal:</strong></td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
@@ -1549,43 +1578,123 @@ def send_quotation():
             
             # Create the HTML version of the message
             html = f"""
+            <!DOCTYPE html>
             <html>
-              <body>
-                <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
-                  <h2 style="text-align: center; color: #2c3e50;">QUOTATION</h2>
-                  
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-                    <div>
-                      <strong>CGI - Chemo Graphics India</strong><br>
-                      123 Print Lane, Mumbai, India<br>
-                      Email: info@chemo.in
+            <head>
+                <meta charset="UTF-8">
+                <title>Quotation</title>
+                <style>
+                    body {{ 
+                        font-family: Arial, sans-serif; 
+                        line-height: 1.6;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+                    }}
+                    .container {{ 
+                        max-width: 800px; 
+                        margin: 0 auto; 
+                        padding: 30px;
+                    }}
+                    .header {{ 
+                        margin-bottom: 20px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #eee;
+                    }}
+                    .header h2 {{
+                        margin: 0 0 10px 0;
+                        color: #2c3e50;
+                    }}
+                    .company-info {{
+                        margin-bottom: 20px;
+                        line-height: 1.5;
+                    }}
+                    .quote-info {{
+                        margin: 25px 0;
+                        padding: 15px;
+                        background-color: #f9f9f9;
+                        border-radius: 5px;
+                        border-left: 4px solid #3498db;
+                    }}
+                    table {{ 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin: 25px 0;
+                        font-size: 14px;
+                    }}
+                    th, td {{ 
+                        padding: 12px 8px; 
+                        text-align: left; 
+                        border: 1px solid #e0e0e0;
+                    }}
+                    th {{ 
+                        background-color: #f8f9fa;
+                        font-weight: 600;
+                        color: #2c3e50;
+                    }}
+                    tr:nth-child(even) {{
+                        background-color: #f9f9f9;
+                    }}
+                    .total-row {{ 
+                        font-weight: bold;
+                        background-color: #f1f8ff !important;
+                    }}
+                    .footer {{ 
+                        margin-top: 40px;
+                        padding-top: 20px;
+                        border-top: 1px solid #eee;
+                        font-size: 0.9em;
+                        color: #666;
+                    }}
+                    .signature {{
+                        margin: 30px 0 20px 0;
+                        padding-top: 20px;
+                        border-top: 1px solid #eee;
+                    }}
+                    .disclaimer {{
+                        font-size: 0.8em;
+                        color: #999;
+                        font-style: italic;
+                        margin-top: 30px;
+                        padding-top: 15px;
+                        border-top: 1px solid #f0f0f0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>QUOTATION</h2>
+                        <div class="company-info">
+                            <strong>CGI - Chemo Graphics India</strong><br>
+                            123 Print Lane, Mumbai, India<br>
+                            Email: info@chemo.in
+                        </div>
                     </div>
-                    <div style="text-align: right;">
-                      <strong>Quote #:</strong> {quote_id}<br>
-                      <strong>Date:</strong> {today}<br>
-                      <strong>Valid Until:</strong> {valid_until}
+                    
+                    <div class="quote-info">
+                        <p><strong>To:</strong> {selected_company.get('name', '')}<br>
+                        <strong>Email:</strong> {customer_email}</p>
                     </div>
-                  </div>
-                  
-                  <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-                    <p><strong>To:</strong> {selected_company.get('name', '')}</p>
-                    <p><strong>Email:</strong> {customer_email}</p>
-                  </div>
-                  
-                  <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
-                  
-                  {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
-                  
-                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
-                    <thead>
-                      <tr style="background-color: #2c3e50; color: white;">
-                        <th style="padding: 10px; text-align: left;">#</th>
-                        <th style="padding: 10px; text-align: left;">Machine</th>
-                        <th style="padding: 10px; text-align: left;">Product</th>
-                        <th style="padding: 10px; text-align: left;">Type</th>
-                        <th style="padding: 10px; text-align: left;">Thickness</th>
-                        <th style="padding: 10px; text-align: left;">Size</th>
-                        <th style="padding: 10px; text-align: left;">Barring</th>
+                    
+                    <p>Hello,</p>
+                    
+                    <p>This is test from CGI.<br>
+                    Here is the proposed quotation for the required products:</p>
+                    
+                    {rows_html}
+                    
+                    <div class="signature">
+                        <p>Thank you for your business!<br>
+                        <strong>— Team CGI</strong></p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>For more information, please contact: <a href="mailto:info@chemo.in" style="color: #3498db; text-decoration: none;">info@chemo.in</a></p>
+                        <p class="disclaimer">
+                            This quotation is not a contract or invoice. It is our best estimate.
+                        </p>
+                    </div>
                         <th style="padding: 10px; text-align: right;">Qty</th>
                         <th style="padding: 10px; text-align: right;">Disc %</th>
                         <th style="padding: 10px; text-align: right;">Amount (₹)</th>
