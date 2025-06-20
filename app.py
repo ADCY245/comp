@@ -741,15 +741,20 @@ def cart():
         
         return render_template('cart.html',
                            cart=cart_data,
-                           products=cart_data.get('products', []),
-                           company_name=company_name,
-                           company_email=company_email,
-                           calculations=cart_data.get('calculations', {
-                               'subtotal': 0,
-                               'gst_percent': gst_percent,
-                               'gst_amount': 0,
-                               'total': 0
-                           }))
+                            products=cart_data.get('products', []),
+                            company_name=company_name,
+                            company_email=company_email,
+                            # Calculate GST rates for each product
+                            products_with_gst=[
+                                {**p, 'gst_percent': 18.0 if p.get('type') == 'blanket' else 12.0}
+                                for p in cart_data.get('products', [])
+                            ],
+                            calculations=cart_data.get('calculations', {
+                                'subtotal': 0,
+                                'gst_percent': 0,  # Will be calculated per product
+                                'gst_amount': 0,
+                                'total': 0
+                            }))
         
     except Exception as e:
         print(f"Error in cart route: {e}")
@@ -1361,14 +1366,134 @@ def send_quotation():
 
         # Determine recipient emails
         selected_company = session.get('selected_company')
-    except Exception as e:
-        app.logger.error(f"Error in send_quotation: {str(e)}")
-        return jsonify({'error': 'An unexpected error occurred while processing your request'}), 500
         if not isinstance(selected_company, dict):
             selected_company = {}
         customer_email = selected_company.get('email') or current_user.email
         if not customer_email:
             return jsonify({'error': 'Customer email not available'}), 400
+
+        # Send to customer and MD's desk
+        recipients = [customer_email, 'md.desk@chemo.in']
+
+        # Get current date
+        today = datetime.utcnow().strftime('%d/%m/%Y')
+
+        # Table rows
+        rows_html = """
+        <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+            <thead>
+                <tr style='background-color: #f5f5f5; text-align: left;'>
+                    <th style='padding: 8px; border: 1px solid #ddd;'>Item</th>
+                    <th style='padding: 8px; border: 1px solid #ddd;'>Quantity</th>
+                    <th style='padding: 8px; border: 1px solid #ddd;'>Unit Price</th>
+                    <th style='padding: 8px; border: 1px solid #ddd;'>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+
+        for idx, p in enumerate(products, start=1):
+            machine = p.get('machine', '')
+            prod_type = p.get('type', '')
+            
+            # Dimensions
+            length = p.get('length', 0)
+            width = p.get('width', 0)
+            unit = p.get('unit', '')
+            
+            # Pricing
+            quantity = p.get('quantity', 1)
+            unit_price = p.get('unit_price', 0)
+            total_price = p.get('total_price', 0)
+            gst_percent = 18.0 if p.get('type') == 'blanket' else 12.0
+            gst_amount = (total_price * gst_percent) / 100
+            
+            rows_html += f"""
+                <tr style='border-bottom: 1px solid #ddd;'>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>
+                        {idx}. {p.get('name', '')}<br>
+                        Machine: {machine}<br>
+                        Type: {prod_type}<br>
+                        Dimensions: {length} x {width} {unit}<br>
+                        Bar Type: {p.get('bar_type', '')}
+                        GST: {gst_percent}%
+                    </td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{quantity}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>₹{unit_price:,.2f}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>₹{total_price:,.2f}</td>
+                </tr>
+            """
+
+        rows_html += """
+            </tbody>
+        </table>
+        """
+
+        # Build full HTML
+        quotation_html = f"""
+        <div style='font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; line-height: 1.6;'>
+          <h2 style='text-align: left; margin-bottom: 20px;'>QUOTATION</h2>
+          
+          <div style='margin-bottom: 20px;'>
+            <h4>Company Information</h4>
+            <p>Company: {selected_company.get('name', 'N/A')}</p>
+            <p>Email: {customer_email}</p>
+          </div>
+
+          <div style='margin-bottom: 20px;'>
+            <h4>Quotation Details</h4>
+            <p>Date: {today}</p>
+            <p>Notes: {notes or 'No additional notes'}</p>
+          </div>
+
+          {rows_html}
+
+          <div style='margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;'>
+            <h4 style='margin: 0 0 10px 0;'>Total Amount</h4>
+            <p style='margin: 0;'>₹{sum(p.get('total_price', 0) for p in products):,.2f}</p>
+            <h4 style='margin: 0 0 10px 0;'>GST Details</h4>
+            <p style='margin: 0;'>Blanket Products (18%): ₹{sum((p.get('total_price', 0) * 18.0 / 100) for p in products if p.get('type') == 'blanket'):,.2f}</p>
+            <p style='margin: 0;'>Mpack Products (12%): ₹{sum((p.get('total_price', 0) * 12.0 / 100) for p in products if p.get('type') != 'blanket'):,.2f}</p>
+          </div>
+
+          <div style='margin-top: 30px; text-align: right;'>
+            <p>Best regards,</p>
+            <p>Chemo India Pvt. Ltd.</p>
+          </div>
+        </div>
+        """
+
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
+        msg['To'] = ', '.join(recipients)
+        msg['Subject'] = f"Quotation from Chemo India - {today}"
+        
+        # Attach HTML version
+        part = MIMEText(quotation_html, 'html')
+        msg.attach(part)
+
+        # Send the email
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        else:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+        
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Quotation sent successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Error sending quotation: {str(e)}")
+        return jsonify({
+            'error': 'Failed to send quotation',
+            'details': str(e)
+        }), 500
 
         # Send to customer and MD's desk
         recipients = [customer_email, 'md.desk@chemo.in']
