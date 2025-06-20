@@ -27,6 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (data.success) {
           showToast('Success', 'Quotation sent successfully!', 'success');
+          
+          // Clear the cart from localStorage
+          const cart = { products: [] };
+          localStorage.setItem('cart', JSON.stringify(cart));
+          
+          // Update UI
+          updateCartCount(0);
+          document.getElementById('cartItems').style.display = 'none';
+          document.getElementById('emptyCart').style.display = 'block';
+          
           // Redirect to cart after a short delay
           setTimeout(() => {
             window.location.href = '/cart';
@@ -44,7 +54,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Show toast notification
+  // Function to update cart count in the UI
+  function updateCartCount(count) {
+    const cartCountElements = document.querySelectorAll('.cart-count');
+    cartCountElements.forEach(el => {
+      el.textContent = count;
+      el.style.display = count > 0 ? 'inline' : 'none';
+    });
+  }
+
+  // Function to show toast notification
   function showToast(title, message, type = 'info') {
     // Check if toast container exists, if not create it
     let toastContainer = document.getElementById('toast-container');
