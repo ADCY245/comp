@@ -1359,13 +1359,16 @@ def send_quotation():
         <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
             <thead>
                 <tr style='background-color: #f2f2f2;'>
-                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>#</th>
-                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Machine</th>
-                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Product</th>
-                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Type</th>
-                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Size</th>
-                    <th style='padding: 8px; text-align: right; border-bottom: 1px solid #ddd;'>Qty</th>
-                    <th style='padding: 8px; text-align: right; border-bottom: 1px solid #ddd;'>Amount (₹)</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Sr No</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Machine</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Product Type</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Blanket Type</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Thickness</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Dimensions</th>
+                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Barring Type</th>
+                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Qty</th>
+                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Discount</th>
+                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -1399,13 +1402,16 @@ def send_quotation():
             
             rows_html += f"""
                 <tr>
-                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{idx}</td>
-                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{machine}</td>
-                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{prod_type}</td>
-                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{p.get('blanket_type', '----') if prod_type == 'blanket' else '----'}</td>
-                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{dimensions}</td>
-                    <td style='padding: 8px; text-align: right; border-bottom: 1px solid #eee;'>{qty}</td>
-                    <td style='padding: 8px; text-align: right; border-bottom: 1px solid #eee;'>₹{total_val:,.2f}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{idx}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{machine}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{prod_type}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('blanket_type', '----') if prod_type == 'blanket' else '----'}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('thickness', '')}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{dimensions}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('bar_type', '------') if prod_type == 'blanket' else '------'}</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{qty}</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{p.get('discount_percent', 0)}%</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{total_val:,.2f}</td>
                 </tr>
             """
         
@@ -1414,33 +1420,37 @@ def send_quotation():
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan='5' style='padding: 8px; text-align: right; border-top: 2px solid #ddd;'><strong>Subtotal:</strong></td>
-                    <td colspan='2' style='padding: 8px; text-align: right; border-top: 2px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
+                    <td colspan='9' style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>Subtotal:</strong></td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
                 </tr>
                 <tr>
-                    <td colspan='5' style='padding: 8px; text-align: right;'><strong>Total:</strong></td>
-                    <td colspan='2' style='padding: 8px; text-align: right;'><strong>₹{subtotal:,.2f}</strong></td>
+                    <td colspan='9' style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>Total:</strong></td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
                 </tr>
             </tfoot>
         </table>
-        <p>Thank you for your business!</p>
-        <p>For more information, please contact: <a href='mailto:info@cgi.in'>info@cgi.in</a></p>
+        <p>For more information, please contact: <a href='mailto:info@chemo.in'>info@chemo.in</a></p>
+        <p>This quotation is not a contract or invoice. It is our best estimate.</p>
         """
 
         # Build full HTML
-        quotation_html = f"""
+        quotation_html = """
         <div style='font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; line-height: 1.6;'>
-          <h2 style='text-align: center; margin-bottom: 30px;'>QUOTATION</h2>
+          <h2 style='text-align: left; margin-bottom: 20px;'>QUOTATION</h2>
           
           <div style='margin-bottom: 20px;'>
-            <strong>Email:</strong> {customer_email}<br>
-            <strong>Quote #:</strong> {quote_id}<br>
-            <strong>Date:</strong> {today}<br>
-            <strong>Valid Until:</strong> {valid_until}
+            <h4>Company Information</h4>
+            <p style='margin: 5px 0;'><strong>Company Name:</strong> Chemo Graphic International<br>
+            <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
+            <strong>Email:</strong> operations@chemo.in</p>
           </div>
           
           <div style='margin: 20px 0;'>
-            <strong>To:</strong> {selected_company.get('name', '')}
+            <h4>Customer Information</h4>
+            <p style='margin: 5px 0;'>
+              {selected_company.get('name', '')}<br>
+              {customer_email}
+            </p>
           </div>
           
           <div style='margin: 20px 0;'>
