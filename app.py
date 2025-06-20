@@ -1188,6 +1188,167 @@ def forgot_password():
 @app.route('/quotation_preview')
 @login_required
 def quotation_preview():
+    pass  # Keep existing quotation_preview function
+
+@app.route('/send_quotation', methods=['POST'])
+@login_required
+def send_quotation():
+    try:
+        data = request.get_json()
+        notes = data.get('notes', '')
+        
+        # Get cart contents
+        cart = get_user_cart()
+        if not cart.get('products'):
+            return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+            
+        # Get company info
+        selected_company = session.get('selected_company', {})
+        customer_name = selected_company.get('name', '')
+        customer_email = selected_company.get('email', '')
+        
+        if not customer_email:
+            return jsonify({'success': False, 'error': 'Customer email is required'}), 400
+            
+        # Generate quotation content
+        current_datetime = datetime.now()
+        quote_date = current_datetime.strftime('%d-%m-%Y')
+        quote_time = current_datetime.strftime('%H:%M:%S')
+        
+        # Calculate totals
+        total = 0
+        for item in cart.get('products', []):
+            if item.get('calculations'):
+                total += item['calculations']['final_total']
+        
+        # Create email content with the exact format from quotation.html
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                .quote-container {{ max-width: 900px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; background: #fff }}
+                .quote-header {{ display: flex; justify-content: space-between; margin-bottom: 20px }}
+                table {{ width: 100%; border-collapse: collapse }}
+                th, td {{ border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 0.9rem }}
+                thead {{ background: #f2f2f2 }}
+                .notes-area {{ width: 100%; min-height: 100px; margin-top: 15px }}
+                .customer-info {{ margin: 20px 0 }}
+                .customer-info p {{ margin: 5px 0 }}
+                .quote-left {{ flex: 1 }}
+                .quote-right {{ flex: 1 }}
+            </style>
+        </head>
+        <body>
+            <div class="quote-container">
+                <div class="header">
+                    <h1>Quotation</h1>
+                    <div class="quote-header">
+                        <div class="quote-left">
+                            <h2>{selected_company.get('name', 'Chemo Graphic International')}</h2>
+                            <p>{selected_company.get('address', '113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060')}</p>
+                            <p>Contact: {selected_company.get('phone', '+91-22-12345678')}</p>
+                            <p>User Email: {current_user.email}</p>
+                        </div>
+                        <div class="quote-right">
+                            <p><strong>Date:</strong> {quote_date}</p>
+                            <p><strong>Time:</strong> {quote_time}</p>
+                            <p><strong>Customer:</strong> {customer_name}</p>
+                            <p><strong>Company Email:</strong> {customer_email}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
+                
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sr No</th>
+                            <th>Machine</th>
+                            <th>Product Type</th>
+                            <th>Blanket Type</th>
+                            <th>Thickness</th>
+                            <th>Dimensions</th>
+                            <th>Barring Type</th>
+                            <th>Qty</th>
+                            <th>Discount</th>
+                            <th>Total (Incl. GST)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {"".join([
+                            f"""
+                            <tr>
+                                <td>{idx + 1}</td>
+                                <td>{item.get('machine', '')}</td>
+                                <td>{item.get('type', '')}</td>
+                                <td>{item.get('blanket_type', '----') if item.get('type') == 'blanket' else '----'}</td>
+                                <td>{item.get('thickness', '').replace('.0', '') if item.get('type') == 'blanket' else item.get('thickness', '------')}</td>
+                                <td>
+                                    {item.get('size', '').replace('.0 mm', ' mm').replace('.0mm', 'mm') if item.get('size') else 
+                                    ('%sx%s mm' % (item.get('length', '').replace('.0', ''), item.get('width', '').replace('.0', '')) if item.get('type') == 'mpack' else 
+                                    ('%sx%s%s' % (item.get('length', '').replace('.0', ''), item.get('width', '').replace('.0', ''), item.get('unit', '').replace('mm', ' mm')) if item.get('length') and item.get('width') else '------'))}
+                                </td>
+                                <td>{item.get('bar_type', '------') if item.get('type') == 'blanket' else '------'}</td>
+                                <td>{item.get('quantity', 1)}</td>
+                                <td>{item.get('discount_percent', 0)}%</td>
+                                <td>₹{item.get('calculations', {}).get('final_total', 0):.2f}</td>
+                            </tr>
+                            """
+                            for idx, item in enumerate(cart.get('products', []))
+                        ])}
+                        <tr>
+                            <td colspan="9" style="text-align:right; font-size: 1.1em; border-top: 2px solid #2c3e50;">
+                                <strong>Total (₹):</strong>
+                            </td>
+                            <td style="font-size: 1.1em; text-align: right; border-top: 2px solid #2c3e50;">
+                                <strong>₹{total:.2f}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h5 class="mt-4">Additional Notes (optional)</h5>
+                <textarea class="form-control notes-area" readonly>{notes}</textarea>
+                
+                <p class="mt-3 text-muted" style="font-size:0.8rem">
+                    This quotation is not a contract or invoice. It is our best estimate.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Create email message
+        msg = MIMEMultipart()
+        msg['From'] = f"""{EMAIL_FROM_NAME} <{EMAIL_FROM}>"""
+        msg['To'] = customer_email
+        msg['Subject'] = f'Quotation - {quote_date}'
+        
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Send email
+        if email_config_valid:
+            try:
+                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.send_message(msg)
+                    
+                # Clear cart after successful send
+                clear_cart()
+                return jsonify({'success': True})
+                
+            except Exception as e:
+                app.logger.error(f"Error sending quotation email: {str(e)}")
+                return jsonify({'success': False, 'error': 'Failed to send email'}), 500
+                
+        else:
+            return jsonify({'success': False, 'error': 'Email configuration is not valid'}), 500
+            
+    except Exception as e:
+        app.logger.error(f"Error processing quotation: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
     # Get current date and time
     current_datetime = datetime.now()
     quote_date = current_datetime.strftime('%d-%m-%Y')
