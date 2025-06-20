@@ -26,29 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         
         if (data.success) {
-          showToast('Success', data.message || 'Quotation sent successfully!', 'success');
-          
-          // Clear the cart from localStorage
-          const cart = { products: [] };
-          localStorage.setItem('cart', JSON.stringify(cart));
-          
-          // Update UI
-          updateCartCount(0);
-          document.getElementById('cartItems').style.display = 'none';
-          document.getElementById('emptyCart').style.display = 'block';
-          
-          // Clear selected company info
-          document.getElementById('selectedCompany').innerHTML = '';
-          document.getElementById('selectedCompanyEmail').innerHTML = '';
-          
+          showToast('Success', 'Quotation sent successfully!', 'success');
           // Redirect to cart after a short delay
           setTimeout(() => {
             window.location.href = '/cart';
           }, 1500);
         } else {
           showToast('Error', data.error || 'Failed to send quotation', 'error');
-          sendBtn.disabled = false;
-          sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send Quotation';
         }
       } catch (err) {
         console.error('Error sending quotation:', err);
@@ -60,16 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Function to update cart count in the UI
-  function updateCartCount(count) {
-    const cartCountElements = document.querySelectorAll('.cart-count');
-    cartCountElements.forEach(el => {
-      el.textContent = count;
-      el.style.display = count > 0 ? 'inline' : 'none';
-    });
-  }
-
-  // Function to show toast notification
+  // Show toast notification
   function showToast(title, message, type = 'info') {
     // Check if toast container exists, if not create it
     let toastContainer = document.getElementById('toast-container');
