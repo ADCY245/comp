@@ -728,7 +728,18 @@ def cart():
             'total': round(total, 2)
         }
         
-        return render_template('cart.html', cart=cart_data)
+        # Get company info from query parameters or use existing session
+        company_name = request.args.get('company', session.get('company_name', ''))
+        company_email = request.args.get('email', session.get('company_email', ''))
+        
+        # Store in session for quotation preview
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        
+        return render_template('cart.html', 
+                             cart=cart_data,
+                             company_name=company_name,
+                             company_email=company_email)
         
     except Exception as e:
         print(f"Error in cart route: {e}")
