@@ -1355,12 +1355,27 @@ def send_quotation():
         valid_until = (datetime.utcnow() + timedelta(days=7)).strftime('%d/%m/%Y')
 
         # Table rows
-        rows_html = ""
+        rows_html = """
+        <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+            <thead>
+                <tr style='background-color: #f2f2f2;'>
+                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>#</th>
+                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Machine</th>
+                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Product</th>
+                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Type</th>
+                    <th style='padding: 8px; text-align: left; border-bottom: 1px solid #ddd;'>Size</th>
+                    <th style='padding: 8px; text-align: right; border-bottom: 1px solid #ddd;'>Qty</th>
+                    <th style='padding: 8px; text-align: right; border-bottom: 1px solid #ddd;'>Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        
         subtotal = 0
         for idx, p in enumerate(products, start=1):
             machine = p.get('machine', '')
             prod_type = p.get('type', '')
-            blanket_type = p.get('blanket_type', '----') if prod_type == 'blanket' else '----'
+            
             # Dimensions
             if p.get('size'):
                 dimensions = p['size']
@@ -1368,36 +1383,71 @@ def send_quotation():
                 length = p.get('length') or ''
                 width = p.get('width') or ''
                 unit = p.get('unit', '')
-                dimensions = f"{length}x{width}{unit}" if length and width else ''
-            barring_type = p.get('bar_type', '----') if prod_type == 'blanket' else '----'
+                dimensions = f"{length} x {width} {unit}" if length and width else '----'
+            
             qty = p.get('quantity', 1)
-            discount_percent = p.get('discount_percent', 0)
-            # Total
+            
+            # Calculate total
             total_val = 0
             calcs = p.get('calculations', {})
             if calcs:
                 total_val = calcs.get('final_total') or calcs.get('finalTotal') or calcs.get('discountedSubtotal') or 0
             else:
                 total_val = p.get('unit_price', 0) * qty
+            
             subtotal += total_val
+            
             rows_html += f"""
-            <tr>
-                <td>{idx}</td>
-                <td>{machine}</td>
-                <td>{prod_type}</td>
-                <td>{blanket_type}</td>
-                <td>{dimensions}</td>
-                <td>{barring_type}</td>
-                <td>{qty}</td>
-                <td>{discount_percent}%</td>
-                <td>₹{total_val:,.2f}</td>
-            </tr>
+                <tr>
+                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{idx}</td>
+                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{machine}</td>
+                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{prod_type}</td>
+                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{p.get('blanket_type', '----') if prod_type == 'blanket' else '----'}</td>
+                    <td style='padding: 8px; border-bottom: 1px solid #eee;'>{dimensions}</td>
+                    <td style='padding: 8px; text-align: right; border-bottom: 1px solid #eee;'>{qty}</td>
+                    <td style='padding: 8px; text-align: right; border-bottom: 1px solid #eee;'>₹{total_val:,.2f}</td>
+                </tr>
             """
+        
+        # Add total row
+        rows_html += f"""
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan='5' style='padding: 8px; text-align: right; border-top: 2px solid #ddd;'><strong>Subtotal:</strong></td>
+                    <td colspan='2' style='padding: 8px; text-align: right; border-top: 2px solid #ddd;'><strong>₹{subtotal:,.2f}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan='5' style='padding: 8px; text-align: right;'><strong>Total:</strong></td>
+                    <td colspan='2' style='padding: 8px; text-align: right;'><strong>₹{subtotal:,.2f}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        <p>Thank you for your business!</p>
+        <p>For more information, please contact: <a href='mailto:info@cgi.in'>info@cgi.in</a></p>
+        """
 
         # Build full HTML
         quotation_html = f"""
-        <div style='font-family: Arial, sans-serif; color: #333; border: 1px solid #ddd; padding: 20px; max-width: 800px; margin: auto;'>
-          <h2 style='text-align: center;'>QUOTATION</h2>
+        <div style='font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; line-height: 1.6;'>
+          <h2 style='text-align: center; margin-bottom: 30px;'>QUOTATION</h2>
+          
+          <div style='margin-bottom: 20px;'>
+            <strong>Email:</strong> {customer_email}<br>
+            <strong>Quote #:</strong> {quote_id}<br>
+            <strong>Date:</strong> {today}<br>
+            <strong>Valid Until:</strong> {valid_until}
+          </div>
+          
+          <div style='margin: 20px 0;'>
+            <strong>To:</strong> {selected_company.get('name', '')}
+          </div>
+          
+          <div style='margin: 20px 0;'>
+            <p>Hello,</p>
+            <p>This is test from CGI.</p>
+            <p>Here is the proposed quotation for the required products:</p>
+          </div>
           <table style='width: 100%; margin-bottom: 20px;'>
             <tr>
               <td>
