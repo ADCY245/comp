@@ -1348,11 +1348,22 @@ def send_quotation():
         # Fetch cart
         cart = get_user_cart()
         products = cart.get('products', [])
+    except Exception as e:
+        app.logger.error(f"Error fetching cart or parsing data: {str(e)}")
+        return jsonify({
+            'error': f'Failed to fetch cart or parse data: {str(e)}',
+            'details': str(e)
+        }), 500
+
+    try:
         if not products:
             return jsonify({'error': 'Cart is empty'}), 400
 
         # Determine recipient emails
         selected_company = session.get('selected_company')
+    except Exception as e:
+        app.logger.error(f"Error in send_quotation: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred while processing your request'}), 500
         if not isinstance(selected_company, dict):
             selected_company = {}
         customer_email = selected_company.get('email') or current_user.email
@@ -1558,8 +1569,48 @@ def send_quotation():
         # Total is same as subtotal since amounts already include any taxes
         total = subtotal
         
+        # Build email content using the same rows_html
+        email_content = f"""
+        <div style='font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; line-height: 1.6;'>
+          <h2 style='text-align: left; margin-bottom: 20px;'>QUOTATION</h2>
+          
+          <div style='margin-bottom: 20px;'>
+            <h4>Company Information</h4>
+            <p style='margin: 5px 0;'>
+              <strong>CGI - Chemo Graphics India</strong><br>
+              123 Print Lane, Mumbai, India<br>
+              Email: info@chemo.in<br>
+              Date: {today}
+            </p>
+          </div>
+          
+          <div style='margin: 20px 0;'>
+            <h4>Customer Information</h4>
+            <p style='margin: 5px 0;'>
+              {selected_company.get('name', '')}<br>
+              {customer_email}
+            </p>
+          </div>
+          
+          <div style='margin: 20px 0;'>
+            <p>Hello,</p>
+            <p>This is {current_user.username} from CGI.</p>
+            <p>Here is the proposed quotation for the required products:</p>
+            {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
+          </div>
+          
+          {rows_html}
+          
+          <p style='margin-top: 20px;'>Thank you for your business!<br>— Team CGI</p>
+          <hr>
+          <small>
+            This quotation is not a contract or invoice. It is our best estimate.
+          </small>
+        </div>
+        """
+
         # Email sending
-        if not email_config_valid:
+        if not refresh_email_config():  # Refresh config before sending
             return jsonify({'error': 'Email configuration invalid'}), 500
 
         subject = f"CGI Quotation - {today}"
@@ -1570,167 +1621,46 @@ def send_quotation():
             msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
             msg['To'] = ', '.join(recipients)
             
-            # Create the HTML version of the message
-            html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Quotation</title>
-                <style>
-                    body {{ 
-                        font-family: Arial, sans-serif; 
-                        line-height: 1.6;
-                        color: #333;
-                        margin: 0;
-                        padding: 0;
-                    }}
-                    .container {{ 
-                        max-width: 800px; 
-                        margin: 0 auto; 
-                        padding: 30px;
-                    }}
-                    .header {{ 
-                        margin-bottom: 20px;
-                        padding-bottom: 10px;
-                        border-bottom: 2px solid #eee;
-                    }}
-                    .header h2 {{
-                        margin: 0 0 10px 0;
-                        color: #2c3e50;
-                    }}
-                    .company-info {{
-                        margin-bottom: 20px;
-                        line-height: 1.5;
-                    }}
-                    .quote-info {{
-                        margin: 25px 0;
-                        padding: 15px;
-                        background-color: #f9f9f9;
-                        border-radius: 5px;
-                        border-left: 4px solid #3498db;
-                    }}
-                    table {{ 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin: 25px 0;
-                        font-size: 14px;
-                    }}
-                    th, td {{ 
-                        padding: 12px 8px; 
-                        text-align: left; 
-                        border: 1px solid #e0e0e0;
-                    }}
-                    th {{ 
-                        background-color: #f8f9fa;
-                        font-weight: 600;
-                        color: #2c3e50;
-                    }}
-                    tr:nth-child(even) {{
-                        background-color: #f9f9f9;
-                    }}
-                    .total-row {{ 
-                        font-weight: bold;
-                        background-color: #f1f8ff !important;
-                    }}
-                    .footer {{ 
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 1px solid #eee;
-                        font-size: 0.9em;
-                        color: #666;
-                    }}
-                    .signature {{
-                        margin: 30px 0 20px 0;
-                        padding-top: 20px;
-                        border-top: 1px solid #eee;
-                    }}
-                    .disclaimer {{
-                        font-size: 0.8em;
-                        color: #999;
-                        font-style: italic;
-                        margin-top: 30px;
-                        padding-top: 15px;
-                        border-top: 1px solid #f0f0f0;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h2>QUOTATION</h2>
-                        <div class="company-info">
-                            <strong>CGI - Chemo Graphics India</strong><br>
-                            123 Print Lane, Mumbai, India<br>
-                            Email: info@chemo.in
-                        </div>
-                    </div>
+            # Attach HTML content
+            msg.attach(MIMEText(email_content, 'html'))
+            
+            # Send email
+            try:
+                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                    if SMTP_PORT == 587:  # TLS
+                        server.starttls()
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.sendmail(EMAIL_FROM, recipients, msg.as_string())
                     
-                    <div class="quote-info">
-                        <p><strong>To:</strong> {selected_company.get('name', '')}<br>
-                        <strong>Email:</strong> {customer_email}</p>
-                    </div>
-                    
-                    <p>Hello,</p>
-                    
-                    <p>This is test from CGI.<br>
-                    Here is the proposed quotation for the required products:</p>
-                    
-                    {rows_html}
-                    
-                    <div class="signature">
-                        <p>Thank you for your business!<br>
-                        <strong>— Team CGI</strong></p>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>For more information, please contact: <a href="mailto:info@chemo.in" style="color: #3498db; text-decoration: none;">info@chemo.in</a></p>
-                        <p class="disclaimer">
-                            This quotation is not a contract or invoice. It is our best estimate.
-                        </p>
-                    </div>
-                        <th style="padding: 10px; text-align: right;">Qty</th>
-                        <th style="padding: 10px; text-align: right;">Disc %</th>
-                        <th style="padding: 10px; text-align: right;">Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {''.join([f'''
-                      <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px;">{idx}</td>
-                        <td style="padding: 10px;">{p.get('machine', '')}</td>
-                        <td style="padding: 10px;">{p.get('type', '')}</td>
-                        <td style="padding: 10px;">{p.get('blanket_type', '----') if p.get('type') == 'blanket' else '----'}</td>
-                        <td style="padding: 10px;">{p.get('thickness', '----')}</td>
-                        <td style="padding: 10px;">
-                            {p.get('size', '').replace('.0 mm', ' mm').replace('.0mm', 'mm') if p.get('size') else 
-                            ('%sx%s mm' % (p.get('length', '').replace('.0', ''), p.get('width', '').replace('.0', '')) if p.get('type') == 'mpack' else 
-                            ('%sx%s%s' % (str(p.get('length', '')).replace('.0', ''), str(p.get('width', '')).replace('.0', ''), p.get('unit', '').replace('mm', ' mm')) if p.get('length') and p.get('width') else '----'))}
-                        </td>
-                        <td style="padding: 10px;">{p.get('bar_type', '----') if p.get('type') == 'blanket' else '----'}</td>
-                        <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
-                        <td style="padding: 10px; text-align: right;">{p.get('discount_percent', 0)}%</td>
-                        <td style="padding: 10px; text-align: right;">₹{p.get('calculations', {}).get('final_total', p.get('total', 0)):,.2f}</td>
-                      </tr>
-                      ''' for idx, p in enumerate(products, 1)])}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colspan="9" style="text-align: right; padding: 10px; font-weight: bold; border-top: 2px solid #ddd;"><strong>Total:</strong></td>
-                        <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                  
-                  <p style="margin-top: 20px;">Thank you for your business!<br>— Team CGI</p>
-                  <p>For more information, please contact: <a href="mailto:info@cgi.in">info@cgi.in</a></p>
-                  <hr>
-                  <small>This quotation is not a contract or invoice. It is our best estimate.</small>
-                </div>
-              </body>
-            </html>
+                # Clear cart after successful email
+                clear_cart()
+                session.pop('selected_company', None)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Quotation sent successfully',
+                    'quote_id': quote_id
+                })
+                
+            except Exception as e:
+                app.logger.error(f"Failed to send email: {str(e)}")
+                return jsonify({
+                    'error': f'Failed to send email: {str(e)}',
+                    'details': str(e)
+                }), 500
+            
+        except Exception as e:
+            app.logger.error(f"Email construction failed: {str(e)}")
+            return jsonify({
+                'error': f'Failed to construct email: {str(e)}',
+                'details': str(e)
+            }), 500
+            html = """
+            <div style='font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; line-height: 1.6;'>
+              <h2 style='text-align: left; margin-bottom: 20px;'>QUOTATION</h2>
+            </div>
             """
-
+            
             # Attach HTML version
             part = MIMEText(html, 'html')
             msg.attach(part)
@@ -1813,7 +1743,7 @@ def api_request_otp():
         if email_config_valid:
             try:
                 msg = MIMEMultipart()
-                msg['From'] = f"""{EMAIL_FROM_NAME} <{EMAIL_FROM}>"""
+                msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
                 msg['To'] = email
                 msg['Subject'] = 'Your OTP for Registration'
                 
@@ -2217,10 +2147,7 @@ def api_request_password_reset():
                 msg['To'] = email
                 msg['Subject'] = "Password Reset OTP"
                 
-                body = f"""
-                Your password reset OTP is: {otp}
-                This code will expire in 10 minutes.
-                """
+                body = f"Your password reset OTP is: {otp}\nThis code will expire in 10 minutes."
                 msg.attach(MIMEText(body, 'plain'))
                 
                 with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
@@ -2399,7 +2326,11 @@ def api_reset_password():
 
 @app.route('/chemicals/<filename>')
 def chemicals(filename):
-    return send_from_directory('static/data/chemicals', filename)
+    try:
+        return send_from_directory('static/chemicals', filename)
+    except Exception as e:
+        app.logger.error(f"Error serving chemicals file: {str(e)}")
+        return jsonify({'error': f'Failed to serve file: {str(e)}'}), 500
 
 @app.route('/blankets_data/<filename>')
 def blankets_data(filename):
