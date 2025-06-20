@@ -53,6 +53,12 @@
                 </a>
               </p>
             {% endif %}
+            {% if not company_name or not company_email %}
+              <div class="alert alert-warning mt-2 mb-0 p-2" style="font-size: 0.9rem;">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                Company information is missing. Please go back and select a company.
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -91,9 +97,20 @@
           <td>{% if item.get('thickness') %}{% if item.type == 'blanket' %}{{ item.thickness|replace('.0', '') }}{% else %}{{ item.thickness }}{% endif %}{% else %}------{% endif %}</td>
           <td>
             {% if item.get('size') %}
-              {{ item.size }}
+              {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
             {% elif item.get('length') and item.get('width') %}
-              {{ '%sx%s%s'|format(item.length, item.width, item.get('unit', '')) }}
+              {% if item.type == 'mpack' %}
+                {{ '%sx%s mm'|format(
+                  item.length|string|replace('.0', ''),
+                  item.width|string|replace('.0', '')
+                ) }}
+              {% else %}
+                {{ '%sx%s%s'|format(
+                  item.length|string|replace('.0', ''),
+                  item.width|string|replace('.0', ''),
+                  item.get('unit', '')|replace('mm', ' mm')
+                ) }}
+              {% endif %}
             {% else %}
               ------
             {% endif %}
