@@ -434,7 +434,7 @@
 
     <!-- Quotation Notes & Send Section (bottom) -->
     <div class="mt-4">
-        <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary" id="sendQuotationBtnBottom">
+        <a href="#" class="btn btn-primary" id="sendQuotationBtnBottom" onclick="return goToQuotationPreview()">
             <i class="fas fa-paper-plane me-1"></i> Send Quotation
         </a>
     </div>
@@ -479,8 +479,37 @@
 // ---------------------------------------------
             // Quotation preview redirection
             // ---------------------------------------------
-        async function goToQuotationPreview() {
-            window.location.href = '/quotation_preview';
+        function goToQuotationPreview() {
+            // First try to get from the page elements
+            let companyName = document.getElementById('companyName')?.textContent || '';
+            let companyEmail = document.getElementById('companyEmail')?.textContent || '';
+            
+            // Fallback to session storage
+            if (!companyName || companyName === 'Your Company') {
+                companyName = sessionStorage.getItem('companyName') || '';
+            }
+            if (!companyEmail || companyEmail === 'No email provided') {
+                companyEmail = sessionStorage.getItem('companyEmail') || '';
+            }
+            
+            // If still no company name, show error
+            if (!companyName || companyName === 'Your Company') {
+                alert('Please select a company first');
+                window.location.href = '{{ url_for("company_selection") }}';
+                return false;
+            }
+            
+            // Build URL with company info as query parameters
+            let url = "{{ url_for('quotation_preview') }}";
+            const params = new URLSearchParams();
+            if (companyName) params.append('company', companyName);
+            if (companyEmail) params.append('email', companyEmail);
+            
+            // Add a timestamp to prevent caching
+            params.append('t', new Date().getTime());
+            
+            window.location.href = url + '?' + params.toString();
+            return false;
         }
 
         // Show quotation section if cart has items
