@@ -1396,7 +1396,26 @@ def send_quotation():
         """
         
         subtotal = 0
+        final_subtotal = 0
         for idx, p in enumerate(products, start=1):
+            # Calculate item total including GST
+            price = p.get('unit_price', 0) or p.get('base_price', 0)
+            if 'bar_price' in p:
+                price += p.get('bar_price', 0)
+            quantity = p.get('quantity', 1)
+            discount_percent = p.get('discount_percent', 0)
+            gst_percent = p.get('gst_percent', 18)
+            
+            # Calculate item values
+            item_subtotal = price * quantity
+            discount_amount = (item_subtotal * discount_percent / 100) if discount_percent else 0
+            discounted_subtotal = item_subtotal - discount_amount
+            gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
+            item_total = discounted_subtotal + gst_amount
+            
+            # Add to final subtotal (sum of all item totals including GST)
+            final_subtotal += item_total
+            
             machine = p.get('machine', '')
             prod_type = p.get('type', '')
             
@@ -1717,12 +1736,8 @@ def send_quotation():
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colspan="9" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
-                        <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
-                      </tr>
-                      <tr>
-                        <td colspan="9" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
-                        <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
+                        <td colspan="8" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>Total (₹):</strong></td>
+                        <td colspan="2" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{final_subtotal:,.2f}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
