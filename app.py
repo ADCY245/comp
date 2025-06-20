@@ -1438,8 +1438,13 @@ def send_quotation():
             # Pricing
             quantity = p.get('quantity', 1)
             unit_price = p.get('unit_price', 0)
-            calcs = p.get('calculations', {})
-            total_price = calcs.get('final_total', 0)
+            
+            # Use different total price calculation based on product type
+            if prod_type == 'mpack':
+                calcs = p.get('calculations', {})
+                total_price = calcs.get('final_total', 0)
+            else:
+                total_price = p.get('total_price', 0)
             
             # For mpack, show size instead of dimensions
             size = p.get('size', '')
@@ -1488,7 +1493,11 @@ def send_quotation():
 
           <div style='margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;'>
             <h4 style='margin: 0 0 10px 0;'>Total Amount</h4>
-            <p style='margin: 0;'>₹{sum(p.get('total_price', 0) for p in products):,.2f}</p>
+            <p style='margin: 0;'>₹{sum(
+                p.get('calculations', {}).get('final_total', 0) if p.get('type') == 'mpack' 
+                else p.get('total_price', 0)
+                for p in products
+            ):,.2f}</p>
           </div>
 
           <div style='margin-top: 30px; text-align: right;'>
