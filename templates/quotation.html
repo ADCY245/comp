@@ -125,38 +125,15 @@
         </tr>
       {% endfor %}
       <tr>
-        <td colspan="9" style="text-align:right; border-top: 2px solid #dee2e6;">
-          <strong>Subtotal:</strong>
+        <td colspan="9" style="text-align:right; font-size: 1.1em; border-top: 2px solid #2c3e50;">
+          <strong>Total (₹):</strong>
         </td>
-        <td style="border-top: 2px solid #dee2e6;">
-          <strong>₹{{ '%.2f'|format(calculations.subtotal) }}</strong>
+        <td style="font-size: 1.1em; text-align: right; border-top: 2px solid #2c3e50;">
+          <strong>₹{{ '%.2f'|format(calculations.total) }}</strong>
         </td>
       </tr>
-      <tr>
-        <td colspan="9" style="text-align:right">
-          <strong>Total:</strong>
-        </td>
-        <td style="font-size: 1.1em; border-top: 2px solid #2c3e50;">
     </tbody>
   </table>
-  
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Order Summary</h5>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Subtotal:</span>
-            <span>₹{{ "%.2f"|format(calculations.subtotal) }}</span>
-          </div>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>Total:</span>
-            <span>₹{{ "%.2f"|format(calculations.total) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <h5 class="mt-4">Additional Notes (optional)</h5>
   <textarea id="quotationNotes" class="form-control notes-area" placeholder="Add any extra details..."></textarea>
