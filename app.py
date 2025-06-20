@@ -1472,116 +1472,131 @@ def send_quotation():
 
         subject = f"CGI Quotation - {quote_id}"
         try:
+            # Create message container
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = f"{EMAIL_FROM_NAME or 'CGI'} <{EMAIL_FROM}>"
+            msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
             msg['To'] = ', '.join(recipients)
             
-            # Build email body with proper styling
-            email_body = f"""
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto;">
-                <h2 style="text-align: center; color: #2c3e50;">QUOTATION</h2>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            # Create the HTML version of the message
+            html = f"""
+            <html>
+              <body>
+                <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
+                  <h2 style="text-align: center; color: #2c3e50;">QUOTATION</h2>
+                  
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
                     <div>
-                        <strong>CGI - Chemo Graphics India</strong><br>
-                        123 Print Lane, Mumbai, India<br>
-                        Email: info@chemo.in
+                      <strong>CGI - Chemo Graphics India</strong><br>
+                      123 Print Lane, Mumbai, India<br>
+                      Email: info@chemo.in
                     </div>
                     <div style="text-align: right;">
-                        <strong>Quote #:</strong> {quote_id}<br>
-                        <strong>Date:</strong> {today}<br>
-                        <strong>Customer ID:</strong> {customer_email}
+                      <strong>Quote #:</strong> {quote_id}<br>
+                      <strong>Date:</strong> {today}<br>
+                      <strong>Valid Until:</strong> {valid_until}
                     </div>
-                </div>
-                
-                <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+                  </div>
+                  
+                  <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
                     <p><strong>To:</strong> {selected_company.get('name', '')}</p>
                     <p><strong>Email:</strong> {customer_email}</p>
-                </div>
-                
-                <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
-                
-                {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
-                
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+                  </div>
+                  
+                  <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
+                  
+                  {f'<p><strong>Notes:</strong><br>{notes}</p>' if notes else ''}
+                  
+                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
                     <thead>
-                        <tr style="background-color: #2c3e50; color: white;">
-                            <th style="padding: 10px; text-align: left;">#</th>
-                            <th style="padding: 10px; text-align: left;">Description</th>
-                            <th style="padding: 10px; text-align: right;">Qty</th>
-                            <th style="padding: 10px; text-align: right;">Rate</th>
-                            <th style="padding: 10px; text-align: right;">Amount</th>
-                        </tr>
+                      <tr style="background-color: #2c3e50; color: white;">
+                        <th style="padding: 10px; text-align: left;">#</th>
+                        <th style="padding: 10px; text-align: left;">Machine</th>
+                        <th style="padding: 10px; text-align: left;">Product</th>
+                        <th style="padding: 10px; text-align: left;">Type</th>
+                        <th style="padding: 10px; text-align: left;">Size</th>
+                        <th style="padding: 10px; text-align: right;">Qty</th>
+                        <th style="padding: 10px; text-align: right;">Amount (₹)</th>
+                      </tr>
                     </thead>
                     <tbody>
-            """
-            
-            # Add products to email body
-            for idx, p in enumerate(products, 1):
-                description = f"{p.get('machine', '')} - {p.get('type', '')}"
-                if p.get('blanket_type'):
-                    description += f" ({p.get('blanket_type')})"
-                if p.get('size'):
-                    description += f" - {p['size']}"
-                elif p.get('length') and p.get('width'):
-                    description += f" - {p['length']}x{p['width']}{p.get('unit', '')}"
-                
-                qty = p.get('quantity', 1)
-                rate = p.get('unit_price', 0)
-                amount = p.get('total', 0) if p.get('type') == 'blanket' else rate * qty
-                
-                email_body += f"""
-                <tr style="border-bottom: 1px solid #ddd;">
-                    <td style="padding: 10px;">{idx}</td>
-                    <td style="padding: 10px;">{description}</td>
-                    <td style="padding: 10px; text-align: right;">{qty}</td>
-                    <td style="padding: 10px; text-align: right;">₹{rate:,.2f}</td>
-                    <td style="padding: 10px; text-align: right;">₹{amount:,.2f}</td>
-                </tr>
-                """
-            
-            # Add totals (GST already included in item totals)
-            email_body += f"""
+                      {''.join([f'''
+                      <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">{idx}</td>
+                        <td style="padding: 10px;">{p.get('machine', '')}</td>
+                        <td style="padding: 10px;">{p.get('type', '')}</td>
+                        <td style="padding: 10px;">{p.get('blanket_type', '') if p.get('type') == 'blanket' else '----'}</td>
+                        <td style="padding: 10px;">{p.get('size', '') or (f"{p.get('length', '')}x{p.get('width', '')}{p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
+                        <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
+                        <td style="padding: 10px; text-align: right;">₹{p.get('total', 0) if p.get('type') == 'blanket' else (p.get('unit_price', 0) * p.get('quantity', 1)):,.2f}</td>
+                      </tr>''' for idx, p in enumerate(products, 1)])}
                     </tbody>
                     <tfoot>
-                        <tr>
-                            <td colspan="4" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
-                            <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
-                            <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
-                        </tr>
+                      <tr>
+                        <td colspan="6" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
+                        <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
+                      </tr>
+                      <tr>
+                        <td colspan="6" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
+                        <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
+                      </tr>
                     </tfoot>
-                </table>
-                
-                <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 0.9em; color: #666;">
-                    <p>Thank you for your business!<br>— Team CGI</p>
-                    <p style="margin-top: 10px; font-size: 0.9em;">
-                        <em>This quotation is not a contract or invoice. It is our best estimate.</em>
-                    </p>
+                  </table>
+                  
+                  <p style="margin-top: 20px;">Thank you for your business!<br>— Team CGI</p>
+                  <hr>
+                  <small>This quotation is not a contract or invoice. It is our best estimate.</small>
                 </div>
-            </div>
+              </body>
+            </html>
             """
+
+            # Attach HTML version
+            part = MIMEText(html, 'html')
+            msg.attach(part)
+
+            # Send the email
+            if SMTP_PORT == 465:
+                server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+            else:
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+                
+            # Set debug level to see SMTP communication
+            server.set_debuglevel(1)
             
-            msg.attach(MIMEText(email_body, 'html'))
-
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                if SMTP_USERNAME and SMTP_PASSWORD:
+            # Start TLS if needed (for ports 587 and 25)
+            if SMTP_PORT in [587, 25]:
+                server.starttls()
+                
+            # Login only if credentials are provided
+            if SMTP_USERNAME and SMTP_PASSWORD:
+                try:
                     server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.sendmail(EMAIL_FROM, recipients, msg.as_string())
+                except smtplib.SMTPNotSupportedError as e:
+                    print(f"SMTP AUTH not supported by server: {e}")
+                    # Continue without authentication if not supported
+            
+            # Send the email
+            server.send_message(msg)
+            server.quit()
+            
+            return jsonify({'success': True, 'message': 'Quotation sent successfully'})
+            
+        except smtplib.SMTPException as e:
+            print(f"SMTP Error: {e}")
+            return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
+            
         except Exception as e:
-            print(f"Error sending quotation email: {e}")
-            return jsonify({'error': 'Failed to send email'}), 500
-
-        return jsonify({'success': True})
-
+            print(f"Unexpected error sending email: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Internal server error'}), 500
+            
     except Exception as e:
-        print(f"send_quotation error: {e}")
+        print(f"Error in send_quotation: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': 'An unexpected error occurred while processing your request'}), 500
 
 @app.route('/api/request-otp', methods=['POST'])
 def api_request_otp():
