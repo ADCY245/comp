@@ -778,14 +778,49 @@
         
         // Function to update cart totals in the UI
         function updateCartTotals() {
-            // This function is now handled server-side
-            // The totals are rendered directly in the template
-            const cartItems = document.querySelectorAll('.cart-item');
-            if (cartItems.length === 0) {
-                document.getElementById('cartItems').style.display = 'none';
-                document.getElementById('emptyCart').style.display = 'block';
-                updateCartCount(0);
-            }
+            const cart = JSON.parse(localStorage.getItem('cart')) || { products: [] };
+            const totalItems = cart.products.length;
+            let subtotal = 0;
+            
+            // Calculate subtotal as sum of all product prices (without GST)
+            cart.products.forEach(item => {
+                if (item.total_before_tax) {
+                    // Use pre-calculated total before tax if available
+                    subtotal += parseFloat(item.total_before_tax);
+                } else if (item.type === 'mpack') {
+                    const price = parseFloat(item.unit_price) || 0;
+                    const quantity = parseInt(item.quantity) || 1;
+                    const discount = parseFloat(item.discount_percent) || 0;
+                    
+                    // Calculate total with discount only (no GST)
+                    let itemTotal = price * quantity;
+                    if (discount > 0) {
+                        itemTotal -= (itemTotal * discount / 100);
+                    }
+                    subtotal += itemTotal;
+                } else if (item.type === 'blanket') {
+                    const base = parseFloat(item.base_price) || 0;
+                    const bar = parseFloat(item.bar_price) || 0;
+                    const quantity = parseInt(item.quantity) || 1;
+                    const discount = parseFloat(item.discount_percent) || 0;
+                    
+                    // Calculate total with discount only (no GST)
+                    let itemTotal = (base + bar) * quantity;
+                    if (discount > 0) {
+                        itemTotal -= (itemTotal * discount / 100);
+                    }
+                    subtotal += itemTotal;
+                } else {
+                    const price = parseFloat(item.price) || 0;
+                    const quantity = parseInt(item.quantity) || 1;
+                    subtotal += price * quantity;
+                }
+            });
+            
+            // Update UI - show only the subtotal (without GST)
+            const formattedSubtotal = '₹' + subtotal.toFixed(2);
+            document.getElementById('cartSubtotal').textContent = formattedSubtotal;
+            document.getElementById('cartTotal').textContent = formattedSubtotal;
         }
         
         // Initialize event listeners
