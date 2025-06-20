@@ -13,39 +13,32 @@
     .customer-info p { margin: 5px 0; }
 </style>
 {% endblock %}
-{% block content %}
-<div class="quote-container">
-  <h2 style="text-align:center">QUOTATION</h2>
-  
-  <!-- Two-column layout -->
-  <div class="row">
-    <!-- Left Side: Company Information -->
-    <div class="col-md-6 mb-4">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Company Information</h5>
-          <div class="mb-2">
-            <strong>Company Name:</strong> Chemo Graphic International<br>
-            <strong>Address:</strong> 113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
-            <strong>Email:</strong> operations@chemo.in
-          </div>
-        </div>
-      </div>
-    </div>
 
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Quotation</h1>
+        <div class="company-info">
+            <h2>Chemo Graphic International</h2>
+            <p>113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060</p>
+            <p>Email: {{ current_user.email }} | Phone: +91-22-12345678</p>
+        </div>
+    </div>
     <!-- Right Side: Customer Information -->
     <div class="col-md-6 mb-4">
       <div class="card">
         <div class="card-body">
           <h5 class="card-title mb-3">Customer Information</h5>
           <div class="mb-2">
-            <h4 class="mb-2">
-              {% if company_name and company_name != 'undefined' and company_name != 'Company Name' %}
+            <h4 class="mb-2">    
+    <div class="quote-info">
+        <p><strong>Date:</strong> {{ today }}</p>
+        <p><strong>To:</strong> 
+            {% if company_name and company_name != 'undefined' and company_name != 'Company Name' %}
                 {{ company_name }}
-              {% else %}
+            {% else %}
                 <span class="text-muted">No company selected</span>
-              {% endif %}
-            </h4>
+            {% endif %}
             {% if company_email and company_email != 'undefined' and company_email != 'email@example.com' %}
               <p class="mb-1">
                 <a href="mailto:{{ company_email }}" class="text-decoration-none">
@@ -53,21 +46,9 @@
                 </a>
               </p>
             {% endif %}
-            <p class="mb-0">
-              <strong>Date:</strong> {{ quote_date }}
-            </p>
-            {% if not company_name or not company_email %}
-              <div class="alert alert-warning mt-2 mb-0 p-2" style="font-size: 0.9rem;">
-                <i class="fas fa-exclamation-triangle me-1"></i>
-                Company information is missing. Please go back and select a company.
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+
     </div>
-  </div>
-  
+    
 
   
   <p>Hello,<br><br>This is <strong>{{ current_user.username }}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
@@ -85,53 +66,53 @@
         <th>Qty</th>
         <th>Discount</th>
         <th>Total (Incl. GST)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in cart.products %}
-        {% set loop_index = loop.index %}
-        {% set prod_type = item.type %}
-        {% set total_val = item.get('total') or (item.get('unit_price', 0) * item.get('quantity', 1)) * (1 - (item.get('discount_percent', 0) / 100)) %}
-        <tr>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart.products %}
+            {% set loop_index = loop.index %}
+            {% set prod_type = item.type %}
+            {% set total_val = item.get('total') or (item.get('unit_price', 0) * item.get('quantity', 1)) * (1 - (item.get('discount_percent', 0) / 100)) %}
+            <tr>
           <td>{{ loop_index }}</td>
           <td>{{ item.get('machine', '') }}</td>
           <td>{{ prod_type }}</td>
           <td>{{ item.get('blanket_type') or item.get('name','----') if prod_type == 'blanket' else '----' }}</td>
           <td>{% if item.get('thickness') %}{% if item.type == 'blanket' %}{{ item.thickness|replace('.0', '') }}{% else %}{{ item.thickness }}{% endif %}{% else %}------{% endif %}</td>
           <td>
-            {% if item.get('size') %}
+                    {% if item.get('size') %}
               {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
-            {% elif item.get('length') and item.get('width') %}
+                    {% elif item.get('length') and item.get('width') %}
               {% if item.type == 'mpack' %}
                 {{ '%sx%s mm'|format(
-                  item.length|string|replace('.0', ''),
-                  item.width|string|replace('.0', '')
-                ) }}
+                            item.length|string|replace('.0', ''),
+                            item.width|string|replace('.0', '')
+                        ) }}
               {% else %}
                 {{ '%sx%s%s'|format(
                   item.length|string|replace('.0', ''),
                   item.width|string|replace('.0', ''),
                   item.get('unit', '')|replace('mm', ' mm')
                 ) }}
-              {% endif %}
+                    {% endif %}
             {% else %}
               ------
             {% endif %}
-          </td>
+                </td>
           <td>{{ item.get('bar_type', '------') if prod_type == 'blanket' else '------' }}</td>
           <td>{{ item.get('quantity', 1) }}</td>
           <td>{{ item.get('discount_percent', 0) }}%</td>
           <td>₹{{ '%.2f'|format(item.calculations.final_total|default(item.total_price|default(0))) }}</td>
-        </tr>
-      {% endfor %}
+            </tr>
+            {% endfor %}
       <tr>
         <td colspan="9" style="text-align:right; font-size: 1.1em; border-top: 2px solid #2c3e50;">
-          <strong>Total (₹):</strong>
-        </td>
+                    <strong>Total (₹):</strong>
+                </td>
         <td style="font-size: 1.1em; text-align: right; border-top: 2px solid #2c3e50;">
           <strong>₹{{ '%.2f'|format(calculations.total) }}</strong>
-        </td>
-      </tr>
+                </td>
+            </tr>
     </tbody>
   </table>
 
