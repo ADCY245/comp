@@ -1339,6 +1339,10 @@ def send_quotation():
                             <p><strong>Company Email:</strong> {customer_email}</p>
                         </div>
                     </div>
+                    <div class="customer-info">
+                        <p><strong>Customer:</strong> {customer_name}</p>
+                        <p><strong>Email:</strong> {customer_email}</p>
+                    </div>
                 </div>
                 
                 <p>Hello,<br><br>This is <strong>{current_user.username}</strong> from CGI.<br>Here is the proposed quotation for the required products:</p>
@@ -1403,34 +1407,67 @@ def send_quotation():
         """
 
         # Create email message
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('alternative')
         msg['From'] = f"""{EMAIL_FROM_NAME} <{EMAIL_FROM}>"""
         msg['To'] = customer_email
         msg['Subject'] = f'Quotation - {quote_date}'
         
+        # Create both plain text and HTML versions of the email
+        text_content = """
+        Quotation Details
+        ===============
+        
+        Company: {company}
+        Date: {date}
+        Time: {time}
+        Customer: {customer}
+        Email: {email}
+        
+        Products:
+        --------
+        {products}
+        
+        Total: ₹{total:.2f}
+        
+        Notes:
+        {notes}
+        
+        This quotation is not a contract or invoice. It is our best estimate.
+        """.format(
+            company=selected_company.get('name', 'Chemo Graphic International'),
+            date=quote_date,
+            time=quote_time,
+            customer=customer_name,
+            email=customer_email,
+            products="\n".join([
+                f"{idx + 1}. {item.get('type')} - {item.get('name', '')}"
+                for idx, item in enumerate(cart.get('products', []))
+            ]),
+            total=calculations['total'],
+            notes=notes
+        )
+        
+        # Attach both versions
+        msg.attach(MIMEText(text_content, 'plain'))
         msg.attach(MIMEText(html_content, 'html'))
         
         # Send email
-        if email_config_valid:
-            try:
-                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                    server.starttls()
-                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                    server.send_message(msg)
-                    
-                # Clear cart after successful send
-                clear_cart()
-                return jsonify({
-                    'success': True,
-                    'message': 'Quotation sent successfully and cart cleared'
-                })
+        try:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.send_message(msg)
                 
-            except Exception as e:
-                app.logger.error(f"Error sending quotation email: {str(e)}")
-                return jsonify({'success': False, 'error': 'Failed to send email'}), 500
-                
-        else:
-            return jsonify({'success': False, 'error': 'Email configuration is not valid'}), 500
+            # Clear cart after successful send
+            clear_cart()
+            return jsonify({
+                'success': True,
+                'message': 'Quotation sent successfully and cart cleared'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error sending quotation email: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
             
     except Exception as e:
         app.logger.error(f"Error processing quotation: {str(e)}")
