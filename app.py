@@ -1335,7 +1335,8 @@ def quotation_preview():
         'calculations': {
             'subtotal': final_subtotal,
             'total': total
-        }
+        },
+        'today': quote_date  # Add this for backward compatibility
     }
     
     return render_template('quotation.html', **context)
