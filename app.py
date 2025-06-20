@@ -892,22 +892,29 @@ def add_to_cart():
                 discount_percent = product['discount_percent']
                 gst_percent = product['gst_percent']
                 
+                # Calculate prices
                 discount_amount = (price * discount_percent / 100)
                 price_after_discount = price - discount_amount
                 gst_amount = (price_after_discount * gst_percent / 100)
                 final_unit_price = price_after_discount + gst_amount
                 final_total = final_unit_price * quantity
                 
-                # Set the total_price field
+                # Set all price fields
+                product['unit_price'] = round(price, 2)
+                product['discount_amount'] = round(discount_amount, 2)
+                product['price_after_discount'] = round(price_after_discount, 2)
+                product['gst_amount'] = round(gst_amount, 2)
+                product['final_unit_price'] = round(final_unit_price, 2)
                 product['total_price'] = round(final_total, 2)
                 
+                # Store calculations
                 product['calculations'] = {
-                    'unit_price': round(price, 2),
-                    'discount_amount': round(discount_amount, 2),
-                    'price_after_discount': round(price_after_discount, 2),
-                    'gst_amount': round(gst_amount, 2),
-                    'final_unit_price': round(final_unit_price, 2),
-                    'final_total': round(final_total, 2),
+                    'unit_price': product['unit_price'],
+                    'discount_amount': product['discount_amount'],
+                    'price_after_discount': product['price_after_discount'],
+                    'gst_amount': product['gst_amount'],
+                    'final_unit_price': product['final_unit_price'],
+                    'final_total': product['total_price'],
                     'machine': product.get('machine', ''),
                     'thickness': product.get('thickness', ''),
                     'size': product.get('size', '')
