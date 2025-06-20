@@ -697,25 +697,37 @@ def cart():
         cart_data.setdefault("products", [])
         
         # Calculate cart totals using the actual total field from each product
-        subtotal = sum(
-            float(p.get('total', 0)) for p in cart_data['products']
-        )
+        # Initialize variables with default values
+        subtotal = 0
+        gst_percent = 18  # Default GST percentage
+        gst_amount = 0
+        total = 0
         
-        total = subtotal  # Total is same as subtotal since amounts already include any taxes
-        
-        # Calculate discount amount if needed
-        discount_amount = sum(
-            float(p.get('calculations', {}).get('discount_amount', 0))
-            for p in cart_data['products']
-        )
-        
-        # Add calculated totals to the cart data
-        cart_data['calculations'] = {
-            'subtotal': round(subtotal, 2),
-            'discount_amount': round(discount_amount, 2),
-            'gst_amount': round(gst_amount, 2),
-            'total': round(total, 2)
-        }
+        # Only calculate if there are products
+        if cart_data.get('products'):
+            subtotal = sum(
+                float(p.get('calculations', {}).get('final_total', p.get('total', 0)))
+                for p in cart_data['products']
+            )
+            
+            # Calculate GST
+            gst_amount = (subtotal * gst_percent) / 100
+            total = subtotal + gst_amount
+            
+            # Calculate discount amount if needed
+            discount_amount = sum(
+                float(p.get('calculations', {}).get('discount_amount', 0))
+                for p in cart_data['products']
+            )
+            
+            # Add calculated totals to the cart data
+            cart_data['calculations'] = {
+                'subtotal': round(subtotal, 2),
+                'discount_amount': round(discount_amount, 2),
+                'gst_percent': gst_percent,
+                'gst_amount': round(gst_amount, 2),
+                'total': round(total, 2)
+            }
         
         # Get company info from session
         selected_company = session.get('selected_company', {})
@@ -733,10 +745,17 @@ def cart():
             session['company_name'] = company_name
             session['company_email'] = company_email
         
-        return render_template('cart.html', 
-                             cart=cart_data,
-                             company_name=company_name,
-                             company_email=company_email)
+        return render_template('cart.html',
+                           cart=cart_data,
+                           products=cart_data.get('products', []),
+                           company_name=company_name,
+                           company_email=company_email,
+                           calculations=cart_data.get('calculations', {
+                               'subtotal': 0,
+                               'gst_percent': gst_percent,
+                               'gst_amount': 0,
+                               'total': 0
+                           }))
         
     except Exception as e:
         print(f"Error in cart route: {e}")
@@ -1637,7 +1656,22 @@ def send_quotation():
             server.send_message(msg)
             server.quit()
             
-            return jsonify({'success': True, 'message': 'Quotation sent successfully'})
+            # Clear the cart after successful email send
+            try:
+                if current_user.is_authenticated:
+                    if USE_MONGO and mongo_db:
+                        mongo_db.carts.delete_one({'user_id': str(current_user.id)})
+                    else:
+                        # Fallback to session-based cart
+                        if 'cart' in session:
+                            session.pop('cart')
+                return jsonify({'success': True, 'message': 'Quotation sent successfully'})
+            except Exception as clear_error:
+                app.logger.error(f"Error clearing cart after sending quotation: {clear_error}")
+                return jsonify({
+                    'success': True, 
+                    'message': 'Quotation sent but there was an error clearing the cart. Please clear it manually.'
+                })
             
         except smtplib.SMTPException as e:
             print(f"SMTP Error: {e}")
