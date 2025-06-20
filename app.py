@@ -696,23 +696,12 @@ def cart():
         # Ensure products list exists
         cart_data.setdefault("products", [])
         
-        # Calculate cart totals
+        # Calculate cart totals using the actual total field from each product
         subtotal = sum(
-            float(p.get('calculations', {}).get('subtotal', 
-                  p.get('calculations', {}).get('price_after_discount', 
-                  float(p.get('price', 0)) * int(p.get('quantity', 1)))))
-            for p in cart_data['products']
+            float(p.get('total', 0)) for p in cart_data['products']
         )
         
-        gst_amount = sum(
-            float(p.get('calculations', {}).get('gst_amount', 0))
-            for p in cart_data['products']
-        )
-        
-        total = sum(
-            float(p.get('calculations', {}).get('final_total', 0))
-            for p in cart_data['products']
-        )
+        total = subtotal  # Total is same as subtotal since amounts already include any taxes
         
         # Calculate discount amount if needed
         discount_amount = sum(
@@ -1357,7 +1346,8 @@ def send_quotation():
         if not customer_email:
             return jsonify({'error': 'Customer email not available'}), 400
 
-        recipients = [customer_email, 'info@chemo.in']
+        # Send to customer and MD's desk
+        recipients = [customer_email, 'md.desk@chemo.in']
 
         # Build quotation HTML
         quote_id = f"CGI-{int(datetime.utcnow().timestamp()*1000)}"
@@ -1514,8 +1504,11 @@ def send_quotation():
                         <th style="padding: 10px; text-align: left;">Machine</th>
                         <th style="padding: 10px; text-align: left;">Product</th>
                         <th style="padding: 10px; text-align: left;">Type</th>
+                        <th style="padding: 10px; text-align: left;">Thickness</th>
                         <th style="padding: 10px; text-align: left;">Size</th>
+                        <th style="padding: 10px; text-align: left;">Barring</th>
                         <th style="padding: 10px; text-align: right;">Qty</th>
+                        <th style="padding: 10px; text-align: right;">Disc %</th>
                         <th style="padding: 10px; text-align: right;">Amount (₹)</th>
                       </tr>
                     </thead>
@@ -1525,25 +1518,29 @@ def send_quotation():
                         <td style="padding: 10px;">{idx}</td>
                         <td style="padding: 10px;">{p.get('machine', '')}</td>
                         <td style="padding: 10px;">{p.get('type', '')}</td>
-                        <td style="padding: 10px;">{p.get('blanket_type', '') if p.get('type') == 'blanket' else '----'}</td>
-                        <td style="padding: 10px;">{p.get('size', '') or (f"{p.get('length', '')}x{p.get('width', '')}{p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
+                        <td style="padding: 10px;">{p.get('blanket_type', '----')}</td>
+                        <td style="padding: 10px;">{p.get('thickness', '----')}</td>
+                        <td style="padding: 10px;">{p.get('size', '') or (f"{p.get('length', '')} x {p.get('width', '')} {p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
+                        <td style="padding: 10px;">{p.get('bar_type', '----')}</td>
                         <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
-                        <td style="padding: 10px; text-align: right;">₹{p.get('total', 0) if p.get('type') == 'blanket' else (p.get('unit_price', 0) * p.get('quantity', 1)):,.2f}</td>
+                        <td style="padding: 10px; text-align: right;">{p.get('discount_percent', 0)}%</td>
+                        <td style="padding: 10px; text-align: right;">₹{p.get('total', 0):,.2f}</td>
                       </tr>''' for idx, p in enumerate(products, 1)])}
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colspan="6" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
+                        <td colspan="9" style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>Subtotal:</strong></td>
                         <td style="text-align: right; padding: 10px; border-top: 2px solid #ddd;"><strong>₹{subtotal:,.2f}</strong></td>
                       </tr>
                       <tr>
-                        <td colspan="6" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
+                        <td colspan="9" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
                         <td style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{total:,.2f}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
                   
                   <p style="margin-top: 20px;">Thank you for your business!<br>— Team CGI</p>
+                  <p>For more information, please contact: <a href="mailto:info@cgi.in">info@cgi.in</a></p>
                   <hr>
                   <small>This quotation is not a contract or invoice. It is our best estimate.</small>
                 </div>
