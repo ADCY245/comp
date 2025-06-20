@@ -496,6 +496,9 @@ class MongoCartStore:
         return True
 
     def clear_cart(self, user_id):
+        if not hasattr(self, 'collection') or self.collection is None:
+            print("Error: MongoDB collection not available")
+            return False
         return self.save_cart(user_id, [])
 
 
@@ -1340,478 +1343,189 @@ def quotation_preview():
     }
     
     return render_template('quotation.html', **context)
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
+    msg['To'] = ', '.join(recipients)
 
-# ---------------------------------------------------------------------------
-# Send Quotation Route
-# ---------------------------------------------------------------------------
-@app.route('/send_quotation', methods=['POST'])
-@login_required
-def send_quotation():
-    """Generate quotation from current cart and email it to customer and CGI."""
-    try:
-        # Parse optional notes from request body
-        data = request.get_json() or {}
-        notes = (data.get('notes') or '').strip()
-
-        # Fetch cart
-        cart = get_user_cart()
-        products = cart.get('products', [])
-        if not products:
-            return jsonify({'error': 'Cart is empty'}), 400
-
-        # Determine recipient emails
-        selected_company = session.get('selected_company')
-        if not isinstance(selected_company, dict):
-            selected_company = {}
-        customer_email = selected_company.get('email') or current_user.email
-        if not customer_email:
-            return jsonify({'error': 'Customer email not available'}), 400
-
-        # Send to customer and MD's desk
-        recipients = [customer_email, 'md.desk@chemo.in']
-
-        # Get current date and time
-        current_datetime = datetime.utcnow()
-        today = current_datetime.strftime('%d-%m-%Y')
-        current_time = current_datetime.strftime('%H:%M:%S')
-
-        # Table rows
-        rows_html = """
-        <table style='width: 100%; border-collapse: collapse; margin: 20px 0; font-family: Arial, sans-serif;'>
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Quotation</title>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }}
+        .company-info {{
+            margin-bottom: 20px;
+            text-align: center;
+        }}
+        .quote-info {{
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }}
+        th {{
+            background-color: #f2f2f2;
+        }}
+        .total-row {{
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }}
+        .footer {{
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Quotation</h1>
+            <div class="quote-header" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div class="quote-left" style="flex: 1;">
+            <h2>{selected_company.get('name', 'Chemo Graphic International')}</h2>
+            <p>{selected_company.get('address', '113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060')}</p>
+            <p>Contact: {selected_company.get('phone', '+91-22-12345678')}</p>
+            <p>User Email: {current_user.email}</p>
+          </div>
+          <div class="quote-right" style="flex: 1;">
+            <p><strong>Date:</strong> {today}</p>
+            <p><strong>Time:</strong> {quote_time}</p>
+            <p><strong>Customer:</strong> {customer_name}</p>
+            <p><strong>Company Email:</strong> {customer_email}</p>
+          </div>
+        </div>
+        
+        <p style="margin: 15px 0 10px 0;">Hello,</p>
+        
+        <p style="margin: 0 0 15px 0;">This is <strong>{current_user.username}</strong> from CGI.<br>
+        Here is the proposed quotation for the required products:</p>
+        
+        <table>
             <thead>
                 <tr>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>#</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Machine</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Product</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Type</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Thickness</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Size</th>
-                    <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Barring</th>
-                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Qty</th>
-                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Disc %</th>
-                    <th style='padding: 8px; text-align: right; border: 1px solid #ddd;'>Amount (₹)</th>
+                    <th>#</th>
+                    <th>Machine</th>
+                    <th>Type</th>
+                    <th>Blanket Type</th>
+                    <th>Thickness</th>
+                    <th>Size</th>
+                    <th>Bar Type</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right">Disc %</th>
+                    <th class="text-right">Amount (₹)</th>
                 </tr>
             </thead>
             <tbody>
-        """
-        
-        subtotal = 0
-        final_subtotal = 0
-        for idx, p in enumerate(products, start=1):
-            # Calculate item total including GST
-            price = p.get('unit_price', 0) or p.get('base_price', 0)
-            if 'bar_price' in p:
-                price += p.get('bar_price', 0)
-            quantity = p.get('quantity', 1)
-            discount_percent = p.get('discount_percent', 0)
-            gst_percent = p.get('gst_percent', 18)
-            
-            # Calculate item values
-            item_subtotal = price * quantity
-            discount_amount = (item_subtotal * discount_percent / 100) if discount_percent else 0
-            discounted_subtotal = item_subtotal - discount_amount
-            gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
-            item_total = discounted_subtotal + gst_amount
-            
-            # Add to final subtotal (sum of all item totals including GST)
-            final_subtotal += item_total
-            
-            machine = p.get('machine', '')
-            prod_type = p.get('type', '')
-            
-            # Dimensions
-            if p.get('size'):
-                dimensions = p['size']
-            else:
-                length = p.get('length') or ''
-                width = p.get('width') or ''
-                unit = p.get('unit', '')
-                dimensions = f"{length} x {width} {unit}" if length and width else '----'
-            
-            qty = p.get('quantity', 1)
-            
-            # Calculate total based on product type matching quotation_preview logic
-            p.setdefault('type', '')
-            p.setdefault('quantity', 1)
-            p.setdefault('discount_percent', 0)
-            p.setdefault('gst_percent', 18)  # Default GST for mpack
-            p.setdefault('unit_price', 0)
-            p.setdefault('base_price', 0)
-            p.setdefault('bar_price', 0)
-            
-            if p['type'] == 'mpack':
-                # Calculate mpack total matching cart template's approach
-                price = float(p.get('unit_price', 0))
-                quantity = int(p.get('quantity', 1))
-                discount_percent = float(p.get('discount_percent', 0))
-                gst_percent = float(p.get('gst_percent', 18))
-                
-                item_subtotal = price * quantity
-                discount_amount = (item_subtotal * discount_percent / 100) if discount_percent else 0
-                price_after_discount = item_subtotal - discount_amount
-                gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
-                final_total = price_after_discount + gst_amount
-                
-                # Store calculations in the item
-                p['calculations'] = {
-                    'unit_price': round(price, 2),
-                    'quantity': quantity,
-                    'subtotal': round(item_subtotal, 2),
-                    'discount_percent': discount_percent,
-                    'discount_amount': round(discount_amount, 2),
-                    'price_after_discount': round(price_after_discount, 2),
-                    'gst_percent': gst_percent,
-                    'gst_amount': round(gst_amount, 2),
-                    'final_total': round(final_total, 2)
-                }
-                item_total = final_total
-                
-            elif p['type'] == 'blanket':
-                # Calculate blanket total matching cart template's approach
-                base_price = float(p.get('base_price', 0))
-                bar_price = float(p.get('bar_price', 0))
-                quantity = int(p.get('quantity', 1))
-                discount_percent = float(p.get('discount_percent', 0))
-                gst_percent = float(p.get('gst_percent', 18))
-                
-                # Calculate unit price as base + bar price
-                unit_price = base_price + bar_price
-                
-                # Calculate subtotal (unit price * quantity)
-                item_subtotal = unit_price * quantity
-                
-                # Calculate discount amount
-                discount_amount = (item_subtotal * discount_percent / 100) if discount_percent else 0
-                
-                # Calculate price after discount
-                price_after_discount = item_subtotal - discount_amount
-                
-                # Calculate GST on discounted amount
-                gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
-                
-                # Calculate final total including GST
-                final_total = price_after_discount + gst_amount
-                
-                # Store calculations in the item
-                p['calculations'] = {
-                    'base_price': round(base_price, 2),
-                    'bar_price': round(bar_price, 2),
-                    'unit_price': round(unit_price, 2),
-                    'quantity': quantity,
-                    'subtotal': round(item_subtotal, 2),
-                    'discount_percent': discount_percent,
-                    'discount_amount': round(discount_amount, 2),
-                    'price_after_discount': round(price_after_discount, 2),
-                    'gst_percent': gst_percent,
-                    'gst_amount': round(gst_amount, 2),
-                    'final_total': round(final_total, 2)
-                }
-                item_total = final_total
-            else:
-                # Handle other product types
-                price = float(p.get('unit_price', 0))
-                quantity = int(p.get('quantity', 1))
-                discount_percent = float(p.get('discount_percent', 0))
-                gst_percent = float(p.get('gst_percent', 0))
-                
-                item_subtotal = price * quantity
-                discount_amount = (item_subtotal * discount_percent / 100) if discount_percent else 0
-                discounted_subtotal = item_subtotal - discount_amount
-                gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
-                final_total = discounted_subtotal + gst_amount
-                
-                p['calculations'] = {
-                    'unit_price': round(price, 2),
-                    'quantity': quantity,
-                    'subtotal': round(item_subtotal, 2),
-                    'discount_percent': discount_percent,
-                    'discount_amount': round(discount_amount, 2),
-                    'gst_percent': gst_percent,
-                    'gst_amount': round(gst_amount, 2),
-                    'final_total': round(final_total, 2)
-                }
-                item_total = final_total
-            
-            # Add to running subtotal
-            subtotal += item_total
-            
-            rows_html += f"""
+                {"".join([f"""
                 <tr>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{idx}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{machine}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('product', '')}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{prod_type}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('thickness', '')}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{dimensions}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('barring', '')}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd; text-align: right;'>{int(p.get('quantity', 1))}</td>
-                    <td style='padding: 8px; border: 1px solid #ddd; text-align: right;'>{p.get('discount_percent', 0)}%</td>
-                    <td style='padding: 8px; border: 1px solid #ddd; text-align: right;'>₹{p['calculations']['final_total']:,.2f}</td>
-                </tr>
-            """
-        
-        # Close table body and add totals row
-        rows_html += f"""
+                    <td>{idx}</td>
+                    <td>{p.get('machine', '')}</td>
+                    <td>{p.get('type', '')}</td>
+                    <td>{p.get('blanket_type', '----')}</td>
+                    <td>{p.get('thickness', '----')}</td>
+                    <td>{p.get('size', '') or (f"{p.get('length', '')} x {p.get('width', '')} {p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
+                    <td>{p.get('bar_type', '----')}</td>
+                    <td class="text-right">{p.get('quantity', 1)}</td>
+                    <td class="text-right">{p.get('discount_percent', 0)}%</td>
+                    <td class="text-right">₹{p.get('total', 0):,.2f}</td>
+                </tr>""" for idx, p in enumerate(products, 1)])}
             </tbody>
             <tfoot>
-                <tr>
-                    <td colspan="8" style="text-align: right; padding: 8px; border: 1px solid #ddd;"><strong>Subtotal:</strong></td>
-                    <td style="text-align: right; padding: 8px; border: 1px solid #ddd; font-weight: bold;">₹{final_subtotal:,.2f}</td>
-                </tr>
-                <tr>
-                    <td colspan="8" style="text-align: right; padding: 8px; border: 1px solid #ddd;"><strong>Total:</strong></td>
-                    <td style="text-align: right; padding: 8px; border: 1px solid #ddd; font-weight: bold;">₹{final_subtotal:,.2f}</td>
+                <tr class="total-row">
+                    <td colspan="7" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;">
+                        <strong>Total (₹):</strong>
+                    </td>
+                    <td colspan="3" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;">
+                        <strong>₹{final_subtotal:,.2f}</strong>
+                    </td>
                 </tr>
             </tfoot>
         </table>
         
-        <div style="margin-top: 30px; margin-bottom: 30px;">
-            <p>Thank you for your business!<br>— Team CGI</p>
-            <p>For more information, please contact: info@chemo.in</p>
-            <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                This quotation is not a contract or invoice. It is our best estimate.
+        <div class="signature">
+            <p>Thank you for your business!<br>
+            <strong>— Team CGI</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>For more information, please contact: <a href="mailto:{current_user.email}" style="color: #3498db; text-decoration: none;">{current_user.email}</a></p>
+            <p class="disclaimer">
+                This quotation is valid for 15 days from the date of issue. Prices are subject to change without prior notice.
             </p>
-        </div>"""
-        
-        # Calculate final total by summing up all item final_totals to match quotation_preview
-        final_subtotal = 0
-        for p in products:
-            final_subtotal += p.get('calculations', {}).get('final_total', 0)
-        
-        # Round to 2 decimal places for display
-        final_subtotal = round(final_subtotal, 2)
-        total = final_subtotal
-        
-        # Email sending
-        if not email_config_valid:
-            return jsonify({'error': 'Email configuration invalid'}), 500
+        </div>
+    </div>
+</body>
+</html>
+"""
 
-        subject = "CGI Quotation"
-        try:
-            # Create message container
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-            msg['To'] = ', '.join(recipients)
-            
-            # Create the HTML version of the message
-            html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Quotation</title>
-                <style>
-                    body {{ 
-                        font-family: Arial, sans-serif; 
-                        line-height: 1.6;
-                        color: #333;
-                        margin: 0;
-                        padding: 0;
-                    }}
-                    .container {{ 
-                        max-width: 800px; 
-                        margin: 0 auto; 
-                        padding: 30px;
-                    }}
-                    .header {{ 
-                        margin-bottom: 20px;
-                        padding-bottom: 10px;
-                        border-bottom: 2px solid #eee;
-                    }}
-                    .header h2 {{
-                        margin: 0 0 10px 0;
-                        color: #2c3e50;
-                    }}
-                    .company-info {{
-                        margin-bottom: 20px;
-                        line-height: 1.5;
-                    }}
-                    .quote-info {{
-                        margin: 25px 0;
-                        padding: 15px;
-                        background-color: #f9f9f9;
-                        border-radius: 5px;
-                        border-left: 4px solid #3498db;
-                    }}
-                    table {{ 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin: 25px 0;
-                        font-size: 14px;
-                    }}
-                    th, td {{ 
-                        padding: 12px 8px; 
-                        text-align: left; 
-                        border: 1px solid #e0e0e0;
-                    }}
-                    th {{ 
-                        background-color: #f8f9fa;
-                        font-weight: 600;
-                        color: #2c3e50;
-                    }}
-                    tr:nth-child(even) {{
-                        background-color: #f9f9f9;
-                    }}
-                    .total-row {{ 
-                        font-weight: bold;
-                        background-color: #f1f8ff !important;
-                    }}
-                    .footer {{ 
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 1px solid #eee;
-                        font-size: 0.9em;
-                        color: #666;
-                    }}
-                    .signature {{
-                        margin: 30px 0 20px 0;
-                        padding-top: 20px;
-                        border-top: 1px solid #eee;
-                    }}
-                    .disclaimer {{
-                        font-size: 0.8em;
-                        color: #999;
-                        font-style: italic;
-                        margin-top: 30px;
-                        padding-top: 15px;
-                        border-top: 1px solid #f0f0f0;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h2>QUOTATION</h2>
-                        <div class="company-info">
-                            <strong>CGI - Chemo Graphics India</strong><br>
-                            123 Print Lane, Mumbai, India<br>
-                            Email: info@chemo.in
-                        </div>
-                    </div>
-                    
-                    <div class="quote-info">
-                        <p><strong>To:</strong> {selected_company.get('name', '')}<br>
-                        <strong>Email:</strong> {customer_email}<br>
-                        <strong>Date:</strong> {today}</p>
-                    </div>
-                    
-                    <p>Hello,</p>
-                    
-                    <p>This is test from CGI.<br>
-                    Here is the proposed quotation for the required products:</p>
-                    
-                    {rows_html}
-                    
-                    <div class="signature">
-                        <p>Thank you for your business!<br>
-                        <strong>— Team CGI</strong></p>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>For more information, please contact: <a href="mailto:info@chemo.in" style="color: #3498db; text-decoration: none;">info@chemo.in</a></p>
-                        <p class="disclaimer">
-                            This quotation is not a contract or invoice. It is our best estimate.
-                        </p>
-                    </div>
-                        <th style="padding: 10px; text-align: right;">Qty</th>
-                        <th style="padding: 10px; text-align: right;">Disc %</th>
-                        <th style="padding: 10px; text-align: right;">Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {''.join([f'''
-                      <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px;">{idx}</td>
-                        <td style="padding: 10px;">{p.get('machine', '')}</td>
-                        <td style="padding: 10px;">{p.get('type', '')}</td>
-                        <td style="padding: 10px;">{p.get('blanket_type', '----')}</td>
-                        <td style="padding: 10px;">{p.get('thickness', '----')}</td>
-                        <td style="padding: 10px;">{p.get('size', '') or (f"{p.get('length', '')} x {p.get('width', '')} {p.get('unit', '')}" if p.get('length') and p.get('width') else '')}</td>
-                        <td style="padding: 10px;">{p.get('bar_type', '----')}</td>
-                        <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
-                        <td style="padding: 10px; text-align: right;">{p.get('discount_percent', 0)}%</td>
-                        <td style="padding: 10px; text-align: right;">₹{p.get('total', 0):,.2f}</td>
-                      </tr>''' for idx, p in enumerate(products, 1)])}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colspan="8" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>Total (₹):</strong></td>
-                        <td colspan="2" style="text-align: right; padding: 10px; font-size: 1.1em; border-top: 2px solid #2c3e50;"><strong>₹{final_subtotal:,.2f}</strong></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                  
-                  <p style="margin-top: 20px;">Thank you for your business!<br>— Team CGI</p>
-                  <p>For more information, please contact: <a href="mailto:info@cgi.in">info@cgi.in</a></p>
-                  <hr>
-                  <small>This quotation is not a contract or invoice. It is our best estimate.</small>
-                </div>
-              </body>
-            </html>
-            """
+    # Attach HTML version
+    part = MIMEText(html, 'html')
+    msg.attach(part)
 
-            # Attach HTML version
-            part = MIMEText(html, 'html')
-            msg.attach(part)
-
-            # Send the email
-            if SMTP_PORT == 465:
-                server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-            else:
-                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-                
-            # Set debug level to see SMTP communication
-            server.set_debuglevel(1)
-            
-            # Start TLS if needed (for ports 587 and 25)
-            if SMTP_PORT in [587, 25]:
-                server.starttls()
-                
-            # Login only if credentials are provided
-            if SMTP_USERNAME and SMTP_PASSWORD:
-                try:
-                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                except smtplib.SMTPNotSupportedError as e:
-                    print(f"SMTP AUTH not supported by server: {e}")
-                    # Continue without authentication if not supported
-            
-            # Send the email
-            server.send_message(msg)
-            server.quit()
-            
-            # Clear the cart after successful email send
+    # Send the email
+    try:
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        else:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.set_debuglevel(1)
+        if SMTP_PORT in [587, 25]:
+            server.starttls()
+        if SMTP_USERNAME and SMTP_PASSWORD:
             try:
-                if current_user.is_authenticated:
-                    if USE_MONGO and mongo_db:
-                        mongo_db.carts.delete_one({'user_id': str(current_user.id)})
-                    else:
-                        # Fallback to session-based cart
-                        if 'cart' in session:
-                            session.pop('cart')
-                return jsonify({'success': True, 'message': 'Quotation sent successfully'})
-            except Exception as clear_error:
-                app.logger.error(f"Error clearing cart after sending quotation: {clear_error}")
-                return jsonify({
-                    'success': True, 
-                    'message': 'Quotation sent but there was an error clearing the cart. Please clear it manually.'
-                })
-            
-        except smtplib.SMTPException as e:
-            print(f"SMTP Error: {e}")
-            return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
-            
-        except Exception as e:
-            print(f"Unexpected error sending email: {e}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({'error': 'Internal server error'}), 500
-            
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            except smtplib.SMTPNotSupportedError as e:
+                print(f"SMTP AUTH not supported by server: {e}")
+                # Continue without authentication if not supported
+        server.send_message(msg)
+        server.quit()
+        # Return success response without clearing the cart
+        return jsonify({
+            'success': True,
+            'message': 'Quotation sent successfully. Your cart has been preserved for future reference.'
+        })
+    except smtplib.SMTPException as e:
+        print(f"SMTP Error: {e}")
+        return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
     except Exception as e:
-        print(f"Error in send_quotation: {str(e)}")
+        print(f"Unexpected error sending email: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'An unexpected error occurred while processing your request'}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/request-otp', methods=['POST'])
 def api_request_otp():
@@ -1865,32 +1579,33 @@ def api_verify_otp():
         
         if not otp:
             return jsonify({'error': 'OTP is required'}), 400
-            
-        # Get stored OTP from session
+
+        # Verify OTP
         stored_otp = session.get('otp')
-        otp_expiry = session.get('otp_expiry')
-        
         if not stored_otp:
-            return jsonify({'error': 'No OTP requested. Please request OTP first.'}), 400
-            
-        if otp_expiry and datetime.now() > datetime.fromisoformat(str(otp_expiry)):
-            return jsonify({'error': 'OTP has expired. Please request a new OTP.'}), 400
-            
-        if otp != stored_otp:
-            return jsonify({'error': 'Invalid OTP'}), 401
-            
-        # Clear OTP from session after successful verification
-        session.pop('otp', None)
-        session.pop('otp_expiry', None)
-        
-        return jsonify({
-            'success': True,
-            'message': 'OTP verified successfully'
-        })
-        
+            return jsonify({'error': 'No OTP has been requested'}), 400
+
+        # Check OTP expiry
+        expiry_time = session.get('otp_expiry')
+        if not expiry_time or datetime.fromisoformat(expiry_time) < datetime.now():
+            return jsonify({'error': 'OTP has expired. Please request a new one.'}), 400
+
+        if otp == stored_otp:
+            # Clear OTP from session
+            session.pop('otp', None)
+            session.pop('otp_expiry', None)
+            return jsonify({
+                'success': True,
+                'message': 'OTP verified successfully'
+            })
+        else:
+            return jsonify({'error': 'Invalid OTP'}), 400
+
     except Exception as e:
         print(f"OTP verification error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
 
 @app.route('/api/auth/register/complete', methods=['POST'])
 def api_register_complete():
