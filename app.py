@@ -1188,7 +1188,69 @@ def forgot_password():
 @app.route('/quotation_preview')
 @login_required
 def quotation_preview():
-    pass  # Keep existing quotation_preview function
+    try:
+        # Get cart contents
+        cart = get_user_cart()
+        if not cart.get('products'):
+            flash('Your cart is empty', 'warning')
+            return redirect(url_for('cart'))
+
+        # Get company info
+        selected_company = session.get('selected_company', {})
+        customer_name = selected_company.get('name', '')
+        customer_email = selected_company.get('email', '')
+
+        if not customer_email:
+            flash('Please select a company first', 'warning')
+            return redirect(url_for('company_selection'))
+
+        # Get current date and time
+        current_datetime = datetime.now()
+        quote_date = current_datetime.strftime('%d-%m-%Y')
+        quote_time = current_datetime.strftime('%H:%M:%S')
+
+        # Calculate cart totals
+        calculations = {
+            'subtotal': 0,
+            'gst_percent': 18,
+            'gst_amount': 0,
+            'total': 0
+        }
+        
+        if cart.get('products'):
+            calculations['subtotal'] = sum(
+                float(item.get('calculations', {}).get('final_total', item.get('total', 0)))
+                for item in cart['products']
+            )
+            
+            # Calculate GST
+            calculations['gst_amount'] = (calculations['subtotal'] * calculations['gst_percent']) / 100
+            calculations['total'] = calculations['subtotal'] + calculations['gst_amount']
+            
+            # Calculate discount amount if needed
+            calculations['discount_amount'] = sum(
+                float(item.get('calculations', {}).get('discount_amount', 0))
+                for item in cart['products']
+            )
+            
+            # Round all values
+            calculations = {k: round(v, 2) for k, v in calculations.items()}
+
+        return render_template('quotation.html',
+            cart=cart,
+            products=cart.get('products', []),
+            company_name=customer_name,
+            company_email=customer_email,
+            quote_date=quote_date,
+            quote_time=quote_time,
+            calculations=calculations,
+            selected_company=selected_company
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error in quotation_preview: {str(e)}")
+        flash('An error occurred while generating the quotation preview', 'error')
+        return redirect(url_for('cart'))
 
 @app.route('/send_quotation', methods=['POST'])
 @login_required
@@ -1215,11 +1277,32 @@ def send_quotation():
         quote_date = current_datetime.strftime('%d-%m-%Y')
         quote_time = current_datetime.strftime('%H:%M:%S')
         
-        # Calculate totals
-        total = 0
-        for item in cart.get('products', []):
-            if item.get('calculations'):
-                total += item['calculations']['final_total']
+        # Calculate cart totals using the same logic as cart page
+        calculations = {
+            'subtotal': 0,
+            'gst_percent': 18,
+            'gst_amount': 0,
+            'total': 0
+        }
+        
+        if cart.get('products'):
+            calculations['subtotal'] = sum(
+                float(item.get('calculations', {}).get('final_total', item.get('total', 0)))
+                for item in cart['products']
+            )
+            
+            # Calculate GST
+            calculations['gst_amount'] = (calculations['subtotal'] * calculations['gst_percent']) / 100
+            calculations['total'] = calculations['subtotal'] + calculations['gst_amount']
+            
+            # Calculate discount amount if needed
+            calculations['discount_amount'] = sum(
+                float(item.get('calculations', {}).get('discount_amount', 0))
+                for item in cart['products']
+            )
+            
+            # Round all values
+            calculations = {k: round(v, 2) for k, v in calculations.items()}
         
         # Create email content with the exact format from quotation.html
         html_content = f"""
