@@ -728,13 +728,21 @@ def cart():
             'total': round(total, 2)
         }
         
-        # Get company info from query parameters or use existing session
-        company_name = request.args.get('company', session.get('company_name', ''))
-        company_email = request.args.get('email', session.get('company_email', ''))
+        # Get company info from session
+        selected_company = session.get('selected_company', {})
         
-        # Store in session for quotation preview
-        session['company_name'] = company_name
-        session['company_email'] = company_email
+        # Fallback to direct session values if not in selected_company
+        company_name = selected_company.get('name') or session.get('company_name', '')
+        company_email = selected_company.get('email') or session.get('company_email', '')
+        
+        # Ensure values are stored in both places for consistency
+        if company_name and company_email:
+            session['selected_company'] = {
+                'name': company_name,
+                'email': company_email
+            }
+            session['company_name'] = company_name
+            session['company_email'] = company_email
         
         return render_template('cart.html', 
                              cart=cart_data,
@@ -1062,11 +1070,21 @@ def select_company():
         flash('Please select a company', 'danger')
         return redirect(url_for('company_selection'))
     
-    # Save company in session as dict with name placeholder (lookup by id could be added)
+    # Get company details from the form
+    company_name = request.form.get('company_name', '')
+    company_email = request.form.get('company_email', '')
+    
+    # Save company in session with all details
     session['selected_company'] = {
-        'name': company_id,
-        'email': ''
+        'id': company_id,
+        'name': company_name,
+        'email': company_email
     }
+    
+    # Also save directly in session for backward compatibility
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    
     return redirect(url_for('product_selection'))
 
 @app.route('/get_companies')
@@ -1168,13 +1186,19 @@ def quotation_preview():
         flash('Your cart is empty', 'warning')
         return redirect(url_for('cart'))
 
-    # Get company info from URL parameters, then session, then default to empty strings
-    customer_name = request.args.get('company', session.get('company_name', ''))
-    customer_email = request.args.get('email', session.get('company_email', ''))
+    # Get company info from selected_company dict first, then fallback to direct session values
+    selected_company = session.get('selected_company', {})
+    customer_name = selected_company.get('name', session.get('company_name', ''))
+    customer_email = selected_company.get('email', session.get('company_email', ''))
     
-    # Update session with the latest values
-    session['company_name'] = customer_name
-    session['company_email'] = customer_email
+    # Ensure values are stored in both places for consistency
+    if customer_name and customer_email:
+        session['selected_company'] = {
+            'name': customer_name,
+            'email': customer_email
+        }
+        session['company_name'] = customer_name
+        session['company_email'] = customer_email
 
     # Ensure all items have required fields and calculate subtotal
     subtotal = 0
