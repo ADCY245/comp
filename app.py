@@ -697,7 +697,6 @@ def cart():
         cart_data.setdefault("products", [])
         
         # Calculate cart totals using the actual total field from each product
-        # Calculate total by summing up final prices from calculations
         total = 0
         if cart_data.get('products'):
             total = sum(
@@ -1706,7 +1705,7 @@ def send_quotation():
                         <td style="padding: 10px;">
                             {p.get('size', '').replace('.0 mm', ' mm').replace('.0mm', 'mm') if p.get('size') else 
                             ('%sx%s mm' % (p.get('length', '').replace('.0', ''), p.get('width', '').replace('.0', '')) if p.get('type') == 'mpack' else 
-                            ('%sx%s%s' % (p.get('length', '').replace('.0', ''), p.get('width', '').replace('.0', ''), p.get('unit', '').replace('mm', ' mm')) if p.get('length') and p.get('width') else '----'))}
+                            ('%sx%s%s' % (str(p.get('length', '')).replace('.0', ''), str(p.get('width', '')).replace('.0', ''), p.get('unit', '').replace('mm', ' mm')) if p.get('length') and p.get('width') else '----'))}
                         </td>
                         <td style="padding: 10px;">{p.get('bar_type', '----') if p.get('type') == 'blanket' else '----'}</td>
                         <td style="padding: 10px; text-align: right;">{p.get('quantity', 1)}</td>
