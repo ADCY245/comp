@@ -1672,7 +1672,8 @@ def send_quotation():
                     
                     <div class="quote-info">
                         <p><strong>To:</strong> {selected_company.get('name', '')}<br>
-                        <strong>Email:</strong> {customer_email}</p>
+                        <strong>Email:</strong> {customer_email}<br>
+                        <strong>Date:</strong> {today}</p>
                     </div>
                     
                     <p>Hello,</p>
