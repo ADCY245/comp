@@ -1438,9 +1438,8 @@ def send_quotation():
             # Pricing
             quantity = p.get('quantity', 1)
             unit_price = p.get('unit_price', 0)
-            total_price = p.get('total_price', 0)
-            gst_percent = 18.0 if p.get('type') == 'blanket' else 12.0
-            gst_amount = (total_price * gst_percent) / 100
+            calcs = p.get('calculations', {})
+            total_price = calcs.get('final_total', 0)
             
             # For mpack, show size instead of dimensions
             size = p.get('size', '')
@@ -1455,7 +1454,7 @@ def send_quotation():
                         {dimensions_str}<br>
                         {'Thickness: ' + str(thickness) if thickness else ''}<br>
                         Bar Type: {p.get('bar_type', '')}<br>
-                        GST: {gst_percent}%
+                        GST: {18.0 if p.get('type') == 'blanket' else 12.0}%
                     </td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{quantity}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>₹{unit_price:,.2f}</td>
