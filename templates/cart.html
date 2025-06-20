@@ -486,10 +486,10 @@
             
             // Fallback to session storage
             if (!companyName || companyName === 'Your Company') {
-                companyName = sessionStorage.getItem('companyName') || '';
+                companyName = '{{ company_name|default("")|safe }}';
             }
             if (!companyEmail || companyEmail === 'No email provided') {
-                companyEmail = sessionStorage.getItem('companyEmail') || '';
+                companyEmail = '{{ company_email|default("")|safe }}';
             }
             
             // If still no company name, show error
@@ -737,9 +737,31 @@
             return false;
         }
 
-        // Add event listeners when DOM is loaded
+        // Function to update cart count in the UI
+        function updateCartCount(count) {
+            const countElements = document.querySelectorAll('.cart-count');
+            countElements.forEach(el => {
+                el.textContent = count;
+                el.style.display = count > 0 ? 'inline' : 'none';
+            });
+        }
+        
+        // Function to update cart totals in the UI
+        function updateCartTotals() {
+            const subtotalEl = document.getElementById('cartSubtotal');
+            const gstEl = document.getElementById('cartGst');
+            const totalEl = document.getElementById('cartTotal');
+            
+            if (subtotalEl && gstEl && totalEl) {
+                subtotalEl.textContent = '₹0.00';
+                gstEl.textContent = '₹0.00';
+                totalEl.textContent = '₹0.00';
+            }
+        }
+        
+        // Initialize event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Use event delegation for clear cart buttons
+            // Handle clear cart buttons
             document.addEventListener('click', function(event) {
                 const clearBtn = event.target.closest('#clearCartBtn, #clearCartBtnTop');
                 if (clearBtn) {
@@ -748,12 +770,14 @@
                 }
             });
 
-            // Existing remove form listeners
+            // Handle remove item buttons
             document.querySelectorAll('.remove-item-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    const index = parseInt(this.getAttribute('data-index'));
-                    removeFromCart(e, index);
+                    const index = this.getAttribute('data-index');
+                    if (index !== null) {
+                        removeFromCart(e, parseInt(index));
+                    }
                 });
             });
         });
