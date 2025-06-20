@@ -1420,7 +1420,10 @@ def send_quotation():
                     
                 # Clear cart after successful send
                 clear_cart()
-                return jsonify({'success': True})
+                return jsonify({
+                    'success': True,
+                    'message': 'Quotation sent successfully and cart cleared'
+                })
                 
             except Exception as e:
                 app.logger.error(f"Error sending quotation email: {str(e)}")
