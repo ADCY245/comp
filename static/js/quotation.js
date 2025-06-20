@@ -37,12 +37,18 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('cartItems').style.display = 'none';
           document.getElementById('emptyCart').style.display = 'block';
           
+          // Clear selected company info
+          document.getElementById('selectedCompany').innerHTML = '';
+          document.getElementById('selectedCompanyEmail').innerHTML = '';
+          
           // Redirect to cart after a short delay
           setTimeout(() => {
             window.location.href = '/cart';
           }, 1500);
         } else {
           showToast('Error', data.error || 'Failed to send quotation', 'error');
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send Quotation';
         }
       } catch (err) {
         console.error('Error sending quotation:', err);
