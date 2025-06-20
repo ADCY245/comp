@@ -793,9 +793,21 @@ def clear_cart():
 @login_required
 def add_to_cart():
     try:
+        # Get request data and validate
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+
+        # Validate required fields for blanket
+        required_fields = ['type', 'name', 'machine', 'length', 'width', 'unit', 'quantity', 'base_price', 'bar_price', 'gst_percent']
+        if data.get('type') == 'blanket' and not all(data.get(field) is not None for field in required_fields):
+            return jsonify({
+                'success': False,
+                'error': f'Missing required fields: {required_fields}'
+            }), 400
 
         # Calculate prices based on product type
         if data.get('type') == 'blanket':
@@ -899,31 +911,40 @@ def add_to_cart():
                 }
         
         # Get existing cart or create new one
-        cart = get_user_cart()
-        if not isinstance(cart, dict):
-            cart = {'products': []}
-        if 'products' not in cart:
-            cart['products'] = []
+        try:
+            cart = get_user_cart()
+            if not isinstance(cart, dict):
+                cart = {'products': []}
+            if 'products' not in cart:
+                cart['products'] = []
+                
+            # Add product to cart
+            cart['products'].append(product)
             
-        # Add product to cart
-        cart['products'].append(product)
-        
-        # Save updated cart
-        save_user_cart(cart)
-        
-        # Get updated cart count
-        updated_cart = get_user_cart()
-        cart_count = len(updated_cart.get('products', [])) if updated_cart and isinstance(updated_cart, dict) else 0
-        
-        return jsonify({
-            'success': True,
-            'message': 'Product added to cart successfully',
-            'cart_count': cart_count
-        })
+            # Save updated cart
+            save_user_cart(cart)
+            
+            # Get updated cart count
+            updated_cart = get_user_cart()
+            cart_count = len(updated_cart.get('products', [])) if updated_cart and isinstance(updated_cart, dict) else 0
+            
+            return jsonify({
+                'success': True,
+                'message': 'Product added to cart successfully',
+                'cart_count': cart_count
+            })
+        except Exception as e:
+            app.logger.error(f"Error saving cart: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to save cart: {str(e)}'
+            }), 500
     except Exception as e:
-        print(f"Error adding to cart: {e}")
-        import traceback
-        traceback.print_exc()
+        app.logger.error(f"Error adding to cart: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/get_cart')
