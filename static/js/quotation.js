@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         
         if (data.success) {
-          showToast('Success', 'Quotation sent successfully!', 'success');
+          showToast('Success', data.message || 'Quotation sent successfully!', 'success');
           
           // Clear the cart from localStorage
           const cart = { products: [] };
