@@ -1586,7 +1586,7 @@ def send_quotation():
         if not email_config_valid:
             return jsonify({'error': 'Email configuration invalid'}), 500
 
-        subject = f"CGI Quotation - {quote_id}"
+        subject = "CGI Quotation"
         try:
             # Create message container
             msg = MIMEMultipart('alternative')
