@@ -1211,41 +1211,7 @@ def forgot_password():
 # API Routes
 
 # Step 1: Request Password Reset - Send OTP to email
-@app.route('/api/auth/request-password-reset', methods=['POST'])
-def api_request_password_reset():
-    data = request.get_json()
-    email = data.get('email', '').strip().lower()
-    if not email:
-        return jsonify({'success': False, 'error': 'Email is required'}), 400
-    user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
-    if not user:
-        return jsonify({'success': False, 'error': 'No account with that email'}), 404
-    otp = str(random.randint(100000, 999999))
-    expiry = datetime.utcnow() + timedelta(minutes=10)
-    if MONGO_AVAILABLE and USE_MONGO:
-        mu_update_user(user['_id'], {'reset_token': otp, 'reset_token_expiry': expiry})
-    else:
-        user.reset_token = otp
-        user.reset_token_expiry = expiry
-        save_users()
-    # Email OTP (if SMTP configured)
-    if email_config_valid:
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-            msg['To'] = email
-            msg['Subject'] = "Password Reset OTP"
-            body = f"Your password reset OTP is: {otp}\nThis code will expire in 10 minutes."
-            msg.attach(MIMEText(body, 'plain'))
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                if SMTP_USERNAME and SMTP_PASSWORD:
-                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.sendmail(EMAIL_FROM, email, msg.as_string())
-        except Exception as e:
-            print(f"SMTP send error: {e}")
-            return jsonify({'success': False, 'error': 'Failed to send email'}), 500
-    return jsonify({'success': True, 'message': 'OTP sent to your email address'})
-
+# (Duplicate removed)
 # Step 2: Verify OTP
 @app.route('/api/auth/verify-reset-otp', methods=['POST'])
 def api_verify_reset_otp():
@@ -2367,8 +2333,7 @@ def api_user():
         print(f"User error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/auth/request-password-reset', methods=['POST'])
-def api_request_password_reset():
+# (Removed duplicate, see below for actual implementation)
     try:
         data = request.get_json()
         email = data.get('email', '').strip().lower()
