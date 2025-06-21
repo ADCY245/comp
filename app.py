@@ -1154,7 +1154,7 @@ def forgot_password():
         users = load_users()
                 # Find user by email
         if USE_MONGO:
-            doc = mu.find_user_by_email_or_username(email)
+            doc = mu_find_user_by_email_or_username(email)
             if not doc:
                 flash('No account with that email', 'danger')
                 return redirect(url_for('forgot_password'))
