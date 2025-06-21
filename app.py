@@ -1180,7 +1180,7 @@ def forgot_password():
         if USE_MONGO:
             # persist OTP in Mongo
             from bson import ObjectId
-            mu.update_user(ObjectId(user_obj.id), {
+            mu_update_user(ObjectId(user_obj.id), {
                 "reset_token": otp,
                 "reset_token_expiry": datetime.now() + timedelta(minutes=10)
             })
