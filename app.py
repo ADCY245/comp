@@ -1210,6 +1210,107 @@ def forgot_password():
 
 # API Routes
 
+# Step 1: Request Password Reset - Send OTP to email
+@app.route('/api/auth/request-password-reset', methods=['POST'])
+def api_request_password_reset():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
+    if not user:
+        return jsonify({'success': False, 'error': 'No account with that email'}), 404
+    otp = str(random.randint(100000, 999999))
+    expiry = datetime.utcnow() + timedelta(minutes=10)
+    if MONGO_AVAILABLE and USE_MONGO:
+        mu_update_user(user['_id'], {'reset_token': otp, 'reset_token_expiry': expiry})
+    else:
+        user.reset_token = otp
+        user.reset_token_expiry = expiry
+        save_users()
+    # Email OTP (if SMTP configured)
+    if email_config_valid:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
+            msg['To'] = email
+            msg['Subject'] = "Password Reset OTP"
+            body = f"Your password reset OTP is: {otp}\nThis code will expire in 10 minutes."
+            msg.attach(MIMEText(body, 'plain'))
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                if SMTP_USERNAME and SMTP_PASSWORD:
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(EMAIL_FROM, email, msg.as_string())
+        except Exception as e:
+            print(f"SMTP send error: {e}")
+            return jsonify({'success': False, 'error': 'Failed to send email'}), 500
+    return jsonify({'success': True, 'message': 'OTP sent to your email address'})
+
+# Step 2: Verify OTP
+@app.route('/api/auth/verify-reset-otp', methods=['POST'])
+def api_verify_reset_otp():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    otp = data.get('otp', '').strip()
+    if not email or not otp:
+        return jsonify({'success': False, 'error': 'Email and OTP are required'}), 400
+    user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
+    if not user:
+        return jsonify({'success': False, 'error': 'No account with that email'}), 404
+    stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
+    stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
+    if not stored_otp or stored_otp != otp:
+        return jsonify({'success': False, 'error': 'Invalid OTP'}), 400
+    if stored_expiry and stored_expiry < datetime.utcnow():
+        return jsonify({'success': False, 'error': 'OTP has expired'}), 400
+    return jsonify({'success': True, 'message': 'OTP verified'})
+
+# Step 3: Reset Password (final step)
+@app.route('/api/auth/reset-password', methods=['POST'])
+def api_reset_password():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        otp = data.get('otp', '').strip()
+        new_password = data.get('new_password', '').strip()
+        if not all([email, otp, new_password]):
+            return jsonify({'success': False, 'error': 'Email, OTP, and new password are required'}), 400
+        user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
+        if not user:
+            return jsonify({'success': False, 'error': 'No account found with that email'}), 404
+        stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
+        stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
+        if not stored_otp or stored_otp != otp:
+            return jsonify({'success': False, 'error': 'Invalid OTP'}), 400
+        if stored_expiry and stored_expiry < datetime.utcnow():
+            return jsonify({'success': False, 'error': 'OTP has expired'}), 400
+        # Update password
+        if MONGO_AVAILABLE and USE_MONGO:
+            temp_user = User(
+                id=str(user['_id']),
+                email=user['email'],
+                username=user['username'],
+                password_hash=user.get('password_hash', '')
+            )
+            temp_user.set_password(new_password)
+            mu_update_user(user['_id'], {
+                'password_hash': temp_user.password_hash,
+                'reset_token': None,
+                'reset_token_expiry': None
+            })
+        else:
+            user.set_password(new_password)
+            user.reset_token = None
+            user.reset_token_expiry = None
+            save_users()
+        return jsonify({'success': True, 'message': 'Password has been reset successfully', 'redirectTo': '/login'})
+    except Exception as e:
+        print(f"Password reset error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
 # ---------------------------------------------------------------------------
 # Quotation Preview Page
 # ---------------------------------------------------------------------------
