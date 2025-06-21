@@ -240,7 +240,7 @@ class User(UserMixin):
 
     def generate_auth_token(self, expires_in=JWT_EXPIRATION):
         return jwt.encode(
-            {'user_id': self.id, 'exp': time() + expires_in},
+            {'user_id': self.id, 'exp': datetime.utcnow() + timedelta(seconds=expires_in)},
             JWT_SECRET,
             algorithm=JWT_ALGORITHM
         )
@@ -385,9 +385,7 @@ if USE_MONGO:
                     username=doc.get('username'),
                     password_hash=doc.get('password_hash'),
                     is_verified=doc.get('is_verified', False),
-                    otp_verified=doc.get('otp_verified', False),
-                    reset_token=doc.get('reset_token'),
-                    reset_token_expiry=doc.get('reset_token_expiry')
+                    otp_verified=doc.get('otp_verified', False)
                 )
         except Exception as e:
             print(f"Error loading users from MongoDB: {e}")
@@ -1211,27 +1209,48 @@ def forgot_password():
 # API Routes
 
 # Step 1: Request Password Reset - Send OTP to email
-# (Duplicate removed)
 # Step 2: Verify OTP
 @app.route('/api/auth/verify-reset-otp', methods=['POST'])
 def api_verify_reset_otp():
-    data = request.get_json()
-    email = data.get('email', '').strip().lower()
-    otp = data.get('otp', '').strip()
-    if not email or not otp:
-        return jsonify({'success': False, 'error': 'Email and OTP are required'}), 400
-    user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
-    if not user:
-        return jsonify({'success': False, 'error': 'No account with that email'}), 404
-    stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
-    stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
-    if not stored_otp or stored_otp != otp:
-        return jsonify({'success': False, 'error': 'Invalid OTP'}), 400
-    if stored_expiry and stored_expiry < datetime.utcnow():
-        return jsonify({'success': False, 'error': 'OTP has expired'}), 400
-    return jsonify({'success': True, 'message': 'OTP verified'})
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        otp = data.get('otp', '').strip()
 
-# Step 3: Reset Password (final step)
+        if not all([email, otp]):
+            return jsonify({'error': 'Email and OTP are required'}), 400
+
+        user = None
+        if MONGO_AVAILABLE and USE_MONGO:
+            doc = mu_find_user_by_email_or_username(email)
+            if doc and doc.get('email', '').lower() == email:
+                user = doc
+        else:
+            for u in users.values():
+                if u.email.lower() == email:
+                    user = u
+                    break
+
+        if not user:
+            return jsonify({'error': 'No account found with that email'}), 404
+
+        stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
+        stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
+
+        if not stored_otp or stored_otp != otp:
+            return jsonify({'error': 'Invalid OTP'}), 400
+
+        if stored_expiry and stored_expiry < datetime.utcnow():
+            return jsonify({'error': 'OTP has expired'}), 400
+
+        return jsonify({'success': True, 'message': 'OTP verified successfully'})
+
+    except Exception as e:
+        print(f"OTP verification error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/api/auth/reset-password', methods=['POST'])
 def api_reset_password():
     try:
@@ -1239,19 +1258,49 @@ def api_reset_password():
         email = data.get('email', '').strip().lower()
         otp = data.get('otp', '').strip()
         new_password = data.get('new_password', '').strip()
+        
         if not all([email, otp, new_password]):
-            return jsonify({'success': False, 'error': 'Email, OTP, and new password are required'}), 400
-        user = mu_find_user_by_email_or_username(email) if MONGO_AVAILABLE and USE_MONGO else next((u for u in users.values() if u.email.lower() == email), None)
+            return jsonify({'error': 'Email, OTP, and new password are required'}), 400
+            
+        print(f"Resetting password for email: {email}")
+            
+        # Find user by email
+        user = None
+        if MONGO_AVAILABLE and USE_MONGO:
+            print("Looking up user in MongoDB...")
+            doc = mu_find_user_by_email_or_username(email)
+            if doc and doc.get('email', '').lower() == email:
+                user = doc
+                print(f"User found in MongoDB: {user['email']} (ID: {user['_id']})")
+        else:
+            # Fallback to JSON storage
+            for u in users.values():
+                if u.email.lower() == email:
+                    user = u
+                    break
+                
         if not user:
-            return jsonify({'success': False, 'error': 'No account found with that email'}), 404
+            print(f"No user found with email: {email}")
+            return jsonify({'error': 'No account found with that email'}), 404
+            
+        # Verify OTP
         stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
         stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
+        
+        print(f"Verifying OTP - Stored: {stored_otp}, Provided: {otp}")
+        
         if not stored_otp or stored_otp != otp:
-            return jsonify({'success': False, 'error': 'Invalid OTP'}), 400
+            print("Invalid OTP")
+            return jsonify({'error': 'Invalid OTP'}), 400
+            
         if stored_expiry and stored_expiry < datetime.utcnow():
-            return jsonify({'success': False, 'error': 'OTP has expired'}), 400
+            print("OTP expired")
+            return jsonify({'error': 'OTP has expired'}), 400
+            
         # Update password
         if MONGO_AVAILABLE and USE_MONGO:
+            print(f"Updating password for user {user['_id']}")
+            # Create a new User instance to use its password hashing
             temp_user = User(
                 id=str(user['_id']),
                 email=user['email'],
@@ -1259,27 +1308,37 @@ def api_reset_password():
                 password_hash=user.get('password_hash', '')
             )
             temp_user.set_password(new_password)
-            mu_update_user(user['_id'], {
-                'password_hash': temp_user.password_hash,
-                'reset_token': None,
-                'reset_token_expiry': None
-            })
+            
+            # Update the user in MongoDB
+            users_col.update_one(
+                {'_id': user['_id']},
+                {'$set': {
+                    'password_hash': temp_user.password_hash,
+                    'reset_token': None,
+                    'reset_token_expiry': None
+                }}
+            )
+            print("Password updated successfully in MongoDB")
         else:
+            # Fallback to JSON storage
             user.set_password(new_password)
             user.reset_token = None
             user.reset_token_expiry = None
             save_users()
-        return jsonify({'success': True, 'message': 'Password has been reset successfully', 'redirectTo': '/login'})
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password has been reset successfully',
+            'redirectTo': '/login'  # Redirect to login page after successful reset
+        })
+        
     except Exception as e:
         print(f"Password reset error: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
-# ---------------------------------------------------------------------------
-# Quotation Preview Page
-# ---------------------------------------------------------------------------
 @app.route('/quotation_preview')
 @login_required
 def quotation_preview():
@@ -1367,9 +1426,7 @@ def quotation_preview():
             price_after_discount = subtotal - discount_amount
             
             # Calculate GST on discounted amount
-            gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
-            
-            # Calculate final total including GST
+            gst_amount = (price_after_discount * gst_percent / 100)
             final_total = price_after_discount + gst_amount
             
             # Store calculations in the item
@@ -1563,8 +1620,7 @@ def send_quotation():
           <div style='margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;'>
             <h4 style='margin: 0 0 10px 0;'>Total Amount</h4>
             <p style='margin: 0;'>₹{sum(
-                p.get('calculations', {}).get('final_total', 0) if p.get('type') == 'mpack' 
-                else p.get('total_price', 0)
+                p.get('calculations', {}).get('final_total', 0)
                 for p in products
             ):,.2f}</p>
           </div>
@@ -1821,7 +1877,7 @@ def send_quotation():
             <h4>Company Information</h4>
             <p style='margin: 5px 0;'>
               <strong>CGI - Chemo Graphics India</strong><br>
-              123 Print Lane, Mumbai, India<br>
+              113, 114 High Tech Industrial Centre, Caves Rd, Jogeshwari East, Mumbai, Maharashtra 400060<br>
               Email: info@chemo.in<br>
               Date: {today}
             </p>
@@ -2404,7 +2460,6 @@ def mpacks():
 @app.route('/reset-password')
 def reset_password_page():
     return render_template('reset_password.html')
-
 
 # Error handling
 @app.errorhandler(404)
