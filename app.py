@@ -1205,7 +1205,7 @@ def forgot_password():
             except Exception as e:
                 print(f"SMTP send error: {e}")
         flash('OTP sent to your email address', 'success')
-        return redirect(url_for('reset_password'))
+        return redirect(url_for('reset_password_page'))
     return render_template('forgot_password.html')
 
 # API Routes
