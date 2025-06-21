@@ -2333,65 +2333,7 @@ def api_user():
         print(f"User error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/auth/verify-reset-otp', methods=['POST'])
-def api_verify_reset_otp():
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        otp = data.get('otp', '').strip()
-        
-        if not all([email, otp]):
-            return jsonify({'error': 'Email and OTP are required'}), 400
-            
-        print(f"Verifying OTP for email: {email}")
-            
-        # Find user by email
-        user = None
-        if MONGO_AVAILABLE and USE_MONGO:
-            print("Looking up user in MongoDB...")
-            doc = mu_find_user_by_email_or_username(email)
-            if doc and doc.get('email', '').lower() == email:
-                user = doc
-                print(f"User found in MongoDB: {user['email']} (ID: {user['_id']})")
-        else:
-            # Fallback to JSON storage
-            for u in users.values():
-                if u.email.lower() == email:
-                    user = u
-                    break
-                
-        if not user:
-            print(f"No user found with email: {email}")
-            return jsonify({'error': 'No account found with that email'}), 404
-            
-        # Verify OTP
-        stored_otp = user.get('reset_token') if isinstance(user, dict) else user.reset_token
-        stored_expiry = user.get('reset_token_expiry') if isinstance(user, dict) else user.reset_token_expiry
-        
-        print(f"Verifying OTP - Stored: {stored_otp}, Provided: {otp}")
-        
-        if not stored_otp or stored_otp != otp:
-            print("Invalid OTP")
-            return jsonify({'error': 'Invalid OTP'}), 400
-            
-        if stored_expiry and stored_expiry < datetime.utcnow():
-            print("OTP expired")
-            return jsonify({'error': 'OTP has expired'}), 400
-            
-        # If we get here, OTP is valid
-        print("OTP verified successfully")
-        return jsonify({
-            'success': True,
-            'message': 'OTP verified successfully',
-            'email': email,  # Return the email for client-side reference
-            'otp': otp      # Return the OTP for client-side reference
-        })
-        
-    except Exception as e:
-        print(f"OTP verification error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': 'Internal server error'}), 500
+# (Removed duplicate, see above for actual implementation)
 
 @app.route('/api/auth/reset-password', methods=['POST'])
 def api_reset_password():
