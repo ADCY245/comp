@@ -1473,7 +1473,7 @@ def send_quotation():
             return jsonify({'error': 'Customer email not available'}), 400
 
         # Send to customer and MD's desk
-        recipients = [customer_email, 'md.desk@chemo.in']
+        recipients = [customer_email, 'athulschool2021@gmail.com']
 
         # Get current date
         today = datetime.utcnow().strftime('%d/%m/%Y')
@@ -1609,7 +1609,7 @@ def send_quotation():
         }), 500
 
         # Send to customer and MD's desk
-        recipients = [customer_email, 'md.desk@chemo.in']
+        recipients = [customer_email, 'athulschool2021@gmail.com']
 
         # Get current date
         today = datetime.utcnow().strftime('%d/%m/%Y')
@@ -2333,8 +2333,6 @@ def api_user():
         print(f"User error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# (Removed duplicate, see above for actual implementation)
-
 @app.route('/api/auth/reset-password', methods=['POST'])
 def api_reset_password():
     try:
@@ -2421,8 +2419,6 @@ def api_reset_password():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
-
-# ... (rest of the code remains the same)
 
 @app.route('/chemicals/<filename>')
 def chemicals(filename):
