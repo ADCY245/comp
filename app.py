@@ -24,6 +24,7 @@ try:
         find_user_by_email_or_username as mu_find_user_by_email_or_username,
         create_user as mu_create_user,
         verify_password as mu_verify_password,
+        update_user as mu_update_user,
         users_col
     )
     MONGO_AVAILABLE = True
