@@ -11,23 +11,27 @@ const steps = document.querySelectorAll('.step');
 let currentStep = 0;
 
 // Initialize the form
+let verifiedEmail = '';
 document.addEventListener('DOMContentLoaded', () => {
   showStep(0);
   setupEventListeners();
 });
 
-// Setup event listeners
 function setupEventListeners() {
   if (requestOtpBtn) {
     requestOtpBtn.addEventListener('click', handleRequestOtp);
   }
-  
+  if (document.getElementById('verifyOtpBtn')) {
+    document.getElementById('verifyOtpBtn').addEventListener('click', handleVerifyOtp);
+  }
   if (resetPasswordBtn) {
     resetPasswordBtn.addEventListener('click', handleResetPassword);
   }
+  if (document.getElementById('resendOtp')) {
+    document.getElementById('resendOtp').addEventListener('click', handleResendOtp);
+  }
 }
 
-// Show specific step
 function showStep(stepIndex) {
   steps.forEach((step, index) => {
     step.classList.remove('active');
@@ -35,34 +39,31 @@ function showStep(stepIndex) {
       step.classList.add('active');
     }
   });
-  
   currentStep = stepIndex;
+  // Clear messages
+  showMessage('', '');
 }
 
 // Handle OTP request
 async function handleRequestOtp() {
   const email = emailInput.value.trim();
-  
   if (!email) {
     showError('Please enter your email');
     return;
   }
-  
   try {
     setLoading(true, 'requestOtpBtn');
-    
     const response = await fetch('/api/auth/request-password-reset', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-    
     const data = await response.json();
-    
     if (response.ok && data.success) {
+      verifiedEmail = email;
+      document.getElementById('emailDisplay').textContent = email;
       showStep(1);
+      startOtpResendTimer();
       showMessage('Verification code sent to your email', 'success');
     } else {
       showError(data.error || 'Failed to send verification code');
@@ -72,6 +73,35 @@ async function handleRequestOtp() {
     showError('An error occurred. Please try again.');
   } finally {
     setLoading(false, 'requestOtpBtn');
+  }
+}
+
+// Handle OTP verification
+async function handleVerifyOtp() {
+  const otp = otpInput.value.trim();
+  if (!verifiedEmail || !otp) {
+    showError('Please enter the verification code');
+    return;
+  }
+  try {
+    setLoading(true, 'verifyOtpBtn');
+    const response = await fetch('/api/auth/verify-reset-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: verifiedEmail, otp })
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showStep(2);
+      showMessage('OTP verified. Please set your new password.', 'success');
+    } else {
+      showError(data.error || 'Failed to verify OTP');
+    }
+  } catch (error) {
+    console.error('OTP verify error:', error);
+    showError('An error occurred. Please try again.');
+  } finally {
+    setLoading(false, 'verifyOtpBtn');
   }
 }
 
