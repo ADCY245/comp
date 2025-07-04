@@ -200,10 +200,14 @@ function updateNavCompanyDisplay(companyName) {
 
     }
 
-
 // Initialize all cart handlers
 function initializeCart() {
     console.log('Initializing cart...');
+    
+    // Store original quantities when page loads
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.setAttribute('data-original-quantity', input.value);
+    });
     
     // Set up event handlers first
     console.log('Setting up quantity handlers...');
@@ -378,7 +382,7 @@ function updateCartTotals() {
 function setupQuantityHandlers() {
     console.log('Setting up quantity handlers...');
     
-    // Show/hide update button when quantity changes
+    // Enable/disable update button when quantity changes
     document.addEventListener('input', function(event) {
         const input = event.target;
         if (input.classList.contains('quantity-input')) {
@@ -388,8 +392,21 @@ function setupQuantityHandlers() {
             const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
             console.log('Update button found:', updateBtn);
             if (updateBtn) {
-                console.log('Removing d-none class from update button');
-                updateBtn.classList.remove('d-none');
+                // Get the original quantity from the data attribute
+                const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value);
+                const newQty = parseInt(input.value) || 1;
+                
+                // Enable/disable button based on whether quantity has changed
+                updateBtn.disabled = (newQty === originalQty);
+                
+                // Change button style based on state
+                if (newQty === originalQty) {
+                    updateBtn.classList.remove('btn-success');
+                    updateBtn.classList.add('btn-outline-success');
+                } else {
+                    updateBtn.classList.remove('btn-outline-success');
+                    updateBtn.classList.add('btn-success');
+                }
             } else {
                 console.error('Update button not found for index:', index);
             }
@@ -551,6 +568,20 @@ function updateCartItemQuantity(index, newQuantity, onSuccess = null) {
             }
             updateCartTotals();
             showToast('Success', 'Quantity updated', 'success');
+            
+            // Update the original quantity to the new value
+            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            if (input) {
+                input.setAttribute('data-original-quantity', newQuantity);
+                
+                // Update button state
+                const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+                if (updateBtn) {
+                    updateBtn.disabled = true;
+                    updateBtn.classList.remove('btn-success');
+                    updateBtn.classList.add('btn-outline-success');
+                }
+            }
             
             // Call the success callback if provided
             if (typeof onSuccess === 'function') {
