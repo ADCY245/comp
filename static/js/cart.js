@@ -365,6 +365,18 @@ function updateCartTotals() {
 }
 
 function setupQuantityHandlers() {
+    // Show/hide update button when quantity changes
+    document.addEventListener('input', function(event) {
+        const input = event.target;
+        if (input.classList.contains('quantity-input')) {
+            const index = input.dataset.index;
+            const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+            if (updateBtn) {
+                updateBtn.classList.remove('d-none');
+            }
+        }
+    });
+
     // Handle quantity decrease button clicks
     document.addEventListener('click', function(event) {
         const decreaseBtn = event.target.closest('.quantity-decrease');
@@ -375,7 +387,11 @@ function setupQuantityHandlers() {
             let value = parseInt(input.value) || 1;
             if (value > 1) {
                 input.value = value - 1;
-                updateCartItemQuantity(index, value - 1);
+                // Show update button
+                const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+                if (updateBtn) {
+                    updateBtn.classList.remove('d-none');
+                }
             }
         }
     });
@@ -387,21 +403,29 @@ function setupQuantityHandlers() {
             event.preventDefault();
             const index = increaseBtn.dataset.index;
             const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
-            const value = parseInt(input.value) || 1;
-            input.value = value + 1;
-            updateCartItemQuantity(index, value + 1);
+            input.value = (parseInt(input.value) || 1) + 1;
+            // Show update button
+            const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+            if (updateBtn) {
+                updateBtn.classList.remove('d-none');
+            }
         }
     });
 
-    // Handle direct input changes
-    document.addEventListener('change', function(event) {
-        const input = event.target;
-        if (input.classList.contains('quantity-input')) {
-            const index = input.dataset.index;
+    // Handle update button clicks
+    document.addEventListener('click', function(event) {
+        const updateBtn = event.target.closest('.update-quantity-btn');
+        if (updateBtn) {
+            event.preventDefault();
+            const index = updateBtn.dataset.index;
+            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
             let value = parseInt(input.value) || 1;
             if (value < 1) value = 1;
             input.value = value; // Ensure minimum value of 1
-            updateCartItemQuantity(index, value);
+            updateCartItemQuantity(index, value, () => {
+                // Hide the update button after successful update
+                updateBtn.classList.add('d-none');
+            });
         }
     });
 }
@@ -421,7 +445,7 @@ function setupRemoveHandlers() {
     });
 }
 
-function updateCartItemQuantity(index, newQuantity) {
+function updateCartItemQuantity(index, newQuantity, onSuccess = null) {
     const itemElement = document.querySelector(`.cart-item[data-index="${index}"]`);
     if (!itemElement) return;
 
@@ -449,23 +473,21 @@ function updateCartItemQuantity(index, newQuantity) {
     })
     .then(data => {
         if (data.success) {
-            // Update the cart count if needed
             if (data.cart_count !== undefined) {
                 updateCartCount(data.cart_count);
             }
-            
-            // Recalculate prices for this item
             if (itemElement.dataset.type === 'mpack') {
                 calculateMPackPrices(itemElement);
             } else if (itemElement.dataset.type === 'blanket') {
                 calculateBlanketPrices(itemElement);
             }
-            
-            // Update cart totals
             updateCartTotals();
-            
-            // Show success message
             showToast('Success', 'Quantity updated', 'success');
+            
+            // Call the success callback if provided
+            if (typeof onSuccess === 'function') {
+                onSuccess();
+            }
         } else {
             throw new Error(data.error || 'Failed to update quantity');
         }
