@@ -1029,30 +1029,53 @@ function updateItemDisplay(item, data) {
     calculateProductPrices(item);
 }
 
-// Check for duplicate MPacks in the cart and combine them
+// Check for identical MPack items in the cart
 function checkForDuplicateMpacks() {
     const mpackItems = document.querySelectorAll('.cart-item[data-type="mpack"]');
-    const mpackMap = new Map();
     const itemsToRemove = [];
     
-    // First pass: identify duplicates
-    mpackItems.forEach((item, index) => {
-        const machine = item.dataset.machine || '';
-        const thickness = item.dataset.thickness || '';
-        const size = item.dataset.size || '';
-        const key = `${machine}-${thickness}-${size}`.toLowerCase();
+    // First pass: identify truly identical items (all properties must match)
+    for (let i = 0; i < mpackItems.length; i++) {
+        const item1 = mpackItems[i];
+        if (!item1) continue; // Skip if already marked for removal
         
-        if (mpackMap.has(key)) {
-            // Found a duplicate - mark for combination
-            const existingIndex = mpackMap.get(key);
-            console.log(`Combining duplicate MPack at index ${index} with item at ${existingIndex}`);
-            itemsToRemove.push({ index, existingIndex });
-        } else {
-            mpackMap.set(key, index);
+        const item1Data = {
+            machine: item1.dataset.machine || '',
+            thickness: item1.dataset.thickness || '',
+            size: item1.dataset.size || '',
+            // Add any other properties that make items unique
+            basePrice: item1.dataset.basePrice || '',
+            barPrice: item1.dataset.barPrice || '',
+            // Add other relevant attributes that make items unique
+        };
+        
+        for (let j = i + 1; j < mpackItems.length; j++) {
+            const item2 = mpackItems[j];
+            if (!item2) continue; // Skip if already marked for removal
+            
+            const item2Data = {
+                machine: item2.dataset.machine || '',
+                thickness: item2.dataset.thickness || '',
+                size: item2.dataset.size || '',
+                basePrice: item2.dataset.basePrice || '',
+                barPrice: item2.dataset.barPrice || '',
+                // Add other relevant attributes that make items unique
+            };
+            
+            // Check if all properties match
+            const allPropertiesMatch = Object.keys(item1Data).every(key => 
+                String(item1Data[key]).toLowerCase() === String(item2Data[key]).toLowerCase()
+            );
+            
+            if (allPropertiesMatch) {
+                console.log(`Found identical MPack items at indices ${i} and ${j}`, item1Data);
+                itemsToRemove.push({ index: j, existingIndex: i });
+                mpackItems[j] = null; // Mark as processed
+            }
         }
-    });
+    }
     
-    // Second pass: combine quantities
+    // Second pass: combine quantities of identical items
     itemsToRemove.forEach(({ index, existingIndex }) => {
         const existingItem = mpackItems[existingIndex];
         const duplicateItem = mpackItems[index];
@@ -1071,16 +1094,24 @@ function checkForDuplicateMpacks() {
                 // Trigger quantity change event
                 const event = new Event('input', { bubbles: true });
                 input.dispatchEvent(event);
+                
+                console.log(`Combined quantities: ${existingQty} + ${duplicateQty} = ${newQty}`);
             }
             
             // Remove the duplicate item
-            duplicateItem.remove();
+            if (duplicateItem.parentNode) {
+                duplicateItem.remove();
+                console.log('Removed duplicate item');
+            }
         }
     });
     
-    // Update indices after removing duplicates
+    // Update indices if any items were removed
     if (itemsToRemove.length > 0) {
+        console.log(`Updated ${itemsToRemove.length} duplicate items`);
         updateAllItemIndices();
+    } else {
+        console.log('No duplicate items found');
     }
 }
 
