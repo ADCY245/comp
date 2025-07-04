@@ -8,36 +8,50 @@
     .quantity-controls {
         display: flex;
         align-items: center;
+        margin: 0;
+        padding: 0;
     }
     
     .quantity-controls .btn-sm {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
+        font-weight: bold;
+        font-size: 1.1rem;
+        line-height: 1;
     }
     
     .quantity-controls .form-control {
-        width: 60px;
-        height: 30px;
+        width: 50px;
+        height: 32px;
         text-align: center;
         padding: 0.25rem;
+        margin: 0 4px;
+        font-weight: 500;
     }
     
     .update-quantity-btn {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
         transition: all 0.2s ease;
+        border-radius: 4px;
+        margin-left: 8px;
     }
     
     .update-quantity-btn:hover {
-        transform: scale(1.05);
+        transform: scale(1.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .update-quantity-btn i {
+        font-size: 0.9rem;
     }
     /* Reset body margin */
     html, body {

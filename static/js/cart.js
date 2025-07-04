@@ -417,6 +417,7 @@ function setupQuantityHandlers() {
         const updateBtn = event.target.closest('.update-quantity-btn');
         if (updateBtn) {
             event.preventDefault();
+            event.stopPropagation();
             const index = updateBtn.dataset.index;
             const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
             let value = parseInt(input.value) || 1;
@@ -426,6 +427,21 @@ function setupQuantityHandlers() {
                 // Hide the update button after successful update
                 updateBtn.classList.add('d-none');
             });
+        }
+    });
+    
+    // Also update quantity when pressing Enter in the input field
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const input = event.target;
+            if (input.classList.contains('quantity-input')) {
+                event.preventDefault();
+                const index = input.dataset.index;
+                const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+                if (updateBtn && !updateBtn.classList.contains('d-none')) {
+                    updateBtn.click();
+                }
+            }
         }
     });
 }
