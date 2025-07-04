@@ -382,16 +382,31 @@ function updateCartTotals() {
 function setupQuantityHandlers() {
     console.log('Setting up quantity handlers...');
     
-    // Enable/disable update button when quantity changes
+    // Use event delegation for quantity inputs
     document.addEventListener('input', function(event) {
         const input = event.target;
-        if (input.classList.contains('quantity-input')) {
+        if (input.matches('.quantity-input')) {
             console.log('Quantity input changed:', input.value);
             const index = input.dataset.index;
             console.log('Item index:', index);
-            const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+            
+            // Find the closest cart item container
+            const cartItem = input.closest('.cart-item');
+            if (!cartItem) {
+                console.error('Cart item container not found');
+                return;
+            }
+            
+            // Find the update button within the same cart item
+            const updateBtn = cartItem.querySelector('.update-quantity-btn');
             console.log('Update button found:', updateBtn);
+            
             if (updateBtn) {
+                // Ensure the button has the correct data-index
+                if (updateBtn.dataset.index !== index) {
+                    updateBtn.dataset.index = index;
+                }
+                
                 // Get the original quantity from the data attribute
                 const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value);
                 const newQty = parseInt(input.value) || 1;
@@ -408,7 +423,20 @@ function setupQuantityHandlers() {
                     updateBtn.classList.add('btn-success');
                 }
             } else {
-                console.error('Update button not found for index:', index);
+                console.error('Update button not found in cart item');
+            }
+        }
+    });
+    
+    // Handle update button clicks
+    document.addEventListener('click', function(event) {
+        const updateBtn = event.target.closest('.update-quantity-btn');
+        if (updateBtn && !updateBtn.disabled) {
+            const index = updateBtn.dataset.index;
+            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            if (input) {
+                const newQuantity = parseInt(input.value) || 1;
+                updateCartItemQuantity(index, newQuantity);
             }
         }
     });
@@ -694,38 +722,42 @@ function removeCartItem(index) {
 
 function updateAllItemIndices() {
     console.log('Updating cart item indices...');
+    
     // Update data-index attributes of all cart items to match their new positions
     const items = document.querySelectorAll('.cart-item');
-    items.forEach((item, index) => {
+    items.forEach((item, newIndex) => {
         const oldIndex = item.getAttribute('data-index');
-        item.setAttribute('data-index', index);
+        if (oldIndex !== String(newIndex)) {
+            console.log(`Updated item index from ${oldIndex} to ${newIndex}`);
+        }
         
-        // Update all elements that reference the index
-        const elementsToUpdate = item.querySelectorAll('[data-index]');
-        elementsToUpdate.forEach(el => {
-            if (el.classList.contains('quantity-input') || 
-                el.classList.contains('quantity-decrease') ||
-                el.classList.contains('quantity-increase') ||
-                el.classList.contains('update-quantity-btn') ||
-                el.classList.contains('remove-item-btn')) {
-                el.setAttribute('data-index', index);
-            }
+        // Update the cart item's data-index
+        item.setAttribute('data-index', newIndex);
+        
+        // Update all elements within this item that reference the index
+        const updateElements = [
+            '.quantity-input',
+            '.quantity-increase',
+            '.quantity-decrease',
+            '.update-quantity-btn',
+            '.remove-item-btn',
+            '.remove-item-form',
+            '[data-item-index]'
+        ];
+        
+        updateElements.forEach(selector => {
+            const elements = item.querySelectorAll(selector);
+            elements.forEach(el => {
+                el.setAttribute('data-index', newIndex);
+            });
         });
         
-        // Update any form actions or other references
-        const forms = item.querySelectorAll('form');
+        // Update any form actions that might include the index
+        const forms = item.querySelectorAll('form[action*="index="]');
         forms.forEach(form => {
-            if (form.action.includes('remove_from_cart')) {
-                form.action = `/remove_from_cart?index=${index}`;
-            }
+            form.action = form.action.replace(/index=\d+/, `index=${newIndex}`);
         });
-        
-        console.log(`Updated item index from ${oldIndex} to ${index}`);
     });
-    
-    // Reattach event listeners
-    setupQuantityHandlers();
-    setupRemoveHandlers();
     
     console.log('Finished updating cart item indices');
 }
@@ -1002,7 +1034,6 @@ function checkForDuplicateMpacks() {
     const mpackItems = document.querySelectorAll('.cart-item[data-type="mpack"]');
     const mpackMap = new Map();
     const itemsToRemove = [];
-    let hasDuplicates = false;
     
     // First pass: identify duplicates
     mpackItems.forEach((item, index) => {
@@ -1012,45 +1043,45 @@ function checkForDuplicateMpacks() {
         const key = `${machine}-${thickness}-${size}`.toLowerCase();
         
         if (mpackMap.has(key)) {
-            // Found a duplicate
-            hasDuplicates = true;
+            // Found a duplicate - mark for combination
             const existingIndex = mpackMap.get(key);
             console.log(`Combining duplicate MPack at index ${index} with item at ${existingIndex}`);
-            
-            // Get the existing quantity and add the new one
-            const existingItem = document.querySelector(`.cart-item[data-index="${existingIndex}"]`);
-            const existingQty = parseInt(existingItem.querySelector('.quantity-input').value) || 1;
-            const newQty = parseInt(item.querySelector('.quantity-input').value) || 1;
-            const totalQty = existingQty + newQty;
-            
-            // Update the existing item's quantity
-            const input = existingItem.querySelector('.quantity-input');
-            input.value = totalQty;
-            input.setAttribute('data-original-quantity', totalQty);
-            
-            // Mark this item for removal
-            itemsToRemove.push(item);
+            itemsToRemove.push({ index, existingIndex });
         } else {
             mpackMap.set(key, index);
         }
     });
     
-    // Second pass: remove duplicates
-    if (hasDuplicates) {
-        // Remove the duplicate items from the DOM
-        itemsToRemove.forEach(item => {
-            item.remove();
-        });
+    // Second pass: combine quantities
+    itemsToRemove.forEach(({ index, existingIndex }) => {
+        const existingItem = mpackItems[existingIndex];
+        const duplicateItem = mpackItems[index];
         
-        // Recalculate totals after removing duplicates
-        updateCartTotals();
-        
-        // Show a message to the user
-        showToast('Notice', 'Duplicate items have been combined in your cart', 'info');
-    }
+        if (existingItem && duplicateItem) {
+            const existingQty = parseInt(existingItem.querySelector('.quantity-input')?.value || '1');
+            const duplicateQty = parseInt(duplicateItem.querySelector('.quantity-input')?.value || '1');
+            const newQty = existingQty + duplicateQty;
+            
+            // Update the existing item's quantity
+            const input = existingItem.querySelector('.quantity-input');
+            if (input) {
+                input.value = newQty;
+                input.setAttribute('data-original-quantity', newQty);
+                
+                // Trigger quantity change event
+                const event = new Event('input', { bubbles: true });
+                input.dispatchEvent(event);
+            }
+            
+            // Remove the duplicate item
+            duplicateItem.remove();
+        }
+    });
     
-    // Re-index the remaining items
-    updateAllItemIndices();
+    // Update indices after removing duplicates
+    if (itemsToRemove.length > 0) {
+        updateAllItemIndices();
+    }
 }
 
 // Function to remove the second MPack when duplicates are found
