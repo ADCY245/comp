@@ -6,6 +6,34 @@ html, body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Ensure update button is always visible and properly styled */
+.update-quantity-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0.25rem 0.5rem;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.update-quantity-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-quantity-btn:not(:disabled):hover {
+  transform: scale(1.05);
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 body {
   background: linear-gradient(135deg, #fff8e1 0%, #e0caa9 100%);
   background-attachment: fixed;

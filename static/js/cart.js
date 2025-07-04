@@ -397,22 +397,37 @@ function handleQuantityChange(event) {
         updateButton = cartItem.querySelector('[data-action="update-quantity"]');
     }
     
-    // If still not found, try to find any button within the cart item
+    // If still not found, try to find any button within the quantity controls
     if (!updateButton) {
-        const buttons = cartItem.querySelectorAll('button');
-        updateButton = Array.from(buttons).find(btn => 
-            btn.textContent.includes('Update') || 
-            btn.innerHTML.includes('check') || // Check for check icon
-            btn.getAttribute('title') === 'Update quantity'
-        );
+        const quantityControls = input.closest('.quantity-controls');
+        if (quantityControls) {
+            updateButton = quantityControls.querySelector('button.update-quantity-btn, [data-action="update-quantity"]');
+            
+            // Last resort: find by icon or text
+            if (!updateButton) {
+                const buttons = quantityControls.querySelectorAll('button');
+                updateButton = Array.from(buttons).find(btn => 
+                    (btn.textContent && btn.textContent.includes('Update')) || 
+                    (btn.innerHTML && btn.innerHTML.includes('check')) ||
+                    btn.getAttribute('title') === 'Update quantity' ||
+                    btn.getAttribute('title') === 'Click to update quantity'
+                );
+            }
+        }
     }
     
     if (updateButton) {
         // Get the original quantity from the data attribute or the current value
         const originalQty = input.getAttribute('data-original-quantity') || value;
+        const hasChanged = parseInt(value) !== parseInt(originalQty);
+        
+        // Make sure the button is visible
+        updateButton.style.display = 'inline-flex';
+        updateButton.style.visibility = 'visible';
+        updateButton.style.opacity = '1';
         
         // Enable/disable the button based on whether the value has changed
-        if (parseInt(value) !== parseInt(originalQty)) {
+        if (hasChanged) {
             updateButton.disabled = false;
             updateButton.classList.remove('btn-outline-success');
             updateButton.classList.add('btn-success');
@@ -424,7 +439,7 @@ function handleQuantityChange(event) {
             updateButton.title = 'No changes to save';
         }
     } else {
-        console.error('Update button not found in cart item. Tried selectors: .update-quantity-btn, [data-action="update-quantity"], and button[title*="Update"]');
+        console.error('Update button not found in cart item. Tried multiple selectors.');
         console.log('Cart item HTML:', cartItem.outerHTML);
     }
 }
@@ -437,6 +452,15 @@ function setupQuantityHandlers() {
     if (quantityHandlersSetUp) {
         return;
     }
+    
+    console.log('Setting up quantity handlers...');
+    
+    // Make sure all update buttons are visible
+    document.querySelectorAll('.update-quantity-btn').forEach(btn => {
+        btn.style.display = 'inline-flex';
+        btn.style.visibility = 'visible';
+        btn.style.opacity = '1';
+    });
     
     console.log('Setting up quantity handlers...');
     quantityHandlersSetUp = true;
@@ -1171,8 +1195,14 @@ function toggleQuotationSection(show = null) {
     }
 }
 
-// Initialize the check when the page loads
+// Initialize the cart when the page is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded, initializing cart...');
+    
+    // Initialize the cart
+    initCart();
+    
+    // Check for duplicate MPack items
     checkForDuplicateMpacks();
     
     // Handle remove duplicate MPack button click
@@ -1190,8 +1220,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Also check after any cart updates
+    // Set up event listeners for cart updates
     document.addEventListener('cartUpdated', function() {
+        console.log('Cart updated, refreshing display...');
+        updateCartUI();
         checkForDuplicateMpacks();
     });
     
@@ -1203,6 +1235,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         observer.observe(cartContainer, { childList: true, subtree: true });
     }
+    
+    // Initialize quantity handlers
+    setupQuantityHandlers();
+    
+    console.log('Cart initialization complete');
 });
 
 // End of file
