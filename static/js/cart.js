@@ -219,14 +219,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize all cart handlers
     function initializeCart() {
+        console.log('Initializing cart...');
+        
         // Set up event handlers first
+        console.log('Setting up quantity handlers...');
         setupQuantityHandlers();
+        
+        console.log('Setting up remove handlers...');
         setupRemoveHandlers();
         
         // Initialize calculations
+        console.log('Initializing cart calculations...');
         initializeCartCalculations();
         
         // Update UI
+        console.log('Updating cart UI...');
         updateCartCount();
         updateCartTotals();
         
@@ -235,10 +242,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const emptyCartDiv = document.getElementById('emptyCart');
         const cartItemsDiv = document.getElementById('cartItems');
         
+        console.log(`Found ${cartItems.length} cart items`);
+        
         if (cartItems.length === 0) {
+            console.log('No cart items, showing empty cart message');
             if (emptyCartDiv) emptyCartDiv.style.display = 'block';
             if (cartItemsDiv) cartItemsDiv.style.display = 'none';
         } else {
+            console.log('Cart has items, showing cart contents');
             if (emptyCartDiv) emptyCartDiv.style.display = 'none';
             if (cartItemsDiv) cartItemsDiv.style.display = 'block';
         }
@@ -365,14 +376,22 @@ function updateCartTotals() {
 }
 
 function setupQuantityHandlers() {
+    console.log('Setting up quantity handlers...');
+    
     // Show/hide update button when quantity changes
     document.addEventListener('input', function(event) {
         const input = event.target;
         if (input.classList.contains('quantity-input')) {
+            console.log('Quantity input changed:', input.value);
             const index = input.dataset.index;
+            console.log('Item index:', index);
             const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+            console.log('Update button found:', updateBtn);
             if (updateBtn) {
+                console.log('Removing d-none class from update button');
                 updateBtn.classList.remove('d-none');
+            } else {
+                console.error('Update button not found for index:', index);
             }
         }
     });
@@ -462,15 +481,31 @@ function setupRemoveHandlers() {
 }
 
 function updateCartItemQuantity(index, newQuantity, onSuccess = null) {
+    console.log(`Updating cart item ${index} quantity to ${newQuantity}`);
+    
     const itemElement = document.querySelector(`.cart-item[data-index="${index}"]`);
-    if (!itemElement) return;
+    if (!itemElement) {
+        console.error(`Item element not found for index ${index}`);
+        return;
+    }
 
     // Show loading state
     const originalContent = itemElement.innerHTML;
     itemElement.style.opacity = '0.7';
     itemElement.style.pointerEvents = 'none';
+    
+    console.log('Sending request to update cart quantity...');
+    
+    // Get the current URL and construct the update URL
+    // Use the current path to handle potential subdirectories
+    const baseUrl = window.location.origin;
+    const pathSegments = window.location.pathname.split('/');
+    // Remove any empty segments and the current page
+    const basePath = pathSegments.slice(0, -1).filter(Boolean).join('/');
+    const updateUrl = `${baseUrl}${basePath ? '/' + basePath : ''}/update_cart_quantity`;
+    console.log('Using update URL:', updateUrl);
 
-    fetch('/update_cart_quantity', {
+    fetch(updateUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -479,13 +514,30 @@ function updateCartItemQuantity(index, newQuantity, onSuccess = null) {
         body: JSON.stringify({ 
             index: parseInt(index),
             quantity: parseInt(newQuantity)
-        })
+        }),
+        credentials: 'same-origin' // Include cookies for session
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
+    .then(async response => {
+        console.log('Received response status:', response.status);
+        
+        // First try to parse as JSON, but handle non-JSON responses
+        let responseData;
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse response as JSON:', e);
+            throw new Error(`Server returned ${response.status}: ${response.statusText}\n${responseText.substring(0, 200)}`);
         }
-        return response.json();
+        
+        if (!response.ok) {
+            console.error('Error response from server:', responseData);
+            throw new Error(responseData.error || 'Failed to update quantity');
+        }
+        
+        return responseData;
     })
     .then(data => {
         if (data.success) {
@@ -510,10 +562,28 @@ function updateCartItemQuantity(index, newQuantity, onSuccess = null) {
     })
     .catch(error => {
         console.error('Error updating quantity:', error);
-        showToast('Error', error.message || 'Failed to update quantity', 'error');
-        // Revert the input value on error
+        
+        // Show detailed error message
+        let errorMessage = 'Failed to update quantity';
+        if (error.message.includes('404')) {
+            errorMessage = 'Server endpoint not found. Please refresh the page and try again.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        showToast('Error', errorMessage, 'error');
+        
+        // Restore the original quantity in the input
         const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
-        if (input) input.value = newQuantity > 1 ? newQuantity - 1 : 1;
+        if (input) {
+            input.value = newQuantity > 1 ? newQuantity - 1 : 1;
+        }
+        
+        // Make sure the update button is visible if there was an error
+        const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
+        if (updateBtn) {
+            updateBtn.classList.remove('d-none');
+        }
     })
     .finally(() => {
         itemElement.style.opacity = '';
