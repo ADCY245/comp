@@ -429,19 +429,21 @@ function handleQuantityChange(event) {
     }
 }
 
+// Track if handlers are already set up
+let quantityHandlersSetUp = false;
+
 function setupQuantityHandlers() {
+    // Only set up handlers once
+    if (quantityHandlersSetUp) {
+        return;
+    }
+    
     console.log('Setting up quantity handlers...');
+    quantityHandlersSetUp = true;
     
-    // Handle quantity input changes
-    document.addEventListener('input', function(event) {
-        const input = event.target;
-        if (input.matches('.quantity-input')) {
-            handleQuantityChange(event);
-        }
-    });
-    
-    // Handle quantity decrease button clicks
+    // Single event delegation for all click events
     document.addEventListener('click', function(event) {
+        // Handle decrease button
         const decreaseBtn = event.target.closest('.quantity-decrease');
         if (decreaseBtn) {
             event.preventDefault();
@@ -458,11 +460,10 @@ function setupQuantityHandlers() {
                 // Trigger input event to update button state
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            return; // Stop further processing
         }
-    });
-
-    // Handle quantity increase button clicks
-    document.addEventListener('click', function(event) {
+        
+        // Handle increase button
         const increaseBtn = event.target.closest('.quantity-increase');
         if (increaseBtn) {
             event.preventDefault();
@@ -476,11 +477,10 @@ function setupQuantityHandlers() {
             input.value = (parseInt(input.value) || 1) + 1;
             // Trigger input event to update button state
             input.dispatchEvent(new Event('input', { bubbles: true }));
+            return; // Stop further processing
         }
-    });
-
-    // Handle update button clicks
-    document.addEventListener('click', function(event) {
+        
+        // Handle update button
         const updateBtn = event.target.closest('.update-quantity-btn');
         if (updateBtn && !updateBtn.disabled) {
             event.preventDefault();
@@ -512,6 +512,14 @@ function setupQuantityHandlers() {
         }
     });
     
+    // Handle quantity input changes
+    document.addEventListener('input', function(event) {
+        const input = event.target;
+        if (input.matches('.quantity-input')) {
+            handleQuantityChange(event);
+        }
+    });
+    
     // Handle Enter key in quantity input
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
@@ -521,7 +529,6 @@ function setupQuantityHandlers() {
                 const cartItem = input.closest('.cart-item');
                 if (!cartItem) return;
                 
-                const index = cartItem.dataset.index;
                 const updateBtn = cartItem.querySelector('.update-quantity-btn');
                 if (updateBtn && !updateBtn.disabled) {
                     updateBtn.click();
