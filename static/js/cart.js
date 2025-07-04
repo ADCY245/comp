@@ -201,6 +201,44 @@ function updateNavCompanyDisplay(companyName) {
     }
 
 
+// Initialize all cart handlers
+function initializeCart() {
+    console.log('Initializing cart...');
+    
+    // Set up event handlers first
+    console.log('Setting up quantity handlers...');
+    setupQuantityHandlers();
+    
+    console.log('Setting up remove handlers...');
+    setupRemoveHandlers();
+    
+    // Initialize calculations
+    console.log('Initializing cart calculations...');
+    initializeCartCalculations();
+    
+    // Update UI
+    console.log('Updating cart UI...');
+    updateCartCount();
+    updateCartTotals();
+    
+    // Check if we need to show the empty cart message
+    const cartItems = document.querySelectorAll('.cart-item');
+    const emptyCartDiv = document.getElementById('emptyCart');
+    const cartItemsDiv = document.getElementById('cartItems');
+    
+    console.log(`Found ${cartItems.length} cart items`);
+    
+    if (cartItems.length === 0) {
+        console.log('No cart items, showing empty cart message');
+        if (emptyCartDiv) emptyCartDiv.style.display = 'block';
+        if (cartItemsDiv) cartItemsDiv.style.display = 'none';
+    } else {
+        console.log('Cart has items, showing cart contents');
+        if (emptyCartDiv) emptyCartDiv.style.display = 'none';
+        if (cartItemsDiv) cartItemsDiv.style.display = 'block';
+    }
+}
+
 // Initialize cart when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
@@ -215,44 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Redirect to product selection page which will handle company change
             window.location.href = '/select-product';
         });
-    }
-    
-    // Initialize all cart handlers
-    function initializeCart() {
-        console.log('Initializing cart...');
-        
-        // Set up event handlers first
-        console.log('Setting up quantity handlers...');
-        setupQuantityHandlers();
-        
-        console.log('Setting up remove handlers...');
-        setupRemoveHandlers();
-        
-        // Initialize calculations
-        console.log('Initializing cart calculations...');
-        initializeCartCalculations();
-        
-        // Update UI
-        console.log('Updating cart UI...');
-        updateCartCount();
-        updateCartTotals();
-        
-        // Check if we need to show the empty cart message
-        const cartItems = document.querySelectorAll('.cart-item');
-        const emptyCartDiv = document.getElementById('emptyCart');
-        const cartItemsDiv = document.getElementById('cartItems');
-        
-        console.log(`Found ${cartItems.length} cart items`);
-        
-        if (cartItems.length === 0) {
-            console.log('No cart items, showing empty cart message');
-            if (emptyCartDiv) emptyCartDiv.style.display = 'block';
-            if (cartItemsDiv) cartItemsDiv.style.display = 'none';
-        } else {
-            console.log('Cart has items, showing cart contents');
-            if (emptyCartDiv) emptyCartDiv.style.display = 'none';
-            if (cartItemsDiv) cartItemsDiv.style.display = 'block';
-        }
     }
     
     // Initialize the cart
