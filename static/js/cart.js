@@ -365,7 +365,45 @@ function updateCartTotals() {
 }
 
 function setupQuantityHandlers() {
-    // Quantity change functionality removed as per requirements
+    // Handle quantity decrease button clicks
+    document.addEventListener('click', function(event) {
+        const decreaseBtn = event.target.closest('.quantity-decrease');
+        if (decreaseBtn) {
+            event.preventDefault();
+            const index = decreaseBtn.dataset.index;
+            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            let value = parseInt(input.value) || 1;
+            if (value > 1) {
+                input.value = value - 1;
+                updateCartItemQuantity(index, value - 1);
+            }
+        }
+    });
+
+    // Handle quantity increase button clicks
+    document.addEventListener('click', function(event) {
+        const increaseBtn = event.target.closest('.quantity-increase');
+        if (increaseBtn) {
+            event.preventDefault();
+            const index = increaseBtn.dataset.index;
+            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            const value = parseInt(input.value) || 1;
+            input.value = value + 1;
+            updateCartItemQuantity(index, value + 1);
+        }
+    });
+
+    // Handle direct input changes
+    document.addEventListener('change', function(event) {
+        const input = event.target;
+        if (input.classList.contains('quantity-input')) {
+            const index = input.dataset.index;
+            let value = parseInt(input.value) || 1;
+            if (value < 1) value = 1;
+            input.value = value; // Ensure minimum value of 1
+            updateCartItemQuantity(index, value);
+        }
+    });
 }
 
 function setupRemoveHandlers() {
@@ -384,7 +422,65 @@ function setupRemoveHandlers() {
 }
 
 function updateCartItemQuantity(index, newQuantity) {
-    // Quantity updates are not allowed
+    const itemElement = document.querySelector(`.cart-item[data-index="${index}"]`);
+    if (!itemElement) return;
+
+    // Show loading state
+    const originalContent = itemElement.innerHTML;
+    itemElement.style.opacity = '0.7';
+    itemElement.style.pointerEvents = 'none';
+
+    fetch('/update_cart_quantity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({ 
+            index: parseInt(index),
+            quantity: parseInt(newQuantity)
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Update the cart count if needed
+            if (data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+            }
+            
+            // Recalculate prices for this item
+            if (itemElement.dataset.type === 'mpack') {
+                calculateMPackPrices(itemElement);
+            } else if (itemElement.dataset.type === 'blanket') {
+                calculateBlanketPrices(itemElement);
+            }
+            
+            // Update cart totals
+            updateCartTotals();
+            
+            // Show success message
+            showToast('Success', 'Quantity updated', 'success');
+        } else {
+            throw new Error(data.error || 'Failed to update quantity');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating quantity:', error);
+        showToast('Error', error.message || 'Failed to update quantity', 'error');
+        // Revert the input value on error
+        const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+        if (input) input.value = newQuantity > 1 ? newQuantity - 1 : 1;
+    })
+    .finally(() => {
+        itemElement.style.opacity = '';
+        itemElement.style.pointerEvents = '';
+    });
 }
 
 function removeCartItem(index) {
@@ -552,13 +648,24 @@ function calculateMPackPrices(container) {
         const quantityRow = document.createElement('div');
         quantityRow.className = 'price-row d-flex justify-content-between align-items-center mb-2';
         quantityRow.innerHTML = `
-            <span class="price-label">Quantity:</span>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="${container.dataset.index}">-</button>
-                <input type="number" class="form-control form-control-sm mx-1 quantity-input" 
-                       value="${quantity}" min="1" style="width: 60px;" 
+            <span class="price-label fw-medium">Quantity:</span>
+            <div class="d-flex align-items-stretch" style="max-width: 150px;">
+                <button class="btn btn-outline-secondary quantity-decrease p-0 d-flex align-items-center justify-content-center" 
+                        style="width: 36px; height: 36px;"
+                        data-index="${container.dataset.index}">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <input type="number" 
+                       class="form-control text-center quantity-input border-start-0 border-end-0 rounded-0" 
+                       value="${quantity}" 
+                       min="1" 
+                       style="height: 36px;"
                        data-index="${container.dataset.index}">
-                <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="${container.dataset.index}">+</button>
+                <button class="btn btn-outline-secondary quantity-increase p-0 d-flex align-items-center justify-content-center"
+                        style="width: 36px; height: 36px;"
+                        data-index="${container.dataset.index}">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
         `;
         priceContainer.appendChild(quantityRow);
