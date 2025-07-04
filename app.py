@@ -1094,7 +1094,91 @@ def remove_from_cart():
     except Exception as e:
         print(f"Error in remove_from_cart: {e}")
         return jsonify({'error': 'Failed to remove item from cart'}), 500
+
+
+@app.route('/update_cart_quantity', methods=['POST'])
+@login_required
+def update_cart_quantity():
+    """Update the quantity of a product in the user's cart."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
+            
+        index = int(data.get('index'))
+        quantity = int(data.get('quantity', 1))
         
+        # Validate quantity
+        if quantity < 1:
+            return jsonify({
+                'success': False,
+                'message': 'Quantity must be at least 1'
+            }), 400
+        
+        # Get current cart
+        cart = get_user_cart()
+        products = cart.get('products', [])
+        
+        # Check if index is valid
+        if 0 <= index < len(products):
+            # Update the quantity
+            products[index]['quantity'] = quantity
+            
+            # Recalculate prices if needed (for blankets)
+            if products[index].get('type') == 'blanket':
+                # Recalculate blanket prices
+                base_price = products[index].get('base_price', 0)
+                bar_price = products[index].get('bar_price', 0)
+                discount_percent = products[index].get('discount_percent', 0)
+                gst_percent = products[index].get('gst_percent', 18)
+                
+                # Recalculate all values
+                price_per_unit = base_price + bar_price
+                subtotal = price_per_unit * quantity
+                discount_amount = subtotal * (discount_percent / 100)
+                discounted_subtotal = subtotal - discount_amount
+                gst_amount = (discounted_subtotal * gst_percent) / 100
+                final_total = discounted_subtotal + gst_amount
+                
+                # Update all price fields
+                products[index].update({
+                    'unit_price': round(price_per_unit, 2),
+                    'total_price': round(final_total, 2),
+                    'calculations': {
+                        **products[index].get('calculations', {}),
+                        'subtotal': round(subtotal, 2),
+                        'discount_amount': round(discount_amount, 2),
+                        'discounted_subtotal': round(discounted_subtotal, 2),
+                        'gst_amount': round(gst_amount, 2),
+                        'final_price': round(final_total, 2)
+                    }
+                })
+            
+            # Save the updated cart
+            save_user_cart({'products': products})
+            
+            return jsonify({
+                'success': True,
+                'message': 'Cart quantity updated',
+                'cart_count': len(products)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid item index',
+                'cart_count': len(products)
+            }), 400
+    except Exception as e:
+        app.logger.error(f'Error updating cart quantity: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while updating the cart quantity',
+            'error': str(e)
+        }), 500
+
 
 @app.route('/get_cart_count')
 def get_cart_count():

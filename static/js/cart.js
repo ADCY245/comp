@@ -867,9 +867,45 @@ function removeSecondMpack(duplicateIndex) {
     }
 }
 
+// Function to toggle quotation section
+function toggleQuotationSection(show = null) {
+    const section = document.getElementById('quotationSection');
+    if (!section) return;
+    
+    if (show === null) {
+        // Toggle current state
+        show = section.style.display === 'none' || !section.style.display;
+    }
+    
+    section.style.display = show ? 'block' : 'none';
+    
+    // Update button text
+    const toggleBtn = document.getElementById('toggleQuotationBtn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = show ? 
+            '<i class="fas fa-eye-slash me-1"></i> Hide Quotation' : 
+            '<i class="fas fa-eye me-1"></i> Show Quotation';
+    }
+}
+
 // Initialize the check when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     checkForDuplicateMpacks();
+    
+    // Handle remove duplicate MPack button click
+    document.getElementById('removeDuplicateMpackBtn')?.addEventListener('click', removeSecondMpack);
+    
+    // Initialize quotation section to be hidden by default
+    toggleQuotationSection(false);
+    
+    // Add click handler for toggle button if it exists
+    const toggleBtn = document.getElementById('toggleQuotationBtn');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleQuotationSection();
+        });
+    }
     
     // Also check after any cart updates
     document.addEventListener('cartUpdated', function() {
