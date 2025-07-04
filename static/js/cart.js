@@ -379,83 +379,84 @@ function updateCartTotals() {
     }
 }
 
+function handleQuantityChange(event) {
+    const input = event.target;
+    const value = input.value;
+    const cartItem = input.closest('.cart-item');
+    
+    if (!cartItem) {
+        console.error('Cart item container not found');
+        return;
+    }
+    
+    // Try multiple selectors to find the update button
+    let updateButton = cartItem.querySelector('.update-quantity-btn');
+    
+    // If not found by class, try by data attribute
+    if (!updateButton) {
+        updateButton = cartItem.querySelector('[data-action="update-quantity"]');
+    }
+    
+    // If still not found, try to find any button within the cart item
+    if (!updateButton) {
+        const buttons = cartItem.querySelectorAll('button');
+        updateButton = Array.from(buttons).find(btn => 
+            btn.textContent.includes('Update') || 
+            btn.innerHTML.includes('check') || // Check for check icon
+            btn.getAttribute('title') === 'Update quantity'
+        );
+    }
+    
+    if (updateButton) {
+        // Get the original quantity from the data attribute or the current value
+        const originalQty = input.getAttribute('data-original-quantity') || value;
+        
+        // Enable/disable the button based on whether the value has changed
+        if (parseInt(value) !== parseInt(originalQty)) {
+            updateButton.disabled = false;
+            updateButton.classList.remove('btn-outline-success');
+            updateButton.classList.add('btn-success');
+            updateButton.title = 'Click to update quantity';
+        } else {
+            updateButton.disabled = true;
+            updateButton.classList.remove('btn-success');
+            updateButton.classList.add('btn-outline-success');
+            updateButton.title = 'No changes to save';
+        }
+    } else {
+        console.error('Update button not found in cart item. Tried selectors: .update-quantity-btn, [data-action="update-quantity"], and button[title*="Update"]');
+        console.log('Cart item HTML:', cartItem.outerHTML);
+    }
+}
+
 function setupQuantityHandlers() {
     console.log('Setting up quantity handlers...');
     
-    // Use event delegation for quantity inputs
+    // Handle quantity input changes
     document.addEventListener('input', function(event) {
         const input = event.target;
         if (input.matches('.quantity-input')) {
-            console.log('Quantity input changed:', input.value);
-            const index = input.dataset.index;
-            console.log('Item index:', index);
-            
-            // Find the closest cart item container
-            const cartItem = input.closest('.cart-item');
-            if (!cartItem) {
-                console.error('Cart item container not found');
-                return;
-            }
-            
-            // Find the update button within the same cart item
-            const updateBtn = cartItem.querySelector('.update-quantity-btn');
-            console.log('Update button found:', updateBtn);
-            
-            if (updateBtn) {
-                // Ensure the button has the correct data-index
-                if (updateBtn.dataset.index !== index) {
-                    updateBtn.dataset.index = index;
-                }
-                
-                // Get the original quantity from the data attribute
-                const originalQty = parseInt(input.getAttribute('data-original-quantity') || input.value);
-                const newQty = parseInt(input.value) || 1;
-                
-                // Enable/disable button based on whether quantity has changed
-                updateBtn.disabled = (newQty === originalQty);
-                
-                // Change button style based on state
-                if (newQty === originalQty) {
-                    updateBtn.classList.remove('btn-success');
-                    updateBtn.classList.add('btn-outline-success');
-                } else {
-                    updateBtn.classList.remove('btn-outline-success');
-                    updateBtn.classList.add('btn-success');
-                }
-            } else {
-                console.error('Update button not found in cart item');
-            }
+            handleQuantityChange(event);
         }
     });
     
-    // Handle update button clicks
-    document.addEventListener('click', function(event) {
-        const updateBtn = event.target.closest('.update-quantity-btn');
-        if (updateBtn && !updateBtn.disabled) {
-            const index = updateBtn.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
-            if (input) {
-                const newQuantity = parseInt(input.value) || 1;
-                updateCartItemQuantity(index, newQuantity);
-            }
-        }
-    });
-
     // Handle quantity decrease button clicks
     document.addEventListener('click', function(event) {
         const decreaseBtn = event.target.closest('.quantity-decrease');
         if (decreaseBtn) {
             event.preventDefault();
-            const index = decreaseBtn.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            const cartItem = decreaseBtn.closest('.cart-item');
+            if (!cartItem) return;
+            
+            const index = cartItem.dataset.index;
+            const input = cartItem.querySelector(`.quantity-input[data-index="${index}"]`);
+            if (!input) return;
+            
             let value = parseInt(input.value) || 1;
             if (value > 1) {
                 input.value = value - 1;
-                // Show update button
-                const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
-                if (updateBtn) {
-                    updateBtn.classList.remove('d-none');
-                }
+                // Trigger input event to update button state
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
     });
@@ -465,44 +466,64 @@ function setupQuantityHandlers() {
         const increaseBtn = event.target.closest('.quantity-increase');
         if (increaseBtn) {
             event.preventDefault();
-            const index = increaseBtn.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            const cartItem = increaseBtn.closest('.cart-item');
+            if (!cartItem) return;
+            
+            const index = cartItem.dataset.index;
+            const input = cartItem.querySelector(`.quantity-input[data-index="${index}"]`);
+            if (!input) return;
+            
             input.value = (parseInt(input.value) || 1) + 1;
-            // Show update button
-            const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
-            if (updateBtn) {
-                updateBtn.classList.remove('d-none');
-            }
+            // Trigger input event to update button state
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
     });
 
     // Handle update button clicks
     document.addEventListener('click', function(event) {
         const updateBtn = event.target.closest('.update-quantity-btn');
-        if (updateBtn) {
+        if (updateBtn && !updateBtn.disabled) {
             event.preventDefault();
             event.stopPropagation();
-            const index = updateBtn.dataset.index;
-            const input = document.querySelector(`.quantity-input[data-index="${index}"]`);
+            
+            const cartItem = updateBtn.closest('.cart-item');
+            if (!cartItem) {
+                console.error('Cart item not found for update button');
+                return;
+            }
+            
+            const index = cartItem.dataset.index;
+            const input = cartItem.querySelector(`.quantity-input[data-index="${index}"]`);
+            if (!input) return;
+            
             let value = parseInt(input.value) || 1;
             if (value < 1) value = 1;
             input.value = value; // Ensure minimum value of 1
-            updateCartItemQuantity(index, value, () => {
-                // Hide the update button after successful update
-                updateBtn.classList.add('d-none');
+            
+            updateCartItemQuantity(index, value, function() {
+                // After successful update, reset the button state
+                updateBtn.disabled = true;
+                updateBtn.classList.remove('btn-success');
+                updateBtn.classList.add('btn-outline-success');
+                
+                // Update the original quantity
+                input.setAttribute('data-original-quantity', value);
             });
         }
     });
     
-    // Also update quantity when pressing Enter in the input field
+    // Handle Enter key in quantity input
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             const input = event.target;
-            if (input.classList.contains('quantity-input')) {
+            if (input.matches('.quantity-input')) {
                 event.preventDefault();
-                const index = input.dataset.index;
-                const updateBtn = document.querySelector(`.update-quantity-btn[data-index="${index}"]`);
-                if (updateBtn && !updateBtn.classList.contains('d-none')) {
+                const cartItem = input.closest('.cart-item');
+                if (!cartItem) return;
+                
+                const index = cartItem.dataset.index;
+                const updateBtn = cartItem.querySelector('.update-quantity-btn');
+                if (updateBtn && !updateBtn.disabled) {
                     updateBtn.click();
                 }
             }

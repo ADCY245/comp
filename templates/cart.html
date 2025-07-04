@@ -427,7 +427,7 @@
                                                 <span class="price-label">Quantity:</span>
                                                 <div class="quantity-controls d-flex align-items-center">
                                                     <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}" type="button">-</button>
-                                                    <input type="number" class="form-control quantity-input text-center mx-2" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" style="width: 60px;">
+                                                    <input type="number" class="form-control quantity-input text-center mx-2" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" data-original-quantity="{{ item.quantity }}" style="width: 60px;">
                                                     <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}" type="button">+</button>
                                                     <button class="btn btn-sm btn-outline-success ms-2 update-quantity-btn" data-index="{{ loop.index0 }}" title="Update Quantity" disabled>
                                                         <i class="fas fa-check"></i>
@@ -747,7 +747,4 @@
             });
         });
     </script>
-    
-    <!-- Load cart.js after DOM is ready -->
-    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 {% endblock %}
