@@ -280,10 +280,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (companyId) {
                     // If we have a company ID, load products for that company
-                    window.location.href = `/products?company_id=${companyId}`;
+                    window.location.href = `/product-selection?company_id=${companyId}`;
                 } else {
-                    // Fallback to regular products page
-                    window.location.href = '/products';
+                    // Fallback to regular product selection page
+                    window.location.href = '/product-selection';
                 }
             } catch (error) {
                 console.error('Error continuing shopping:', error);
