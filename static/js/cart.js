@@ -255,97 +255,129 @@ function removeSecondMpack() {
     }
 }
 
-// Initialize cart when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded, initializing cart...');
-    
-    // Hide the cart initially to prevent layout flash
-    const cartContainer = document.getElementById('cartItems');
-    if (cartContainer) {
-        cartContainer.style.visibility = 'hidden';
-    }
-    
-    // Initialize company info
-    initCompanyInfo();
-    
-    // Create and style the product type selection modal
-    function createProductTypeModal() {
-        const modalHTML = `
-            <div class="modal fade" id="productTypeModal" tabindex="-1" aria-labelledby="productTypeModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="productTypeModalLabel">Select Product Type</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body text-center">
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-outline-primary w-100 py-4" id="selectBlankets">
-                                        <i class="fas fa-blanket fa-2x mb-2 d-block"></i>
-                                        Blankets
-                                    </button>
-                                </div>
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-outline-success w-100 py-4" id="selectMpacks">
-                                        <i class="fas fa-box fa-2x mb-2 d-block"></i>
-                                        MPacks
-                                    </button>
-                                </div>
+// Function to create product type selection modal
+function createProductTypeModal() {
+    const modalHTML = `
+        <div class="modal fade" id="productTypeModal" tabindex="-1" aria-labelledby="productTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="productTypeModalLabel">Select Product Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-primary w-100 py-4" id="selectBlankets">
+                                    <i class="fas fa-blanket fa-2x mb-2 d-block"></i>
+                                    Blankets
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-success w-100 py-4" id="selectMpacks">
+                                    <i class="fas fa-box fa-2x mb-2 d-block"></i>
+                                    MPacks
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-        
-        // Add modal to the body
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
-        // Initialize the modal
-        const modal = new bootstrap.Modal(document.getElementById('productTypeModal'));
-        
-        // Get company ID once
-        const companyId = sessionStorage.getItem('companyId') || 
-                         new URLSearchParams(window.location.search).get('company_id');
-        
-        // Add event listeners to the buttons
-        document.getElementById('selectBlankets').addEventListener('click', function() {
-            if (companyId) {
-                window.location.href = `/blankets?company_id=${companyId}`;
-            } else {
-                window.location.href = '/blankets';
-            }
-        });
-        
-        document.getElementById('selectMpacks').addEventListener('click', function() {
-            if (companyId) {
-                window.location.href = `/mpacks?company_id=${companyId}`;
-            } else {
-                window.location.href = '/mpacks';
-            }
-        });
-        
-        return modal;
-    }
+        </div>`;
     
-    // Initialize the modal when the page loads
-    let productTypeModal;
-    document.addEventListener('DOMContentLoaded', function() {
-        productTypeModal = createProductTypeModal();
-        
-        // Set up continue shopping buttons to show the modal
-        const continueShoppingButtons = document.querySelectorAll(
-            '#continueShoppingBtn, #continueShoppingBtnBottom, #emptyCartContinueShopping'
-        );
-        
-        continueShoppingButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
+    // Add modal to the body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Initialize the modal
+    const modal = new bootstrap.Modal(document.getElementById('productTypeModal'));
+    
+    // Get company ID once
+    const companyId = sessionStorage.getItem('companyId') || 
+                     new URLSearchParams(window.location.search).get('company_id');
+    
+    // Add event listeners to the buttons
+    document.getElementById('selectBlankets').addEventListener('click', function() {
+        if (companyId) {
+            window.location.href = `/blankets?company_id=${companyId}`;
+        } else {
+            window.location.href = '/blankets';
+        }
+    });
+    
+    document.getElementById('selectMpacks').addEventListener('click', function() {
+        if (companyId) {
+            window.location.href = `/mpacks?company_id=${companyId}`;
+        } else {
+            window.location.href = '/mpacks';
+        }
+    });
+    
+    return modal;
+}
+
+// Initialize cart when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded, initializing cart...');
+    
+    // Initialize company info
+    initCompanyInfo();
+    
+    // Create and initialize the product type modal
+    const productTypeModal = createProductTypeModal();
+    
+    // Set up continue shopping buttons
+    const continueButtons = document.querySelectorAll('#continueShoppingBtn, #emptyCartContinueShopping');
+    continueButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (productTypeModal) {
                 productTypeModal.show();
-            });
+            } else {
+                // Fallback in case modal fails to initialize
+                const companyId = sessionStorage.getItem('companyId') || 
+                               new URLSearchParams(window.location.search).get('company_id');
+                window.location.href = companyId ? 
+                    `/product-selection?company_id=${companyId}` : 
+                    '/product-selection';
+            }
         });
     });
+    
+    // Set up clear cart button
+    const clearCartBtn = document.getElementById('clearCartBtn');
+    if (clearCartBtn) {
+        clearCartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to clear your cart? This cannot be undone.')) {
+                fetch('/clear_cart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        showToast('Error', data.message || 'Failed to clear cart', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing cart:', error);
+                    showToast('Error', 'An error occurred while clearing the cart', 'error');
+                });
+            }
+        });
+    }
+    
+    // Initialize cart functionality
+    initializeCart();
+    setupQuantityHandlers();
+    setupRemoveHandlers();
+    initializeCartCalculations();
+    checkForDuplicateMpacks();
     
     // Set up checkout button
     const checkoutBtn = document.getElementById('checkoutBtn');
@@ -722,23 +754,51 @@ function setupQuantityHandlers() {
     });
 }
 
-// Function to set up remove handlers
+// Function to set up remove handlers using event delegation
 function setupRemoveHandlers() {
-    document.querySelectorAll('.remove-item-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const index = this.dataset.index;
-            removeFromCart(e, index);
-        });
-    });
+    // Remove any existing event listeners to prevent duplicates
+    document.removeEventListener('click', handleRemoveClick);
+    
+    // Add event delegation for remove buttons
+    document.addEventListener('click', handleRemoveClick);
+}
+
+// Handle remove button clicks using event delegation
+function handleRemoveClick(e) {
+    // Find the closest remove button or form that was clicked
+    const removeBtn = e.target.closest('.remove-item-form') || 
+                     e.target.closest('.btn-danger');
+    
+    if (!removeBtn) return;
+    
+    e.preventDefault();
+    
+    // Get the index from the button's data attribute or its parent form
+    const form = removeBtn.closest('form');
+    const index = removeBtn.dataset.index || (form ? form.dataset.index : null);
+    
+    if (index !== null && index !== undefined) {
+        removeFromCart(e, index);
+    }
 }
 
 // Function to remove item from cart
 function removeFromCart(event, index) {
+    event.preventDefault();
+    
     if (!confirm('Are you sure you want to remove this item from your cart?')) {
         return;
     }
 
+    const button = event.target.closest('button');
+    const originalHtml = button ? button.innerHTML : '';
+    
+    // Show loading state
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Removing...';
+    }
+    
     const csrfToken = getCSRFToken();
     
     fetch('/remove_from_cart', {
@@ -755,7 +815,7 @@ function removeFromCart(event, index) {
     .then(data => {
         if (data.success) {
             // Remove the item from the DOM
-            const itemElement = event.target.closest('.cart-item');
+            const itemElement = document.querySelector(`.cart-item[data-index="${index}"]`);
             if (itemElement) {
                 itemElement.remove();
             }
@@ -764,7 +824,13 @@ function removeFromCart(event, index) {
             updateCartTotals();
             updateCartCount();
             
-            showToast('Success', 'Item removed from cart', 'success');
+            // Check if cart is empty
+            const cartItems = document.querySelectorAll('.cart-item');
+            if (cartItems.length === 0) {
+                window.location.reload(); // Reload to show empty cart message
+            } else {
+                showToast('Success', 'Item removed from cart', 'success');
+            }
         } else {
             showToast('Error', data.message || 'Failed to remove item from cart', 'error');
         }
@@ -772,6 +838,12 @@ function removeFromCart(event, index) {
     .catch(error => {
         console.error('Error removing from cart:', error);
         showToast('Error', 'An error occurred while removing the item', 'error');
+    })
+    .finally(() => {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }
     });
 }
 
