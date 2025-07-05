@@ -538,9 +538,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize cart calculations
     initializeCartCalculations();
     
-    // Update cart totals
-    updateCartTotals();
-    
     // Check for duplicate MPacks
     checkForDuplicateMpacks();
     if (clearCartBtn) {
@@ -1332,8 +1329,7 @@ function updateItemDisplay(item, data) {
         }
     }
     
-    // Update cart totals
-    updateCartTotals();
+    // Removed recursive call to prevent infinite loop
 }
 
 // End of file
