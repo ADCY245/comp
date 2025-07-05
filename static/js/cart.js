@@ -271,9 +271,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up continue shopping buttons
     const continueShoppingButtons = document.querySelectorAll('#continueShoppingBtn, #continueShoppingBtnBottom');
     continueShoppingButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
+        button.addEventListener('click', async function(e) {
             e.preventDefault();
-            window.location.href = '/products';
+            try {
+                // Get company ID from session storage or URL
+                const companyId = sessionStorage.getItem('companyId') || 
+                                 new URLSearchParams(window.location.search).get('company_id');
+                
+                if (companyId) {
+                    // If we have a company ID, load products for that company
+                    window.location.href = `/products?company_id=${companyId}`;
+                } else {
+                    // Fallback to regular products page
+                    window.location.href = '/products';
+                }
+            } catch (error) {
+                console.error('Error continuing shopping:', error);
+                // Fallback to regular products page on error
+                window.location.href = '/products';
+            }
         });
     });
     
@@ -525,10 +541,13 @@ function handleQuantityChange(event) {
     if (isNaN(newQuantity) || newQuantity < 1) {
         newQuantity = 1;
         input.value = 1;
+    } else {
+        // Update the input value to ensure it's a valid number
+        input.value = newQuantity;
     }
     
-    // Update the quantity immediately without requiring an update button
-    updateCartItemQuantity(index, newQuantity);
+    // Update the quantity immediately
+    updateCartItemQuantity(parseInt(index), newQuantity);
 }
 
 
@@ -536,6 +555,17 @@ function handleQuantityChange(event) {
 // Function to update cart item quantity
 function updateCartItemQuantity(index, newQuantity) {
     const csrfToken = getCSRFToken();
+    const cartItem = document.querySelector(`.cart-item[data-index="${index}"]`);
+    
+    if (!cartItem) {
+        console.error('Cart item not found in DOM');
+        return;
+    }
+    
+    // Show loading state
+    const quantityInput = cartItem.querySelector('.quantity-input');
+    const originalValue = quantityInput.value;
+    quantityInput.disabled = true;
     
     fetch('/update_cart_quantity', {
         method: 'POST',
@@ -544,22 +574,69 @@ function updateCartItemQuantity(index, newQuantity) {
             'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
-            index: parseInt(index),
-            quantity: parseInt(newQuantity)
+            index: index,
+            quantity: newQuantity
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            updateCartTotals();
-            updateCartCount();
+            // Update the UI with the new data from the server
+            if (data.updated_item) {
+                // Update the cart item's data attributes
+                const item = data.updated_item;
+                cartItem.setAttribute('data-unit-price', item.unit_price || 0);
+                cartItem.setAttribute('data-quantity', item.quantity || 1);
+                
+                // Update the quantity input
+                const quantityInput = cartItem.querySelector('.quantity-input');
+                if (quantityInput) {
+                    quantityInput.value = item.quantity || 1;
+                }
+                
+                // Update price displays
+                const priceElements = cartItem.querySelectorAll('.price-value, .subtotal-value, .total-value');
+                priceElements.forEach(el => {
+                    if (el.classList.contains('subtotal-value')) {
+                        const subtotal = (item.unit_price || 0) * (item.quantity || 1);
+                        el.textContent = `₹${subtotal.toFixed(2)}`;
+                    } else if (el.classList.contains('total-value')) {
+                        const subtotal = (item.unit_price || 0) * (item.quantity || 1);
+                        const discount = subtotal * ((item.discount_percent || 0) / 100);
+                        const total = (subtotal - discount) * (1 + (item.gst_percent || 18) / 100);
+                        el.textContent = `₹${total.toFixed(2)}`;
+                    } else {
+                        el.textContent = `₹${parseFloat(item.unit_price || 0).toFixed(2)}`;
+                    }
+                });
+                
+                // Recalculate totals
+                updateCartTotals();
+                updateCartCount();
+                showToast('Success', 'Quantity updated', 'success');
+            } else {
+                // Fallback if updated_item is not provided
+                updateCartTotals();
+                updateCartCount();
+                showToast('Success', 'Quantity updated', 'success');
+            }
         } else {
-            showToast('Error', data.message || 'Failed to update quantity', 'error');
+            throw new Error(data.message || 'Failed to update quantity');
         }
     })
     .catch(error => {
         console.error('Error updating quantity:', error);
-        showToast('Error', 'An error occurred while updating quantity', 'error');
+        // Revert to original value on error
+        quantityInput.value = originalValue;
+        showToast('Error', error.message || 'An error occurred while updating quantity', 'error');
+    })
+    .finally(() => {
+        quantityInput.disabled = false;
     });
 }
 
@@ -654,15 +731,44 @@ function checkForDuplicateMpacks() {
 
 // Function to update item display
 function updateItemDisplay(item, data) {
-    const priceElement = item.querySelector('.item-total');
-    if (priceElement) {
-        priceElement.textContent = `₹${data.finalTotal.toFixed(2)}`;
+    if (!item || !data) return;
+    
+    // Update the data attributes
+    if (data.unit_price !== undefined) {
+        item.setAttribute('data-unit-price', data.unit_price);
     }
     
-    // Update any other relevant display elements
-    const quantityInput = item.querySelector('.quantity-input');
-    if (quantityInput) {
-        quantityInput.value = data.quantity;
+    if (data.quantity !== undefined) {
+        item.setAttribute('data-quantity', data.quantity);
+        const quantityInput = item.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.value = data.quantity;
+        }
+    }
+    
+    // Update the price display
+    const priceElement = item.querySelector('.price-value');
+    if (priceElement && data.unit_price !== undefined) {
+        priceElement.textContent = `₹${parseFloat(data.unit_price).toFixed(2)}`;
+    }
+    
+    // Update subtotal if available
+    const subtotalElement = item.querySelector('.subtotal-value');
+    if (subtotalElement && data.subtotal !== undefined) {
+        subtotalElement.textContent = `₹${parseFloat(data.subtotal).toFixed(2)}`;
+    }
+    
+    // Update total if available
+    const totalElement = item.querySelector('.total-value');
+    if (totalElement && data.total !== undefined) {
+        totalElement.textContent = `₹${parseFloat(data.total).toFixed(2)}`;
+    }
+    
+    // Recalculate prices based on item type
+    if (item.dataset.type === 'mpack') {
+        calculateMPackPrices(item);
+    } else if (item.dataset.type === 'blanket') {
+        calculateBlanketPrices(item);
     }
 }
 

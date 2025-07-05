@@ -1157,13 +1157,17 @@ def update_cart_quantity():
                     }
                 })
             
+            # Get the updated item
+            updated_item = products[index]
+            
             # Save the updated cart
             save_user_cart({'products': products})
             
             return jsonify({
                 'success': True,
                 'message': 'Cart quantity updated',
-                'cart_count': len(products)
+                'cart_count': len(products),
+                'updated_item': updated_item
             })
         else:
             return jsonify({

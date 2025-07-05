@@ -452,7 +452,7 @@
                                             </div>
                                             <div class="price-row">
                                                 <span class="price-label">Subtotal:</span>
-                                                <span class="price-value">₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1))) }}</span>
+                                                <span class="price-value subtotal-value">₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1))) }}</span>
                                             </div>
                                             {% if item.discount_percent and item.discount_percent > 0 %}
                                             <div class="price-row">
@@ -466,7 +466,7 @@
                                             </div>
                                             <div class="price-row fw-bold border-top mt-2 pt-2">
                                                 <span>Total:</span>
-                                                <span>₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (1 + (item.gst_percent|default(18)) / 100)) }}</span>
+                                                <span class="total-value">₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (1 + (item.gst_percent|default(18)) / 100)) }}</span>
                                             </div>
                                         </div>
                                     </div>
