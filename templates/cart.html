@@ -492,7 +492,9 @@
                                 <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
                                 <h4>Your cart is empty</h4>
                                 <p class="text-muted">Browse our products and add some items to your cart</p>
-                                <a href="{{ url_for('product_selection') }}" class="btn btn-outline-secondary">Continue Shopping</a>
+                                <button type="button" class="btn btn-outline-secondary" id="emptyCartContinueShopping">
+                                    <i class="fas fa-shopping-cart me-2"></i>Continue Shopping
+                                </button>
                             </div>
                         {% endif %}
                         

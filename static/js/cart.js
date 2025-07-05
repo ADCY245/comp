@@ -268,28 +268,82 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize company info
     initCompanyInfo();
     
-    // Set up continue shopping buttons
-    const continueShoppingButtons = document.querySelectorAll('#continueShoppingBtn, #continueShoppingBtnBottom');
-    continueShoppingButtons.forEach(button => {
-        button.addEventListener('click', async function(e) {
-            e.preventDefault();
-            try {
-                // Get company ID from session storage or URL
-                const companyId = sessionStorage.getItem('companyId') || 
-                                 new URLSearchParams(window.location.search).get('company_id');
-                
-                if (companyId) {
-                    // If we have a company ID, load products for that company
-                    window.location.href = `/product-selection?company_id=${companyId}`;
-                } else {
-                    // Fallback to regular product selection page
-                    window.location.href = '/product-selection';
-                }
-            } catch (error) {
-                console.error('Error continuing shopping:', error);
-                // Fallback to regular products page on error
-                window.location.href = '/products';
+    // Create and style the product type selection modal
+    function createProductTypeModal() {
+        const modalHTML = `
+            <div class="modal fade" id="productTypeModal" tabindex="-1" aria-labelledby="productTypeModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="productTypeModalLabel">Select Product Type</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-primary w-100 py-4" id="selectBlankets">
+                                        <i class="fas fa-blanket fa-2x mb-2 d-block"></i>
+                                        Blankets
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-success w-100 py-4" id="selectMpacks">
+                                        <i class="fas fa-box fa-2x mb-2 d-block"></i>
+                                        MPacks
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to the body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Initialize the modal
+        const modal = new bootstrap.Modal(document.getElementById('productTypeModal'));
+        
+        // Get company ID once
+        const companyId = sessionStorage.getItem('companyId') || 
+                         new URLSearchParams(window.location.search).get('company_id');
+        
+        // Add event listeners to the buttons
+        document.getElementById('selectBlankets').addEventListener('click', function() {
+            if (companyId) {
+                window.location.href = `/blankets?company_id=${companyId}`;
+            } else {
+                window.location.href = '/blankets';
             }
+        });
+        
+        document.getElementById('selectMpacks').addEventListener('click', function() {
+            if (companyId) {
+                window.location.href = `/mpacks?company_id=${companyId}`;
+            } else {
+                window.location.href = '/mpacks';
+            }
+        });
+        
+        return modal;
+    }
+    
+    // Initialize the modal when the page loads
+    let productTypeModal;
+    document.addEventListener('DOMContentLoaded', function() {
+        productTypeModal = createProductTypeModal();
+        
+        // Set up continue shopping buttons to show the modal
+        const continueShoppingButtons = document.querySelectorAll(
+            '#continueShoppingBtn, #continueShoppingBtnBottom, #emptyCartContinueShopping'
+        );
+        
+        continueShoppingButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                productTypeModal.show();
+            });
         });
     });
     
