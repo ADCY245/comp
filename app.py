@@ -1027,8 +1027,42 @@ def add_to_cart():
                 cart = {'products': []}
             if 'products' not in cart:
                 cart['products'] = []
+            
+            # Check for duplicate products with same dimensions if force_add is not True
+            if not data.get('force_add'):
+                duplicate_index = -1
+                product_type = product.get('type')
                 
-            # Add product to cart
+                if product_type == 'blanket':
+                    for idx, item in enumerate(cart['products']):
+                        if (item.get('type') == 'blanket' and 
+                            abs(float(item.get('length', 0)) - float(product.get('length', 0))) < 0.01 and 
+                            abs(float(item.get('width', 0)) - float(product.get('width', 0))) < 0.01 and 
+                            item.get('thickness') == product.get('thickness') and
+                            item.get('bar_type') == product.get('bar_type')):
+                            duplicate_index = idx
+                            break
+                
+                # Check for duplicate MPacks with same specifications
+                elif product_type == 'mpack':
+                    for idx, item in enumerate(cart['products']):
+                        if (item.get('type') == 'mpack' and 
+                            item.get('machine') == product.get('machine') and
+                            item.get('thickness') == product.get('thickness') and
+                            item.get('size') == product.get('size')):
+                            duplicate_index = idx
+                            break
+                
+                if duplicate_index >= 0:
+                    # Return info about duplicate product
+                    return jsonify({
+                        'success': False,
+                        'is_duplicate': True,
+                        'duplicate_index': duplicate_index,
+                        'message': 'A product with the same dimensions already exists in your cart.'
+                    })
+                
+            # If no duplicate found, add the product to cart
             cart['products'].append(product)
             
             # Save updated cart
@@ -1040,6 +1074,7 @@ def add_to_cart():
             
             return jsonify({
                 'success': True,
+                'is_duplicate': False,
                 'message': 'Product added to cart successfully',
                 'cart_count': cart_count
             })

@@ -747,6 +747,31 @@ function addBlanketToCart() {
           if (typeof updateCartCount === 'function') {
             updateCartCount();
           }
+        } else if (data.is_duplicate) {
+          // Show confirmation dialog for duplicate product
+          if (confirm('A product with the same dimensions is already in your cart. Would you like to add it anyway?')) {
+            // If user confirms, force add the product by removing the duplicate check
+            fetch('/add_to_cart', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({...payload, force_add: true})
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                showToast('Success', 'Blanket added to cart!', 'success');
+                if (typeof updateCartCount === 'function') {
+                  updateCartCount();
+                }
+              } else {
+                showToast('Error', data.error || 'Failed to add to cart', 'error');
+              }
+            })
+            .catch(err => {
+              console.error('Error adding to cart:', err);
+              showToast('Error', 'Failed to add to cart. Please try again.', 'error');
+            });
+          }
         } else {
           showToast('Error', data.error || 'Failed to add to cart', 'error');
           throw new Error(data.error || 'Failed to add to cart');
