@@ -329,25 +329,66 @@ document.addEventListener('DOMContentLoaded', function() {
     const productTypeModal = createProductTypeModal();
     
     // Set up continue shopping buttons
-    const continueButtons = document.querySelectorAll('#continueShoppingBtn, #emptyCartContinueShopping');
-    continueButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
+    const continueShopping = () => {
+        if (productTypeModal) {
+            productTypeModal.show();
+        } else {
+            // Fallback in case modal fails to initialize
+            const companyId = sessionStorage.getItem('companyId') || 
+                           new URLSearchParams(window.location.search).get('company_id');
+            window.location.href = companyId ? 
+                `/product-selection?company_id=${companyId}` : 
+                '/product-selection';
+        }
+    };
+
+    // Top continue shopping button
+    const continueShoppingBtn = document.getElementById('continueShoppingBtn');
+    if (continueShoppingBtn) {
+        continueShoppingBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (productTypeModal) {
-                productTypeModal.show();
-            } else {
-                // Fallback in case modal fails to initialize
-                const companyId = sessionStorage.getItem('companyId') || 
-                               new URLSearchParams(window.location.search).get('company_id');
-                window.location.href = companyId ? 
-                    `/product-selection?company_id=${companyId}` : 
-                    '/product-selection';
-            }
+            continueShopping();
         });
-    });
+    }
+
+    // Bottom continue shopping button
+    const continueShoppingBtnBottom = document.getElementById('continueShoppingBtnBottom');
+    if (continueShoppingBtnBottom) {
+        continueShoppingBtnBottom.addEventListener('click', function(e) {
+            e.preventDefault();
+            continueShopping();
+        });
+    }
+
+    // Empty cart continue shopping button
+    const emptyCartContinueShopping = document.getElementById('emptyCartContinueShopping');
+    if (emptyCartContinueShopping) {
+        emptyCartContinueShopping.addEventListener('click', function(e) {
+            e.preventDefault();
+            continueShopping();
+        });
+    }
     
     // Set up clear cart button
     const clearCartBtn = document.getElementById('clearCartBtn');
+    
+    // Initialize all cart handlers
+    initializeCart();
+    
+    // Set up quantity handlers
+    setupQuantityHandlers();
+    
+    // Set up remove handlers
+    setupRemoveHandlers();
+    
+    // Initialize cart calculations
+    initializeCartCalculations();
+    
+    // Update cart totals
+    updateCartTotals();
+    
+    // Check for duplicate MPacks
+    checkForDuplicateMpacks();
     if (clearCartBtn) {
         clearCartBtn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -683,18 +724,15 @@ function handleQuantityChange(event) {
         return;
     }
     
+    // Ensure the quantity is at least 1
     let newQuantity = parseInt(input.value);
-    
-    // Ensure quantity is at least 1
     if (isNaN(newQuantity) || newQuantity < 1) {
         newQuantity = 1;
         input.value = 1;
-    } else {
-        // Update the input value to ensure it's a valid number
-        input.value = newQuantity;
     }
-    
-    // Update the quantity immediately
+
+    // Update the cart item quantity
+    updateCartItemQuantity(index, newQuantity);
     updateCartItemQuantity(parseInt(index), newQuantity);
 }
 
@@ -790,30 +828,70 @@ function updateCartItemQuantity(index, newQuantity) {
 
 // Function to set up quantity handlers
 function setupQuantityHandlers() {
+    // Remove any existing event listeners to prevent duplicates
+    document.removeEventListener('click', handleQuantityButtonClick);
+    document.removeEventListener('change', handleQuantityInputChange);
+    document.removeEventListener('keydown', handleQuantityKeyDown);
+    
+    // Add event delegation for quantity buttons
+    document.addEventListener('click', handleQuantityButtonClick);
+    
+    // Add event listener for manual input changes
+    document.addEventListener('change', handleQuantityInputChange);
+    
+    // Add event listener for keyboard input
+    document.addEventListener('keydown', handleQuantityKeyDown);
+}
+
+// Handle quantity button clicks (increase/decrease)
+function handleQuantityButtonClick(event) {
     // Handle quantity increase
-    document.addEventListener('click', function(event) {
-        if (event.target.closest('.quantity-increase')) {
-            const button = event.target.closest('.quantity-increase');
-            const input = button.parentElement.querySelector('.quantity-input');
-            input.value = parseInt(input.value) + 1;
+    if (event.target.closest('.quantity-increase')) {
+        event.preventDefault();
+        const button = event.target.closest('.quantity-increase');
+        const input = button.closest('.input-group').querySelector('.quantity-input');
+        if (input) {
+            input.value = parseInt(input.value || 1) + 1;
             input.dispatchEvent(new Event('change'));
         }
-        
-        // Handle quantity decrease
-        if (event.target.closest('.quantity-decrease')) {
-            const button = event.target.closest('.quantity-decrease');
-            const input = button.parentElement.querySelector('.quantity-input');
-            if (parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-                input.dispatchEvent(new Event('change'));
-            }
-        }
-    });
+    }
     
-    // Handle direct input changes
-    document.querySelectorAll('.quantity-input').forEach(input => {
-        input.addEventListener('change', handleQuantityChange);
-    });
+    // Handle quantity decrease
+    if (event.target.closest('.quantity-decrease')) {
+        event.preventDefault();
+        const button = event.target.closest('.quantity-decrease');
+        const input = button.closest('.input-group').querySelector('.quantity-input');
+        if (input && parseInt(input.value) > 1) {
+            input.value = parseInt(input.value) - 1;
+            input.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+// Handle manual input changes
+function handleQuantityInputChange(event) {
+    if (event.target.classList.contains('quantity-input')) {
+        const input = event.target;
+        const container = input.closest('.cart-item');
+        const index = container ? container.dataset.index : null;
+        
+        if (index !== null) {
+            let newQuantity = parseInt(input.value);
+            if (isNaN(newQuantity) || newQuantity < 1) {
+                newQuantity = 1;
+                input.value = 1;
+            }
+            updateCartItemQuantity(index, newQuantity);
+        }
+    }
+}
+
+// Handle keyboard input for quantity fields
+function handleQuantityKeyDown(event) {
+    if (event.target.classList.contains('quantity-input') && event.key === 'Enter') {
+        event.preventDefault();
+        event.target.blur(); // Triggers the change event
+    }
 }
 
 // Function to set up remove handlers using event delegation
@@ -921,88 +999,187 @@ function checkForDuplicateMpacks() {
 function updateItemDisplay(item, data) {
     if (!item || !data) return;
     
-    // Helper function to format currency
-    const formatCurrency = (amount) => `₹${parseFloat(amount).toFixed(2)}`;
+    // Update the data attributes with the latest values
+    if (data.type === 'blanket') {
+        item.dataset.basePrice = data.base_price || 0;
+        item.dataset.barPrice = data.bar_price || 0;
+        item.dataset.quantity = data.quantity || 1;
+        item.dataset.discountPercent = data.discount_percent || 0;
+        item.dataset.gstPercent = data.gst_percent || 18;
+    } else if (data.type === 'mpack') {
+        item.dataset.unitPrice = data.unit_price || 0;
+        item.dataset.quantity = data.quantity || 1;
+        item.dataset.discountPercent = data.discount_percent || 0;
+        item.dataset.gstPercent = data.gst_percent || 12;
+    }
     
-    // Update data attributes
-    const updateDataAttr = (key, value) => {
-        if (value !== undefined) {
-            item.setAttribute(`data-${key}`, value);
-        }
-    };
-    
-    // Update all relevant data attributes
-    updateDataAttr('unit-price', data.unit_price);
-    updateDataAttr('bar-price', data.bar_price);
-    updateDataAttr('quantity', data.quantity);
-    updateDataAttr('discount-percent', data.discount_percent);
-    updateDataAttr('gst-percent', data.gst_percent);
-    
-    // Update quantity input
+    // Update the quantity input
     const quantityInput = item.querySelector('.quantity-input');
-    if (quantityInput && data.quantity !== undefined) {
-        quantityInput.value = data.quantity;
+    if (quantityInput) {
+        quantityInput.value = data.quantity || 1;
     }
     
-    // Update all price displays
-    const updatePriceDisplay = (selector, value, useFormat = true) => {
-        const element = item.querySelector(selector);
-        if (element && value !== undefined) {
-            element.textContent = useFormat ? formatCurrency(value) : value;
+    // Update the price displays
+    if (data.type === 'blanket') {
+        // Update unit price display
+        const unitPriceElement = item.querySelector('.unit-price');
+        if (unitPriceElement) {
+            unitPriceElement.textContent = `₹${parseFloat(data.base_price || 0).toFixed(2)}`;
         }
-    };
-    
-    // Calculate values if not provided
-    const unitPrice = data.unit_price || parseFloat(item.getAttribute('data-unit-price')) || 0;
-    const barPrice = data.bar_price || parseFloat(item.getAttribute('data-bar-price')) || 0;
-    const quantity = data.quantity || parseInt(item.getAttribute('data-quantity')) || 1;
-    const discountPercent = data.discount_percent || parseFloat(item.getAttribute('data-discount-percent')) || 0;
-    const gstPercent = data.gst_percent || parseFloat(item.getAttribute('data-gst-percent')) || 18;
-    
-    const subtotal = (unitPrice + barPrice) * quantity;
-    const discountAmount = subtotal * (discountPercent / 100);
-    const taxableAmount = subtotal - discountAmount;
-    const gstAmount = taxableAmount * (gstPercent / 100);
-    const total = taxableAmount + gstAmount;
-    
-    // Update all price displays
-    updatePriceDisplay('.price-value', unitPrice);
-    
-    // Update bar price if it exists
-    const barPriceElement = item.querySelector('.price-row:nth-child(2) .price-value');
-    if (barPriceElement && barPrice > 0) {
-        barPriceElement.textContent = `+${formatCurrency(barPrice)}`;
+        
+        // Update bar price display if it exists
+        const barPriceElement = item.querySelector('.bar-price');
+        if (barPriceElement) {
+            if (data.bar_price && data.bar_price > 0) {
+                barPriceElement.textContent = `+₹${parseFloat(data.bar_price).toFixed(2)}`;
+                barPriceElement.closest('.price-row').style.display = 'flex';
+            } else {
+                barPriceElement.closest('.price-row').style.display = 'none';
+            }
+        }
+        
+        // Calculate values
+        const basePrice = parseFloat(data.base_price || 0);
+        const barPrice = parseFloat(data.bar_price || 0);
+        const quantity = parseInt(data.quantity || 1);
+        const discountPercent = parseFloat(data.discount_percent || 0);
+        const gstPercent = parseFloat(data.gst_percent || 18);
+        
+        // Calculate subtotal (before discount)
+        const subtotal = (basePrice + barPrice) * quantity;
+        
+        // Calculate discount amount
+        const discountAmount = subtotal * (discountPercent / 100);
+        
+        // Calculate taxable amount (after discount)
+        const taxableAmount = subtotal - discountAmount;
+        
+        // Calculate GST amount
+        const gstAmount = taxableAmount * (gstPercent / 100);
+        
+        // Calculate total (after discount + GST)
+        const total = taxableAmount + gstAmount;
+        
+        // Update subtotal display
+        const subtotalElement = item.querySelector('.subtotal-value');
+        if (subtotalElement) {
+            subtotalElement.textContent = `₹${subtotal.toFixed(2)}`;
+        }
+        
+        // Update discount row if it exists
+        const discountRow = item.querySelector('.discount-row');
+        if (discountRow) {
+            if (discountPercent > 0) {
+                discountRow.style.display = 'flex';
+                const discountAmountElement = discountRow.querySelector('.discount-amount') || 
+                                          discountRow.querySelector('span:last-child');
+                if (discountAmountElement) {
+                    discountAmountElement.textContent = `-₹${discountAmount.toFixed(2)}`;
+                }
+                const discountPercentElement = discountRow.querySelector('.discount-percent');
+                if (discountPercentElement) {
+                    discountPercentElement.textContent = `${discountPercent}%`;
+                }
+            } else {
+                discountRow.style.display = 'none';
+            }
+        }
+        
+        // Update GST row if it exists
+        const gstRow = item.querySelector('.gst-row');
+        if (gstRow) {
+            const gstAmountElement = gstRow.querySelector('.gst-amount') || 
+                                   gstRow.querySelector('span:last-child');
+            if (gstAmountElement) {
+                gstAmountElement.textContent = `₹${gstAmount.toFixed(2)}`;
+            }
+            const gstPercentElement = gstRow.querySelector('.gst-percent');
+            if (gstPercentElement) {
+                gstPercentElement.textContent = `${gstPercent}%`;
+            }
+        }
+        
+        // Update total
+        const totalElement = item.querySelector('.total-value');
+        if (totalElement) {
+            totalElement.textContent = `₹${total.toFixed(2)}`;
+        }
+    } else if (data.type === 'mpack') {
+        // Similar updates for MPack items
+        const unitPriceElement = item.querySelector('.unit-price');
+        if (unitPriceElement) {
+            unitPriceElement.textContent = `₹${parseFloat(data.unit_price || 0).toFixed(2)}`;
+        }
+        
+        // Calculate values
+        const unitPrice = parseFloat(data.unit_price || 0);
+        const quantity = parseInt(data.quantity || 1);
+        const discountPercent = parseFloat(data.discount_percent || 0);
+        const gstPercent = parseFloat(data.gst_percent || 12);
+        
+        // Calculate subtotal (before discount)
+        const subtotal = unitPrice * quantity;
+        
+        // Calculate discount amount
+        const discountAmount = subtotal * (discountPercent / 100);
+        
+        // Calculate taxable amount (after discount)
+        const taxableAmount = subtotal - discountAmount;
+        
+        // Calculate GST amount
+        const gstAmount = taxableAmount * (gstPercent / 100);
+        
+        // Calculate total (after discount + GST)
+        const total = taxableAmount + gstAmount;
+        
+        // Update subtotal display
+        const subtotalElement = item.querySelector('.subtotal-value');
+        if (subtotalElement) {
+            subtotalElement.textContent = `₹${subtotal.toFixed(2)}`;
+        }
+        
+        // Update discount row if it exists
+        const discountRow = item.querySelector('.discount-row');
+        if (discountRow) {
+            if (discountPercent > 0) {
+                discountRow.style.display = 'flex';
+                const discountAmountElement = discountRow.querySelector('.discount-amount') || 
+                                          discountRow.querySelector('span:last-child');
+                if (discountAmountElement) {
+                    discountAmountElement.textContent = `-₹${discountAmount.toFixed(2)}`;
+                }
+                const discountPercentElement = discountRow.querySelector('.discount-percent');
+                if (discountPercentElement) {
+                    discountPercentElement.textContent = `${discountPercent}%`;
+                }
+            } else {
+                discountRow.style.display = 'none';
+            }
+        }
+        
+        // Update GST row if it exists
+        const gstRow = item.querySelector('.gst-row');
+        if (gstRow) {
+            const gstAmountElement = gstRow.querySelector('.gst-amount') || 
+                                   gstRow.querySelector('span:last-child');
+            if (gstAmountElement) {
+                gstAmountElement.textContent = `₹${gstAmount.toFixed(2)}`;
+            }
+            const gstPercentElement = gstRow.querySelector('.gst-percent');
+            if (gstPercentElement) {
+                gstPercentElement.textContent = `${gstPercent}%`;
+            }
+        }
+        
+        // Update total
+        const totalElement = item.querySelector('.total-value');
+        if (totalElement) {
+            totalElement.textContent = `₹${total.toFixed(2)}`;
+        }
     }
     
-    // Update subtotal
-    updatePriceDisplay('.subtotal-value', subtotal);
-    
-    // Update discount row if it exists
-    const discountRow = item.querySelector('.price-row:nth-child(5)');
-    if (discountRow && discountPercent > 0) {
-        discountRow.style.display = 'flex';
-        discountRow.querySelector('.price-label').textContent = `Discount (${discountPercent}%):`;
-        discountRow.querySelector('.price-value').textContent = `-${formatCurrency(discountAmount)}`;
-    } else if (discountRow) {
-        discountRow.style.display = 'none';
-    }
-    
-    // Update GST row
-    const gstRow = item.querySelector('.price-row:nth-child(6)');
-    if (gstRow) {
-        gstRow.querySelector('.price-label').textContent = `GST (${gstPercent}%):`;
-        gstRow.querySelector('.price-value').textContent = formatCurrency(gstAmount);
-    }
-    
-    // Update total
-    updatePriceDisplay('.total-value', total);
-    
-    // If there are any calculations to be done based on item type
-    if (item.dataset.type === 'mpack') {
-        calculateMPackPrices(item);
-    } else if (item.dataset.type === 'blanket') {
-        calculateBlanketPrices(item);
-    }
+    // Update cart totals
+    updateCartTotals();
 }
 
 // End of file
