@@ -337,34 +337,20 @@
     
     // Function to set up navigation event listeners
     function setupNavigation() {
-        // Handle all nav link clicks
-        document.querySelectorAll('.nav-link').forEach(link => {
-            if (['mpacksLink', 'blanketsLink', 'cartLink', 'homeLink'].includes(link.id)) {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Don't do anything if the link is already active
-                    if (this.classList.contains('active')) {
-                        return;
-                    }
-                    
-                    // Get the target route
-                    let targetRoute = this.href;
-                    
-                    // For all links, check company first
-                    if (this.id === 'cartLink') {
-                        targetRoute = '{{ url_for("cart") }}';
-                    } else if (this.id === 'mpacksLink') {
-                        targetRoute = '{{ url_for("mpacks") }}';
-                    } else if (this.id === 'blanketsLink') {
-                        targetRoute = '{{ url_for("blankets") }}';
-                    }
-                    
-                    // Always check company before navigation
-                    checkCompanyAndNavigate(targetRoute);
-                });
-            }
+        // Handle navigation links
+        document.querySelectorAll('a[data-route]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const route = this.getAttribute('data-route');
+                
+                // Special handling for home link - always go to index without company check
+                if (this.id === 'homeLink' || route === '/' || route === '/index') {
+                    window.location.href = '/';
+                    return;
+                }
+                
+                checkCompanyAndNavigate(route);
+            });
         });
         
         // Handle direct URL access on page load
@@ -391,14 +377,21 @@
     
     // Function to check if company is selected before navigation
     async function checkCompanyAndNavigate(route) {
-        // Skip company check for these paths
-        const publicPaths = ['/', '/index', '/login', '/register', '/api/'];
+        // Skip company check for home page and public paths
+        const isHomePage = route === '/' || route === '/index' || route === '';
+        const publicPaths = ['/login', '/register', '/api/'];
         const isPublicPath = publicPaths.some(path => 
             route.startsWith(path) || 
-            window.location.pathname === path ||
-            window.location.pathname === ''
+            window.location.pathname === path
         );
 
+        // Always allow navigation to home page without company check
+        if (isHomePage) {
+            window.location.href = '/';
+            return;
+        }
+
+        // Allow other public paths
         if (isPublicPath) {
             window.location.href = route;
             return;
