@@ -546,16 +546,38 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
-        // Cart initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize cart
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        // Function to check for duplicate MPacks
+        function checkForDuplicateMpacks() {
+            const mpacks = document.querySelectorAll('.cart-item[data-type="mpack"]');
+            const duplicateMpackSection = document.getElementById('duplicateMpackSection');
             
+            if (mpacks.length > 1 && duplicateMpackSection) {
+                duplicateMpackSection.style.display = 'block';
+                // Make sure the remove button works
+                const removeBtn = document.getElementById('removeDuplicateMpackBtn');
+                if (removeBtn) {
+                    removeBtn.onclick = removeSecondMpack;
+                }
+            } else if (duplicateMpackSection) {
+                duplicateMpackSection.style.display = 'none';
+            }
+        }
+
+        // Function to toggle quotation section
+        function toggleQuotationSection() {
+            const cartItems = document.querySelectorAll('.cart-item');
+            const quotationSection = document.getElementById('quotationSection');
+            if (quotationSection) {
+                quotationSection.style.display = cartItems.length > 0 ? 'block' : 'none';
+            }
+        }
+        
+        // Initialize cart when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
             // Listen for cart updates from other tabs
             window.addEventListener('storage', function(event) {
                 if (event.key === 'cart') {
                     try {
-                        // Reload the page to reflect cart changes
                         window.location.reload();
                     } catch (e) {
                         console.error('Error handling cart update:', e);
@@ -566,13 +588,8 @@
             // Check for duplicate MPack entries
             checkForDuplicateMpacks();
             
-            // Handle remove duplicate MPack button click
-            document.getElementById('removeDuplicateMpackBtn')?.addEventListener('click', removeSecondMpack);
-            
             // Toggle quotation section based on cart items
             toggleQuotationSection();
-            
-            // Cart items are loaded by the server
         });
     </script>
     

@@ -245,9 +245,25 @@ function initializeCart() {
     }
 }
 
+// Function to handle removing second MPack if present
+function removeSecondMpack() {
+    const mpacks = document.querySelectorAll('.cart-item[data-type="mpack"]');
+    if (mpacks.length > 1) {
+        mpacks[1].remove();
+        updateCartTotals();
+        showToast('Notice', 'Only one MPack can be in the cart. The additional MPack has been removed.', 'info');
+    }
+}
+
 // Initialize cart when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
+    
+    // Hide the cart initially to prevent layout flash
+    const cartContainer = document.getElementById('cartItems');
+    if (cartContainer) {
+        cartContainer.style.visibility = 'hidden';
+    }
     
     // Initialize company info
     initCompanyInfo();
@@ -279,16 +295,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Set up mutation observer for cart changes
-    const cartContainer = document.querySelector('.cart-items');
     if (cartContainer) {
         const observer = new MutationObserver(function() {
             checkForDuplicateMpacks();
+            // Show the cart after initial render
+            cartContainer.style.visibility = 'visible';
         });
-        observer.observe(cartContainer, { childList: true, subtree: true });
+        observer.observe(cartContainer, { 
+            childList: true, 
+            subtree: true,
+            attributes: true,
+            characterData: true
+        });
+        
+        // Show cart after a short delay if mutation observer doesn't trigger
+        setTimeout(() => {
+            if (cartContainer.style.visibility !== 'visible') {
+                cartContainer.style.visibility = 'visible';
+            }
+        }, 500);
     }
     
     // Initialize the cart
     initializeCart();
+    
+    // Check for duplicate mpacks on initial load
+    checkForDuplicateMpacks();
     
     console.log('Cart initialization complete');
 });
@@ -304,6 +336,79 @@ function initializeCartCalculations() {
             calculateBlanketPrices(item);
         }
     });
+}
+
+// Function to calculate MPack prices
+function calculateMPackPrices(item) {
+    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || 0);
+    const quantity = parseInt(item.querySelector('.quantity-input')?.value || 1);
+    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || 0);
+    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || 12);
+    
+    // Calculate prices
+    const subtotal = unitPrice * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const total = discountedSubtotal + gstAmount;
+    
+    return {
+        subtotal: round(subtotal, 2),
+        discountAmount: round(discountAmount, 2),
+        discountedSubtotal: round(discountedSubtotal, 2),
+        gstAmount: round(gstAmount, 2),
+        total: round(total, 2)
+    };
+}
+
+// Function to calculate blanket prices
+function calculateBlanketPrices(item) {
+    const basePrice = parseFloat(item.getAttribute('data-base-price') || 0);
+    const barPrice = parseFloat(item.getAttribute('data-bar-price') || 0);
+    const quantity = parseInt(item.querySelector('.quantity-input')?.value || 1);
+    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || 0);
+    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || 12);
+    
+    // Get the selected size and calculate size factor
+    const sizeSelect = item.querySelector('.size-select');
+    let sizeFactor = 1.0;
+    if (sizeSelect) {
+        const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+        sizeFactor = parseFloat(selectedOption.getAttribute('data-factor') || 1.0);
+    }
+    
+    // Calculate prices
+    const baseSubtotal = basePrice * quantity * sizeFactor;
+    const barSubtotal = barPrice * quantity;
+    const subtotal = baseSubtotal + barSubtotal;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const total = discountedSubtotal + gstAmount;
+    
+    return {
+        baseSubtotal: round(baseSubtotal, 2),
+        barSubtotal: round(barSubtotal, 2),
+        subtotal: round(subtotal, 2),
+        discountAmount: round(discountAmount, 2),
+        discountedSubtotal: round(discountedSubtotal, 2),
+        gstAmount: round(gstAmount, 2),
+        total: round(total, 2),
+        sizeFactor: sizeFactor
+    };
+}
+
+// Function to calculate item prices based on type
+function calculateItemPrices(item) {
+    if (!item) return null;
+    
+    const type = item.getAttribute('data-type');
+    if (type === 'mpack') {
+        return calculateMPackPrices(item);
+    } else if (type === 'blanket') {
+        return calculateBlanketPrices(item);
+    }
+    return null;
 }
 
 function updateCartTotals() {
