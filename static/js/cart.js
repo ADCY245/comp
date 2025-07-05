@@ -319,6 +319,9 @@ function createProductTypeModal() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
     
+    // Get cart container
+    const cartContainer = document.querySelector('.cart-container');
+    
     // Initialize company info
     initCompanyInfo();
     
@@ -398,11 +401,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up mutation observer for cart changes
     if (cartContainer) {
+        // Show the cart initially
+        cartContainer.style.visibility = 'visible';
+        
         const observer = new MutationObserver(function() {
             checkForDuplicateMpacks();
-            // Show the cart after initial render
-            cartContainer.style.visibility = 'visible';
+            updateCartTotals(); // Ensure totals are updated on any cart changes
         });
+        
         observer.observe(cartContainer, { 
             childList: true, 
             subtree: true,
@@ -514,99 +520,156 @@ function calculateItemPrices(item) {
 }
 
 function updateCartTotals() {
-    let total = 0; // total after GST per item
-    let totalItems = 0;
-    const cartItems = document.querySelectorAll('.cart-item');
-    
-    // Show/hide empty cart message
-    const emptyCart = document.getElementById('emptyCart');
-    const cartItemsContainer = document.getElementById('cartItems');
-    
-    if (cartItems.length === 0) {
-        if (emptyCart) emptyCart.style.display = 'block';
-        if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+    try {
+        let subtotal = 0;
+        let totalDiscount = 0;
+        let totalGst = 0;
+        let total = 0;
+        let totalItems = 0;
         
-        // Clear the cart summary
+        const cartItems = document.querySelectorAll('.cart-item');
+        const emptyCart = document.getElementById('emptyCart');
+        const cartItemsContainer = document.getElementById('cartItems');
+        
+        // Show/hide empty cart message
+        if (cartItems.length === 0) {
+            if (emptyCart) emptyCart.style.display = 'block';
+            if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+            
+            // Clear the cart summary
+            const cartSummary = document.getElementById('cartSummary');
+            if (cartSummary) {
+                cartSummary.innerHTML = '';
+            }
+            return;
+        } else {
+            if (emptyCart) emptyCart.style.display = 'none';
+            if (cartItemsContainer) cartItemsContainer.style.display = 'block';
+        }
+        
+        // Calculate totals for all items
+        cartItems.forEach(item => {
+            try {
+                const type = item.getAttribute('data-type');
+                const quantity = parseInt(item.getAttribute('data-quantity') || '1');
+                
+                // Ensure quantity is at least 1
+                const validQuantity = isNaN(quantity) || quantity < 1 ? 1 : quantity;
+                
+                if (type === 'mpack') {
+                    // Get prices for mpack
+                    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || '0');
+                    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
+                    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '12');
+                    
+                    // Calculate prices
+                    const itemSubtotal = unitPrice * validQuantity;
+                    const discountAmount = itemSubtotal * (discountPercent / 100);
+                    const discountedSubtotal = itemSubtotal - discountAmount;
+                    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+                    const itemTotal = discountedSubtotal + gstAmount;
+                    
+                    // Update running totals
+                    subtotal += itemSubtotal;
+                    totalDiscount += discountAmount;
+                    totalGst += gstAmount;
+                    total += itemTotal;
+                    totalItems += validQuantity;
+                    
+                    // Update data attributes
+                    item.setAttribute('data-quantity', validQuantity.toString());
+                    
+                    // Update item display
+                    updateItemDisplay(item, {
+                        finalTotal: itemTotal,
+                        discountAmount: discountAmount,
+                        gstAmount: gstAmount,
+                        quantity: validQuantity,
+                        unitPrice: unitPrice,
+                        discountPercent: discountPercent,
+                        gstPercent: gstPercent
+                    });
+                    
+                } else if (type === 'blanket') {
+                    // Get prices for blanket
+                    const basePrice = parseFloat(item.getAttribute('data-base-price') || '0');
+                    const barPrice = parseFloat(item.getAttribute('data-bar-price') || '0');
+                    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
+                    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '18');
+                    
+                    // Calculate prices
+                    const pricePerUnit = basePrice + barPrice;
+                    const itemSubtotal = pricePerUnit * validQuantity;
+                    const discountAmount = itemSubtotal * (discountPercent / 100);
+                    const discountedSubtotal = itemSubtotal - discountAmount;
+                    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+                    const itemTotal = discountedSubtotal + gstAmount;
+                    
+                    // Update running totals
+                    subtotal += itemSubtotal;
+                    totalDiscount += discountAmount;
+                    totalGst += gstAmount;
+                    total += itemTotal;
+                    totalItems += validQuantity;
+                    
+                    // Update data attributes
+                    item.setAttribute('data-quantity', validQuantity.toString());
+                    
+                    // Update item display
+                    updateItemDisplay(item, {
+                        finalTotal: itemTotal,
+                        discountAmount: discountAmount,
+                        gstAmount: gstAmount,
+                        quantity: validQuantity,
+                        basePrice: basePrice,
+                        barPrice: barPrice,
+                        discountPercent: discountPercent,
+                        gstPercent: gstPercent
+                    });
+                }
+            } catch (error) {
+                console.error('Error calculating item totals:', error);
+            }
+        });
+        
+        // Update the cart summary
         const cartSummary = document.getElementById('cartSummary');
         if (cartSummary) {
-            cartSummary.innerHTML = '';
+            // Round all values to 2 decimal places
+            subtotal = Math.round(subtotal * 100) / 100;
+            totalDiscount = Math.round(totalDiscount * 100) / 100;
+            totalGst = Math.round(totalGst * 100) / 100;
+            total = Math.round(total * 100) / 100;
+            
+            cartSummary.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Order Summary</h5>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Subtotal (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
+                                <span>₹${subtotal.toFixed(2)}</span>
+                            </div>
+                            ${totalDiscount > 0 ? `
+                            <div class="d-flex justify-content-between mb-1 text-success">
+                                <span>Discount:</span>
+                                <span>-₹${totalDiscount.toFixed(2)}</span>
+                            </div>` : ''}
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>GST:</span>
+                                <span>₹${totalGst.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                            <span class="fw-bold">Total:</span>
+                            <span class="fw-bold fs-5">₹${total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>`;
         }
-        return;
-    } else {
-        if (emptyCart) emptyCart.style.display = 'none';
-        if (cartItemsContainer) cartItemsContainer.style.display = 'block';
+    } catch (error) {
+        console.error('Error updating cart totals:', error);
     }
-    
-    cartItems.forEach(item => {
-        const type = item.dataset.type;
-        const quantity = parseInt(item.dataset.quantity) || 1;
-        
-        if (type === 'mpack') {
-            // Get price from data attributes or calculations
-            const unitPrice = parseFloat(item.dataset.unitPrice) || 0;
-            const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
-            const gstPercent = parseFloat(item.dataset.gstPercent) || 12;
-            
-            // Calculate prices for mpack
-            const subtotal = unitPrice * quantity;
-            const discountAmount = subtotal * (discountPercent / 100);
-            const discountedSubtotal = subtotal - discountAmount;
-            const gstAmount = (discountedSubtotal * gstPercent) / 100;
-            const finalTotal = discountedSubtotal + gstAmount;
-            
-            // Update item's price display
-            updateItemDisplay(item, {
-                finalTotal,
-                discountAmount,
-                gstAmount,
-                quantity
-            });
-            
-            total += finalTotal;
-            totalItems += quantity;
-            
-        } else if (type === 'blanket') {
-            const basePrice = parseFloat(item.dataset.basePrice) || 0;
-            const barPrice = parseFloat(item.dataset.barPrice) || 0;
-            const pricePerUnit = basePrice + barPrice;
-            const discountPercent = parseFloat(item.dataset.discountPercent) || 0;
-            const gstPercent = parseFloat(item.dataset.gstPercent) || 18;
-            
-            // Calculate prices for blanket
-            const subtotalItem = pricePerUnit * quantity;
-            const discountAmount = subtotalItem * (discountPercent / 100);
-            const discountedSubtotal = subtotalItem - discountAmount;
-            const gstAmount = (discountedSubtotal * gstPercent) / 100;
-            const finalTotal = discountedSubtotal + gstAmount;
-            
-            // Update item's price display
-            updateItemDisplay(item, {
-                finalTotal,
-                discountAmount,
-                gstAmount,
-                quantity
-            });
-            
-            total += finalTotal;
-            totalItems += quantity;
-        }
-    });
-    
-    // Update the cart summary with total after GST
-    const cartSummary = document.getElementById('cartSummary');
-    if (cartSummary) {
-        const orderTotal = Math.round(total * 100) / 100;
-        cartSummary.innerHTML = `
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Order Summary</h5>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold">Total (${totalItems} ${totalItems === 1 ? 'item' : 'items'}):</span>
-                <span class="fw-bold fs-5">₹${orderTotal.toFixed(2)}</span>
-            </div>
-        </div>
-    </div>
-    `;
     }
 }
 
@@ -855,42 +918,87 @@ function checkForDuplicateMpacks() {
     }
 }
 
-// Function to update item display
+// Function to update item display with all price information
 function updateItemDisplay(item, data) {
     if (!item || !data) return;
     
-    // Update the data attributes
-    if (data.unit_price !== undefined) {
-        item.setAttribute('data-unit-price', data.unit_price);
-    }
+    // Helper function to format currency
+    const formatCurrency = (amount) => `₹${parseFloat(amount).toFixed(2)}`;
     
-    if (data.quantity !== undefined) {
-        item.setAttribute('data-quantity', data.quantity);
-        const quantityInput = item.querySelector('.quantity-input');
-        if (quantityInput) {
-            quantityInput.value = data.quantity;
+    // Update data attributes
+    const updateDataAttr = (key, value) => {
+        if (value !== undefined) {
+            item.setAttribute(`data-${key}`, value);
         }
+    };
+    
+    // Update all relevant data attributes
+    updateDataAttr('unit-price', data.unit_price);
+    updateDataAttr('bar-price', data.bar_price);
+    updateDataAttr('quantity', data.quantity);
+    updateDataAttr('discount-percent', data.discount_percent);
+    updateDataAttr('gst-percent', data.gst_percent);
+    
+    // Update quantity input
+    const quantityInput = item.querySelector('.quantity-input');
+    if (quantityInput && data.quantity !== undefined) {
+        quantityInput.value = data.quantity;
     }
     
-    // Update the price display
-    const priceElement = item.querySelector('.price-value');
-    if (priceElement && data.unit_price !== undefined) {
-        priceElement.textContent = `₹${parseFloat(data.unit_price).toFixed(2)}`;
+    // Update all price displays
+    const updatePriceDisplay = (selector, value, useFormat = true) => {
+        const element = item.querySelector(selector);
+        if (element && value !== undefined) {
+            element.textContent = useFormat ? formatCurrency(value) : value;
+        }
+    };
+    
+    // Calculate values if not provided
+    const unitPrice = data.unit_price || parseFloat(item.getAttribute('data-unit-price')) || 0;
+    const barPrice = data.bar_price || parseFloat(item.getAttribute('data-bar-price')) || 0;
+    const quantity = data.quantity || parseInt(item.getAttribute('data-quantity')) || 1;
+    const discountPercent = data.discount_percent || parseFloat(item.getAttribute('data-discount-percent')) || 0;
+    const gstPercent = data.gst_percent || parseFloat(item.getAttribute('data-gst-percent')) || 18;
+    
+    const subtotal = (unitPrice + barPrice) * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const taxableAmount = subtotal - discountAmount;
+    const gstAmount = taxableAmount * (gstPercent / 100);
+    const total = taxableAmount + gstAmount;
+    
+    // Update all price displays
+    updatePriceDisplay('.price-value', unitPrice);
+    
+    // Update bar price if it exists
+    const barPriceElement = item.querySelector('.price-row:nth-child(2) .price-value');
+    if (barPriceElement && barPrice > 0) {
+        barPriceElement.textContent = `+${formatCurrency(barPrice)}`;
     }
     
-    // Update subtotal if available
-    const subtotalElement = item.querySelector('.subtotal-value');
-    if (subtotalElement && data.subtotal !== undefined) {
-        subtotalElement.textContent = `₹${parseFloat(data.subtotal).toFixed(2)}`;
+    // Update subtotal
+    updatePriceDisplay('.subtotal-value', subtotal);
+    
+    // Update discount row if it exists
+    const discountRow = item.querySelector('.price-row:nth-child(5)');
+    if (discountRow && discountPercent > 0) {
+        discountRow.style.display = 'flex';
+        discountRow.querySelector('.price-label').textContent = `Discount (${discountPercent}%):`;
+        discountRow.querySelector('.price-value').textContent = `-${formatCurrency(discountAmount)}`;
+    } else if (discountRow) {
+        discountRow.style.display = 'none';
     }
     
-    // Update total if available
-    const totalElement = item.querySelector('.total-value');
-    if (totalElement && data.total !== undefined) {
-        totalElement.textContent = `₹${parseFloat(data.total).toFixed(2)}`;
+    // Update GST row
+    const gstRow = item.querySelector('.price-row:nth-child(6)');
+    if (gstRow) {
+        gstRow.querySelector('.price-label').textContent = `GST (${gstPercent}%):`;
+        gstRow.querySelector('.price-value').textContent = formatCurrency(gstAmount);
     }
     
-    // Recalculate prices based on item type
+    // Update total
+    updatePriceDisplay('.total-value', total);
+    
+    // If there are any calculations to be done based on item type
     if (item.dataset.type === 'mpack') {
         calculateMPackPrices(item);
     } else if (item.dataset.type === 'blanket') {

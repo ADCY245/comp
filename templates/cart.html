@@ -366,7 +366,9 @@
                 {% for item in cart.products %}
                 {% if item %}
                 <div class="col-12 col-lg-10 mx-auto">
-                    <div class="cart-item mb-4" data-type="{{ item.type }}" data-index="{{ loop.index0 }}"> 
+                    <div class="cart-item mb-4" 
+                         data-type="{{ item.type }}" 
+                         data-index="{{ loop.index0 }}" 
                          {% if item.type == 'blanket' %}
                              data-base-price="{{ item.base_price|default(0) }}" 
                              data-bar-price="{{ item.bar_price|default(0) }}" 
@@ -377,7 +379,7 @@
                              data-unit-price="{{ item.unit_price|default(0) }}" 
                              data-quantity="{{ item.quantity|default(1) }}" 
                              data-discount-percent="{{ item.discount_percent|default(0) }}" 
-                             data-gst-percent="{{ item.gst_percent|default(18) }}"
+                             data-gst-percent="{{ item.gst_percent|default(12) }}"
                          {% endif %}>
                     <div class="card h-100">
                         <div class="card-body">
@@ -420,12 +422,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="price-details mt-3 p-3 bg-light rounded w-100" 
-                                         data-type="{{ item.type }}" 
-                                         data-unit-price="{{ item.unit_price|default(0) }}" 
-                                         data-quantity="{{ item.quantity|default(1) }}" 
-                                         data-discount-percent="{{ item.discount_percent|default(0) }}" 
-                                         data-gst-percent="{{ item.gst_percent|default(18) }}">
+                                    <div class="price-details mt-3 p-3 bg-light rounded w-100">
                                         <div class="price-grid">
                                             <div class="price-row">
                                                 <span class="price-label">Unit Price:</span>
@@ -612,34 +609,94 @@
         });
 
         // Function to handle remove from cart
-        async function removeFromCart(event, productIndex) {
-            try {
-                const response = await fetch('/remove_from_cart', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        index: productIndex
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Show success message
-                    showToast('Success', 'Item removed from cart', 'success');
-                    // Reload the page to reflect the changes
-                    window.location.reload();
-                } else {
-                    // Show error message
-                    showToast('Error', data.error || 'Failed to remove item from cart', 'error');
-                }
-            } catch (error) {
-                console.error('Error removing item from cart:', error);
-                showToast('Error', 'An error occurred while removing the item', 'error');
+        function removeFromCart(event, productIndex) {
+            if (event) event.preventDefault();
+            
+            if (!confirm('Are you sure you want to remove this item from your cart?')) {
+                return false;
             }
+            
+            const csrfToken = getCSRFToken();
+            const removeButton = event.target.closest('.remove-item-btn');
+            const originalHtml = removeButton ? removeButton.innerHTML : '';
+            
+            // Show loading state
+            if (removeButton) {
+                removeButton.disabled = true;
+                removeButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            }
+            
+            fetch('/remove_from_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    index: productIndex
+                }),
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove the item from the DOM
+                    const itemToRemove = document.querySelector(`.cart-item[data-index="${productIndex}"]`);
+                    if (itemToRemove) {
+                        itemToRemove.closest('.col-12').style.opacity = '0';
+                        setTimeout(() => {
+                            itemToRemove.closest('.col-12').remove();
+                            
+                            // Check if cart is now empty
+                            const remainingItems = document.querySelectorAll('.cart-item');
+                            if (remainingItems.length === 0) {
+                                const cartItemsContainer = document.getElementById('cartItems');
+                                const emptyCart = document.getElementById('emptyCart');
+                                if (cartItemsContainer && emptyCart) {
+                                    cartItemsContainer.style.display = 'none';
+                                    emptyCart.style.display = 'block';
+                                    
+                                    // Hide cart totals
+                                    const cartTotals = document.querySelectorAll('.cart-summary, .cart-total, .checkout-section');
+                                    cartTotals.forEach(el => el.style.display = 'none');
+                                }
+                            }
+                            
+                            // Update cart count and totals
+                            updateCartCount();
+                            updateCartTotals();
+                            
+                            // Show success message
+                            showToast('Success', 'Item removed from cart', 'success');
+                            
+                            // Trigger an event that other components might be listening for
+                            document.dispatchEvent(new Event('cartUpdated'));
+                        }, 300);
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to remove item');
+                }
+            })
+            .catch(error => {
+                console.error('Error removing item from cart:', error);
+                showToast('Error', error.message || 'An error occurred while removing the item', 'error');
+            })
+            .finally(() => {
+                // Restore button state
+                if (removeButton) {
+                    removeButton.disabled = false;
+                    removeButton.innerHTML = originalHtml;
+                }
+            });
+            
+            return false;
         }
 
         // Function to show toast notifications
