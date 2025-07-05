@@ -529,8 +529,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize all cart handlers
     initializeCart();
     
-    // Set up quantity handlers
-    setupQuantityHandlers();
+    // Set up event delegation for quantity buttons
+    document.addEventListener('click', function(event) {
+        // Handle decrease quantity button click
+        if (event.target.closest('.decrease-quantity')) {
+            const input = event.target.closest('.quantity-wrapper').querySelector('.quantity-input');
+            if (input) {
+                let value = parseInt(input.value) || 1;
+                if (value > 1) {
+                    input.value = value - 1;
+                    handleQuantityChange({ target: input });
+                }
+            }
+        }
+        
+        // Handle increase quantity button click
+        if (event.target.closest('.increase-quantity')) {
+            const input = event.target.closest('.quantity-wrapper').querySelector('.quantity-input');
+            if (input) {
+                let value = parseInt(input.value) || 1;
+                input.value = value + 1;
+                handleQuantityChange({ target: input });
+            }
+        }
+    });
+    
+    // Set up input change handler for direct input
+    document.addEventListener('change', function(event) {
+        if (event.target.classList.contains('quantity-input')) {
+            handleQuantityChange(event);
+        }
+    });
     
     // Set up remove handlers
     setupRemoveHandlers();
@@ -884,7 +913,6 @@ function handleQuantityChange(event) {
 
     // Update the cart item quantity
     updateCartItemQuantity(index, newQuantity);
-    updateCartItemQuantity(parseInt(index), newQuantity);
 }
 
 
