@@ -347,9 +347,12 @@
                 if (this.id === 'homeLink' || route === '/' || route === '/index') {
                     // Check if company selection is currently active
                     const companySearchBox = document.getElementById('companySearchBox');
-                    if (companySearchBox && companySearchBox.style.display !== 'none') {
-                        // If company selection is active, do nothing (make it non-responsive)
-                        return;
+                    // If company search box is visible, prevent navigation
+                    if (companySearchBox && companySearchBox.style.display !== 'none' && companySearchBox.style.display !== '') {
+                        console.log('Company selection active, preventing navigation');
+                        e.stopPropagation();
+                        e.preventDefault();
+                        return false;
                     }
                     // Otherwise, navigate to home
                     window.location.href = '/';
