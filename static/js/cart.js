@@ -670,7 +670,6 @@ function updateCartTotals() {
     } catch (error) {
         console.error('Error updating cart totals:', error);
     }
-    }
 }
 
 // Function to handle quantity changes
