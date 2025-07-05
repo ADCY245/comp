@@ -315,58 +315,212 @@ function createProductTypeModal() {
     return modal;
 }
 
+// Function to handle continue shopping
+function handleContinueShopping() {
+    const productTypeModal = createProductTypeModal();
+    if (productTypeModal) {
+        productTypeModal.show();
+    } else {
+        // Fallback in case modal fails to initialize
+        const companyId = sessionStorage.getItem('companyId') || 
+                       new URLSearchParams(window.location.search).get('company_id');
+        window.location.href = companyId ? 
+            `/product-selection?company_id=${companyId}` : 
+            '/product-selection';
+    }
+}
+
+// Function to check for duplicate MPacks
+function checkForDuplicateMpacks() {
+    const mpacks = document.querySelectorAll('.cart-item[data-type="mpack"]');
+    const duplicateMpackSection = document.getElementById('duplicateMpackSection');
+    
+    if (mpacks.length > 1 && duplicateMpackSection) {
+        duplicateMpackSection.style.display = 'block';
+        // Make sure the remove button works
+        const removeBtn = document.getElementById('removeDuplicateMpackBtn');
+        if (removeBtn) {
+            removeBtn.onclick = removeSecondMpack;
+        }
+    } else if (duplicateMpackSection) {
+        duplicateMpackSection.style.display = 'none';
+    }
+}
+
+// Function to toggle quotation section
+function toggleQuotationSection() {
+    const cartItems = document.querySelectorAll('.cart-item');
+    const quotationSection = document.getElementById('quotationSection');
+    if (quotationSection) {
+        quotationSection.style.display = cartItems.length > 0 ? 'block' : 'none';
+    }
+}
+
+// Function to handle clearing the cart
+function handleClearCart(event) {
+    if (event) event.preventDefault();
+    
+    if (!confirm('Are you sure you want to clear your cart? This action cannot be undone.')) {
+        return false;
+    }
+    
+    const csrfToken = getCSRFToken();
+    const clearButton = event.target.closest('button');
+    const originalHtml = clearButton ? clearButton.innerHTML : '';
+    
+    // Show loading state
+    if (clearButton) {
+        clearButton.disabled = true;
+        clearButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Clearing...';
+    }
+    
+    fetch('/clear_cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Remove all cart items from the DOM
+            const cartItemsContainer = document.getElementById('cartItems');
+            if (cartItemsContainer) {
+                // Remove all child elements except the first one (which contains the empty cart message)
+                while (cartItemsContainer.firstChild) {
+                    cartItemsContainer.removeChild(cartItemsContainer.firstChild);
+                }
+                
+                // Show empty cart message
+                const emptyCart = document.getElementById('emptyCart');
+                if (emptyCart) {
+                    emptyCart.style.display = 'block';
+                }
+                
+                // Hide the cart items container
+                cartItemsContainer.style.display = 'none';
+            }
+            
+            // Update cart count
+            updateCartCount();
+            
+            // Reset cart totals
+            const cartTotals = document.querySelectorAll('.cart-summary, .cart-total, .checkout-section');
+            cartTotals.forEach(el => el.style.display = 'none');
+            
+            // Show success message
+            showToast('Success', 'Your cart has been cleared', 'success');
+            
+            // Trigger an event that other components might be listening for
+            document.dispatchEvent(new Event('cartCleared'));
+        } else {
+            throw new Error(data.error || 'Failed to clear cart');
+        }
+    })
+    .catch(error => {
+        console.error('Error clearing cart:', error);
+        showToast('Error', error.message || 'An error occurred while clearing the cart', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        if (clearButton) {
+            clearButton.disabled = false;
+            clearButton.innerHTML = originalHtml;
+        }
+    });
+    
+    return false;
+}
+
 // Initialize cart when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
     
-    // Get cart container
-    const cartContainer = document.querySelector('.cart-container');
-    
-    // Initialize company info
-    initCompanyInfo();
-    
-    // Create and initialize the product type modal
-    const productTypeModal = createProductTypeModal();
-    
-    // Set up continue shopping buttons
-    const continueShopping = () => {
-        if (productTypeModal) {
-            productTypeModal.show();
-        } else {
-            // Fallback in case modal fails to initialize
-            const companyId = sessionStorage.getItem('companyId') || 
-                           new URLSearchParams(window.location.search).get('company_id');
-            window.location.href = companyId ? 
-                `/product-selection?company_id=${companyId}` : 
-                '/product-selection';
+    try {
+        // Initialize company info
+        initCompanyInfo();
+        
+        // Set up continue shopping buttons
+        const continueShoppingBtns = [
+            'continueShoppingBtn',
+            'continueShoppingBtnBottom',
+            'emptyCartContinueShopping'
+        ];
+        
+        continueShoppingBtns.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                // Remove any existing event listeners to prevent duplicates
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleContinueShopping();
+                });
+            }
+        });
+        
+        // Set up clear cart button
+        const clearCartBtn = document.getElementById('clearCartBtn');
+        if (clearCartBtn) {
+            clearCartBtn.addEventListener('click', handleClearCart);
         }
-    };
-
-    // Top continue shopping button
-    const continueShoppingBtn = document.getElementById('continueShoppingBtn');
-    if (continueShoppingBtn) {
-        continueShoppingBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            continueShopping();
+        
+        // Initialize all cart functionality
+        console.log('Initializing cart functionality...');
+        initializeCart();
+        
+        // Set up quantity handlers
+        console.log('Setting up quantity handlers...');
+        setupQuantityHandlers();
+        
+        // Set up remove handlers
+        console.log('Setting up remove handlers...');
+        setupRemoveHandlers();
+        
+        // Initialize cart calculations
+        console.log('Initializing cart calculations...');
+        initializeCartCalculations();
+        
+        // Update cart totals
+        console.log('Updating cart totals...');
+        updateCartTotals();
+        
+        // Check for duplicate MPacks
+        console.log('Checking for duplicate MPacks...');
+        checkForDuplicateMpacks();
+        
+        // Toggle quotation section based on cart items
+        toggleQuotationSection();
+        
+        // Listen for cart updates from other tabs
+        window.addEventListener('storage', function(event) {
+            if (event.key === 'cart') {
+                try {
+                    window.location.reload();
+                } catch (e) {
+                    console.error('Error handling cart update:', e);
+                }
+            }
         });
-    }
-
-    // Bottom continue shopping button
-    const continueShoppingBtnBottom = document.getElementById('continueShoppingBtnBottom');
-    if (continueShoppingBtnBottom) {
-        continueShoppingBtnBottom.addEventListener('click', function(e) {
-            e.preventDefault();
-            continueShopping();
-        });
-    }
-
-    // Empty cart continue shopping button
-    const emptyCartContinueShopping = document.getElementById('emptyCartContinueShopping');
-    if (emptyCartContinueShopping) {
-        emptyCartContinueShopping.addEventListener('click', function(e) {
-            e.preventDefault();
-            continueShopping();
-        });
+        
+        // Add a small delay to ensure all elements are properly initialized
+        setTimeout(() => {
+            console.log('Cart initialization complete');
+            // Force a recalculation of totals after a short delay
+            updateCartTotals();
+        }, 100);
+    } catch (error) {
+        console.error('Error initializing cart:', error);
     }
     
     // Set up clear cart button
