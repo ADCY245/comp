@@ -1024,27 +1024,73 @@ function setupQuantityHandlers() {
 
 // Handle quantity button clicks (increase/decrease)
 function handleQuantityButtonClick(event) {
-    // Handle quantity increase
-    if (event.target.closest('.quantity-increase')) {
+    // Check if the click was on a quantity button using the correct class names
+    const increaseBtn = event.target.closest('.quantity-increase');
+    const decreaseBtn = event.target.closest('.quantity-decrease');
+    
+    if (!increaseBtn && !decreaseBtn) {
+        // Also check for data-action attributes as fallback
+        const actionBtn = event.target.closest('[data-action]');
+        if (!actionBtn) return;
+        
+        const action = actionBtn.getAttribute('data-action');
+        if (action !== 'increase' && action !== 'decrease') return;
+        
         event.preventDefault();
-        const button = event.target.closest('.quantity-increase');
-        const input = button.closest('.input-group').querySelector('.quantity-input');
-        if (input) {
-            input.value = parseInt(input.value || 1) + 1;
-            input.dispatchEvent(new Event('change'));
+        event.stopPropagation();
+        
+        const itemCard = actionBtn.closest('.cart-item');
+        if (!itemCard) return;
+        
+        const index = itemCard.getAttribute('data-index');
+        const type = itemCard.getAttribute('data-type');
+        const quantityInput = itemCard.querySelector('.quantity-input');
+        
+        if (!quantityInput) return;
+        
+        let quantity = parseInt(quantityInput.value) || 1;
+        
+        if (action === 'increase') {
+            quantity += 1;
+        } else if (action === 'decrease' && quantity > 1) {
+            quantity -= 1;
         }
+        
+        // Update the input value
+        quantityInput.value = quantity;
+        
+        // Update the cart
+        updateCartItemQuantity(index, quantity, type);
+        return;
     }
     
-    // Handle quantity decrease
-    if (event.target.closest('.quantity-decrease')) {
-        event.preventDefault();
-        const button = event.target.closest('.quantity-decrease');
-        const input = button.closest('.input-group').querySelector('.quantity-input');
-        if (input && parseInt(input.value) > 1) {
-            input.value = parseInt(input.value) - 1;
-            input.dispatchEvent(new Event('change'));
-        }
+    // Original button handling
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const button = increaseBtn || decreaseBtn;
+    const itemCard = button.closest('.cart-item');
+    if (!itemCard) return;
+    
+    const index = itemCard.getAttribute('data-index');
+    const type = itemCard.getAttribute('data-type');
+    const quantityInput = itemCard.querySelector('.quantity-input');
+    
+    if (!quantityInput) return;
+    
+    let quantity = parseInt(quantityInput.value) || 1;
+    
+    if (increaseBtn) {
+        quantity += 1;
+    } else if (decreaseBtn && quantity > 1) {
+        quantity -= 1;
     }
+    
+    // Update the input value
+    quantityInput.value = quantity;
+    
+    // Update the cart
+    updateCartItemQuantity(index, quantity, type);
 }
 
 // Handle manual input changes
