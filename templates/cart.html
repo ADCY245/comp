@@ -12,25 +12,33 @@
         padding: 0;
     }
     
-    .quantity-controls .btn-sm {
-        width: 32px;
-        height: 32px;
+    .quantity-controls .btn {
+        width: 38px;
+        height: 38px;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        font-weight: bold;
-        font-size: 1.1rem;
-        line-height: 1;
     }
     
     .quantity-controls .form-control {
-        width: 50px;
-        height: 32px;
+        width: 60px;
+        height: 38px;
         text-align: center;
-        padding: 0.25rem;
-        margin: 0 4px;
         font-weight: 500;
+        -moz-appearance: textfield;
+        -webkit-appearance: textfield;
+        appearance: textfield;
+    }
+    
+    .quantity-controls .form-control::-webkit-outer-spin-button,
+    .quantity-controls .form-control::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    .input-group .btn {
+        z-index: 1;
     }
     
     .update-quantity-btn {
@@ -423,15 +431,23 @@
                                                 <span class="price-value">+₹{{ "%.2f"|format(item.bar_price|default(0)) }}</span>
                                             </div>
                                             {% endif %}
-                                            <div class="price-row">
+                                            <div class="price-row align-items-center">
                                                 <span class="price-label">Quantity:</span>
-                                                <div class="quantity-controls d-flex align-items-center">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-decrease" data-index="{{ loop.index0 }}" type="button">-</button>
-                                                    <input type="number" class="form-control quantity-input text-center mx-2" value="{{ item.quantity }}" min="1" data-index="{{ loop.index0 }}" data-original-quantity="{{ item.quantity }}" style="width: 60px;">
-                                                    <button class="btn btn-sm btn-outline-secondary quantity-increase" data-index="{{ loop.index0 }}" type="button">+</button>
-                                                    <button class="btn btn-sm btn-outline-success ms-2 update-quantity-btn" data-index="{{ loop.index0 }}" title="Update Quantity" disabled>
-                                                        <i class="fas fa-check"></i>
-                                                    </button>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="input-group" style="width: 140px;">
+                                                        <button class="btn btn-outline-secondary quantity-decrease px-3" type="button" data-index="{{ loop.index0 }}">
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+                                                        <input type="number" 
+                                                               class="form-control text-center quantity-input" 
+                                                               value="{{ item.quantity }}" 
+                                                               min="1" 
+                                                               data-index="{{ loop.index0 }}" 
+                                                               style="border-left: 0; border-right: 0; padding: 0.375rem 0.5rem;">
+                                                        <button class="btn btn-outline-secondary quantity-increase px-3" type="button" data-index="{{ loop.index0 }}">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="price-row">

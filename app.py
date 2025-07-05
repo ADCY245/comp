@@ -2952,9 +2952,9 @@ def load_companies_data():
     try:
         # Try multiple possible paths
         possible_paths = [
-            os.path.join('static', 'data', 'company_emails.json'),  # Relative path
-            os.path.join(os.path.dirname(__file__), 'static', 'data', 'company_emails.json'),  # Absolute path from app
-            os.path.join(os.getcwd(), 'static', 'data', 'company_emails.json')  # Absolute path from working dir
+            os.path.join('static', 'data', 'company_emails.json'),  
+            os.path.join(os.path.dirname(__file__), 'static', 'data', 'company_emails.json'),  
+            os.path.join(os.getcwd(), 'static', 'data', 'company_emails.json')  
         ]
         
         json_path = None
@@ -2985,7 +2985,7 @@ def load_companies_data():
                         company_name = company.get('Company Name') or company.get('name') or ''
                         company_email = company.get('EmailID') or company.get('email') or ''
                         
-                        if company_name:  # Only add companies with names
+                        if company_name:  
                             companies.append({
                                 'id': str(i + 1),
                                 'name': company_name.strip(),
@@ -3030,12 +3030,6 @@ def get_companies():
             'message': 'Failed to load company data',
             'companies': []
         }), 500
-
-# Keep the old route for backward compatibility
-@app.route('/get_companies_list')
-@login_required
-def get_companies_list():
-    return get_companies()
 
 # Profile page
 @app.route('/profile')

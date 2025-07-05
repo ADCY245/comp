@@ -252,15 +252,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize company info
     initCompanyInfo();
     
-    // Handle change company button click
-    const changeCompanyBtn = document.getElementById('changeCompanyBtn');
-    if (changeCompanyBtn) {
-        changeCompanyBtn.addEventListener('click', function() {
-            // Redirect to product selection page which will handle company change
-            window.location.href = '/select-product';
-        });
-    }
-    
     // Set up continue shopping buttons
     const continueShoppingButtons = document.querySelectorAll('#continueShoppingBtn, #continueShoppingBtnBottom');
     continueShoppingButtons.forEach(button => {
@@ -279,25 +270,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Set up change company button
+    const changeCompanyBtn = document.getElementById('changeCompanyBtn');
+    if (changeCompanyBtn) {
+        changeCompanyBtn.addEventListener('click', function() {
+            window.location.href = '/select-product';
+        });
+    }
+    
     // Set up mutation observer for cart changes
     const cartContainer = document.querySelector('.cart-items');
     if (cartContainer) {
         const observer = new MutationObserver(function() {
             checkForDuplicateMpacks();
         });
-        
         observer.observe(cartContainer, { childList: true, subtree: true });
     }
     
     // Initialize the cart
     initializeCart();
     
-    // Initialize quantity handlers
-    setupQuantityHandlers();
-    
     console.log('Cart initialization complete');
 });
 
+// Initialize cart calculations
 function initializeCartCalculations() {
     const cartItems = document.querySelectorAll('.cart-item');
     cartItems.forEach(item => {
@@ -431,5 +427,138 @@ function handleQuantityChange(event) {
 }
 
 
+
+// Function to update cart item quantity
+function updateCartItemQuantity(index, newQuantity) {
+    const csrfToken = getCSRFToken();
+    
+    fetch('/update_cart_quantity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            index: parseInt(index),
+            quantity: parseInt(newQuantity)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateCartTotals();
+            updateCartCount();
+        } else {
+            showToast('Error', data.message || 'Failed to update quantity', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating quantity:', error);
+        showToast('Error', 'An error occurred while updating quantity', 'error');
+    });
+}
+
+// Function to set up quantity handlers
+function setupQuantityHandlers() {
+    // Handle quantity increase
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('.quantity-increase')) {
+            const button = event.target.closest('.quantity-increase');
+            const input = button.parentElement.querySelector('.quantity-input');
+            input.value = parseInt(input.value) + 1;
+            input.dispatchEvent(new Event('change'));
+        }
+        
+        // Handle quantity decrease
+        if (event.target.closest('.quantity-decrease')) {
+            const button = event.target.closest('.quantity-decrease');
+            const input = button.parentElement.querySelector('.quantity-input');
+            if (parseInt(input.value) > 1) {
+                input.value = parseInt(input.value) - 1;
+                input.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+    
+    // Handle direct input changes
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('change', handleQuantityChange);
+    });
+}
+
+// Function to set up remove handlers
+function setupRemoveHandlers() {
+    document.querySelectorAll('.remove-item-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const index = this.dataset.index;
+            removeFromCart(e, index);
+        });
+    });
+}
+
+// Function to remove item from cart
+function removeFromCart(event, index) {
+    if (!confirm('Are you sure you want to remove this item from your cart?')) {
+        return;
+    }
+
+    const csrfToken = getCSRFToken();
+    
+    fetch('/remove_from_cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            index: parseInt(index)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the item from the DOM
+            const itemElement = event.target.closest('.cart-item');
+            if (itemElement) {
+                itemElement.remove();
+            }
+            
+            // Update cart totals and count
+            updateCartTotals();
+            updateCartCount();
+            
+            showToast('Success', 'Item removed from cart', 'success');
+        } else {
+            showToast('Error', data.message || 'Failed to remove item from cart', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing from cart:', error);
+        showToast('Error', 'An error occurred while removing the item', 'error');
+    });
+}
+
+// Function to check for duplicate mpacks
+function checkForDuplicateMpacks() {
+    const mpacks = Array.from(document.querySelectorAll('.cart-item[data-type="mpack"]'));
+    if (mpacks.length > 1) {
+        showToast('Notice', 'You have multiple MPacks in your cart. Please note that only one MPack can be used per order.', 'info');
+    }
+}
+
+// Function to update item display
+function updateItemDisplay(item, data) {
+    const priceElement = item.querySelector('.item-total');
+    if (priceElement) {
+        priceElement.textContent = `₹${data.finalTotal.toFixed(2)}`;
+    }
+    
+    // Update any other relevant display elements
+    const quantityInput = item.querySelector('.quantity-input');
+    if (quantityInput) {
+        quantityInput.value = data.quantity;
+    }
+}
 
 // End of file
