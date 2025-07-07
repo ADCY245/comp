@@ -18,10 +18,19 @@
   <h2>MPACK Selection</h2>
 
   <div class="mb-3">
-    <label for="machineSelect" class="form-label">Select Machine/Model:</label>
-    <select id="machineSelect" class="form-select">
-      <option value="">-- Select Machine --</option>
-    </select>
+    <div class="d-flex align-items-end gap-2">
+      <div class="flex-grow-1">
+        <label for="machineSelect" class="form-label">Select Machine/Model:</label>
+        <select id="machineSelect" class="form-select">
+          <option value="">-- Select Machine --</option>
+        </select>
+      </div>
+      <div>
+        <a href="{{ url_for('add_machine') }}" class="btn btn-outline-primary">
+          <i class="fas fa-plus"></i> New Machine
+        </a>
+      </div>
+    </div>
   </div>
 
   <div id="mpackSection" style="display:none;">

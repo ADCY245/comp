@@ -12,9 +12,14 @@
                         {% endif %}
                     </span>
                 </div>
-                <button class="btn btn-sm btn-outline-primary" id="companyChangeBtn">
-                    <i class="fas fa-edit me-1"></i> Change
-                </button>
+                <div class="d-flex flex-column gap-1">
+                    <button class="btn btn-sm btn-outline-primary" id="companyChangeBtn">
+                        <i class="fas fa-edit me-1"></i> Change
+                    </button>
+                    <a href="{{ url_for('add_company') }}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-plus me-1"></i> New Company
+                    </a>
+                </div>
             </div>
             {% if session.company_email %}
             <div id="companyInfoContainer" class="d-flex align-items-center mt-1">
