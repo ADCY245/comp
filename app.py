@@ -1303,6 +1303,28 @@ def get_cart_count():
         print(f"Error in get_cart_count: {e}")
         return jsonify({'count': 0})
 
+def load_companies_data():
+    """Load companies data from MongoDB or fall back to JSON file."""
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            # Get companies from MongoDB
+            companies = list(mongo_db.companies.find({}, {'_id': 1, 'name': 1, 'email': 1}))
+            # Convert ObjectId to string for JSON serialization
+            for company in companies:
+                company['id'] = str(company.pop('_id'))
+            return companies
+        else:
+            # Fall back to JSON file
+            companies_file = os.path.join('static', 'data', 'companies.json')
+            if os.path.exists(companies_file):
+                with open(companies_file, 'r', encoding='utf-8') as f:
+                    companies_data = json.load(f)
+                    return companies_data.get('companies', [])
+            return []
+    except Exception as e:
+        app.logger.error(f"Error loading companies: {str(e)}")
+        return []
+
 @app.route('/')
 @app.route('/index')
 @login_required
@@ -1316,7 +1338,8 @@ def index():
             
         return render_template('index.html', companies=companies)
         
-    except Exception:
+    except Exception as e:
+        app.logger.error(f"Error in index route: {str(e)}")
         # Return empty companies list on error
         return render_template('index.html', companies=[])
 

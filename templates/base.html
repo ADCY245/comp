@@ -234,7 +234,7 @@
                             <span class="d-none d-md-inline">{{ current_user.username }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('api_profile_update') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
                             <li><hr class="dropdown-divider m-0"></li>
                             <li>
                                 <form id="logout-form" class="d-inline">
