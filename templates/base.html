@@ -237,8 +237,8 @@
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
                             <li><hr class="dropdown-divider m-0"></li>
                             <li>
-                                <form id="logout-form" class="d-inline" action="{{ url_for('api_logout') }}" method="POST">
-                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to sign out?');">
+                                <form id="logout-form" class="d-inline">
+                                    <button type="button" class="dropdown-item text-danger" id="logoutButton">
                                         <i class="bi bi-box-arrow-right me-2"></i>Sign Out
                                     </button>
                                 </form>
@@ -769,6 +769,36 @@
         
         // Update cart count
         updateCartCount();
+        
+        // Handle logout with confirmation
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', async function(e) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to sign out?')) {
+                    try {
+                        const response = await fetch('{{ url_for("api_logout") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (response.ok) {
+                            window.location.href = '{{ url_for("login") }}';
+                        } else {
+                            console.error('Logout failed');
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        console.error('Error during logout:', error);
+                        window.location.href = '{{ url_for("login") }}';
+                    }
+                }
+            });
+        }
         
         // Auto-dismiss flash messages after 2 seconds
         const messages = document.querySelectorAll('#flash-messages .message');
