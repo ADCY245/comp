@@ -144,10 +144,35 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" id="homeLink" href="{{ url_for('index') }}" data-route="{{ url_for('index') }}">
+                        <a class="nav-link {% if request.endpoint == 'index' %}disabled{% endif %}" 
+                           href="#" 
+                           id="homeLink"
+                           {% if request.endpoint == 'index' %}aria-disabled="true"{% endif %}>
                             <i class="bi bi-house-door"></i> Home
                         </a>
                     </li>
+                    {% if request.endpoint != 'index' %}
+                    <script>
+                        // Home button click handler - only set up if not on index page
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const homeBtn = document.getElementById('homeLink');
+                            if (homeBtn) {
+                                homeBtn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    const companyName = sessionStorage.getItem('companyName') || '';
+                                    const companyEmail = sessionStorage.getItem('companyEmail') || '';
+                                    if (companyName) {
+                                        localStorage.setItem('selectedCompany', JSON.stringify({
+                                            name: companyName,
+                                            email: companyEmail
+                                        }));
+                                    }
+                                    window.location.href = '{{ url_for("product_selection") }}';
+                                });
+                            }
+                        });
+                    </script>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" id="mpacksLink" href="{{ url_for('mpacks') }}" data-route="{{ url_for('mpacks') }}">
                             <i class="bi bi-box-seam"></i> M-Packs

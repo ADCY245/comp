@@ -354,13 +354,6 @@
             </div>
         </div>
 
-        <!-- Button to remove second MPack entry -->
-        <div class="mb-3" id="removeDuplicateMpackBtn" style="display: none;">
-            <button type="button" class="btn btn-warning" onclick="removeSecondMpack()">
-                <i class="fas fa-trash me-1"></i> Remove Duplicate MPack
-            </button>
-        </div>
-
         <div id="cartItems" class="cart-items row row-cols-1 g-4 mx-auto" style="width: 100%; max-width: 1400px;" {% if not cart.products or cart.products|length == 0 %}style="display: none;"{% endif %}>
             {% if cart.products %}
                 {% for item in cart.products %}
