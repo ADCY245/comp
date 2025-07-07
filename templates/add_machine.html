@@ -89,10 +89,11 @@ document.addEventListener('DOMContentLoaded', function() {
             messageText.textContent = result.message;
             responseDiv.classList.remove('d-none');
 
-            // Reset form on success
+            const params = new URLSearchParams(window.location.search);
+            const nextUrl = params.get('next') || '{{ url_for("mpacks") }}';
             if (result.success) {
-                form.reset();
-                form.classList.remove('was-validated');
+                window.location.href = nextUrl;
+                return;
             }
         } catch (error) {
             console.error('Error:', error);

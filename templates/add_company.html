@@ -92,10 +92,10 @@ document.addEventListener('DOMContentLoaded', function() {
             messageText.textContent = result.message;
             responseDiv.classList.remove('d-none');
 
-            // Reset form on success
+            // On success redirect to home
             if (result.success) {
-                form.reset();
-                form.classList.remove('was-validated');
+                window.location.href = '{{ url_for("index") }}';
+                return;
             }
         } catch (error) {
             console.error('Error:', error);

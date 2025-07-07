@@ -26,7 +26,7 @@
         </select>
       </div>
       <div>
-        <a href="{{ url_for('add_machine') }}" class="btn btn-outline-primary">
+        <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-primary">
           <i class="fas fa-plus"></i> New Machine
         </a>
       </div>

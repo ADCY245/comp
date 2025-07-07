@@ -1727,17 +1727,22 @@ def api_add_company():
             result = mongo_db.companies.insert_one({'name': name, 'email': email})
             company_id = str(result.inserted_id)
         else:
-            # Fallback to JSON file storage
-            companies_file = os.path.join('data', 'companies.json')
+            # Fallback to JSON file storage (static/data/company_emails.json)
+            companies_file = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
             os.makedirs(os.path.dirname(companies_file), exist_ok=True)
             companies = []
             if os.path.exists(companies_file):
-                with open(companies_file, 'r') as f:
+                with open(companies_file, 'r', encoding='utf-8') as f:
                     companies = json.load(f) or []
+
+            # Determine next ID (1-based index)
             company_id = str(len(companies) + 1)
-            companies.append({'id': company_id, 'name': name, 'email': email})
-            with open(companies_file, 'w') as f:
-                json.dump(companies, f, indent=2)
+            companies.append({
+                'Company Name': name,
+                'EmailID': email
+            })
+            with open(companies_file, 'w', encoding='utf-8') as f:
+                json.dump(companies, f, ensure_ascii=False, indent=2)
 
         return jsonify({'success': True, 'message': 'Company added successfully.', 'id': company_id})
     except Exception as e:
@@ -1764,16 +1769,20 @@ def api_add_machine():
             result = mongo_db.machines.insert_one({'name': name, 'description': description})
             machine_id = str(result.inserted_id)
         else:
-            machines_file = os.path.join('data', 'machines.json')
+            machines_file = os.path.join(app.root_path, 'static', 'data', 'machine.json')
             os.makedirs(os.path.dirname(machines_file), exist_ok=True)
-            machines = []
+            machines_data = {"machines": []}
             if os.path.exists(machines_file):
-                with open(machines_file, 'r') as f:
-                    machines = json.load(f) or []
-            machine_id = str(len(machines) + 1)
-            machines.append({'id': machine_id, 'name': name, 'description': description})
-            with open(machines_file, 'w') as f:
-                json.dump(machines, f, indent=2)
+                with open(machines_file, 'r', encoding='utf-8') as f:
+                    machines_data = json.load(f) or {"machines": []}
+            machines = machines_data.get('machines', [])
+
+            # Determine next ID
+            next_id = (machines[-1]['id'] if machines else 0) + 1
+            machines.append({'id': next_id, 'name': name})
+            machines_data['machines'] = machines
+            with open(machines_file, 'w', encoding='utf-8') as f:
+                json.dump(machines_data, f, ensure_ascii=False, indent=2)
 
         return jsonify({'success': True, 'message': 'Machine added successfully.', 'id': machine_id})
     except Exception as e:
