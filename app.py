@@ -20,6 +20,7 @@ import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
+import socket  # Added for socket.timeout and socket.gaierror
 
 # Import MongoDB users module
 try:
@@ -106,24 +107,62 @@ ADMIN_ALERT_EMAIL = os.getenv('ADMIN_ALERT_EMAIL', 'athulnair3096@gmail.com')
 def send_alert_email(subject: str, body: str):
     """Send an alert email to admin; relies on environment variables SMTP_HOST, SMTP_PORT, EMAIL_USER, EMAIL_PASS"""
     try:
+        # Get email configuration
         smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
         smtp_port = int(os.getenv('SMTP_PORT', 587))
         email_user = os.getenv('EMAIL_USER')
         email_pass = os.getenv('EMAIL_PASS')
-        if not (email_user and email_pass):
-            app.logger.warning('Email credentials not configured; skipping alert email.')
-            return
+        
+        # Log configuration for debugging
+        app.logger.info(f"Email config - Host: {smtp_host}, Port: {smtp_port}, User: {email_user}")
+        
+        # Validate configuration
+        if not all([email_user, email_pass]):
+            error_msg = 'Email credentials not fully configured; missing EMAIL_USER or EMAIL_PASS'
+            app.logger.error(error_msg)
+            return False
+            
+        if not ADMIN_ALERT_EMAIL:
+            error_msg = 'No admin email address configured'
+            app.logger.error(error_msg)
+            return False
+        
+        # Create message
         msg = MIMEMultipart()
         msg['From'] = email_user
         msg['To'] = ADMIN_ALERT_EMAIL
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
+        
+        # Send email
+        app.logger.info(f"Attempting to send email to {ADMIN_ALERT_EMAIL}")
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            server.ehlo()
+            if smtp_port == 587:
+                server.starttls()
+                server.ehlo()
+            
+            app.logger.info("Logging into SMTP server...")
             server.login(email_user, email_pass)
+            
+            app.logger.info("Sending email message...")
             server.send_message(msg)
+            server.quit()
+            
+        app.logger.info("Email sent successfully")
+        return True
+        
+    except smtplib.SMTPException as e:
+        error_msg = f"SMTP error sending email: {str(e)}"
+    except socket.timeout:
+        error_msg = "SMTP connection timed out"
+    except socket.gaierror:
+        error_msg = "SMTP server address could not be resolved"
     except Exception as e:
-        app.logger.error(f"Failed to send alert email: {e}")
+        error_msg = f"Unexpected error sending email: {str(e)}"
+    
+    app.logger.error(error_msg, exc_info=True)
+    return False
 
 # Initialize MongoDB if available
 MONGO_AVAILABLE = False
@@ -1760,37 +1799,100 @@ def api_add_company():
         return jsonify({'success': False, 'message': 'Name and email are required.'}), 400
 
     try:
-        # Prefer MongoDB if available
+        # Check for existing company with same name or email
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            result = mongo_db.companies.insert_one({'name': name, 'email': email})
+            # Check for existing company in MongoDB
+            existing_company = mongo_db.companies.find_one({
+                '$or': [
+                    {'name': name},
+                    {'email': email}
+                ]
+            })
+            
+            if existing_company:
+                return jsonify({
+                    'success': False, 
+                    'message': 'A company with this name or email already exists.'
+                }), 400
+                
+            # Insert new company
+            result = mongo_db.companies.insert_one({
+                'name': name, 
+                'email': email,
+                'created_at': datetime.utcnow(),
+                'created_by': str(current_user.id)
+            })
             company_id = str(result.inserted_id)
         else:
-            return jsonify({'success': False, 'message': 'Database not available.'}), 500
+            # JSON fallback implementation
             companies_file = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
             os.makedirs(os.path.dirname(companies_file), exist_ok=True)
+            
+            # Load existing companies
             companies = []
             if os.path.exists(companies_file):
                 with open(companies_file, 'r', encoding='utf-8') as f:
                     companies = json.load(f) or []
-
-            # Determine next ID (1-based index)
+            
+            # Check for duplicates
+            if any(company.get('Company Name') == name or company.get('EmailID') == email 
+                  for company in companies):
+                return jsonify({
+                    'success': False, 
+                    'message': 'A company with this name or email already exists.'
+                }), 400
+            
+            # Add new company
             company_id = str(len(companies) + 1)
             companies.append({
+                'id': company_id,
                 'Company Name': name,
-                'EmailID': email
+                'EmailID': email,
+                'created_at': datetime.utcnow().isoformat(),
+                'created_by': str(current_user.id)
             })
+            
+            # Save back to file
             with open(companies_file, 'w', encoding='utf-8') as f:
                 json.dump(companies, f, ensure_ascii=False, indent=2)
 
-        # Send alert email
+        # Log environment variables for debugging (sensitive values masked)
+        app.logger.info("Environment variables for email configuration:")
+        app.logger.info(f"SMTP_HOST: {os.getenv('SMTP_HOST', 'Not set')}")
+        app.logger.info(f"SMTP_PORT: {os.getenv('SMTP_PORT', 'Not set')}")
+        app.logger.info(f"EMAIL_USER: {'Set' if os.getenv('EMAIL_USER') else 'Not set'}")
+        app.logger.info(f"EMAIL_PASS: {'Set' if os.getenv('EMAIL_PASS') else 'Not set'}")
+        app.logger.info(f"ADMIN_ALERT_EMAIL: {ADMIN_ALERT_EMAIL}")
+
+        # Send alert email and handle the result
         user_identity = getattr(current_user, 'email', getattr(current_user, 'username', 'Unknown User'))
-        send_alert_email(
+        email_sent = send_alert_email(
             subject='Database Update: New Company Added',
-            body=f"{user_identity} added a new company ({name}, {email}) on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            body=f"{user_identity} added a new company ({name}, {email}) on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC"
         )
-        return jsonify({'success': True, 'message': 'Company added successfully.', 'id': company_id})
+        
+        if email_sent:
+            app.logger.info("Notification email sent successfully")
+            return jsonify({
+                'success': True, 
+                'message': 'Company added successfully. Notification email sent.', 
+                'id': company_id
+            })
+        else:
+            app.logger.warning("Company added but failed to send notification email")
+            return jsonify({
+                'success': True, 
+                'message': 'Company added successfully. Failed to send notification email.',
+                'id': company_id,
+                'warning': 'Email notification failed'
+            })
+        
     except Exception as e:
-        app.logger.error(f"Error adding company: {e}")
+        app.logger.error(f"Error adding company: {e}", exc_info=True)
+        return jsonify({
+            'success': False, 
+            'message': 'An error occurred while adding the company. Please try again.'
+        }), 500
         return jsonify({'success': False, 'message': 'Failed to add company.'}), 500
 
 
