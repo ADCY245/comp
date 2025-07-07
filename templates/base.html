@@ -745,6 +745,17 @@
         // Initialize all Bootstrap dropdowns
         initializeDropdowns();
         
+        // Explicit handler for user profile dropdown (ensures it works on all pages)
+        const userDropdownToggle = document.getElementById('userDropdown');
+        if (userDropdownToggle) {
+            userDropdownToggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const dd = bootstrap.Dropdown.getOrCreateInstance(userDropdownToggle);
+                dd.toggle();
+            });
+        }
+        
         // Re-initialize dropdowns after AJAX content loads
         document.addEventListener('ajaxComplete', function() {
             initializeDropdowns();
