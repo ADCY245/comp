@@ -170,10 +170,10 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'index' %}disabled{% endif %}" 
-                           href="#" 
-                           id="homeLink"
-                           {% if request.endpoint == 'index' %}aria-disabled="true"{% endif %}>
+                        <a class="nav-link {% if request.endpoint in ['index', 'add_company', 'add_machine'] %}disabled{% endif %}"
+   href="#"
+   id="homeLink"
+   {% if request.endpoint in ['index', 'add_company', 'add_machine'] %}aria-disabled="true"{% endif %}>
                             <i class="bi bi-house-door"></i> Home
                         </a>
                     </li>
