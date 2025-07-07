@@ -1185,14 +1185,6 @@ function removeFromCart(event, index) {
     });
 }
 
-// Function to check for duplicate mpacks
-function checkForDuplicateMpacks() {
-    const mpacks = Array.from(document.querySelectorAll('.cart-item[data-type="mpack"]'));
-    if (mpacks.length > 1) {
-        showToast('Notice', 'You have multiple MPacks in your cart. Please note that only one MPack can be used per order.', 'info');
-    }
-}
-
 // Function to update item display with all price information
 function updateItemDisplay(item, data) {
     if (!item || !data) return;
