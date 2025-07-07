@@ -11,6 +11,11 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     <style>
+        /* Ensure dropdown menus appear above other content */
+        .dropdown-menu {
+            z-index: 2000 !important;
+        }
+        
         /* Company Info Styles */
         .company-info-card {
             margin-bottom: 1.5rem;
@@ -201,14 +206,15 @@
                 </ul>
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                    <li class="nav-item dropdown" id="userDropdownContainer">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="true" data-bs-offset="10,20">
                             <i class="bi bi-person-circle me-1"></i>
                             <span class="d-none d-md-inline">{{ current_user.username }}</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li><hr class="dropdown-divider m-0"></li>
                             <li>
                                 <form id="logout-form" class="d-inline" action="{{ url_for('api_logout') }}" method="POST">
                                     <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to sign out?');">
@@ -693,6 +699,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateCompanyDisplay();
         updateCompanyTooltip();
+        
+        // Initialize all Bootstrap dropdowns
+        const dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        const dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl, {
+                boundary: 'clippingParents',
+                reference: 'toggle',
+                display: 'dynamic',
+                popperConfig: function (defaultBsPopperConfig) {
+                    return {
+                        ...defaultBsPopperConfig,
+                        strategy: 'fixed'
+                    };
+                }
+            });
+        });
         
         // Set up navigation
         setupNavigation();
