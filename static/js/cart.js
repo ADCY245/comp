@@ -124,6 +124,13 @@ function updateCartCount() {
 
 // Function to show toast notifications
 function showToast(title, message, type = 'info') {
+    // Remove any existing toasts first
+    const existingToasts = document.querySelectorAll('.toast');
+    existingToasts.forEach(toast => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    });
+
     // Create toast container if it doesn't exist
     let toastContainer = document.getElementById('toast-container');
     if (!toastContainer) {
@@ -136,8 +143,10 @@ function showToast(title, message, type = 'info') {
         document.body.appendChild(toastContainer);
     }
 
-    // Create toast
+    // Create toast with unique ID based on content to prevent duplicates
+    const toastId = `toast-${Date.now()}`;
     const toast = document.createElement('div');
+    toast.id = toastId;
     toast.className = `toast show align-items-center text-white bg-${type} border-0`;
     toast.role = 'alert';
     toast.setAttribute('aria-live', 'assertive');
@@ -158,8 +167,15 @@ function showToast(title, message, type = 'info') {
 
     // Auto remove after 5 seconds
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
+        const existingToast = document.getElementById(toastId);
+        if (existingToast) {
+            existingToast.classList.remove('show');
+            setTimeout(() => {
+                if (existingToast && existingToast.parentNode) {
+                    existingToast.parentNode.removeChild(existingToast);
+                }
+            }, 300);
+        }
     }, 5000);
 }
 
@@ -245,8 +261,8 @@ function initializeCart() {
     }
 }
 
-// Function to create product type selection modal
-function createProductTypeModal() {
+// Make createProductTypeModal available globally
+window.createProductTypeModal = function() {
     const modalHTML = `
         <div class="modal fade" id="productTypeModal" tabindex="-1" aria-labelledby="productTypeModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">

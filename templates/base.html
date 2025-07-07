@@ -159,16 +159,25 @@
                             if (homeBtn) {
                                 homeBtn.addEventListener('click', function(e) {
                                     e.preventDefault();
-                                    const companyName = sessionStorage.getItem('companyName') || '';
-                                    const companyEmail = sessionStorage.getItem('companyEmail') || '';
-                                    if (companyName) {
-                                        localStorage.setItem('selectedCompany', JSON.stringify({
-                                            name: companyName,
-                                            email: companyEmail
-                                        }));
+                                    // Show the product type modal
+                                    try {
+                                        const modal = createProductTypeModal();
+                                        if (modal) {
+                                            // Create a new Bootstrap modal instance and show it
+                                            const bsModal = new bootstrap.Modal(document.getElementById('productTypeModal'));
+                                            bsModal.show();
+                                        } else {
+                                            throw new Error('Modal not created');
+                                        }
+                                    } catch (error) {
+                                        console.error('Error showing product type modal:', error);
+                                        // Fallback in case modal fails to initialize
+                                        const companyId = sessionStorage.getItem('companyId') || 
+                                                       new URLSearchParams(window.location.search).get('company_id');
+                                        window.location.href = companyId ? 
+                                            `/product-selection?company_id=${companyId}` : 
+                                            '/product-selection';
                                     }
-                                    // Navigate to home page
-                                    window.location.href = '/';
                                 });
                             }
                         });
@@ -719,6 +728,9 @@
         }
     });
 </script>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 {% block extra_js %}{% endblock %}
 </body>
