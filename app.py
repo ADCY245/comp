@@ -50,6 +50,45 @@ print("===========================\n")
 # CORS Configuration
 from flask_cors import CORS
 app = Flask(__name__)
+# -------------------- Company selection enforcement --------------------
+
+def company_required(view_func):
+    """Decorator to ensure a company is selected before accessing product/cart pages.
+    If a `company_id` query parameter is present, it will set the selected company
+    in the session on-the-fly so that the request can proceed seamlessly.
+    """
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        # If session already has a selected company, allow
+        selected_company = session.get('selected_company') or {}
+        if selected_company.get('id'):
+            return view_func(*args, **kwargs)
+
+        # Attempt to use company_id from query parameters (first-time access)
+        company_id = request.args.get('company_id')
+        if company_id:
+            # Lazy import to avoid circular dependencies
+            from app import get_company_name_by_id, get_company_email_by_id  # type: ignore
+            company_name = get_company_name_by_id(company_id) or ''
+            company_email = get_company_email_by_id(company_id) or ''
+            if company_name or company_email:
+                session['selected_company'] = {
+                    'id': company_id,
+                    'name': company_name,
+                    'email': company_email
+                }
+                session['company_name'] = company_name
+                session['company_email'] = company_email
+                session.modified = True
+                return view_func(*args, **kwargs)
+
+        # Otherwise, redirect to company selection
+        flash('Please select a company first.', 'warning')
+        return redirect(url_for('company_selection'))
+    return wrapped_view
+
+# -----------------------------------------------------------------------
+
 CORS(app, resources={
     r"/api/*": {
         "origins": ["*"],
@@ -782,6 +821,7 @@ def load_user(user_id):
 
 @app.route('/cart')
 @login_required
+@company_required
 def cart():
     """Render the cart page with current cart contents and calculated totals.
     
@@ -917,10 +957,11 @@ def clear_cart():
         return jsonify({'success': True, 'message': 'Cart cleared successfully'})
     except Exception as e:
         print(f"Error clearing cart: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'error': 'Failed to clear cart', 'message': str(e)})
 
 @app.route('/add_to_cart', methods=['POST'])
 @login_required
+@company_required
 def add_to_cart():
     try:
         # Get request data and validate
@@ -1415,75 +1456,7 @@ def select_company():
     # For GET requests, just render the template
     return render_template('company_selection.html')
 
-# ------------------------------------------------------------------
-# AJAX endpoint used by company_selector.js to update selected company
-# ------------------------------------------------------------------
-@app.route('/api/user/update-company', methods=['POST'])
-@login_required
-def api_update_company():
-    """Update selected company via AJAX POST with JSON {company_id: str}.
-    
-    Accepts either:
-    - company_id: The actual company ID from the database
-    - Or company_id as a 1-based index into the companies list
-    """
-    data = request.get_json(silent=True) or {}
-    company_id = data.get('company_id')
-    company_name = data.get('company_name')
-    company_email = data.get('company_email')
-    
-    if not company_id:
-        return jsonify({'error': 'company_id is required'}), 400
-
-    try:
-        # If we have all company details, just use them directly
-        if company_name and company_email:
-            selected = {
-                'id': str(company_id),
-                'name': company_name,
-                'email': company_email
-            }
-        else:
-            # Otherwise, look up the company in the companies list
-            file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
-            with open(file_path, 'r') as f:
-                companies = json.load(f)
-            
-            # First try to find by exact ID match
-            company = next((c for c in companies if str(c.get('id', '')).lower() == str(company_id).lower()), None)
-            
-            # If not found, try to use as 1-based index
-            if not company and company_id.isdigit():
-                idx = int(company_id) - 1
-                if 0 <= idx < len(companies):
-                    company = companies[idx]
-            
-            if not company:
-                return jsonify({'error': 'Company not found'}), 404
-            
-            selected = {
-                'id': str(company.get('id', company_id)),
-                'name': company.get('Company Name', company_name or f'Company {company_id}'),
-                'email': company.get('EmailID', company_email or '')
-            }
-
-        # Update user's company in session
-        session['selected_company'] = selected
-        session['company_name'] = selected['name']
-        session['company_email'] = selected['email']
-        session.modified = True  # Ensure the session is saved
-
-        app.logger.info(f"Company updated via API: {selected}")
-        
-        # Return the updated company details
-        return jsonify({
-            'success': True,
-            'company': selected
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Error in api_update_company: {str(e)}")
-        return jsonify({'error': 'Failed to update company', 'details': str(e)}), 500
+# -------------------- Cart helper wrappers --------------------
 
 def get_companies():
     try:
@@ -1766,7 +1739,7 @@ def api_add_company():
     try:
         # Prefer MongoDB if available
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            result = mongo_db.company_email.insert_one({'name': name, 'email': email})
+            result = mongo_db.companies.insert_one({'name': name, 'email': email})
             company_id = str(result.inserted_id)
         else:
             return jsonify({'success': False, 'message': 'Database not available.'}), 500
@@ -1790,7 +1763,7 @@ def api_add_company():
         user_identity = getattr(current_user, 'email', getattr(current_user, 'username', 'Unknown User'))
         send_alert_email(
             subject='Database Update: New Company Added',
-            body=f"{user_identity} added a new company ({name}, {email}) on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            body=f"{user_identity} added a new company ({name}, {email}) on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
         return jsonify({'success': True, 'message': 'Company added successfully.', 'id': company_id})
     except Exception as e:
@@ -2063,6 +2036,7 @@ def api_reset_password():
 
 @app.route('/quotation_preview')
 @login_required
+@company_required
 def quotation_preview():
     # Get current date and time
     current_datetime = datetime.now()
@@ -2248,6 +2222,7 @@ def quotation_preview():
 # ---------------------------------------------------------------------------
 @app.route('/send_quotation', methods=['POST'])
 @login_required
+@company_required
 def send_quotation():
     """Generate quotation from current cart and email it to customer and CGI."""
     try:
@@ -2911,20 +2886,21 @@ def api_login():
             try:
                 with open(USERS_FILE, 'r', encoding='utf-8') as f:
                     all_users = json.load(f)
-                    for user_id, user_data in all_users.items():
-                        if user_data.get('email') == identifier or user_data.get('username') == identifier:
-                            # Create User object from file data
-                            user = User(
-                                id=user_id,
-                                email=user_data['email'],
-                                username=user_data['username'],
-                                password_hash=user_data['password_hash'],
-                                is_verified=user_data.get('is_verified', False),
-                                otp_verified=user_data.get('otp_verified', False)
-                            )
-                            # Add to our users dictionary
-                            users[user_id] = user
-                            break
+                
+                for user_id, user_data in all_users.items():
+                    if user_data.get('email') == identifier or user_data.get('username') == identifier:
+                        # Create User object from file data
+                        user = User(
+                            id=user_id,
+                            email=user_data['email'],
+                            username=user_data['username'],
+                            password_hash=user_data['password_hash'],
+                            is_verified=user_data.get('is_verified', False),
+                            otp_verified=user_data.get('otp_verified', False)
+                        )
+                        # Add to our users dictionary
+                        users[user_id] = user
+                        break
             except Exception as e:
                 print(f"Error loading user from file: {str(e)}")
                 return jsonify({'error': 'Internal server error'}), 500
@@ -2993,280 +2969,6 @@ def api_user():
         print(f"User error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/user/update-company', methods=['POST'], endpoint='update_company_v1')
-@app.route('/api/update_company', methods=['POST'], endpoint='update_company_v2')
-@login_required
-def update_company():
-    try:
-        data = request.get_json()
-        company_id = data.get('company_id')
-        company_name = data.get('company_name')
-        company_email = data.get('company_email')
-
-        if not company_id:
-            return jsonify({'error': 'Company ID is required'}), 400
-
-        # If company_name or company_email is not provided, try to get them from company_emails.json
-        if not company_name:
-            company_name = get_company_name_by_id(company_id) or 'Not specified'
-        if not company_email:
-            company_email = get_company_email_by_id(company_id) or ''
-
-        # Update user's company information in the database
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Update in MongoDB
-            user_id = current_user.get_id()
-            update_data = {
-                'company_id': company_id,
-                'company_name': company_name,
-                'company_email': company_email
-            }
-            
-            # Update the user document
-            result = users_col.update_one(
-                {'_id': user_id},
-                {'$set': update_data}
-            )
-            
-            if result.matched_count == 0:
-                return jsonify({'error': 'User not found'}), 404
-                
-            # Update the current_user object
-            if hasattr(current_user, 'company_id'):
-                current_user.company_id = company_id
-            if hasattr(current_user, 'company_name'):
-                current_user.company_name = company_name
-            if hasattr(current_user, 'company_email'):
-                current_user.company_email = company_email
-                
-            # Update session data
-            session['company_id'] = company_id
-            session['company_name'] = company_name
-            session['company_email'] = company_email
-            session['selected_company'] = {
-                'id': company_id,
-                'name': company_name,
-                'email': company_email
-            }
-            session.modified = True
-        else:
-            # Fallback to SQLAlchemy if needed
-            current_user.company_id = company_id
-            if company_name:
-                current_user.company_name = company_name
-            if company_email:
-                current_user.company_email = company_email
-            db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': 'Company updated successfully',
-            'company': {
-                'id': company_id,
-                'name': company_name,
-                'email': company_email
-            }
-        })
-
-    except Exception as e:
-        print(f"Error updating company: {str(e)}")
-        return jsonify({'error': 'Failed to update company'}), 500
-
-@app.route('/chemicals/<filename>')
-def chemicals(filename):
-    try:
-        return send_from_directory('static/chemicals', filename)
-    except Exception as e:
-        app.logger.error(f"Error serving chemicals file: {str(e)}")
-        return jsonify({'error': f'Failed to serve file: {str(e)}'}), 500
-
-@app.route('/blankets_data/<filename>')
-def blankets_data(filename):
-    return send_from_directory('static/data/blankets', filename)
-
-@app.route('/chemicals_data/<filename>')
-def chemicals_data(filename):
-    return send_from_directory('static/data/chemicals', filename)
-
-@app.route('/static/data/blankets/<filename>')
-def static_blankets(filename):
-    return send_from_directory('static/data/blankets', filename)
-
-# Serve static products blanket JSON files
-@app.route('/static/products/blankets/<filename>')
-def static_products_blankets(filename):
-    return send_from_directory('static/products/blankets', filename)
-
-@app.route('/static/data/chemicals/<filename>')
-def static_chemicals(filename):
-    return send_from_directory('static/data/chemicals', filename)
-
-# Serve blanket categories and other JSON files
-@app.route('/static/products/blankets/<path:filename>')
-def serve_blanket_files(filename):
-    try:
-        # Only allow JSON files for security
-        if not filename.endswith('.json'):
-            return jsonify({'error': 'Invalid file type'}), 400
-            
-        # Construct the full file path
-        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', filename)
-        
-        # Check if file exists
-        if not os.path.isfile(file_path):
-            return jsonify({'error': 'File not found'}), 404
-            
-        # Send the file
-        return send_from_directory('static/products/blankets', filename)
-    except Exception as e:
-        app.logger.error(f"Error serving file {filename}: {str(e)}")
-        return jsonify({'error': 'Failed to serve file'}), 500
-
-# Serve blanket categories
-@app.route('/blanket_categories')
-def get_blanket_categories():
-    try:
-        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'blanket_categories.json')
-        with open(file_path, 'r', encoding='utf-8') as f:
-            categories = json.load(f)
-        return jsonify(categories)
-    except Exception as e:
-        app.logger.error(f"Error loading blanket categories: {str(e)}")
-        return jsonify({'error': 'Failed to load blanket categories'}), 500
-
-# Serve blanket data
-@app.route('/blanket_data')
-def get_blanket_data():
-    try:
-        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'blankets.json')
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return jsonify(data)
-    except Exception as e:
-        app.logger.error(f"Error loading blanket data: {str(e)}")
-        return jsonify({'error': 'Failed to load blanket data'}), 500
-
-# Serve bar data
-@app.route('/bar_data')
-def get_bar_data():
-    try:
-        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'bar.json')
-        with open(file_path, 'r', encoding='utf-8') as f:
-            bar_data = json.load(f)
-        return jsonify(bar_data)
-    except Exception as e:
-        app.logger.error(f"Error loading bar data: {str(e)}")
-        return jsonify({'error': 'Failed to load bar data'}), 500
-
-# Serve companies data
-def load_companies_data():
-    """Helper function to load companies data from MongoDB"""
-    if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
-        return []
-    try:
-        companies_cursor = mongo_db.company_email.find()
-        companies = []
-        for doc in companies_cursor:
-            companies.append({
-                'id': str(doc.get('_id')),
-                'name': doc.get('name', ''),
-                'email': doc.get('email', '')
-            })
-        return companies
-    except Exception as e:
-        app.logger.error(f"Error loading companies: {str(e)}")
-        return []
-    """Helper function to load companies data from JSON file"""
-    try:
-        # Try multiple possible paths
-        possible_paths = [
-            os.path.join('static', 'data', 'company_emails.json'),  
-            os.path.join(os.path.dirname(__file__), 'static', 'data', 'company_emails.json'),  
-            os.path.join(os.getcwd(), 'static', 'data', 'company_emails.json')  
-        ]
-        
-        json_path = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                json_path = os.path.abspath(path)
-                break
-                
-        if not json_path:
-            return []
-            
-        # Read and parse the JSON file
-        with open(json_path, 'r', encoding='utf-8') as f:
-            json_content = f.read().strip()
-            
-            if not json_content:
-                return []
-                
-            # Try to parse the JSON
-            try:
-                json_data = json.loads(json_content)
-                
-                # Check if the data is a list of companies
-                if isinstance(json_data, list):
-                    companies = []
-                    for i, company in enumerate(json_data):
-                        # Handle different possible field names
-                        company_name = company.get('Company Name') or company.get('name') or ''
-                        company_email = company.get('EmailID') or company.get('email') or ''
-                        
-                        if company_name:  
-                            companies.append({
-                                'id': str(i + 1),
-                                'name': company_name.strip(),
-                                'email': company_email.strip()
-                            })
-                    
-                    return companies
-                return []
-                    
-            except json.JSONDecodeError:
-                return []
-                
-    except Exception:
-        return []
-
-@app.route('/get_companies')
-def get_companies():
-    """
-    API endpoint to get companies as JSON
-    Returns:
-        JSON response with companies list or error message
-    """
-    try:
-        companies = load_companies_data()
-        
-        if not companies:
-            return jsonify({
-                'status': 'error',
-                'message': 'No companies found or error loading company data',
-                'companies': []
-            }), 200
-            
-        return jsonify({
-            'status': 'success',
-            'count': len(companies),
-            'companies': companies
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': 'Failed to load company data',
-            'companies': []
-        }), 500
-
-# Profile page
-@app.route('/profile')
-@login_required
-def profile():
-    user = current_user
-    return render_template('profile/profile.html', user=user)
-
-# API endpoints for profile
 @app.route('/api/profile/account')
 @login_required
 def api_profile_account():
@@ -3314,6 +3016,7 @@ def api_profile_update():
 # Product pages
 @app.route('/mpacks')
 @login_required
+@company_required
 def mpacks():
     # Get company_id from query parameters
     company_id = request.args.get('company_id')
@@ -3339,30 +3042,22 @@ def mpacks():
     else:
         # Fall back to session data if no company_id in URL
         selected_company = session.get('selected_company', {})
-        company_name = session.get('company_name')
-        company_email = session.get('company_email')
+        company_name = selected_company.get('name') or session.get('company_name')
+        company_email = selected_company.get('email') or session.get('company_email')
+        company_id = selected_company.get('id') or session.get('company_id')
         
-        # If we have a selected company but no session vars, update them
-        if selected_company and not company_name:
-            company_name = selected_company.get('name', '')
-            company_email = selected_company.get('email', '')
-            session['company_name'] = company_name
-            session['company_email'] = company_email
-        # If we have no selected company but have user data, use that
-        elif not selected_company and current_user.is_authenticated:
-            if hasattr(current_user, 'company_name'):
-                company_name = current_user.company_name
-                company_email = getattr(current_user, 'company_email', '')
-                session['company_name'] = company_name
-                session['company_email'] = company_email
+        # Fall back to user's company info if not found
+        if not company_name and hasattr(current_user, 'company_name'):
+            company_name = current_user.company_name
+        if not company_email and hasattr(current_user, 'company_email'):
+            company_email = current_user.company_email
+        if not company_id and hasattr(current_user, 'company_id'):
+            company_id = current_user.company_id
     
-    # Ensure we have values in session
-    if not company_name:
-        company_name = ''
-        session['company_name'] = company_name
-    if not company_email:
-        company_email = ''
-        session['company_email'] = company_email
+    # Update session with final values
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    session['company_id'] = company_id
             
     # Log the company info being sent to template
     app.logger.info(f"Rendering mpacks with company: {company_name}, email: {company_email}")
@@ -3379,6 +3074,7 @@ def mpacks():
 
 @app.route('/blankets')
 @login_required
+@company_required
 def blankets():
     # Get company_id from query parameters
     company_id = request.args.get('company_id')
