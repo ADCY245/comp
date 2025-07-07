@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Product Calculator{% endblock %}</title>
@@ -11,6 +16,20 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     <style>
+        /* Make navbar stick to the top */
+        body {
+            padding-top: 70px; /* Add padding to body to prevent content from being hidden behind the fixed navbar */
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030; /* Ensure navbar stays above other content */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Add subtle shadow */
+        }
+        
         /* Ensure dropdown menus appear above other content */
         .dropdown-menu {
             z-index: 2000 !important;
