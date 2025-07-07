@@ -15,8 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS Bundle with Popper will be loaded at the end of body -->
     <style>
         /* Make navbar stick to the top */
         body {
@@ -783,6 +782,33 @@
             updateCompanyTooltip();
         }
     });
+</script>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Re-initialize dropdowns after all scripts are loaded
+window.addEventListener('load', function() {
+    // Initialize dropdowns
+    const dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+    dropdownElementList.forEach(function (dropdownToggleEl) {
+        // Only initialize if not already initialized
+        if (!dropdownToggleEl._dropdown) {
+            dropdownToggleEl._dropdown = new bootstrap.Dropdown(dropdownToggleEl, {
+                boundary: 'clippingParents',
+                reference: 'toggle',
+                display: 'dynamic',
+                popperConfig: function (defaultBsPopperConfig) {
+                    return {
+                        ...defaultBsPopperConfig,
+                        strategy: 'fixed'
+                    };
+                }
+            });
+        }
+    });
+});
 </script>
 
 {% block extra_js %}{% endblock %}
