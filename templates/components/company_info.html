@@ -231,7 +231,7 @@ async function loadCompaniesData() {
     try {
         showToast('Loading companies...', 'info');
         
-        const response = await fetch('/get_companies', {
+        const response = await fetch('/api/companies', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
