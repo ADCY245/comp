@@ -245,16 +245,6 @@ function initializeCart() {
     }
 }
 
-// Function to handle removing second MPack if present
-function removeSecondMpack() {
-    const mpacks = document.querySelectorAll('.cart-item[data-type="mpack"]');
-    if (mpacks.length > 1) {
-        mpacks[1].remove();
-        updateCartTotals();
-        showToast('Notice', 'Only one MPack can be in the cart. The additional MPack has been removed.', 'info');
-    }
-}
-
 // Function to create product type selection modal
 function createProductTypeModal() {
     const modalHTML = `
@@ -327,23 +317,6 @@ function handleContinueShopping() {
         window.location.href = companyId ? 
             `/product-selection?company_id=${companyId}` : 
             '/product-selection';
-    }
-}
-
-// Function to check for duplicate MPacks
-function checkForDuplicateMpacks() {
-    const mpacks = document.querySelectorAll('.cart-item[data-type="mpack"]');
-    const duplicateMpackSection = document.getElementById('duplicateMpackSection');
-    
-    if (mpacks.length > 1 && duplicateMpackSection) {
-        duplicateMpackSection.style.display = 'block';
-        // Make sure the remove button works
-        const removeBtn = document.getElementById('removeDuplicateMpackBtn');
-        if (removeBtn) {
-            removeBtn.onclick = removeSecondMpack;
-        }
-    } else if (duplicateMpackSection) {
-        duplicateMpackSection.style.display = 'none';
     }
 }
 
