@@ -4,10 +4,10 @@ let currentDiscount = 0;
 let currentBarRate = 0;
 
 window.onload = () => {
-  fetch("/static/data/machine.json")
+  fetch("/api/machines")
     .then(res => res.json())
     .then(data => {
-      machineData = data.machines;
+      machineData = Array.isArray(data) ? data : data.machines;
       const select = document.getElementById("machineSelect");
       select.innerHTML = '<option value="">--Select Machine--</option>';
       machineData.forEach(machine => {

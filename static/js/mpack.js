@@ -95,11 +95,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function loadMachines() {
-  fetch("/static/data/machine.json")
+  fetch("/api/machines")
     .then(res => res.json())
     .then(data => {
       const machineSelect = document.getElementById("machineSelect");
-      data.machines.forEach(machine => {
+      const machinesArr = Array.isArray(data) ? data : data.machines;
+      machinesArr.forEach(machine => {
         const opt = document.createElement("option");
         opt.value = machine.id;
         opt.textContent = machine.name;

@@ -15,9 +15,11 @@ import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
+from flask_login import current_user
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
+from bson.objectid import ObjectId
 
 # Import MongoDB users module
 try:
@@ -57,6 +59,33 @@ CORS(app, resources={
 })
 
 # -------------------- MongoDB configuration --------------------
+# Admin email for alerts
+ADMIN_ALERT_EMAIL = os.getenv('ADMIN_ALERT_EMAIL', 'athulnair3096@gmail.com')
+
+# Helper to send alert email
+
+def send_alert_email(subject: str, body: str):
+    """Send an alert email to admin; relies on environment variables SMTP_HOST, SMTP_PORT, EMAIL_USER, EMAIL_PASS"""
+    try:
+        smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', 587))
+        email_user = os.getenv('EMAIL_USER')
+        email_pass = os.getenv('EMAIL_PASS')
+        if not (email_user and email_pass):
+            app.logger.warning('Email credentials not configured; skipping alert email.')
+            return
+        msg = MIMEMultipart()
+        msg['From'] = email_user
+        msg['To'] = ADMIN_ALERT_EMAIL
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+    except Exception as e:
+        app.logger.error(f"Failed to send alert email: {e}")
+
 # Initialize MongoDB if available
 MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
@@ -78,6 +107,7 @@ if MONGO_URI and USE_MONGO:
         
         # Updated MongoDB connection with SSL options
         from pymongo import MongoClient
+
         from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
         
         # Initialize connection variables
@@ -1518,6 +1548,18 @@ def api_get_companies():
         app.logger.error(f"Error getting companies: {str(e)}")
         return jsonify({'error': 'Failed to load companies'}), 500
 
+# Machines list endpoint
+@app.route('/api/machines', methods=['GET'])
+@login_required
+def api_get_machines():
+    if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
+        return jsonify([])
+    # Fetch machines from the master document that stores the array
+    master_doc = mongo_db.machine.find_one({'machines': {'$exists': True}})
+    if not master_doc:
+        return jsonify([])
+    return jsonify(master_doc.get('machines', []))
+
 # Company Search Endpoint
 @app.route('/api/companies/search', methods=['GET'])
 @login_required
@@ -1724,10 +1766,10 @@ def api_add_company():
     try:
         # Prefer MongoDB if available
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            result = mongo_db.companies.insert_one({'name': name, 'email': email})
+            result = mongo_db.company_email.insert_one({'name': name, 'email': email})
             company_id = str(result.inserted_id)
         else:
-            # Fallback to JSON file storage (static/data/company_emails.json)
+            return jsonify({'success': False, 'message': 'Database not available.'}), 500
             companies_file = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
             os.makedirs(os.path.dirname(companies_file), exist_ok=True)
             companies = []
@@ -1744,6 +1786,12 @@ def api_add_company():
             with open(companies_file, 'w', encoding='utf-8') as f:
                 json.dump(companies, f, ensure_ascii=False, indent=2)
 
+        # Send alert email
+        user_identity = getattr(current_user, 'email', getattr(current_user, 'username', 'Unknown User'))
+        send_alert_email(
+            subject='Database Update: New Company Added',
+            body=f"{user_identity} added a new company ({name}, {email}) on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         return jsonify({'success': True, 'message': 'Company added successfully.', 'id': company_id})
     except Exception as e:
         app.logger.error(f"Error adding company: {e}")
@@ -1766,10 +1814,33 @@ def api_add_machine():
 
     try:
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            result = mongo_db.machines.insert_one({'name': name, 'description': description})
-            machine_id = str(result.inserted_id)
+            # Store machines in a single document that contains an array field `machines`
+            # Find the document that holds the array (first document that has `machines`)
+            master_doc = mongo_db.machine.find_one({'machines': {'$exists': True}})
+            if master_doc is None:
+                # Create master doc if it doesn't exist
+                next_id = 1
+                mongo_db.machine.insert_one({'machines': [{'id': next_id, 'name': name}]})
+            else:
+                machines_arr = master_doc.get('machines', [])
+                # Determine next incremental id based on existing array length / max id
+                if machines_arr:
+                    next_id = max([m.get('id', 0) for m in machines_arr]) + 1
+                else:
+                    next_id = 1
+                mongo_db.machine.update_one(
+                    {'_id': master_doc['_id']},
+                    {'$push': {'machines': {'id': next_id, 'name': name}}}
+                )
+            machine_id = str(next_id)
+            # Send alert email
+            user_identity = getattr(current_user, 'email', getattr(current_user, 'username', 'Unknown User'))
+            send_alert_email(
+                subject='Database Update: New Machine Added',
+                body=f"{user_identity} added a new machine ({name}) on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
         else:
-            machines_file = os.path.join(app.root_path, 'static', 'data', 'machine.json')
+            return jsonify({'success': False, 'message': 'Database not available.'}), 500
             os.makedirs(os.path.dirname(machines_file), exist_ok=True)
             machines_data = {"machines": []}
             if os.path.exists(machines_file):
@@ -3089,6 +3160,22 @@ def get_bar_data():
 
 # Serve companies data
 def load_companies_data():
+    """Helper function to load companies data from MongoDB"""
+    if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
+        return []
+    try:
+        companies_cursor = mongo_db.company_email.find()
+        companies = []
+        for doc in companies_cursor:
+            companies.append({
+                'id': str(doc.get('_id')),
+                'name': doc.get('name', ''),
+                'email': doc.get('email', '')
+            })
+        return companies
+    except Exception as e:
+        app.logger.error(f"Error loading companies: {str(e)}")
+        return []
     """Helper function to load companies data from JSON file"""
     try:
         # Try multiple possible paths

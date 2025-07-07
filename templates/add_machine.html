@@ -19,10 +19,7 @@
                                 Please provide a machine name.
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="machineDescription" class="form-label">Description (Optional)</label>
-                            <textarea class="form-control" id="machineDescription" rows="3"></textarea>
-                        </div>
+                        
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary" id="submitBtn">
                                 <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
@@ -63,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const machineData = {
             name: document.getElementById('machineName').value.trim(),
-            description: document.getElementById('machineDescription').value.trim()
+            
         };
 
         // Show loading state
