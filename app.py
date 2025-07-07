@@ -1687,6 +1687,99 @@ def update_company():
         app.logger.error(f"Error updating company: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
+# ---------------------------------------------------------------------------
+# Company and Machine Creation Routes
+# ---------------------------------------------------------------------------
+
+@app.route('/add_company')
+@login_required
+def add_company():
+    """Render form page to add a new company"""
+    return render_template('add_company.html')
+
+
+@app.route('/add_machine')
+@login_required
+def add_machine():
+    """Render form page to add a new machine"""
+    return render_template('add_machine.html')
+
+
+# ----------------------------- API Endpoints ------------------------------
+
+@app.route('/api/add_company', methods=['POST'])
+@login_required
+def api_add_company():
+    """Handle AJAX request to create a new company"""
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Invalid request, JSON expected.'}), 400
+
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip().lower()
+
+    if not name or not email:
+        return jsonify({'success': False, 'message': 'Name and email are required.'}), 400
+
+    try:
+        # Prefer MongoDB if available
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            result = mongo_db.companies.insert_one({'name': name, 'email': email})
+            company_id = str(result.inserted_id)
+        else:
+            # Fallback to JSON file storage
+            companies_file = os.path.join('data', 'companies.json')
+            os.makedirs(os.path.dirname(companies_file), exist_ok=True)
+            companies = []
+            if os.path.exists(companies_file):
+                with open(companies_file, 'r') as f:
+                    companies = json.load(f) or []
+            company_id = str(len(companies) + 1)
+            companies.append({'id': company_id, 'name': name, 'email': email})
+            with open(companies_file, 'w') as f:
+                json.dump(companies, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Company added successfully.', 'id': company_id})
+    except Exception as e:
+        app.logger.error(f"Error adding company: {e}")
+        return jsonify({'success': False, 'message': 'Failed to add company.'}), 500
+
+
+@app.route('/api/add_machine', methods=['POST'])
+@login_required
+def api_add_machine():
+    """Handle AJAX request to create a new machine"""
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Invalid request, JSON expected.'}), 400
+
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Machine name is required.'}), 400
+
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            result = mongo_db.machines.insert_one({'name': name, 'description': description})
+            machine_id = str(result.inserted_id)
+        else:
+            machines_file = os.path.join('data', 'machines.json')
+            os.makedirs(os.path.dirname(machines_file), exist_ok=True)
+            machines = []
+            if os.path.exists(machines_file):
+                with open(machines_file, 'r') as f:
+                    machines = json.load(f) or []
+            machine_id = str(len(machines) + 1)
+            machines.append({'id': machine_id, 'name': name, 'description': description})
+            with open(machines_file, 'w') as f:
+                json.dump(machines, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Machine added successfully.', 'id': machine_id})
+    except Exception as e:
+        app.logger.error(f"Error adding machine: {e}")
+        return jsonify({'success': False, 'message': 'Failed to add machine.'}), 500
+
 # Step 1: Request Password Reset - Send OTP to email
 # Step 2: Verify OTP
 @app.route('/api/auth/request-password-reset', methods=['POST'])
