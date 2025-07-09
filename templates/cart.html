@@ -348,9 +348,18 @@
                 <button id="clearCartBtn" class="btn btn-outline-danger me-2">
                     <i class="fas fa-trash me-2"></i>Clear Cart
                 </button>
-                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary" id="sendQuotationBtn">
+                <button type="button" class="btn btn-primary {% if selected_company or session.get('company_name') %}d-none{% endif %}" id="selectCompanyBtn">
+                    <i class="fas fa-building me-2"></i>Select Company First
+                </button>
+                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary {% if not selected_company and not session.get('company_name') %}d-none{% endif %}" id="sendQuotationBtn">
                     <i class="fas fa-paper-plane me-2"></i>Send Quotation
                 </a>
+                
+                <script>
+                    document.getElementById('selectCompanyBtn').addEventListener('click', function() {
+                        window.location.href = '{{ url_for("company_selection") }}';
+                    });
+                </script>
             </div>
         </div>
 

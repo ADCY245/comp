@@ -1,3 +1,6 @@
+// Get cart container reference at the top
+const cartContainer = document.getElementById('cart-container');
+
 // Helper function to round numbers to 2 decimal places
 function round(value, decimals) {
     return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
@@ -642,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const changeCompanyBtn = document.getElementById('changeCompanyBtn');
     if (changeCompanyBtn) {
         changeCompanyBtn.addEventListener('click', function() {
-            window.location.href = '/select-product';
+            window.location.href = '/select-company';
         });
     }
     
