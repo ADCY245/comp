@@ -2930,6 +2930,9 @@ def send_quotation():
         <p>This quotation is not a contract or invoice. It is our best estimate.</p>
         """
 
+        # Generate a unique quote ID
+        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+
         # Build email content with improved table layout and consistent white background
         email_content = f"""
         <div style='font-family: Arial, sans-serif; color: #333; max-width: 1200px; margin: 0 auto; line-height: 1.6; background-color: #e0caa9; padding: 20px;'>
@@ -3029,9 +3032,7 @@ def send_quotation():
         # Total is same as subtotal since amounts already include any taxes
         total = subtotal
         
-        # Generate a unique quote ID if not already defined
-        if 'quote_id' not in locals():
-            quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+
         
         # Create message
         msg = MIMEMultipart()
@@ -3043,9 +3044,7 @@ def send_quotation():
         part = MIMEText(email_content, 'html')
         msg.attach(part)
 
-        # Generate a unique quote ID
-        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
-        
+
         # Initialize email_sent flag
         email_sent = False
         
