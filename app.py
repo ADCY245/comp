@@ -1772,6 +1772,7 @@ def update_user_company():
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 @app.route('/update_company', methods=['POST'])
+@app.route('/api/user/update-company', methods=['POST'])
 @login_required
 def update_company():
     """Update the current user's company from product pages"""
