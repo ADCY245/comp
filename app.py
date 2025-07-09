@@ -2098,6 +2098,10 @@ def api_add_machine():
                 mongo_db.machine.insert_one({'machines': [{'id': next_id, 'name': name}]})
             else:
                 machines_arr = master_doc.get('machines', [])
+                # Check if machine with this name already exists
+                if any(m.get('name') == name for m in machines_arr):
+                    return jsonify({'success': False, 'message': 'A machine with this name already exists.'}), 400
+                    
                 # Determine next incremental id based on existing array length / max id
                 if machines_arr:
                     next_id = max([m.get('id', 0) for m in machines_arr]) + 1
@@ -2105,7 +2109,8 @@ def api_add_machine():
                     next_id = 1
                 mongo_db.machine.update_one(
                     {'_id': master_doc['_id']},
-                    {'$push': {'machines': {'id': next_id, 'name': name}}}
+                    {'$push': {'machines': {'id': next_id, 'name': name, 'description': description, 'created_at': datetime.utcnow()}}},
+                    upsert=True
                 )
             machine_id = str(next_id)
             # Send alert email
@@ -2115,17 +2120,27 @@ def api_add_machine():
                 body=f"{user_identity} added a new machine ({name}) on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
             )
         else:
-            return jsonify({'success': False, 'message': 'Database not available.'}), 500
+            # File-based storage fallback
             os.makedirs(os.path.dirname(machines_file), exist_ok=True)
             machines_data = {"machines": []}
             if os.path.exists(machines_file):
                 with open(machines_file, 'r', encoding='utf-8') as f:
                     machines_data = json.load(f) or {"machines": []}
+            
             machines = machines_data.get('machines', [])
+            
+            # Check if machine with this name already exists
+            if any(m.get('name') == name for m in machines):
+                return jsonify({'success': False, 'message': 'A machine with this name already exists.'}), 400
 
             # Determine next ID
-            next_id = (machines[-1]['id'] if machines else 0) + 1
-            machines.append({'id': next_id, 'name': name})
+            next_id = (machines[-1]['id'] + 1) if machines else 1
+            machines.append({
+                'id': next_id, 
+                'name': name, 
+                'description': description,
+                'created_at': datetime.utcnow().isoformat()
+            })
             machines_data['machines'] = machines
             with open(machines_file, 'w', encoding='utf-8') as f:
                 json.dump(machines_data, f, ensure_ascii=False, indent=2)
