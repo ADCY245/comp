@@ -982,32 +982,22 @@ function updateCartItemQuantity(index, newQuantity) {
         if (data.success) {
             // Update the UI with the new data from the server
             if (data.updated_item) {
-                // Update the cart item's data attributes
-                const item = data.updated_item;
-                cartItem.setAttribute('data-unit-price', item.unit_price || 0);
-                cartItem.setAttribute('data-quantity', item.quantity || 1);
-                
-                // Update the quantity input
+                // Utilize helper to refresh all price-related fields including discount & GST
+                const itemData = { ...data.updated_item };
+
+                // Ensure type present for updateItemDisplay (fallback to DOM dataset)
+                if (!itemData.type) {
+                    itemData.type = cartItem.getAttribute('data-type');
+                }
+
+                // Sync the quantity input first
                 const quantityInput = cartItem.querySelector('.quantity-input');
                 if (quantityInput) {
-                    quantityInput.value = item.quantity || 1;
+                    quantityInput.value = itemData.quantity || 1;
                 }
-                
-                // Update price displays
-                const priceElements = cartItem.querySelectorAll('.price-value, .subtotal-value, .total-value');
-                priceElements.forEach(el => {
-                    if (el.classList.contains('subtotal-value')) {
-                        const subtotal = (item.unit_price || 0) * (item.quantity || 1);
-                        el.textContent = `₹${subtotal.toFixed(2)}`;
-                    } else if (el.classList.contains('total-value')) {
-                        const subtotal = (item.unit_price || 0) * (item.quantity || 1);
-                        const discount = subtotal * ((item.discount_percent || 0) / 100);
-                        const total = (subtotal - discount) * (1 + (item.gst_percent || 18) / 100);
-                        el.textContent = `₹${total.toFixed(2)}`;
-                    } else {
-                        el.textContent = `₹${parseFloat(item.unit_price || 0).toFixed(2)}`;
-                    }
-                });
+
+                // Delegate DOM refresh to central utility
+                updateItemDisplay(cartItem, itemData);
                 
                 // Recalculate totals
                 updateCartTotals();
