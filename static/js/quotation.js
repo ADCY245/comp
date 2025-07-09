@@ -26,13 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         
         if (data.success) {
-          showToast('Success', 'Quotation sent successfully!', 'success');
+          const message = data.email_sent ? 
+            'Quotation sent successfully!' : 
+            'Quotation processed successfully (email not sent - configuration missing)';
+          
+          showToast('Success', message, 'success');
+          
           // Redirect to cart after a short delay
           setTimeout(() => {
             window.location.href = '/cart';
           }, 1500);
         } else {
-          showToast('Error', data.error || 'Failed to send quotation', 'error');
+          showToast('Error', data.error || 'Failed to process quotation', 'error');
         }
       } catch (err) {
         console.error('Error sending quotation:', err);

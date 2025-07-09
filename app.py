@@ -3043,18 +3043,32 @@ def send_quotation():
         part = MIMEText(email_content, 'html')
         msg.attach(part)
 
-        # Send the email
-        if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-            server.starttls()
+        # Initialize email_sent flag
+        email_sent = False
         
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        # Check if email configuration is valid
+        if all([SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD]):
+            try:
+                # Send the email
+                if str(SMTP_PORT) == '465':
+                    server = smtplib.SMTP_SSL(SMTP_HOST, int(SMTP_PORT))
+                else:
+                    server = smtplib.SMTP(SMTP_HOST, int(SMTP_PORT))
+                    if str(SMTP_PORT) == '587':  # Explicitly use STARTTLS for port 587
+                        server.starttls()
+                
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+                server.quit()
+                app.logger.info("Quotation email sent successfully")
+                email_sent = True
+            except Exception as e:
+                app.logger.error(f"Failed to send email: {str(e)}")
+                email_sent = False
+        else:
+            app.logger.warning("Email configuration is incomplete. Email will not be sent.")
 
-        # Clear cart after successful email but keep the selected company
+        # Clear cart after attempting to send email
         clear_cart()
         
         # Instead of removing selected_company, keep it in the session
@@ -3062,7 +3076,8 @@ def send_quotation():
         
         return jsonify({
             'success': True,
-            'message': 'Quotation sent successfully',
+            'message': 'Quotation processed successfully',
+            'email_sent': email_sent,
             'quote_id': quote_id,
             'company': {
                 'id': session.get('selected_company', {}).get('id'),
