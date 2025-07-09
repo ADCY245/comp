@@ -1933,7 +1933,12 @@ def update_company():
         })
         
     except Exception as e:
-        app.logger.error(f"Error updating company: {str(e)}")
+        app.logger.error(f"Error updating company: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to update company information',
+            'error': str(e)
+        }), 500
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 # ---------------------------------------------------------------------------
