@@ -1933,13 +1933,26 @@ def update_company():
         })
         
     except Exception as e:
-        app.logger.error(f"Error updating company: {str(e)}", exc_info=True)
-        return jsonify({
+        import traceback
+        error_trace = traceback.format_exc()
+        app.logger.error(f"Error updating company: {str(e)}\n{error_trace}")
+        
+        # Prepare error details for the response
+        error_details = {
             'status': 'error',
-            'message': 'Failed to update company information',
-            'error': str(e)
-        }), 500
-        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+            'message': 'Failed to update company information.',
+            'error': str(e),
+            'error_type': type(e).__name__
+        }
+        
+        # Add more context based on error type
+        if 'MongoDB' in error_details['error_type'] or 'pymongo' in error_details['error_type']:
+            error_details['message'] = 'Database connection error. Please try again later.'
+            
+        # Log the full error for debugging
+        app.logger.error(f"Returning error response: {error_details}")
+        
+        return jsonify(error_details), 500
 
 # ---------------------------------------------------------------------------
 # Company and Machine Creation Routes
