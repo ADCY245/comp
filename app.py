@@ -1346,12 +1346,49 @@ def load_companies_data():
     """Load companies data from MongoDB or fall back to JSON file."""
     try:
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            # Get companies from MongoDB
-            companies = list(mongo_db.companies.find({}, {'_id': 1, 'name': 1, 'email': 1}))
-            # Convert ObjectId to string for JSON serialization
+            # Get companies from MongoDB, including alternate field names that may exist
+            projection = {
+                '_id': 1,
+                'name': 1,
+                'email': 1,
+                'Company Name': 1,
+                'company_name': 1,
+                'EmailID': 1,
+                'emailID': 1,
+                'emailId': 1,
+                'Email Id': 1,
+                'Email': 1
+            }
+            companies = list(mongo_db.companies.find({}, projection))
+
+            mapped_companies = []
             for company in companies:
-                company['id'] = str(company.pop('_id'))
-            return companies
+                # Extract ID first
+                company_id = str(company.pop('_id'))
+
+                # Attempt to resolve name and email using various possible keys
+                name = (company.get('name') or
+                        company.get('Company Name') or
+                        company.get('company_name'))
+
+                email = (company.get('email') or
+                         company.get('EmailID') or
+                         company.get('emailID') or
+                         company.get('emailId') or
+                         company.get('Email Id') or
+                         company.get('Email'))
+
+                # Skip entries without a valid name (frontend requires it)
+                if not name:
+                    continue
+
+                mapped_companies.append({
+                    'id': company_id,
+                    'name': name,
+                    'email': email or ''  # Email is optional but keep empty string if missing
+                })
+
+            return mapped_companies
         else:
             # Fall back to JSON file
             companies_file = os.path.join('static', 'data', 'companies.json')
@@ -1565,6 +1602,7 @@ def forgot_password_redirect():
 
 # Company Management
 @app.route('/api/companies', methods=['GET'])
+@app.route('/get_companies', methods=['GET'])  # Add this line to support both endpoints
 @login_required
 def api_get_companies():
     """Get all companies from the database"""
