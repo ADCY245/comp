@@ -336,6 +336,43 @@ function handleContinueShopping() {
     }
 }
 
+// Helper to remove or merge duplicate MPack items in the cart
+function checkForDuplicateMpacks() {
+    try {
+        const mpackItems = document.querySelectorAll('.cart-item[data-type="mpack"]');
+        const seen = new Map();
+
+        mpackItems.forEach(item => {
+            // Determine a unique key for the MPack – fall back to product name text if no attribute present
+            const key = item.dataset.name || item.querySelector('.item-name')?.textContent?.trim();
+            if (!key) return; // Skip if no identifiable key
+
+            if (seen.has(key)) {
+                // Duplicate found – merge quantities instead of keeping duplicate DOM nodes
+                const existing = seen.get(key);
+                const qtyInputExisting = existing.querySelector('.quantity-input');
+                const qtyInputDuplicate = item.querySelector('.quantity-input');
+
+                if (qtyInputExisting && qtyInputDuplicate) {
+                    const totalQty = (parseInt(qtyInputExisting.value) || 1) + (parseInt(qtyInputDuplicate.value) || 1);
+                    qtyInputExisting.value = totalQty;
+                    existing.setAttribute('data-quantity', totalQty);
+                }
+
+                // Remove the duplicate row from DOM
+                item.remove();
+            } else {
+                seen.set(key, item);
+            }
+        });
+
+        // After merging duplicates, recalculate totals
+        updateCartTotals();
+    } catch (err) {
+        console.error('Error checking for duplicate MPacks:', err);
+    }
+}
+
 // Function to toggle quotation section
 function toggleQuotationSection() {
     const cartItems = document.querySelectorAll('.cart-item');

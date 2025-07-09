@@ -1637,13 +1637,37 @@ def api_get_companies():
 @app.route('/api/machines', methods=['GET'])
 @login_required
 def api_get_machines():
+    """Return list of machines.
+    Primary design: store machines inside a single *master* document that has an
+    array field called `machines`.  If such a document doesn’t exist (e.g. data
+    migrated differently), fall back to scanning the whole collection and
+    returning each document’s id / name pair.  This guarantees the endpoint
+    always returns an array of objects like: [{"id": 1, "name": "Heidelberg"}, …]
+    """
     if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
         return jsonify([])
-    # Fetch machines from the master document that stores the array
-    master_doc = mongo_db.machine.find_one({'machines': {'$exists': True}})
-    if not master_doc:
+
+    try:
+        # Preferred structure – one master document with `machines` array
+        master_doc = mongo_db.machine.find_one({'machines': {'$exists': True}})
+        if master_doc and isinstance(master_doc.get('machines'), list):
+            return jsonify(master_doc.get('machines', []))
+
+        # Fallback: each machine as its own document
+        cursor = mongo_db.machine.find({}, {'_id': 0, 'id': 1, 'name': 1})
+        machines = []
+        for doc in cursor:
+            # Some datasets might store ObjectIds or missing incremental id.
+            # Ensure we always provide an `id` (string) and `name`.
+            m_id = str(doc.get('id', doc.get('_id')))
+            m_name = doc.get('name')
+            if m_name:
+                machines.append({'id': m_id, 'name': m_name})
+
+        return jsonify(machines)
+    except Exception as e:
+        app.logger.error(f"Error fetching machines: {str(e)}")
         return jsonify([])
-    return jsonify(master_doc.get('machines', []))
 
 # Company Search Endpoint
 @app.route('/api/companies/search', methods=['GET'])
