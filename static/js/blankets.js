@@ -76,6 +76,32 @@ window.onload = () => {
       alert('Error loading blanket data. Please refresh the page to try again.');
     });
 
+  // Load thickness data
+  fetch("/thickness_data")
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      thicknessData = data.thickness || data;
+      const thicknessSelect = document.getElementById("thicknessSelect");
+      thicknessSelect.innerHTML = '<option value="">-- Select Thickness --</option>';
+      thicknessData.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.value || t;
+        opt.text = t.label || t.value || t;
+        thicknessSelect.appendChild(opt);
+      });
+      thicknessSelect.addEventListener("change", () => {
+        calculatePrice();
+      });
+    })
+    .catch(error => {
+      console.error('Error loading thickness data:', error);
+    });
+
   // Load bar data
   fetch("/bar_data")
     .then(res => {
@@ -561,6 +587,26 @@ function applyGST() {
     `;
   }
 }
+
+// Attach auto-calc listeners for dimension and other inputs
+  const lengthInput = document.getElementById('lengthInput');
+  const widthInput = document.getElementById('widthInput');
+  const quantityInput = document.getElementById('quantityInput');
+  const unitSelect = document.getElementById('unitSelect');
+  const gstSelect = document.getElementById('gstSelect');
+
+  [lengthInput, widthInput, quantityInput].forEach(el => {
+    if (el) {
+      el.addEventListener('input', () => {
+        calculatePrice();
+      });
+    }
+  });
+  if (unitSelect) unitSelect.addEventListener('change', calculatePrice);
+  if (gstSelect) gstSelect.addEventListener('change', () => {
+    applyGST();
+    calculatePrice();
+  });
 
 // Initialize discount select when the page loads
 document.addEventListener('DOMContentLoaded', function() {

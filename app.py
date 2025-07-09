@@ -1800,6 +1800,25 @@ def api_blanket_data():
         app.logger.error("Error reading blankets.json: %s", e)
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/thickness_data')
+@login_required
+def api_thickness_data():
+    """Serve thickness data JSON to frontend."""
+    try:
+        # Prefer blankets folder thickness.json, fallback to static/data/thickness.json
+        primary_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'thickness.json')
+        fallback_path = os.path.join(app.root_path, 'static', 'data', 'thickness.json')
+        file_path = primary_path if os.path.exists(primary_path) else fallback_path
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        app.logger.error("thickness.json not found at %s", file_path)
+        return jsonify({'error': 'Thickness data not found'}), 404
+    except Exception as e:
+        app.logger.error("Error reading thickness.json: %s", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/bar_data')
 @login_required
 def api_bar_data():
