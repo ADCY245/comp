@@ -3325,8 +3325,21 @@ def reset_password_page():
 
 # Helper functions to get company name and email by ID
 def get_company_name_by_id(company_id):
-    """Get company name by ID from company_emails.json"""
+    """Get company name by ID.
+    Priority: MongoDB -> JSON fallback."""
     try:
+        # Try MongoDB first
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
+            except Exception:
+                doc = mongo_db.companies.find_one({'_id': company_id})
+            if doc:
+                normalized = {k.lower().replace(' ', ''): v for k, v in doc.items()}
+                for key in ['name', 'companyname', 'company_name']:
+                    if key in normalized and normalized[key]:
+                        return normalized[key]
+        # Fallback to JSON file lookup
         file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
         with open(file_path, 'r') as f:
             companies = json.load(f)
@@ -3345,8 +3358,19 @@ def get_company_name_by_id(company_id):
     return ''
 
 def get_company_email_by_id(company_id):
-    """Get company email by ID from company_emails.json"""
+    """Get company email by ID.
+    Priority: MongoDB -> JSON fallback."""
     try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
+            except Exception:
+                doc = mongo_db.companies.find_one({'_id': company_id})
+            if doc:
+                normalized = {k.lower().replace(' ', ''): v for k, v in doc.items()}
+                for key in ['email', 'emailid', 'email_id', 'emailid']:
+                    if key in normalized and normalized[key]:
+                        return normalized[key]
         file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
         with open(file_path, 'r') as f:
             companies = json.load(f)
