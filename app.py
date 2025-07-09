@@ -1830,15 +1830,25 @@ def update_user_company():
                     try:
                         users_col.insert_one(new_doc)
                     except Exception as dup_err:
+                        # Handle duplicate key gracefully
                         try:
                             from pymongo.errors import DuplicateKeyError
                             if isinstance(dup_err, DuplicateKeyError):
-                                # If duplicate on username_lower, force a safe unique value
+                                app.logger.warning("Duplicate key on user insert, falling back to update: %s", dup_err)
+                                # Ensure username_lower is unique by appending user id
                                 safe_username_lower = f"user_{current_user.id}"
-                                new_doc['username_lower'] = safe_username_lower
-                                users_col.insert_one(new_doc)
+                                users_col.update_one(
+                                    {'_id': current_user.id},
+                                    {'$set': {
+                                        'company_id': company_id_casted,
+                                        'username_lower': safe_username_lower
+                                    }},
+                                    upsert=True
+                                )
+                            else:
+                                app.logger.error("Error inserting user doc: %s", dup_err)
                         except ImportError:
-                            pass
+                            app.logger.error("pymongo DuplicateKeyError not available; error: %s", dup_err)
                 else:
                     # If a document exists but was not matched (unlikely), update company_id
                     users_col.update_one({'_id': current_user.id}, {'$set': {'company_id': company_id_casted}})
