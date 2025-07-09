@@ -1766,6 +1766,56 @@ def api_update_session():
     else:
         return jsonify({'status': 'error', 'message': 'No valid keys provided'}), 400
 
+# ---------------------- Static JSON Data Endpoints ----------------------
+
+@app.route('/blanket_categories')
+@login_required
+def api_blanket_categories():
+    """Serve blanket categories JSON to frontend."""
+    try:
+        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'blanket_categories.json')
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        app.logger.error("blanket_categories.json not found at %s", file_path)
+        return jsonify({'error': 'Blanket categories data not found'}), 404
+    except Exception as e:
+        app.logger.error("Error reading blanket_categories.json: %s", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/blanket_data')
+@login_required
+def api_blanket_data():
+    """Serve blankets data JSON to frontend."""
+    try:
+        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'blankets.json')
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        app.logger.error("blankets.json not found at %s", file_path)
+        return jsonify({'error': 'Blankets data not found'}), 404
+    except Exception as e:
+        app.logger.error("Error reading blankets.json: %s", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/bar_data')
+@login_required
+def api_bar_data():
+    """Serve bar data JSON to frontend."""
+    try:
+        file_path = os.path.join(app.root_path, 'static', 'products', 'blankets', 'bar.json')
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        app.logger.error("bar.json not found at %s", file_path)
+        return jsonify({'error': 'Bar data not found'}), 404
+    except Exception as e:
+        app.logger.error("Error reading bar.json: %s", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
 # Company Search Endpoint
 @app.route('/api/companies/search', methods=['GET'])
 @login_required
