@@ -1791,56 +1791,31 @@ def search_companies():
 @app.route('/api/update_company', methods=['POST'])
 @login_required
 def update_user_company():
+    """Update the current user's company"""
+    if not request.is_json:
+        return jsonify({'status': 'error', 'message': 'Request must be JSON'}), 400
+    
+    data = request.get_json()
+    company_id = data.get('company_id')
+    
+    if not company_id:
+        return jsonify({'status': 'error', 'message': 'Company ID is required'}), 400
+    
     try:
-        if not request.is_json:
-            return jsonify({'status': 'error', 'message': 'Request must be JSON'}), 400
-        
-        data = request.get_json()
-        company_id = data.get('company_id')
-        
-        if not company_id:
-            return jsonify({'status': 'error', 'message': 'Company ID is required'}), 400
-        
-        app.logger.info(f"Updating company for user {current_user.id} to {company_id}")
-        
-        # Update in session
-        session['company_id'] = company_id
-        
-        # Update in database if using MongoDB
+        # Update user's company in the database
         if MONGO_AVAILABLE and USE_MONGO and users_col is not None:
+            # Ensure company_id is stored in the correct BSON type when possible
             try:
-                # First try to cast to ObjectId if it's a valid format
-                try:
-                    company_id_casted = ObjectId(company_id)
-                    app.logger.debug(f"Converted company_id to ObjectId: {company_id_casted}")
-                except Exception as e:
-                    company_id_casted = company_id
-                    app.logger.debug(f"Using company_id as string: {company_id}")
-                
-                # Prepare user data
-                user_data = {
-                    'company_id': company_id_casted,
-                    'username': getattr(current_user, 'username', str(current_user.id)),
-                    'email': getattr(current_user, 'email', ''),
-                    'username_lower': (getattr(current_user, 'username', '') or str(current_user.id)).lower()
-                }
-                
-                # Try to update existing user or insert if not exists
-                result = users_col.update_one(
-                    {'_id': current_user.id},
-                    {'$set': user_data},
-                    upsert=True
-                )
-                
-                app.logger.info(f"MongoDB update result - matched: {result.matched_count}, modified: {result.modified_count}, upserted_id: {getattr(result, 'upserted_id', None)}")
-                
-            except Exception as e:
-                app.logger.error(f"Error updating user in MongoDB: {str(e)}", exc_info=True)
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Failed to update company in database',
-                    'details': str(e)
-                }), 500
+                company_id_casted = ObjectId(company_id)
+            except Exception:
+                # Keep the original value if it is not a valid ObjectId
+                company_id_casted = company_id
+
+            # Update in MongoDB only – do not create new user docs here
+            result = users_col.update_one(
+                {'_id': current_user.id},
+                {'$set': {'company_id': company_id_casted}}
+            )
             if result.matched_count == 0:
                 # User document missing – create it so that the company can be saved
                 user_doc = users_col.find_one({'_id': current_user.id})
@@ -1878,46 +1853,39 @@ def update_user_company():
                     # If a document exists but was not matched (unlikely), update company_id
                     users_col.update_one({'_id': current_user.id}, {'$set': {'company_id': company_id_casted}})
             # No error even if modified_count == 0 (company already set)
-        elif not (MONGO_AVAILABLE and USE_MONGO):
-            try:
-                users = load_users()
-                user = next((u for u in users if u['id'] == current_user.id), None)
-                if user:
-                    user['company_id'] = company_id
-                    save_users(users)
-                else:
-                    users.append({
-                        'id': current_user.id,
-                        'username': getattr(current_user, 'username', str(current_user.id)),
-                        'email': getattr(current_user, 'email', ''),
-                        'company_id': company_id
-                    })
-                    save_users(users)
-            except Exception as e:
-                app.logger.error(f"Error updating user in JSON: {str(e)}", exc_info=True)
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Failed to update company in JSON storage',
-                    'details': str(e)
-                }), 500
+        else:
+            # Update in JSON file
+            users = load_users()
+            if str(current_user.id) not in users:
+                return jsonify({'status': 'error', 'message': 'User not found'}), 404
+                
+            users[str(current_user.id)]['company_id'] = company_id
+            save_users()
         
-        # Update current_user object if possible
-        if hasattr(current_user, 'company_id'):
-            current_user.company_id = company_id
-            
+        # Update session
+        session['company_id'] = company_id
+        
+        # Get company details for response
+        company_name = get_company_name_by_id(company_id)
+        company_email = get_company_email_by_id(company_id)
+        
+        # Update session with company details
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        
         return jsonify({
             'status': 'success',
             'message': 'Company updated successfully',
-            'company_id': str(company_id)
+            'company': {
+                'id': company_id,
+                'name': company_name,
+                'email': company_email
+            }
         })
         
     except Exception as e:
-        app.logger.error(f"Error in update_user_company: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': 'An error occurred while updating company',
-            'details': str(e)
-        }), 500
+        app.logger.error(f"Error updating user company: {str(e)}")
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 def load_users():
     """Load users from JSON file"""
