@@ -1973,7 +1973,7 @@ def api_add_machine():
             user_identity = getattr(current_user, 'email', getattr(current_user, 'username', 'Unknown User'))
             send_alert_email(
                 subject='Database Update: New Machine Added',
-                body=f"{user_identity} added a new machine ({name}) on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                body=f"{user_identity} added a new machine ({name}) on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
             )
         else:
             return jsonify({'success': False, 'message': 'Database not available.'}), 500
