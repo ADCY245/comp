@@ -291,8 +291,32 @@
         {% block content %}{% endblock %}
     </div>
 
+    <!-- Product Type Selection Modal -->
+    <div class="modal fade" id="productTypeModal" tabindex="-1" aria-labelledby="productTypeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productTypeModalLabel">Select Product Type</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <a href="{{ url_for('mpacks') }}" class="btn btn-primary btn-lg d-block mb-3">M-Packs</a>
+                        <a href="{{ url_for('blankets') }}" class="btn btn-success btn-lg d-block">Blankets</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Initialize company data before any components load -->
     <script>
+    // Function to create and return the product type modal
+    function createProductTypeModal() {
+        // Return the modal element if it exists
+        return document.getElementById('productTypeModal');
+    }
+
     // Initialize company data in sessionStorage if it doesn't exist
     document.addEventListener('DOMContentLoaded', function() {
         // Only initialize if not already set
