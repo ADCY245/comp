@@ -1888,16 +1888,36 @@ def update_company():
         # Update user's company in the database
         if MONGO_AVAILABLE and USE_MONGO and users_col is not None:
             # Update or create in MongoDB
+            # Ensure we target the correct user document and avoid inserting duplicates
+            from bson import ObjectId
+            try:
+                user_filter = {'_id': ObjectId(current_user.id)} if ObjectId.is_valid(str(current_user.id)) else {'_id': current_user.id}
+            except Exception:
+                user_filter = {'_id': current_user.id}
+
+            # Update existing user document; do NOT upsert to prevent accidental duplicates
             result = users_col.update_one(
-                {'_id': current_user.id},
+                user_filter,
                 {'$set': {
                     'company_id': company_id,
                     'company_name': company_name,
                     'company_email': company_email,
                     'updated_at': datetime.utcnow()
-                }},
-                upsert=True  # Create user if not exists
+                }}
             )
+
+            # If no document was modified, explicitly set company fields using update_many as a fallback
+            if result.matched_count == 0:
+                # Attempt to update by email/username as a safeguard
+                users_col.update_one(
+                    {'email': current_user.email},
+                    {'$set': {
+                        'company_id': company_id,
+                        'company_name': company_name,
+                        'company_email': company_email,
+                        'updated_at': datetime.utcnow()
+                    }}
+                )
         else:
             # Update in JSON file
             users = load_users()
