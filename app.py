@@ -647,23 +647,60 @@ class MongoCartStore:
 
     def __init__(self, db):
         self.col = db.get_collection('carts')
+        app.logger.info("[DEBUG] Initialized MongoCartStore with collection: %s", self.col.name)
 
     def _doc(self, user_id):
-        return self.col.find_one({"user_id": user_id}) or {}
+        doc = self.col.find_one({"user_id": user_id})
+        app.logger.debug(
+            "[DEBUG] _doc(user_id=%s) - %s",
+            user_id,
+            f"Found document with {len(doc.get('products', []))} products" if doc else "No document found"
+        )
+        return doc or {}
 
     def get_cart(self, user_id):
+        app.logger.debug("[DEBUG] get_cart(user_id=%s)", user_id)
         doc = self._doc(user_id)
-        return doc.get('products', [])
+        products = doc.get('products', [])
+        app.logger.debug(
+            "[DEBUG] Retrieved cart for user %s with %d products",
+            user_id,
+            len(products)
+        )
+        if products:
+            app.logger.debug("[DEBUG] Sample product data: %s", str(products[0])[:200])
+        return products
 
     def save_cart(self, user_id, products):
-        self.col.update_one(
+        app.logger.debug(
+            "[DEBUG] save_cart(user_id=%s) - Saving %d products",
+            user_id,
+            len(products)
+        )
+        if products:
+            app.logger.debug("[DEBUG] Sample product being saved: %s", str(products[0])[:200])
+            
+        result = self.col.update_one(
             {"user_id": user_id},
-            {"$set": {"products": products, "updated_at": datetime.utcnow()}},
+            {
+                "$set": {
+                    "products": products,
+                    "updated_at": datetime.utcnow(),
+                    "user_id": user_id  # Ensure user_id is set
+                }
+            },
             upsert=True
+        )
+        app.logger.debug(
+            "[DEBUG] Cart save result - Matched: %d, Modified: %d, Upserted ID: %s",
+            result.matched_count,
+            result.modified_count,
+            getattr(result, 'upserted_id', 'N/A')
         )
         return True
 
     def clear_cart(self, user_id):
+        app.logger.info("[DEBUG] Clearing cart for user: %s", user_id)
         return self.save_cart(user_id, [])
 
 
@@ -719,11 +756,24 @@ else:
 def get_user_cart():
     """Return a dict with a products list for the current user using MongoDB."""
     try:
+        app.logger.info(f"[DEBUG] get_user_cart() called for user: {getattr(current_user, 'id', 'no-user')}")
+        
         if not hasattr(current_user, 'id'):
+            app.logger.warning("[DEBUG] No current_user.id, returning empty cart")
             return {"products": []}
             
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            products = cart_store.get_cart(current_user.id)
+            app.logger.info("[DEBUG] Using MongoDB for cart storage")
+            app.logger.info(f"[DEBUG] MongoDB status - MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if mongo_db is not None else 'None'}")
+            
+            try:
+                products = cart_store.get_cart(current_user.id)
+                app.logger.info(f"[DEBUG] Retrieved {len(products) if products else 0} products from MongoDB")
+                if products:
+                    app.logger.debug(f"[DEBUG] Sample product from MongoDB: {str(products[0])[:200]}...")
+            except Exception as e:
+                app.logger.error(f"[DEBUG] Error fetching cart from MongoDB: {str(e)}")
+                products = []
             # Ensure all products have the correct structure
             for product in products:
                 if 'calculations' not in product:
@@ -774,7 +824,8 @@ def get_user_cart():
             return {"products": products or []}
             
         # If we get here, MongoDB is not available
-        print("MongoDB is not available for cart storage")
+        app.logger.warning("[DEBUG] MongoDB is not available for cart storage")
+        app.logger.warning(f"[DEBUG] MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if 'mongo_db' in globals() and mongo_db is not None else 'None'}")
         return {"products": []}
         
     except Exception as e:
@@ -1771,6 +1822,29 @@ def update_user_company():
         app.logger.error(f"Error updating user company: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
+def load_users():
+    """Load users from JSON file"""
+    try:
+        users_file = os.path.join(os.path.dirname(__file__), 'data', 'users.json')
+        if os.path.exists(users_file):
+            with open(users_file, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        app.logger.error(f"Error loading users: {str(e)}")
+        return {}
+
+def save_users(users):
+    """Save users to JSON file"""
+    try:
+        users_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(users_dir, exist_ok=True)
+        users_file = os.path.join(users_dir, 'users.json')
+        with open(users_file, 'w') as f:
+            json.dump(users, f, indent=2)
+    except Exception as e:
+        app.logger.error(f"Error saving users: {str(e)}")
+
 @app.route('/update_company', methods=['POST'])
 @app.route('/api/user/update-company', methods=['POST'])
 @login_required
@@ -2238,20 +2312,28 @@ def api_reset_password():
 @login_required
 @company_required
 def quotation_preview():
+    app.logger.info("[DEBUG] quotation_preview() called")
+    
     # Get current date and time
     current_datetime = datetime.now()
     quote_date = current_datetime.strftime('%d-%m-%Y')
     quote_time = current_datetime.strftime('%H:%M:%S')
     
     cart = get_user_cart()
+    app.logger.info(f"[DEBUG] Cart contains {len(cart.get('products', []))} products")
+    
     if not cart.get('products'):
+        app.logger.warning("[DEBUG] Empty cart, redirecting to cart page")
         flash('Your cart is empty', 'warning')
         return redirect(url_for('cart'))
 
     # Get company info from selected_company dict first, then fallback to direct session values
     selected_company = session.get('selected_company', {})
+    app.logger.info(f"[DEBUG] Selected company from session: {selected_company}")
+    
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
+    app.logger.info(f"[DEBUG] Resolved customer: {customer_name} <{customer_email}>")
     
     # If we have company ID but no name/email, try to look it up
     if not customer_name and 'company_id' in session:
