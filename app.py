@@ -1565,6 +1565,7 @@ def forgot_password_redirect():
 
 # Company Management
 @app.route('/api/companies', methods=['GET'])
+@app.route('/get_companies', methods=['GET'])  # Add this line to support both endpoints
 @login_required
 def api_get_companies():
     """Get all companies from the database"""
