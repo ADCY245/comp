@@ -424,13 +424,17 @@ function calculateFinalPrice() {
   const quantity = parseInt(sheetInput.value) || 0;
   const gstRate = parseFloat(document.getElementById("gstSelect").value) || 0;
   
-  if (currentNetPrice <= 0 || quantity <= 0) {
+  if (currentNetPrice <= 0) {
     resetCalculations();
     return;
   }
   
+  // If quantity is 0 or negative, set to 1 for calculation but show 0 in the display
+  const displayQuantity = Math.max(0, quantity);
+  const calcQuantity = quantity <= 0 ? 1 : quantity;
+  
   // Calculate base price without GST
-  const basePrice = currentNetPrice * quantity;
+  const basePrice = currentNetPrice * calcQuantity;
   
   // Apply discount if any
   const discountAmount = (basePrice * currentDiscount) / 100;
@@ -455,7 +459,7 @@ function calculateFinalPrice() {
     if (currentDiscount > 0) {
       summaryHTML = `
         <div class="d-flex justify-content-between">
-          <span>Subtotal (${quantity} sheets):</span>
+          <span>Subtotal (${displayQuantity} sheets):</span>
           <span>₹${basePrice.toFixed(2)}</span>
         </div>
         <div class="d-flex justify-content-between text-danger">
@@ -469,7 +473,7 @@ function calculateFinalPrice() {
     } else {
       summaryHTML = `
         <div class="d-flex justify-content-between">
-          <span>Subtotal (${quantity} sheets):</span>
+          <span>Subtotal (${displayQuantity} sheets):</span>
           <span>₹${basePrice.toFixed(2)}</span>
         </div>`;
     }
