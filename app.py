@@ -1817,8 +1817,31 @@ def update_user_company():
                 {'$set': {'company_id': company_id_casted}}
             )
             if result.matched_count == 0:
-                # User document missing – treat as an error instead of creating a new document
-                return jsonify({'status': 'error', 'message': 'User not found'}), 404
+                # User document missing – create it so that the company can be saved
+                user_doc = users_col.find_one({'_id': current_user.id})
+                if not user_doc:
+                    new_doc = {
+                        '_id': current_user.id,
+                        'username': getattr(current_user, 'username', str(current_user.id)),
+                        'username_lower': (getattr(current_user, 'username', '') or str(current_user.id)).lower(),
+                        'email': getattr(current_user, 'email', ''),
+                        'company_id': company_id_casted,
+                    }
+                    try:
+                        users_col.insert_one(new_doc)
+                    except Exception as dup_err:
+                        try:
+                            from pymongo.errors import DuplicateKeyError
+                            if isinstance(dup_err, DuplicateKeyError):
+                                # If duplicate on username_lower, force a safe unique value
+                                safe_username_lower = f"user_{current_user.id}"
+                                new_doc['username_lower'] = safe_username_lower
+                                users_col.insert_one(new_doc)
+                        except ImportError:
+                            pass
+                else:
+                    # If a document exists but was not matched (unlikely), update company_id
+                    users_col.update_one({'_id': current_user.id}, {'$set': {'company_id': company_id_casted}})
             # No error even if modified_count == 0 (company already set)
         else:
             # Update in JSON file
