@@ -3013,7 +3013,7 @@ def send_quotation():
                 {'<p style="margin-bottom: 1.5rem;"><strong>Notes:</strong><br>' + notes + '</p>' if notes else ''}
                 
                 <div style='overflow-x: auto; margin: 1.5rem 0;'>
-                <!-- Table rows have been removed as requested -->
+{rows_html}
               </div>
               
                 <p style='margin: 2rem 0 1rem 0;'>Thank you for your business!<br>— Team CGI</p>
