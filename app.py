@@ -3049,17 +3049,17 @@ def send_quotation():
         email_sent = False
         
         # Check if email configuration is valid
-        if all([SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD]):
+        if all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD]):
             try:
                 # Send the email
                 if str(SMTP_PORT) == '465':
-                    server = smtplib.SMTP_SSL(SMTP_HOST, int(SMTP_PORT))
+                    server = smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT))
                 else:
-                    server = smtplib.SMTP(SMTP_HOST, int(SMTP_PORT))
+                    server = smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT))
                     if str(SMTP_PORT) == '587':  # Explicitly use STARTTLS for port 587
                         server.starttls()
                 
-                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
                 server.send_message(msg)
                 server.quit()
                 app.logger.info("Quotation email sent successfully")
