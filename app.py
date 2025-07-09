@@ -1895,29 +1895,50 @@ def update_company():
             except Exception:
                 user_filter = {'_id': current_user.id}
 
-            # Update existing user document; do NOT upsert to prevent accidental duplicates
-            result = users_col.update_one(
-                user_filter,
-                {'$set': {
-                    'company_id': company_id,
-                    'company_name': company_name,
-                    'company_email': company_email,
-                    'updated_at': datetime.utcnow()
-                }}
-            )
-
-            # If no document was modified, explicitly set company fields using update_many as a fallback
-            if result.matched_count == 0:
-                # Attempt to update by email/username as a safeguard
-                users_col.update_one(
-                    {'email': current_user.email},
-                    {'$set': {
-                        'company_id': company_id,
-                        'company_name': company_name,
-                        'company_email': company_email,
-                        'updated_at': datetime.utcnow()
-                    }}
+            # First, check if the user exists and handle the username_lower field
+            user = users_col.find_one(user_filter)
+            update_data = {
+                'company_id': company_id,
+                'company_name': company_name,
+                'company_email': company_email,
+                'updated_at': datetime.utcnow()
+            }
+            
+            # If user exists, update the document
+            if user:
+                # If username_lower is missing or null, set a default value to avoid index conflicts
+                if 'username_lower' not in user or user.get('username_lower') is None:
+                    update_data['username_lower'] = str(user.get('username', '')).lower() or f'user_{current_user.id}'.lower()
+                
+                # Update the document
+                result = users_col.update_one(
+                    user_filter,
+                    {'$set': update_data}
                 )
+            else:
+                # If user doesn't exist, try to find by email
+                if hasattr(current_user, 'email') and current_user.email:
+                    user = users_col.find_one({'email': current_user.email})
+                    if user:
+                        # Update the found user
+                        if 'username_lower' not in user or user.get('username_lower') is None:
+                            update_data['username_lower'] = str(user.get('username', '')).lower() or f'user_{user["_id"]}'.lower()
+                        
+                        result = users_col.update_one(
+                            {'_id': user['_id']},
+                            {'$set': update_data}
+                        )
+                    else:
+                        # If no user found by email, create a new one with required fields
+                        update_data.update({
+                            '_id': current_user.id,
+                            'email': current_user.email,
+                            'username': getattr(current_user, 'username', f'user_{current_user.id}'),
+                            'username_lower': getattr(current_user, 'username', f'user_{current_user.id}').lower(),
+                            'created_at': datetime.utcnow()
+                        })
+                        users_col.insert_one(update_data)
+                        result = type('obj', (object,), {'matched_count': 1})  # Mock result object
         else:
             # Update in JSON file
             users = load_users()
