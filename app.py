@@ -3043,6 +3043,9 @@ def send_quotation():
         part = MIMEText(email_content, 'html')
         msg.attach(part)
 
+        # Generate a unique quote ID
+        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        
         # Initialize email_sent flag
         email_sent = False
         
