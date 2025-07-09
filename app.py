@@ -1804,13 +1804,22 @@ def update_user_company():
     try:
         # Update user's company in the database
         if MONGO_AVAILABLE and USE_MONGO and users_col is not None:
-            # Update in MongoDB
+            # Ensure company_id is stored in the correct BSON type when possible
+            try:
+                company_id_casted = ObjectId(company_id)
+            except Exception:
+                # Keep the original value if it is not a valid ObjectId
+                company_id_casted = company_id
+
+            # Update in MongoDB only – do not create new user docs here
             result = users_col.update_one(
                 {'_id': current_user.id},
-                {'$set': {'company_id': company_id}}
+                {'$set': {'company_id': company_id_casted}}
             )
             if result.matched_count == 0:
-                return jsonify({'status': 'error', 'message': 'User not found or no changes made'}), 404
+                # User document missing – treat as an error instead of creating a new document
+                return jsonify({'status': 'error', 'message': 'User not found'}), 404
+            # No error even if modified_count == 0 (company already set)
         else:
             # Update in JSON file
             users = load_users()
@@ -3550,20 +3559,23 @@ def get_company_name_by_id(company_id):
                 for key in ['name', 'companyname', 'company_name']:
                     if key in normalized and normalized[key]:
                         return normalized[key]
-        # Fallback to JSON file lookup
-        file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
-        with open(file_path, 'r') as f:
-            companies = json.load(f)
-            # Convert company_id to int if it's a string
-            try:
-                idx = int(company_id) - 1
-                if 0 <= idx < len(companies):
-                    return companies[idx].get('Company Name', '')
-            except (ValueError, TypeError):
-                # If company_id is not a number, try to find by exact match in ID field
-                for company in companies:
-                    if str(company.get('id', '')).lower() == str(company_id).lower():
-                        return company.get('Company Name', '')
+        # Skip JSON fallback when MongoDB is enabled
+        if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
+            # Fallback to JSON file lookup
+            file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
+            with open(file_path, 'r') as f:
+                companies = json.load(f)
+                # Convert company_id to int if it's a string
+                try:
+                    idx = int(company_id) - 1
+                    if 0 <= idx < len(companies):
+                        return companies[idx].get('Company Name', '')
+                except (ValueError, TypeError):
+                    # If company_id is not a number, try to find by exact match in ID field
+                    for company in companies:
+                        if str(company.get('id', '')).lower() == str(company_id).lower():
+                            return company.get('Company Name', '')
+
     except Exception as e:
         app.logger.error(f"Error getting company name: {e}")
     return ''
@@ -3582,19 +3594,21 @@ def get_company_email_by_id(company_id):
                 for key in ['email', 'emailid', 'email_id', 'emailid']:
                     if key in normalized and normalized[key]:
                         return normalized[key]
-        file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
-        with open(file_path, 'r') as f:
-            companies = json.load(f)
-            # Convert company_id to int if it's a string
-            try:
-                idx = int(company_id) - 1
-                if 0 <= idx < len(companies):
-                    return companies[idx].get('EmailID', '')
-            except (ValueError, TypeError):
-                # If company_id is not a number, try to find by exact match in ID field
-                for company in companies:
-                    if str(company.get('id', '')).lower() == str(company_id).lower():
-                        return company.get('EmailID', '')
+        # Skip JSON fallback when MongoDB is enabled
+        if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
+            file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
+            with open(file_path, 'r') as f:
+                companies = json.load(f)
+                # Convert company_id to int if it's a string
+                try:
+                    idx = int(company_id) - 1
+                    if 0 <= idx < len(companies):
+                        return companies[idx].get('EmailID', '')
+                except (ValueError, TypeError):
+                    # If company_id is not a number, try to find by exact match in ID field
+                    for company in companies:
+                        if str(company.get('id', '')).lower() == str(company_id).lower():
+                            return company.get('EmailID', '')
     except Exception as e:
         app.logger.error(f"Error getting company email: {e}")
         return ''
