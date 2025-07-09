@@ -2899,14 +2899,21 @@ def send_quotation():
         server.send_message(msg)
         server.quit()
 
-        # Clear cart after successful email
+        # Clear cart after successful email but keep the selected company
         clear_cart()
-        session.pop('selected_company', None)
+        
+        # Instead of removing selected_company, keep it in the session
+        # This ensures the company selection persists after sending a quotation
         
         return jsonify({
             'success': True,
             'message': 'Quotation sent successfully',
-            'quote_id': quote_id
+            'quote_id': quote_id,
+            'company': {
+                'id': session.get('selected_company', {}).get('id'),
+                'name': session.get('selected_company', {}).get('name'),
+                'email': session.get('selected_company', {}).get('email')
+            }
         })
     except Exception as e:
         app.logger.error(f"Error sending quotation: {str(e)}")

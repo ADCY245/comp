@@ -185,7 +185,7 @@
                     csrfToken = csrfMeta.getAttribute('content');
                 }
                 
-                const response = await fetch('/api/user/update-company', {
+                const response = await fetch('/api/update_company', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -206,8 +206,8 @@
                     throw new Error(data.message || 'Failed to update company');
                 }
                 
-                // Show success message
-                showToast(`Company updated to ${company.name}`, 'success');
+                // Update the UI immediately
+                updateCompanyDisplay(company.name, company.email);
                 
                 // Hide search box and show info bar
                 if (searchBox) searchBox.style.display = 'none';
@@ -221,10 +221,34 @@
                     sessionStorage.setItem('selectedCompany', JSON.stringify(company));
                 }
                 
-                // Reload the page to update any dependent components
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
+                // Update the selected company in the session
+                try {
+                    const sessionResponse = await fetch('/api/session/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken || getCookie('csrftoken') || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            selected_company: {
+                                id: company.id,
+                                name: company.name,
+                                email: company.email
+                            }
+                        }),
+                        credentials: 'same-origin'
+                    });
+                    
+                    if (!sessionResponse.ok) {
+                        console.warn('Failed to update session, but company was updated');
+                    }
+                } catch (e) {
+                    console.warn('Error updating session:', e);
+                }
+                
+                // Show success message after updating the UI
+                showToast(`Company updated to ${company.name}`, 'success');
                 
             } catch (error) {
                 console.error('Error updating company:', error);
