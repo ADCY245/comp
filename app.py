@@ -1366,17 +1366,29 @@ def load_companies_data():
                 # Extract ID first
                 company_id = str(company.pop('_id'))
 
-                # Attempt to resolve name and email using various possible keys
-                name = (company.get('name') or
-                        company.get('Company Name') or
-                        company.get('company_name'))
+                # Attempt to resolve name and email using various possible keys (case & space insensitive)
+                potential_name_keys = [
+                    'name', 'company name', 'company_name', 'companyname'
+                ]
+                potential_email_keys = [
+                    'email', 'emailid', 'email_id', 'email id'
+                ]
 
-                email = (company.get('email') or
-                         company.get('EmailID') or
-                         company.get('emailID') or
-                         company.get('emailId') or
-                         company.get('Email Id') or
-                         company.get('Email'))
+                name = None
+                email = None
+
+                # Normalize keys for robust lookup
+                normalized_dict = {k.lower().replace(' ', ''): v for k, v in company.items()}
+
+                for key in potential_name_keys:
+                    if key.replace(' ', '') in normalized_dict and normalized_dict[key.replace(' ', '')]:
+                        name = normalized_dict[key.replace(' ', '')]
+                        break
+
+                for key in potential_email_keys:
+                    if key.replace(' ', '') in normalized_dict and normalized_dict[key.replace(' ', '')]:
+                        email = normalized_dict[key.replace(' ', '')]
+                        break
 
                 # Skip entries without a valid name (frontend requires it)
                 if not name:
