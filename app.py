@@ -1743,6 +1743,29 @@ def api_get_machines():
         app.logger.error(f"Error fetching machines: {str(e)}")
         return jsonify([])
 
+@app.route('/api/session/update', methods=['POST'])
+@login_required
+def api_update_session():
+    """Update session data such as selected_company from the frontend."""
+    if not request.is_json:
+        return jsonify({'status': 'error', 'message': 'Request must be JSON'}), 400
+
+    data = request.get_json()
+
+    # Update any keys that the frontend sends (e.g., selected_company)
+    allowed_keys = {'selected_company', 'company_id', 'company_name', 'company_email'}
+    updated_any = False
+    for key in allowed_keys:
+        if key in data:
+            session[key] = data[key]
+            updated_any = True
+
+    if updated_any:
+        session.modified = True
+        return jsonify({'status': 'success', 'message': 'Session updated'}), 200
+    else:
+        return jsonify({'status': 'error', 'message': 'No valid keys provided'}), 400
+
 # Company Search Endpoint
 @app.route('/api/companies/search', methods=['GET'])
 @login_required
