@@ -77,30 +77,79 @@ window.onload = () => {
     });
 
   // Load thickness data
-  fetch("/thickness_data")
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      thicknessData = data.thickness || data;
-      const thicknessSelect = document.getElementById("thicknessSelect");
-      thicknessSelect.innerHTML = '<option value="">-- Select Thickness --</option>';
-      thicknessData.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t.value || t;
-        opt.text = t.label || t.value || t;
-        thicknessSelect.appendChild(opt);
+  function loadThicknessData() {
+    fetch("/thickness_data")
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Handle both array and object response formats
+        if (Array.isArray(data)) {
+          thicknessData = data;
+        } else if (data.thickness && Array.isArray(data.thickness)) {
+          thicknessData = data.thickness;
+        } else if (data.thicknesses && Array.isArray(data.thicknesses)) {
+          thicknessData = data.thicknesses;
+        } else {
+          throw new Error('Invalid thickness data format');
+        }
+
+        const thicknessSelect = document.getElementById("thicknessSelect");
+        if (!thicknessSelect) {
+          console.error('Thickness select element not found');
+          return;
+        }
+
+        thicknessSelect.innerHTML = '<option value="">-- Select Thickness --</option>';
+        
+        thicknessData.forEach(t => {
+          const opt = document.createElement("option");
+          // Handle both object and primitive values
+          if (typeof t === 'object' && t !== null) {
+            opt.value = t.value || t.id || JSON.stringify(t);
+            opt.text = t.label || t.name || t.value || JSON.stringify(t);
+          } else {
+            opt.value = t;
+            opt.text = t;
+          }
+          thicknessSelect.appendChild(opt);
+        });
+        
+        // Add change event listener for thickness select
+        thicknessSelect.addEventListener("change", () => {
+          console.log('Thickness changed, recalculating price...');
+          calculatePrice();
+        });
+      })
+      .catch(error => {
+        console.error('Error loading thickness data:', error);
+        // Fallback to default thickness options if the request fails
+        const defaultThicknesses = [
+          { value: '0.5', label: '0.5mm' },
+          { value: '1.0', label: '1.0mm' },
+          { value: '1.5', label: '1.5mm' },
+          { value: '2.0', label: '2.0mm' },
+          { value: '3.0', label: '3.0mm' }
+        ];
+        
+        const thicknessSelect = document.getElementById("thicknessSelect");
+        if (thicknessSelect) {
+          thicknessSelect.innerHTML = '<option value="">-- Select Thickness --</option>';
+          defaultThicknesses.forEach(t => {
+            const opt = document.createElement("option");
+            opt.value = t.value;
+            opt.text = t.label;
+            thicknessSelect.appendChild(opt);
+          });
+        }
       });
-      thicknessSelect.addEventListener("change", () => {
-        calculatePrice();
-      });
-    })
-    .catch(error => {
-      console.error('Error loading thickness data:', error);
-    });
+  }
+
+  // Initialize thickness data loading
+  loadThicknessData();
 
   // Load bar data
   fetch("/bar_data")
@@ -266,29 +315,8 @@ window.onload = () => {
 
   // Call calculatePrice when the page loads to initialize values
   calculatePrice();
-
-  // Add event listeners for automatic calculation
-  document.getElementById('lengthInput').addEventListener('input', calculatePrice);
-  document.getElementById('widthInput').addEventListener('input', calculatePrice);
-  document.getElementById('thicknessSelect').addEventListener('change', calculatePrice);
-  document.getElementById('barSelect').addEventListener('change', calculatePrice);
-  document.getElementById('quantityInput').addEventListener('input', calculatePrice);
-  document.getElementById('gstSelect').addEventListener('change', calculatePrice);
-
-  // Add click handler for calculate button
-  const calculateBtn = document.querySelector('button[onclick*="calculatePrice"]');
-  if (calculateBtn) {
-    console.log('Found calculate button');
-    calculateBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      console.log('Calculate button clicked');
-      calculatePrice();
-    });
-  } else {
-    console.warn('Calculate button not found');
-  }
-
-  // Utility: show/hide discount section based on selected blanket
+  
+  // Initialize discount section
   function updateDiscountSection() {
     const discountSection = document.getElementById('discountSection');
     const discountSelect = document.getElementById('discountSelect');
@@ -298,7 +326,7 @@ window.onload = () => {
       return;
     }
   }
-
+  
   // Hook add-to-cart button
   const addBtn = document.getElementById("addToCartBlanket");
   if (addBtn) {
