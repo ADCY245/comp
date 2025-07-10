@@ -2867,37 +2867,54 @@ def send_quotation():
             
             # Calculate total based on product type
             if prod_type == 'mpack':
-                # For mpack, use calculations from the cart if available
-                calcs = p.get('calculations', {})
-                if calcs:
-                    total_val = next((calcs.get(k) for k in ('final_total', 'final_price', 'total_price') if calcs.get(k) is not None), 0)
-                else:
-                    # Fallback calculation
-                    unit_price = p.get('unit_price', 0)
-                    discount_percent = p.get('discount_percent', 0)
-                    gst_percent = p.get('gst_percent', 12)  # 12% GST for mpack
-                    
-                    subtotal_val = unit_price * qty
-                    discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
-                    taxable_amount = subtotal_val - discount_amount
-                    gst_amount = (taxable_amount * gst_percent / 100)
-                    total_val = taxable_amount + gst_amount
+                # Always recalculate MPack totals to ensure fresh values after quantity changes
+                unit_price = float(p.get('unit_price', 0))
+                discount_percent = float(p.get('discount_percent', 0))
+                gst_percent = float(p.get('gst_percent', 12))  # 12% GST for MPack
+
+                subtotal_val = unit_price * qty
+                discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
+                taxable_amount = subtotal_val - discount_amount
+                gst_amount = taxable_amount * gst_percent / 100
+                total_val = taxable_amount + gst_amount
+
+                # Update (or create) calculations dict so subsequent routes remain consistent
+                p['calculations'] = {
+                    'unit_price': round(unit_price, 2),
+                    'quantity': qty,
+                    'discount_percent': discount_percent,
+                    'discount_amount': round(discount_amount, 2),
+                    'taxable_amount': round(taxable_amount, 2),
+                    'gst_percent': gst_percent,
+                    'gst_amount': round(gst_amount, 2),
+                    'final_total': round(total_val, 2)
+                }
                 
             elif prod_type == 'blanket':
-                # For blanket, use calculations from the cart
-                calcs = p.get('calculations', {})
-                if calcs:
-                    total_val = next((calcs.get(k) for k in ('final_total', 'final_price', 'total_price') if calcs.get(k) is not None), 0)
-                else:
-                    unit_price = p.get('unit_price', 0)
-                    discount_percent = p.get('discount_percent', 0)
-                    gst_percent = p.get('gst_percent', 18)
-                    
-                    subtotal_val = unit_price * qty
-                    discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
-                    taxable_amount = subtotal_val - discount_amount
-                    gst_amount = (taxable_amount * gst_percent / 100)
-                    total_val = taxable_amount + gst_amount
+                # Always recalculate Blanket totals as well
+                base_price = float(p.get('base_price', 0))
+                bar_price = float(p.get('bar_price', 0))
+                unit_price = base_price + bar_price
+                discount_percent = float(p.get('discount_percent', 0))
+                gst_percent = float(p.get('gst_percent', 18))
+
+                subtotal_val = unit_price * qty
+                discount_amount = subtotal_val * discount_percent / 100 if discount_percent else 0
+                taxable_amount = subtotal_val - discount_amount
+                gst_amount = taxable_amount * gst_percent / 100
+                total_val = taxable_amount + gst_amount
+
+                # Sync calculations back to product
+                p['calculations'] = {
+                    'unit_price': round(unit_price, 2),
+                    'quantity': qty,
+                    'discount_percent': discount_percent,
+                    'discount_amount': round(discount_amount, 2),
+                    'taxable_amount': round(taxable_amount, 2),
+                    'gst_percent': gst_percent,
+                    'gst_amount': round(gst_amount, 2),
+                    'final_total': round(total_val, 2)
+                }
             
             subtotal += total_val
             
