@@ -667,6 +667,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Set up footer continue shopping button
+    const continueShoppingFooter = document.getElementById('continueShoppingBtnBottom');
+    if (continueShoppingFooter) {
+        continueShoppingFooter.addEventListener('click', function(e) {
+            e.preventDefault();
+            const companyName = sessionStorage.getItem('companyName') || '';
+            const companyEmail = sessionStorage.getItem('companyEmail') || '';
+            if (companyName) {
+                localStorage.setItem('selectedCompany', JSON.stringify({
+                    name: companyName,
+                    email: companyEmail
+                }));
+            }
+            window.location.href = '/product_selection';
+        });
+    }
+    
+    // Set up footer clear cart button
+    const clearCartFooter = document.getElementById('clearCartBtn');
+    if (clearCartFooter) {
+        clearCartFooter.addEventListener('click', handleClearCart);
+    }
+    
     // Set up change company button
     const changeCompanyBtn = document.getElementById('changeCompanyBtn');
     if (changeCompanyBtn) {
