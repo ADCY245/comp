@@ -521,26 +521,7 @@
                 </button>
             </div>
 
-            <script>
-                // Continue Shopping (bottom) click handler
-                document.addEventListener('DOMContentLoaded', function () {
-                    const btn = document.getElementById('continueShoppingBtnBottom');
-                    if (btn) {
-                        btn.addEventListener('click', function (e) {
-                            e.preventDefault();
-                            const companyName = sessionStorage.getItem('companyName') || '';
-                            const companyEmail = sessionStorage.getItem('companyEmail') || '';
-                            if (companyName) {
-                                localStorage.setItem('selectedCompany', JSON.stringify({
-                                    name: companyName,
-                                    email: companyEmail
-                                }));
-                            }
-                            window.location.href = '{{ url_for("product_selection") }}';
-                        });
-                    }
-                });
-            </script>
+
             </div>            {% endif %}
         </div>
     </div>

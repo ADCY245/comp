@@ -667,6 +667,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Set up header continue shopping button
+    const continueShoppingBtn = document.getElementById('continueShoppingBtn');
+    if (continueShoppingBtn) {
+        continueShoppingBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleContinueShopping();
+        });
+    }
+    
     // Set up footer continue shopping button
     const continueShoppingFooter = document.getElementById('continueShoppingBtnBottom');
     if (continueShoppingFooter) {
