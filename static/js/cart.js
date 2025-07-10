@@ -126,7 +126,7 @@ function updateCartEmptyState() {
         if (emptyCart) emptyCart.style.display = 'none';
         if (cartFooter) cartFooter.style.display = 'flex';
     } else {
-        cartItems.style.display = 'none';
+        cartItems.style.display = 'flex';
         if (emptyCart) emptyCart.style.display = 'block';
         if (cartFooter) cartFooter.style.display = 'none';
     }
@@ -277,7 +277,7 @@ function initializeCart() {
     if (cartItems.length === 0) {
         console.log('No cart items, showing empty cart message');
         if (emptyCartDiv) emptyCartDiv.style.display = 'block';
-        if (cartItemsDiv) cartItemsDiv.style.display = 'none';
+        if (cartItemsDiv) cartItemsDiv.style.display = 'flex';
     } else {
         console.log('Cart has items, showing cart contents');
         if (emptyCartDiv) emptyCartDiv.style.display = 'none';
@@ -458,7 +458,7 @@ function handleClearCart(event) {
                 }
                 
                 // Hide the cart items container
-                cartItemsContainer.style.display = 'none';
+                cartItemsContainer.style.display = 'flex';
             }
             
             // Update cart count
@@ -810,7 +810,7 @@ function updateCartTotals() {
         // Show/hide empty cart message
         if (cartItems.length === 0) {
             if (emptyCart) emptyCart.style.display = 'block';
-            if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+            if (cartItemsContainer) cartItemsContainer.style.display = 'flex';
             
             // Clear the cart summary
             const cartSummary = document.getElementById('cartSummary');
