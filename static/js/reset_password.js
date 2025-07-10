@@ -181,6 +181,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Password visibility toggle for eye buttons
+  document.querySelectorAll('.toggle-password').forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const input = button.parentElement.querySelector('input');
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+      } else {
+        input.type = 'password';
+        button.innerHTML = '<i class="fas fa-eye"></i>';
+      }
+    });
+  });
+
   // Event Listeners
   if (requestOtpBtn) requestOtpBtn.addEventListener('click', () => handleRequestOtp(false));
   if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', handleVerifyOtp);
