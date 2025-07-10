@@ -672,15 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (continueShoppingFooter) {
         continueShoppingFooter.addEventListener('click', function(e) {
             e.preventDefault();
-            const companyName = sessionStorage.getItem('companyName') || '';
-            const companyEmail = sessionStorage.getItem('companyEmail') || '';
-            if (companyName) {
-                localStorage.setItem('selectedCompany', JSON.stringify({
-                    name: companyName,
-                    email: companyEmail
-                }));
-            }
-            window.location.href = '/product_selection';
+            handleContinueShopping();
         });
     }
     
