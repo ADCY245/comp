@@ -111,6 +111,27 @@ function getCSRFToken() {
     return '';
 }
 
+// Function to update cart empty state
+function updateCartEmptyState() {
+    const cartItems = document.getElementById('cartItems');
+    const emptyCart = document.getElementById('emptyCart');
+    const cartFooter = document.querySelector('.cart-footer');
+    
+    if (!cartItems) return;
+    
+    const hasItems = document.querySelectorAll('.cart-item').length > 0;
+    
+    if (hasItems) {
+        cartItems.style.display = 'flex';
+        if (emptyCart) emptyCart.style.display = 'none';
+        if (cartFooter) cartFooter.style.display = 'flex';
+    } else {
+        cartItems.style.display = 'none';
+        if (emptyCart) emptyCart.style.display = 'block';
+        if (cartFooter) cartFooter.style.display = 'none';
+    }
+}
+
 // Function to update cart count in the UI
 function updateCartCount() {
     fetch('/get_cart_count')
@@ -387,6 +408,8 @@ function toggleQuotationSection() {
 
 // Function to handle clearing the cart
 function handleClearCart(event) {
+    // Update empty state after clearing cart
+    updateCartEmptyState();
     if (event) event.preventDefault();
     
     if (!confirm('Are you sure you want to clear your cart? This action cannot be undone.')) {
@@ -472,6 +495,9 @@ function handleClearCart(event) {
 // Initialize cart when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded, initializing cart...');
+    
+    // Initial empty state check
+    updateCartEmptyState();
     
     try {
         // Initialize company info
@@ -948,6 +974,8 @@ function handleQuantityChange(event) {
 
 // Function to update cart item quantity
 function updateCartItemQuantity(index, newQuantity) {
+    // Update empty state after quantity changes
+    updateCartEmptyState();
     const csrfToken = getCSRFToken();
     const cartItem = document.querySelector(`.cart-item[data-index="${index}"]`);
     
@@ -1168,6 +1196,8 @@ function handleRemoveClick(e) {
 
 // Function to remove item from cart
 function removeFromCart(event, index) {
+    // Update empty state after removing item
+    updateCartEmptyState();
     event.preventDefault();
     
     if (!confirm('Are you sure you want to remove this item from your cart?')) {
