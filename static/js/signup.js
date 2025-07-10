@@ -494,10 +494,10 @@ async function handleCompleteSignup(e) {
       // Clear form data
       form.reset();
       
-      // Redirect to login page after 3 seconds
+      // Redirect to index.html after successful signup
       setTimeout(() => {
-        window.location.href = result.redirectTo || '/login';
-      }, 3000);
+        window.location.href = result.redirectTo || '/index';
+      }, 1000);
     } else {
       // Show error message
       const errorMessage = result.error || 'Registration failed. Please try again.';
