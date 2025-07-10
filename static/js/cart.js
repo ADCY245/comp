@@ -347,10 +347,25 @@ window.createProductTypeModal = function() {
 
 // Function to handle continue shopping
 function handleContinueShopping() {
-    const productTypeModal = createProductTypeModal();
-    if (productTypeModal) {
-        productTypeModal.show();
-    } else {
+    try {
+        const modalElement = document.getElementById('productTypeModal');
+        let modal;
+        
+        if (modalElement) {
+            // If modal already exists, get the Bootstrap instance
+            modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+        } else {
+            // Otherwise create a new one
+            modal = createProductTypeModal();
+        }
+        
+        if (modal) {
+            modal.show();
+        } else {
+            throw new Error('Failed to create product type modal');
+        }
+    } catch (error) {
+        console.error('Error showing product type modal:', error);
         // Fallback in case modal fails to initialize
         const companyId = sessionStorage.getItem('companyId') || 
                        new URLSearchParams(window.location.search).get('company_id');
