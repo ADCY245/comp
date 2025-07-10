@@ -3288,7 +3288,7 @@ def api_register_complete():
         return jsonify({
             'success': True,
             'message': 'Registration successful',
-            'redirectTo': '/display',  # Changed from '/login' to '/display'
+            'redirectTo': '/index',  # Redirect to index after successful registration
             'user': {
                 'id': new_user.id,
                 'email': new_user.email,
