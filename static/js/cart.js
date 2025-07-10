@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Set up footer clear cart button
-    const clearCartFooter = document.getElementById('clearCartBtn');
+    const clearCartFooter = document.getElementById('clearCartBtnFooter');
     if (clearCartFooter) {
         clearCartFooter.addEventListener('click', handleClearCart);
     }
