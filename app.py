@@ -3399,14 +3399,16 @@ def api_login():
                 print(f'User {user.username} logged in successfully')
                 
                 if request.is_json:
+                    redirect_to = '/admin' if getattr(user, 'role', 'user') == 'admin' else '/index'
                     response = jsonify({
                         'success': True,
                         'message': 'Login successful',
-                        'redirectTo': '/index',
+                        'redirectTo': redirect_to,
                         'user': {
                             'id': str(user.id),
                             'email': user.email,
-                            'username': user.username
+                            'username': user.username,
+                            'role': getattr(user, 'role', 'user')
                         }
                     })
                 else:
@@ -3477,15 +3479,17 @@ def api_login():
             user.role = users.get(user.id, {}).get('role', 'user') if isinstance(users, dict) else 'user'
         print(f'User {user.username} logged in successfully (JSON storage)')
         
-        target_page = '/admin' if getattr(user, 'role', 'user') == 'admin' else '/index'
+        user_role = getattr(user, 'role', 'user')
+        target_page = '/admin' if user_role == 'admin' else '/index'
         return jsonify({
             'success': True,
             'message': 'Login successful',
-            'redirectTo': ('/admin' if getattr(user, 'role', 'user') == 'admin' else '/index'),
+            'redirectTo': target_page,
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'username': user.username
+                'username': user.username,
+                'role': user_role
             }
         })
         
