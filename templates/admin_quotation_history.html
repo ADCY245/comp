@@ -1,0 +1,26 @@
+{% extends 'admin_base.html' %}
+{% block title %}Quotation History{% endblock %}
+
+{% block admin_content %}
+<h2 class="mb-4">Quotation History</h2>
+<table class="table table-hover" id="quotesTable">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Company</th>
+      <th>Date</th>
+      <th>View</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for quote in quotations %}
+    <tr>
+      <td>{{ quote.user }}</td>
+      <td>{{ quote.company }}</td>
+      <td>{{ quote.date }}</td>
+      <td><a href="{{ url_for('admin_view_quote', quote_id=quote.id) }}" class="btn btn-sm btn-primary">Open</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

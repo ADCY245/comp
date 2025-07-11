@@ -1,0 +1,44 @@
+{% extends 'admin_base.html' %}
+{% block title %}Manage Users{% endblock %}
+
+{% block admin_content %}
+<h2 class="mb-4">Manage Users</h2>
+<table class="table table-striped" id="usersTable">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.email }}</td>
+      <td>
+        <select class="form-control form-control-sm role-select" data-user-id="{{ user.id }}">
+          <option value="user" {% if user.role=='user' %}selected{% endif %}>User</option>
+          <option value="dealer" {% if user.role=='dealer' %}selected{% endif %}>Dealer</option>
+          <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
+        </select>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-danger delete-user" data-user-id="{{ user.id }}">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+// Placeholder JS for changing roles — will call backend API later
+$('.role-select').on('change', function() {
+  const userId = $(this).data('user-id');
+  const newRole = $(this).val();
+  console.log('Change role', userId, newRole);
+  // TODO: AJAX call to backend
+});
+</script>
+{% endblock %}

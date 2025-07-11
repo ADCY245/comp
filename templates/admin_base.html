@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block head_extra %}
+  <!-- Admin specific styles or scripts -->
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .sidebar {
+      min-height: 100vh;
+    }
+  </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+  <div class="row">
+    <nav class="col-md-2 d-none d-md-block bg-light sidebar py-4">
+      <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link {% if request.path=='/admin' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link {% if request.path.startswith('/admin/manage-users') %}active{% endif %}" href="{{ url_for('admin_manage_users') }}">Manage Users</a></li>
+          <li class="nav-item"><a class="nav-link {% if request.path.startswith('/admin/quotation-history') %}active{% endif %}" href="{{ url_for('admin_quotation_history') }}">Quotation History</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_user_login') }}">User Login View</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dealer_login') }}">Dealer Login View</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4 py-4">
+      {% block admin_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
