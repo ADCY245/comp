@@ -481,6 +481,8 @@ def load_user(user_id):
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id')
             )
+            # Persist role attribute so it is available in subsequent requests
+            user.role = str(doc.get('role', 'user')).lower()
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
         except Exception as e:
@@ -491,7 +493,7 @@ def load_user(user_id):
     users = _load_users_json()
     user_data = users.get(user_id) if hasattr(users, 'get') else None
     if user_data:
-        return User(
+        user = User(
             id=user_id,
             email=user_data['email'],
             username=user_data.get('username', user_data['email'].split('@')[0]),
@@ -503,6 +505,8 @@ def load_user(user_id):
             reset_token_expiry=user_data.get('reset_token_expiry'),
             company_id=user_data.get('company_id')
         )
+        user.role = str(user_data.get('role', 'user')).lower()
+        return user
     return None
 
 def save_users(users_dict=None):
@@ -909,6 +913,8 @@ def load_user(user_id):
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id')
             )
+            # Persist role attribute so it is available in subsequent requests
+            user.role = str(doc.get('role', 'user')).lower()
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
         except Exception as e:
@@ -918,7 +924,7 @@ def load_user(user_id):
         print('MongoDB not available, falling back to JSON users')
         user_data = users.get(user_id) if hasattr(users, 'get') else None
         if user_data:
-            return User(
+            user = User(
                 id=user_id,
                 email=user_data['email'],
                 username=user_data.get('username', user_data['email'].split('@')[0]),
@@ -930,6 +936,9 @@ def load_user(user_id):
                 reset_token_expiry=user_data.get('reset_token_expiry'),
                 company_id=user_data.get('company_id')
             )
+            # Attach role (default to 'user') so it persists in subsequent requests
+            user.role = user_data.get('role', 'user')
+            return user
         return None
 
 @app.route('/cart')
