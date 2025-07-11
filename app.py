@@ -1500,6 +1500,10 @@ def load_companies_data():
 @app.route('/index')
 @login_required
 def index():
+    # If admin, always use the dedicated admin dashboard/pages
+    if getattr(current_user, 'role', 'user').lower() == 'admin':
+        return redirect(url_for('admin_dashboard'))
+
     try:
         companies = load_companies_data()
         
