@@ -937,7 +937,7 @@ def load_user(user_id):
                 company_id=user_data.get('company_id')
             )
             # Attach role (default to 'user') so it persists in subsequent requests
-            user.role = user_data.get('role', 'user')
+            user.role = str(user_data.get('role', 'user')).lower()
             return user
         return None
 
@@ -1517,7 +1517,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        target_page = '/admin' if getattr(current_user, 'role', 'user') == 'admin' else '/index'
+        target_page = '/admin' if getattr(current_user, 'role', 'user').lower() == 'admin' else '/index'
         return jsonify({'success': True, 'redirectTo': target_page}) if request.method == 'POST' else redirect(target_page)
     
     if request.method == 'POST':
@@ -3404,11 +3404,11 @@ def api_login():
                 # Log the user in
                 login_user(user)
                 # Attach role attribute if present in DB
-                user.role = doc.get('role', 'user')
+                user.role = str(doc.get('role', 'user')).lower()
                 print(f'User {user.username} logged in successfully')
                 
                 if request.is_json:
-                    redirect_to = '/admin' if getattr(user, 'role', 'user') == 'admin' else '/index'
+                    redirect_to = '/admin' if getattr(user, 'role', 'user').lower() == 'admin' else '/index'
                     response = jsonify({
                         'success': True,
                         'message': 'Login successful',
@@ -3802,7 +3802,7 @@ def page_not_found(e):
 @login_required
 def admin_dashboard():
     # Only allow admins to access this dashboard
-    if getattr(current_user, 'role', 'user') != 'admin':
+    if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))
     return render_template('admin.html')
 
@@ -3810,7 +3810,7 @@ def admin_dashboard():
 @app.route('/admin/manage-users')
 @login_required
 def admin_manage_users():
-    if getattr(current_user, 'role', 'user') != 'admin':
+    if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))
     # TODO: Replace with real DB query
     dummy_users = [
@@ -3823,7 +3823,7 @@ def admin_manage_users():
 @app.route('/admin/quotation-history')
 @login_required
 def admin_quotation_history():
-    if getattr(current_user, 'role', 'user') != 'admin':
+    if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))
     # TODO: Replace with real DB query
     dummy_quotes = [
@@ -3835,7 +3835,7 @@ def admin_quotation_history():
 @app.route('/admin/quotation/<quote_id>')
 @login_required
 def admin_view_quote(quote_id):
-    if getattr(current_user, 'role', 'user') != 'admin':
+    if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))
     # TODO: fetch quote details
     return f"Placeholder for quotation {quote_id}"
@@ -3852,7 +3852,7 @@ def admin_dealer_login():
     # Redirect to dealer index page (to be implemented)
     return redirect('/dealer-index')
     # Only allow admins to access this dashboard
-    if getattr(current_user, 'role', 'user') != 'admin':
+    if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))
     return render_template('admin.html')
 
