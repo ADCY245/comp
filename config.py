@@ -10,8 +10,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-change-in-production'
     
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MONGO_URI = os.environ.get('MONGO_URI', '')
+    USE_MONGO = os.environ.get('USE_MONGO', 'True').lower() == 'true'
     
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

@@ -1,11 +1,12 @@
-from flask_sqlalchemy import SQLAlchemy
+from pymongo import MongoClient, ASCENDING
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+import os
 
 # Initialize extensions
-db = SQLAlchemy()
+mongo = None
 login_manager = LoginManager()
 mail = Mail()
 csrf = CSRFProtect()
@@ -13,8 +14,22 @@ cors = CORS(resources={r"/*": {"origins": "*"}})
 
 def init_extensions(app):
     """Initialize Flask extensions with the application."""
-    # Initialize SQLAlchemy
-    db.init_app(app)
+    global mongo
+    
+    # Initialize MongoDB if enabled
+    if app.config.get('USE_MONGO', False) and app.config.get('MONGO_URI'):
+        try:
+            mongo = MongoClient(
+                app.config['MONGO_URI'],
+                tls=True if app.config.get('MONGO_TLS', 'true').lower() == 'true' else False,
+                tlsAllowInvalidCertificates=app.config.get('MONGO_TLS_ALLOW_INVALID_CERTS', 'false').lower() == 'true'
+            )
+            # Test the connection
+            mongo.server_info()
+            app.logger.info("Successfully connected to MongoDB")
+        except Exception as e:
+            app.logger.error(f"Failed to connect to MongoDB: {str(e)}")
+            raise
     
     # Initialize LoginManager
     login_manager.init_app(app)
@@ -29,10 +44,3 @@ def init_extensions(app):
     
     # Initialize CORS
     cors.init_app(app)
-    
-    # Import models to ensure they are registered with SQLAlchemy
-    from app.models import User, Company, Product, Quotation, QuotationItem
-    
-    # Create database tables
-    with app.app_context():
-        db.create_all()

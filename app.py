@@ -2,13 +2,15 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from flask_cors import CORS
+from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo.errors import ConnectionFailure, OperationFailure
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 from logging.handlers import RotatingFileHandler
 
 # Import extensions
-from extensions import db, login_manager, mail
+from extensions import mongo, login_manager, mail
 
 # Import blueprints
 from blueprints.admin.routes import admin_bp as admin_blueprint
@@ -362,14 +364,11 @@ def _resolve_data_dir():
         os.makedirs(fallback, exist_ok=True)
         return fallback
 
-DATA_DIR = _resolve_data_dir()
-USERS_FILE = os.getenv('USERS_FILE_PATH', os.path.join(DATA_DIR, 'users.json'))
-CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None):
-        self.id = id
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, **kwargs):
+        self.id = str(id)  # Ensure ID is always a string for MongoDB _id
         self.email = email
         self.username = username
         self.password_hash = password_hash
@@ -378,7 +377,10 @@ class User(UserMixin):
         self.cart = cart if cart is not None else []
         self.reset_token = reset_token
         self.reset_token_expiry = reset_token_expiry
-        self.company_id = company_id
+        self.company_id = str(company_id) if company_id else None
+        self.is_admin = kwargs.get('is_admin', False)  # Add admin flag
+        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.updated_at = kwargs.get('updated_at', datetime.utcnow())
 
     def to_dict(self):
         return {
@@ -480,50 +482,49 @@ def _load_users_json():
 
 def load_user(user_id):
     """Load user by ID from either MongoDB or JSON."""
-    if MONGO_AVAILABLE and USE_MONGO:
-        # Try MongoDB first
+    if not user_id:
+        return None
+        
+    # Try MongoDB first if available
+    if MONGO_AVAILABLE and USE_MONGO and 'mongo' in current_app.config:
         try:
-            print(f'Loading user from MongoDB with ID: {user_id}')
-            doc = mu_find_user_by_id(user_id)
-            if not doc:
-                print(f'User not found in MongoDB with ID: {user_id}')
-                return None
+            # Try to find user by _id first, then by id field
+            user_data = current_app.config['mongo'].users.find_one({
+                "$or": [
+                    {"_id": ObjectId(user_id) if ObjectId.is_valid(user_id) else user_id},
+                    {"id": user_id}
+                ]
+            })
+            
+            if user_data:
+                # Convert MongoDB ObjectId to string for the user ID
+                user_data['id'] = str(user_data.pop('_id', user_data.get('id', user_id)))
+                # Ensure all required fields have default values
+                user_data.setdefault('is_verified', False)
+                user_data.setdefault('otp_verified', False)
+                user_data.setdefault('cart', [])
+                user_data.setdefault('is_admin', False)
+                return User(**user_data)
                 
-            user = User(
-                id=str(doc['_id']),  # Convert ObjectId to string
-                email=doc['email'],
-                username=doc['username'],
-                password_hash=doc['password_hash'],
-                is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
-            )
-            # Persist role attribute so it is available in subsequent requests
-            user.role = str(doc.get('role', 'user')).lower()
-            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
-            return user
         except Exception as e:
-            print(f"Error loading user {user_id}: {e}")
-            return None
+            current_app.logger.error(f"Error loading user from MongoDB: {str(e)}")
+            if current_app.config.get('FLASK_ENV') == 'production':
+                raise
     
-    # Fall back to JSON users
-    users = _load_users_json()
-    user_data = users.get(user_id) if hasattr(users, 'get') else None
-    if user_data:
-        user = User(
-            id=user_id,
-            email=user_data['email'],
-            username=user_data.get('username', user_data['email'].split('@')[0]),
-            password_hash=user_data['password_hash'],
-            is_verified=user_data.get('is_verified', False),
-            otp_verified=user_data.get('otp_verified', False),
-            cart=user_data.get('cart', []),
-            reset_token=user_data.get('reset_token'),
-            reset_token_expiry=user_data.get('reset_token_expiry'),
-            company_id=user_data.get('company_id')
-        )
-        user.role = str(user_data.get('role', 'user')).lower()
-        return user
+    # Fall back to JSON if MongoDB is not available or user not found
+    try:
+        users_dict = _load_users_json()
+        user_data = users_dict.get(user_id)
+        if user_data:
+            # Ensure all required fields have default values
+            user_data.setdefault('is_verified', False)
+            user_data.setdefault('otp_verified', False)
+            user_data.setdefault('cart', [])
+            user_data.setdefault('is_admin', False)
+            return User(**user_data)
+    except Exception as e:
+        current_app.logger.error(f"Error loading user from JSON: {str(e)}")
+        
     return None
 
 def save_users(users_dict=None):
@@ -663,8 +664,28 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
+    # Initialize MongoDB if enabled
+    if app.config.get('USE_MONGO', False) and app.config.get('MONGO_URI'):
+        try:
+            # Initialize MongoDB connection
+            mongo_client = MongoClient(
+                app.config['MONGO_URI'],
+                tls=app.config.get('MONGO_TLS', 'true').lower() == 'true',
+                tlsAllowInvalidCertificates=app.config.get('MONGO_TLS_ALLOW_INVALID_CERTS', 'false').lower() == 'true'
+            )
+            # Test the connection
+            mongo_client.server_info()
+            app.logger.info("Successfully connected to MongoDB")
+            
+            # Store the database connection in the app config
+            app.mongo = mongo_client.get_database()
+            
+        except Exception as e:
+            app.logger.error(f"Failed to connect to MongoDB: {str(e)}")
+            if app.config.get('FLASK_ENV') == 'production':
+                raise
+    
     # Initialize extensions
-    db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
@@ -716,7 +737,6 @@ def create_app():
     app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
     app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
     
     # Import and register blueprints
     try:
@@ -863,85 +883,103 @@ else:
 # -------------------- Cart helper wrappers --------------------
 
 def get_user_cart():
-    """Return a dict with a products list for the current user using MongoDB."""
+    """Return a dict with a products list for the current user using MongoDB or session."""
     try:
-        app.logger.info(f"[DEBUG] get_user_cart() called for user: {getattr(current_user, 'id', 'no-user')}")
+        app.logger.info(f"[DEBUG] get_user_cart() called for user: {getattr(current_user, 'id', 'anonymous')}")
         
-        if not hasattr(current_user, 'id'):
-            app.logger.warning("[DEBUG] No current_user.id, returning empty cart")
-            return {"products": []}
-            
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            app.logger.info("[DEBUG] Using MongoDB for cart storage")
-            app.logger.info(f"[DEBUG] MongoDB status - MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if mongo_db is not None else 'None'}")
-            
-            try:
-                products = cart_store.get_cart(current_user.id)
-                app.logger.info(f"[DEBUG] Retrieved {len(products) if products else 0} products from MongoDB")
-                if products:
-                    app.logger.debug(f"[DEBUG] Sample product from MongoDB: {str(products[0])[:200]}...")
-            except Exception as e:
-                app.logger.error(f"[DEBUG] Error fetching cart from MongoDB: {str(e)}")
-                products = []
-            # Ensure all products have the correct structure
-            for product in products:
-                if 'calculations' not in product:
-                    # If calculations are missing, recalculate them
-                    if product.get('type') == 'blanket':
-                        base_price = float(product.get('base_price', 0))
-                        bar_price = float(product.get('bar_price', 0))
-                        quantity = int(product.get('quantity', 1))
-                        discount_percent = float(product.get('discount_percent', 0))
-                        gst_percent = float(product.get('gst_percent', 18))
+        # For authenticated users
+        if current_user.is_authenticated:
+            if 'mongo' in current_app.config:
+                try:
+                    # Get cart from MongoDB
+                    cart_data = current_app.config['mongo'].carts.find_one({"user_id": str(current_user.id)})
+                    
+                    if cart_data:
+                        # Ensure products list exists and has proper structure
+                        if 'products' not in cart_data or not isinstance(cart_data['products'], list):
+                            cart_data['products'] = []
                         
-                        price_per_unit = base_price + bar_price
-                        subtotal = price_per_unit * quantity
-                        discount_amount = subtotal * (discount_percent / 100)
-                        discounted_subtotal = subtotal - discount_amount
-                        gst_amount = (discounted_subtotal * gst_percent) / 100
-                        final_total = discounted_subtotal + gst_amount
+                        # Ensure each product has required calculations
+                        for product in cart_data['products']:
+                            if 'calculations' not in product:
+                                product['calculations'] = {
+                                    'subtotal': product.get('subtotal', 0),
+                                    'gst_amount': product.get('gst_amount', 0),
+                                    'discount_amount': product.get('discount_amount', 0),
+                                    'final_total': product.get('total', 0)
+                                }
                         
-                        product['calculations'] = {
-                            'price_per_unit': round(price_per_unit, 2),
-                            'subtotal': round(subtotal, 2),
-                            'discount_amount': round(discount_amount, 2),
-                            'discounted_subtotal': round(discounted_subtotal, 2),
-                            'gst_amount': round(gst_amount, 2),
-                            'final_total': round(final_total, 2)
+                        # Convert ObjectId to string for JSON serialization
+                        if '_id' in cart_data:
+                            cart_data['_id'] = str(cart_data['_id'])
+                        return cart_data
+                    else:
+                        # Create new cart if none exists
+                        new_cart = {
+                            'user_id': str(current_user.id),
+                            'products': [],
+                            'created_at': datetime.utcnow(),
+                            'updated_at': datetime.utcnow()
                         }
-                    elif product.get('type') == 'mpack':
-                        price = float(product.get('unit_price', 0))
-                        quantity = int(product.get('quantity', 1))
-                        discount_percent = float(product.get('discount_percent', 0))
-                        gst_percent = float(product.get('gst_percent', 12))
+                        result = current_app.config['mongo'].carts.insert_one(new_cart)
+                        new_cart['_id'] = str(result.inserted_id)
+                        return new_cart
                         
-                        discount_amount = (price * discount_percent / 100)
-                        price_after_discount = price - discount_amount
-                        gst_amount = (price_after_discount * gst_percent / 100)
-                        final_unit_price = price_after_discount + gst_amount
-                        final_total = final_unit_price * quantity
-                        
-                        product['calculations'] = {
-                            'unit_price': round(price, 2),
-                            'discount_amount': round(discount_amount, 2),
-                            'price_after_discount': round(price_after_discount, 2),
-                            'gst_amount': round(gst_amount, 2),
-                            'final_unit_price': round(final_unit_price, 2),
-                            'final_total': round(final_total, 2)
-                        }
+                except Exception as e:
+                    app.logger.error(f"[ERROR] MongoDB cart operation failed: {str(e)}")
+                    if current_app.config.get('FLASK_ENV') == 'production':
+                        raise
+        
+        # For anonymous users, use session storage
+        if 'cart' not in session:
+            session['cart'] = {"products": []}
             
-            return {"products": products or []}
-            
-        # If we get here, MongoDB is not available
-        app.logger.warning("[DEBUG] MongoDB is not available for cart storage")
-        app.logger.warning(f"[DEBUG] MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if 'mongo_db' in globals() and mongo_db is not None else 'None'}")
-        return {"products": []}
+        return session['cart']
         
     except Exception as e:
-        print(f"Error in get_user_cart: {e}")
+        app.logger.error(f"[ERROR] get_user_cart failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return {"products": []}
+
+def calculate_product_totals(products):
+    """Calculate and update product totals including GST and discounts."""
+    try:
+        if not isinstance(products, list):
+            return []
+            
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+                
+            if product.get('type') == 'blanket':
+                price = float(product.get('price', 0))
+                quantity = int(product.get('quantity', 1))
+                discount_percent = float(product.get('discount_percent', 0))
+                gst_percent = float(product.get('gst_percent', 12))
+                
+                discount_amount = (price * discount_percent / 100)
+                price_after_discount = price - discount_amount
+                gst_amount = (price_after_discount * gst_percent / 100)
+                final_unit_price = price_after_discount + gst_amount
+                final_total = final_unit_price * quantity
+                
+                product['calculations'] = {
+                    'unit_price': round(price, 2),
+                    'discount_amount': round(discount_amount, 2),
+                    'price_after_discount': round(price_after_discount, 2),
+                    'gst_amount': round(gst_amount, 2),
+                    'final_unit_price': round(final_unit_price, 2),
+                    'final_total': round(final_total, 2)
+                }
+                
+        return products
+        
+    except Exception as e:
+        app.logger.error(f"[ERROR] calculate_product_totals failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return products if isinstance(products, list) else []
 
 def save_user_cart(cart_dict):
     """Persist cart for current user using MongoDB."""
@@ -978,50 +1016,50 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            print(f'Loading user from MongoDB with ID: {user_id}')
-            doc = mu_find_user_by_id(user_id)
-            if not doc:
-                print(f'User not found in MongoDB with ID: {user_id}')
-                return None
-                
-            user = User(
-                id=str(doc['_id']),  # Convert ObjectId to string
-                email=doc['email'],
-                username=doc['username'],
-                password_hash=doc['password_hash'],
-                is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
-            )
-            # Persist role attribute so it is available in subsequent requests
-            user.role = str(doc.get('role', 'user')).lower()
-            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
-            return user
-        except Exception as e:
-            print(f"Error loading user {user_id}: {e}")
-            return None
-    else:
-        print('MongoDB not available, falling back to JSON users')
-        user_data = users.get(user_id) if hasattr(users, 'get') else None
-        if user_data:
-            user = User(
-                id=user_id,
-                email=user_data['email'],
-                username=user_data.get('username', user_data['email'].split('@')[0]),
-                password_hash=user_data['password_hash'],
-                is_verified=user_data.get('is_verified', False),
-                otp_verified=user_data.get('otp_verified', False),
-                cart=user_data.get('cart', []),
-                reset_token=user_data.get('reset_token'),
-                reset_token_expiry=user_data.get('reset_token_expiry'),
-                company_id=user_data.get('company_id')
-            )
-            # Attach role (default to 'user') so it persists in subsequent requests
-            user.role = str(user_data.get('role', 'user')).lower()
-            return user
+    """Load user by ID from either MongoDB or JSON."""
+    if not user_id:
         return None
+        
+    if USE_MONGO and 'mongo' in current_app.config:
+        try:
+            # Try to find user by _id first, then by id field
+            user_data = current_app.config['mongo'].users.find_one({
+                "$or": [
+                    {"_id": ObjectId(user_id) if ObjectId.is_valid(user_id) else user_id},
+                    {"id": user_id}
+                ]
+            })
+            
+            if user_data:
+                # Convert MongoDB ObjectId to string for the user ID
+                user_data['id'] = str(user_data.pop('_id', user_data.get('id', user_id)))
+                # Ensure all required fields have default values
+                user_data.setdefault('is_verified', False)
+                user_data.setdefault('otp_verified', False)
+                user_data.setdefault('cart', [])
+                user_data.setdefault('is_admin', False)
+                return User(**user_data)
+                
+        except Exception as e:
+            current_app.logger.error(f"Error loading user from MongoDB: {str(e)}")
+            if current_app.config.get('FLASK_ENV') == 'production':
+                raise
+    
+    # Fall back to JSON if MongoDB is not available or user not found
+    try:
+        users_dict = _load_users_json()
+        user_data = users_dict.get(user_id)
+        if user_data:
+            # Ensure all required fields have default values
+            user_data.setdefault('is_verified', False)
+            user_data.setdefault('otp_verified', False)
+            user_data.setdefault('cart', [])
+            user_data.setdefault('is_admin', False)
+            return User(**user_data)
+    except Exception as e:
+        current_app.logger.error(f"Error loading user from JSON: {str(e)}")
+        
+    return None
 
 @app.route('/cart')
 @login_required
