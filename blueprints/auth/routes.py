@@ -1,7 +1,8 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from extensions import db, login_manager
+from extensions import db
 from models import User
+from . import auth_bp
 from .forms import LoginForm, RegistrationForm, ForgotPasswordForm, ResetPasswordForm
 
 @auth_bp.route('/login', methods=['GET', 'POST'])

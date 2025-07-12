@@ -13,7 +13,7 @@ from logging.handlers import RotatingFileHandler
 from extensions import mongo, login_manager, mail
 
 # Import blueprints
-from blueprints.auth.routes import auth_bp as auth_blueprint
+from blueprints.auth import auth_bp as auth_blueprint, init_auth
 from blueprints.user.routes import user_bp as user_blueprint
 from blueprints.main.routes import main_bp as main_blueprint
 from blueprints.api.routes import api_bp as api_blueprint
@@ -640,6 +640,9 @@ else:
 def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__)
+    
+    # Initialize auth blueprint
+    init_auth(app)
     
     # Load configuration
     env = os.getenv('FLASK_ENV', 'development')
