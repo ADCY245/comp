@@ -1,9 +1,9 @@
 from flask import jsonify, request, current_app
 from flask_login import login_required, current_user
 from functools import wraps
-import jwt
+import PyJWT as jwt
 import time
-from extensions import mongo_db
+from extensions import mongo as mongo_db
 from bson.objectid import ObjectId
 
 # Helper function to verify JWT token
