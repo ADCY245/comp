@@ -3,9 +3,11 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import os
 
 # Initialize extensions
+db = SQLAlchemy()
 mongo = None
 login_manager = LoginManager()
 mail = Mail()
@@ -14,7 +16,7 @@ cors = CORS(resources={r"/*": {"origins": "*"}})
 
 def init_extensions(app):
     """Initialize Flask extensions with the application."""
-    global mongo
+    global mongo, db
     
     # Initialize MongoDB if enabled
     if app.config.get('USE_MONGO', False) and app.config.get('MONGO_URI'):
@@ -44,3 +46,10 @@ def init_extensions(app):
     
     # Initialize CORS
     cors.init_app(app)
+    
+    # Initialize SQLAlchemy
+    db.init_app(app)
+    
+    with app.app_context():
+        # Create tables if they don't exist
+        db.create_all()
