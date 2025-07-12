@@ -1,7 +1,7 @@
 from flask import jsonify, request, current_app
 from flask_login import login_required, current_user
 from functools import wraps
-import PyJWT as jwt
+import jwt
 import time
 from extensions import mongo as mongo_db
 from bson.objectid import ObjectId
