@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
+
+# Import admin blueprint
+from routes.admin_routes import admin_bp as admin_blueprint
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from waitress import serve
@@ -51,6 +54,9 @@ print("===========================\n")
 # CORS Configuration
 from flask_cors import CORS
 app = Flask(__name__)
+
+# Register blueprints
+app.register_blueprint(admin_blueprint, url_prefix='/admin')
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
@@ -3799,42 +3805,20 @@ def get_company_email_by_id(company_id):
 
 # Error handling
 @app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    # Only allow admins to access this dashboard
-    if getattr(current_user, 'role', 'user').lower() != 'admin':
-        return redirect(url_for('index'))
-    return render_template('admin.html')
-
-# ---------------- Admin sub-pages ----------------
-@app.route('/admin/manage-users')
-@login_required
-def admin_manage_users():
-    if getattr(current_user, 'role', 'user').lower() != 'admin':
-        return redirect(url_for('index'))
-    # TODO: Replace with real DB query
-    dummy_users = [
-        {'id': '1', 'username': 'alice', 'email': 'alice@example.com', 'role': 'user'},
-        {'id': '2', 'username': 'bob', 'email': 'bob@example.com', 'role': 'dealer'},
-        {'id': '3', 'username': 'md.desk', 'email': 'admin@example.com', 'role': 'admin'},
-    ]
-    return render_template('admin_manage_users.html', users=dummy_users)
-
-@app.route('/admin/quotation-history')
-@login_required
-def admin_quotation_history():
-    if getattr(current_user, 'role', 'user').lower() != 'admin':
-        return redirect(url_for('index'))
-    # TODO: Replace with real DB query
+def page_not_found(error):
+    # Dummy data for testing
     dummy_quotes = [
-        {'id': 'q1', 'user': 'alice', 'company': 'ACME', 'date': '2025-07-10'},
-        {'id': 'q2', 'user': 'bob', 'company': 'Globex', 'date': '2025-07-11'},
+        {'id': 1, 'quote_number': 'QT-2023001', 'customer': 'ABC Corp', 'total': 1250.00, 'status': 'Pending'},
+        {'id': 2, 'quote_number': 'QT-2023002', 'customer': 'XYZ Ltd', 'total': 875.50, 'status': 'Approved'},
+        {'id': 3, 'quote_number': 'QT-2023003', 'customer': '123 Industries', 'total': 2300.75, 'status': 'Rejected'},
     ]
-    return render_template('admin_quotation_history.html', quotations=dummy_quotes)
+    
+    # Check if the request is for an admin page
+    if request.path.startswith('/admin'):
+        return render_template('admin/quotation_history.html', quotations=dummy_quotes)
+    
+    # For non-admin 404 errors, show the standard 404 page
+    return render_template('errors/404.html'), 404
 
 @app.route('/admin/quotation/<quote_id>')
 @login_required
@@ -3853,8 +3837,8 @@ def admin_user_login():
 @app.route('/admin/dealer-login')
 @login_required
 def admin_dealer_login():
-    # Redirect to dealer index page (to be implemented)
-    return redirect('/dealer-index')
+    # TODO: Implement actual admin login logic
+    return render_template('admin/dashboard.html')
     # Only allow admins to access this dashboard
     if getattr(current_user, 'role', 'user').lower() != 'admin':
         return redirect(url_for('index'))

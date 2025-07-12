@@ -1,0 +1,361 @@
+/* Admin Panel Styles */
+
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+}
+
+/* Sidebar Styles */
+#sidebar-wrapper {
+    min-height: 100vh;
+    margin-left: -15rem;
+    -webkit-transition: margin .25s ease-out;
+    -moz-transition: margin .25s ease-out;
+    -o-transition: margin .25s ease-out;
+    transition: margin .25s ease-out;
+    width: 15rem;
+}
+
+#sidebar-wrapper .sidebar-heading {
+    padding: 0.875rem 1.25rem;
+    font-size: 1.2rem;
+}
+
+#sidebar-wrapper .list-group {
+    width: 15rem;
+}
+
+#page-content-wrapper {
+    min-width: 100vw;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: 0;
+}
+
+.list-group-item {
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0 !important;
+    margin-bottom: 0.1rem;
+}
+
+.list-group-item i {
+    width: 1.5rem;
+    text-align: center;
+}
+
+.list-group-item:hover, .list-group-item:focus {
+    background-color: #343a40;
+    color: #fff;
+}
+
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Navbar Styles */
+.navbar {
+    padding: 0.5rem 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+/* Content Area */
+.container-fluid {
+    padding: 20px;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Tables */
+.table {
+    font-size: 0.875rem;
+}
+
+.table thead th {
+    border-top: none;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.table td, .table th {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+/* Buttons */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+.btn-group-sm > .btn, .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+/* Badges */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+}
+
+/* Forms */
+.form-control, .form-select {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    height: calc(1.5em + 0.75rem + 2px);
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+/* Alerts */
+.alert {
+    font-size: 0.875rem;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: 0;
+    }
+
+    #page-content-wrapper {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: -15rem;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Status Badges */
+.badge-status-pending {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.badge-status-approved {
+    background-color: #198754;
+    color: #fff;
+}
+
+.badge-status-rejected {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* Custom Utilities */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-underline-hover {
+    text-decoration: none;
+}
+
+.text-underline-hover:hover {
+    text-decoration: underline;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 0.25rem solid #f3f3f3;
+    border-top: 0.25rem solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Custom Checkbox */
+.custom-checkbox .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Custom Radio */
+.custom-radio .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Custom Switch */
+.form-switch .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Custom File Upload */
+.custom-file-upload {
+    border: 1px dashed #ced4da;
+    border-radius: 0.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.custom-file-upload:hover {
+    border-color: #86b7fe;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Dropzone */
+.dropzone {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dropzone:hover {
+    border-color: #86b7fe;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Custom Card Styles */
+.card-hover {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Custom Scrollable Container */
+.scrollable-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Custom Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.divider:not(:empty)::before {
+    margin-right: 1.5rem;
+}
+
+.divider:not(:empty)::after {
+    margin-left: 1.5rem;
+}
+
+/* Custom Badge */
+.badge-custom {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 50rem;
+}
+
+/* Custom Avatar */
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0d6efd;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Custom Tooltip */
+.custom-tooltip {
+    --bs-tooltip-bg: #212529;
+    --bs-tooltip-color: #fff;
+    --bs-tooltip-font-size: 0.75rem;
+    --bs-tooltip-padding-x: 0.5rem;
+    --bs-tooltip-padding-y: 0.25rem;
+}
+
+/* Custom Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}

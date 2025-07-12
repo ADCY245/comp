@@ -1,0 +1,42 @@
+{% extends 'admin/base.html' %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Admin Dashboard</h1>
+</div>
+
+<div class="row">
+  <div class="col-md-4 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Total Users</h5>
+        <h2 class="card-text">{{ user_count }}</h2>
+        <a href="{{ url_for('admin.manage_users') }}" class="btn btn-primary btn-sm">View All</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Total Quotations</h5>
+        <h2 class="card-text">{{ quote_count }}</h2>
+        <a href="{{ url_for('admin.quotation_history') }}" class="btn btn-primary btn-sm">View All</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Recent Activity</h5>
+        <ul class="list-unstyled">
+          {% for activity in recent_activities %}
+          <li class="mb-2">{{ activity }}</li>
+          {% else %}
+          <li>No recent activity</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

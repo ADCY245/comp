@@ -1,0 +1,143 @@
+{% extends 'admin/base.html' %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Quotation History</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="input-group me-2">
+      <input type="text" id="searchQuotes" class="form-control form-control-sm" placeholder="Search quotes...">
+      <button class="btn btn-sm btn-outline-secondary" type="button">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+    <div class="btn-group me-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+    </div>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover" id="quotesTable">
+    <thead>
+      <tr>
+        <th>Quote #</th>
+        <th>Date</th>
+        <th>Customer</th>
+        <th>Company</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for quote in quotations %}
+      <tr>
+        <td>{{ quote.id }}</td>
+        <td>{{ quote.date }}</td>
+        <td>{{ quote.customer_name }}</td>
+        <td>{{ quote.company_name }}</td>
+        <td>${{ "%.2f"|format(quote.total) }}</td>
+        <td>
+          <span class="badge bg-{{ 'success' if quote.status == 'completed' else 'warning' }}">
+            {{ quote.status|title }}
+          </span>
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <a href="{{ url_for('admin.view_quote', quote_id=quote.id) }}" class="btn btn-outline-primary" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="#" class="btn btn-outline-secondary" title="Download PDF">
+              <i class="bi bi-download"></i>
+            </a>
+            <button class="btn btn-outline-danger delete-quote" title="Delete" data-quote-id="{{ quote.id }}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center">No quotations found</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<nav aria-label="Quotation pagination">
+  <ul class="pagination justify-content-center">
+    <li class="page-item disabled">
+      <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+    </li>
+    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+    <li class="page-item"><a class="page-link" href="#">2</a></li>
+    <li class="page-item"><a class="page-link" href="#">3</a></li>
+    <li class="page-item">
+      <a class="page-link" href="#">Next</a>
+    </li>
+  </ul>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Search functionality
+$('#searchQuotes').on('keyup', function() {
+  const value = $(this).val().toLowerCase();
+  $('#quotesTable tbody tr').filter(function() {
+    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+  });
+});
+
+// Delete quote
+$('.delete-quote').on('click', function() {
+  if (!confirm('Are you sure you want to delete this quotation? This action cannot be undone.')) {
+    return;
+  }
+  
+  const quoteId = $(this).data('quote-id');
+  const $row = $(this).closest('tr');
+  
+  fetch(`/api/admin/quotations/${quoteId}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token() }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      $row.fadeOut(400, () => $row.remove());
+      showAlert('Quotation deleted successfully', 'success');
+    } else {
+      showAlert(data.message || 'Failed to delete quotation', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showAlert('An error occurred while deleting quotation', 'danger');
+  });
+});
+
+// Helper function to show alerts
+function showAlert(message, type) {
+  const alertHtml = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  `;
+  
+  // Prepend alert to the main content
+  $('main').prepend(alertHtml);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    $('.alert').alert('close');
+  }, 5000);
+}
+</script>
+{% endblock %}
