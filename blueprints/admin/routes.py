@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from functools import wraps
 from ...models import User, Quotation
 from ...extensions import db
+from . import admin_bp
 
 def admin_required(f):
     @wraps(f)
