@@ -2,6 +2,13 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from flask_cors import CORS
+import os
+from datetime import timedelta
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Import extensions
+from extensions import db, login_manager, mail
 
 # Import blueprints
 from blueprints.admin.routes import admin_bp as admin_blueprint
@@ -13,9 +20,7 @@ from blueprints.api.routes import api_bp as api_blueprint
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from waitress import serve
-import os
 import json
-from datetime import datetime, timedelta
 import uuid
 import hashlib
 import secrets
@@ -611,12 +616,6 @@ else:
 
 # Add logging for debugging
 
-print(f"SMTP Configuration:\n"
-      f"SMTP_HOST: {SMTP_SERVER}\n"
-      f"SMTP_PORT: {SMTP_PORT}\n"
-      f"SMTP_USER: {SMTP_USERNAME}\n"
-      f"EMAIL_FROM: {EMAIL_FROM}")
-
 def check_email_config():
     """Check if email configuration is valid."""
     if not SMTP_SERVER or not SMTP_USERNAME or not SMTP_PASSWORD or not EMAIL_FROM:
@@ -632,38 +631,86 @@ def refresh_email_config():
     global email_config_valid
     email_config_valid = check_email_config()
 
+# Log email configuration status
+if email_config_valid:
+    print("Email configuration is valid")
+else:
+    print("Warning: Email configuration is incomplete or invalid")
+
 def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__)
     
     # Load configuration
-    app.config.from_pyfile('config.py')
+    env = os.getenv('FLASK_ENV', 'development')
+    if env == 'development':
+        app.config.from_object('config.DevelopmentConfig')
+    elif env == 'testing':
+        app.config.from_object('config.TestingConfig')
+    else:
+        app.config.from_object('config.ProductionConfig')
     
-    # Initialize Flask-Login
-    login_manager = LoginManager()
+    # Configure session
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+    app.config['SESSION_FILE_THRESHOLD'] = 100
+    
+    # Configure CSRF protection
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['WTF_CSRF_SECRET_KEY'] = os.urandom(24)
+    
+    # Configure upload folder
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Initialize extensions
+    db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message_category = 'info'
+    mail.init_app(app)
+    csrf.init_app(app)
+    cors.init_app(app)
     
     # Configure logging
-    log_formatter = logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
-    log_file = os.path.join(app.root_path, 'logs', 'app.log')
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    if not app.debug and not app.testing:
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Application startup')
     
-    file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(log_formatter)
+    # Configure logging
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    file_handler = RotatingFileHandler('logs/moneda.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
     file_handler.setLevel(logging.INFO)
-    
     app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
+    app.logger.info('Moneda startup')
     
-    # Initialize Flask-WTF CSRF protection
+    # Initialize CORS
+    cors.init_app(app, resources={
+        r"/api/*": {
+            "origins": "*",
+            "methods": ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "expose_headers": ["Content-Range", "X-Total-Count"],
+            "max_age": 600  # Cache preflight request for 10 minutes
+        }
+    })
+    
+    # Configure Flask-WTF CSRF protection
     app.config['WTF_CSRF_ENABLED'] = True
     app.config['WTF_CSRF_SECRET_KEY'] = os.urandom(24)
     app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
     
-    # Initialize Flask-Mail
+    # Configure Flask-Mail
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
@@ -671,26 +718,23 @@ def create_app():
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
     
-    # Configure session
-    app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
-    app.config['SESSION_TYPE'] = 'filesystem'
-    app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session expires after 1 day
-    
-    # Register blueprints
-    from blueprints.admin.routes import admin_bp as admin_blueprint
-    from blueprints.auth.routes import auth_bp as auth_blueprint
-    from blueprints.user.routes import user_bp as user_blueprint
-    from blueprints.main.routes import main_bp as main_blueprint
-    from blueprints.api.routes import api_bp as api_blueprint
-    
-    app.register_blueprint(admin_blueprint, url_prefix='/admin')
-    app.register_blueprint(auth_blueprint, url_prefix='/auth')
-    app.register_blueprint(user_blueprint, url_prefix='/user')
-    app.register_blueprint(main_blueprint, url_prefix='/')
-    app.register_blueprint(api_blueprint, url_prefix='/api')
+    # Import and register blueprints
+    try:
+        from blueprints.admin.routes import admin_bp as admin_blueprint
+        from blueprints.auth.routes import auth_bp as auth_blueprint
+        from blueprints.user.routes import user_bp as user_blueprint
+        from blueprints.main.routes import main_bp as main_blueprint
+        from blueprints.api.routes import api_bp as api_blueprint
+        
+        app.register_blueprint(admin_blueprint, url_prefix='/admin')
+        app.register_blueprint(auth_blueprint, url_prefix='/auth')
+        app.register_blueprint(user_blueprint, url_prefix='/user')
+        app.register_blueprint(api_blueprint, url_prefix='/api')
+        app.register_blueprint(main_blueprint)
+        
+    except ImportError as e:
+        app.logger.error(f"Failed to import blueprints: {e}")
+        raise
     
     # Add template filters
     app.jinja_env.filters['regex_search'] = regex_search_filter

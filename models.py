@@ -1,24 +1,30 @@
 from datetime import datetime
-from bson import ObjectId
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db
 
-class User(UserMixin):
+class User(UserMixin, db.Model):
     """User model for authentication and profile management."""
+    __tablename__ = 'users'
     
-    def __init__(self, user_data=None):
-        if user_data:
-            self.id = str(user_data.get('_id'))
-            self.username = user_data.get('username')
-            self.email = user_data.get('email')
-            self.password_hash = user_data.get('password_hash')
-            self.is_admin = user_data.get('is_admin', False)
-            self.is_verified = user_data.get('is_verified', False)
-            self.created_at = user_data.get('created_at', datetime.utcnow())
-            self.updated_at = user_data.get('updated_at', datetime.utcnow())
-            self.last_login = user_data.get('last_login')
-            self.company_id = user_data.get('company_id')
-            self.profile = user_data.get('profile', {})
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_verified = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'))
+    
+    # Relationships
+    company = db.relationship('Company', backref='users')
+    
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if 'password' in kwargs:
+            self.set_password(kwargs['password'])
     
     def set_password(self, password):
         """Create hashed password."""
@@ -31,100 +37,66 @@ class User(UserMixin):
     def to_dict(self):
         """Convert user object to dictionary."""
         return {
+            'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_admin': self.is_admin,
             'is_verified': self.is_verified,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at,
-            'last_login': self.last_login,
-            'company_id': self.company_id,
-            'profile': self.profile
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_login': self.last_login.isoformat() if self.last_login else None,
+            'company_id': self.company_id
         }
-    
-    def save(self, db):
-        """Save user to database."""
-        user_data = self.to_dict()
-        user_data['password_hash'] = self.password_hash
-        
-        if hasattr(self, 'id'):
-            # Update existing user
-            result = db.users.update_one(
-                {'_id': ObjectId(self.id)},
-                {'$set': user_data}
-            )
-            return result.modified_count > 0
-        else:
-            # Create new user
-            user_data['created_at'] = datetime.utcnow()
-            result = db.users.insert_one(user_data)
-            self.id = str(result.inserted_id)
-            return result.acknowledged
 
 
-class Company:
+class Company(db.Model):
     """Company model for organization management."""
+    __tablename__ = 'companies'
     
-    def __init__(self, company_data=None):
-        if company_data:
-            self.id = str(company_data.get('_id'))
-            self.name = company_data.get('name')
-            self.email = company_data.get('email')
-            self.phone = company_data.get('phone')
-            self.address = company_data.get('address', {})
-            self.created_at = company_data.get('created_at', datetime.utcnow())
-            self.updated_at = company_data.get('updated_at', datetime.utcnow())
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(20))
+    address = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
         """Convert company object to dictionary."""
         return {
+            'id': self.id,
             'name': self.name,
             'email': self.email,
             'phone': self.phone,
             'address': self.address,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-    
-    def save(self, db):
-        """Save company to database."""
-        company_data = self.to_dict()
-        
-        if hasattr(self, 'id'):
-            # Update existing company
-            result = db.companies.update_one(
-                {'_id': ObjectId(self.id)},
-                {'$set': company_data}
-            )
-            return result.modified_count > 0
-        else:
-            # Create new company
-            company_data['created_at'] = datetime.utcnow()
-            result = db.companies.insert_one(company_data)
-            self.id = str(result.inserted_id)
-            return result.acknowledged
 
 
-class Product:
+class Product(db.Model):
     """Product model for inventory management."""
+    __tablename__ = 'products'
     
-    def __init__(self, product_data=None):
-        if product_data:
-            self.id = str(product_data.get('_id'))
-            self.name = product_data.get('name')
-            self.description = product_data.get('description')
-            self.price = product_data.get('price', 0.0)
-            self.category = product_data.get('category')
-            self.sku = product_data.get('sku')
-            self.stock = product_data.get('stock', 0)
-            self.image_url = product_data.get('image_url')
-            self.is_active = product_data.get('is_active', True)
-            self.created_at = product_data.get('created_at', datetime.utcnow())
-            self.updated_at = product_data.get('updated_at', datetime.utcnow())
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    price = db.Column(db.Float, nullable=False, default=0.0)
+    category = db.Column(db.String(50))
+    sku = db.Column(db.String(50), unique=True)
+    stock = db.Column(db.Integer, default=0)
+    image_url = db.Column(db.String(200))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    quotation_items = db.relationship('QuotationItem', backref='product', lazy=True)
     
     def to_dict(self):
         """Convert product object to dictionary."""
         return {
+            'id': self.id,
             'name': self.name,
             'description': self.description,
             'price': self.price,
@@ -133,93 +105,89 @@ class Product:
             'stock': self.stock,
             'image_url': self.image_url,
             'is_active': self.is_active,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-    
-    def save(self, db):
-        """Save product to database."""
-        product_data = self.to_dict()
-        
-        if hasattr(self, 'id'):
-            # Update existing product
-            result = db.products.update_one(
-                {'_id': ObjectId(self.id)},
-                {'$set': product_data}
-            )
-            return result.modified_count > 0
-        else:
-            # Create new product
-            product_data['created_at'] = datetime.utcnow()
-            result = db.products.insert_one(product_data)
-            self.id = str(result.inserted_id)
-            return result.acknowledged
 
 
-class Quotation:
+class Quotation(db.Model):
     """Quotation model for managing customer quotes."""
+    __tablename__ = 'quotations'
     
-    def __init__(self, quotation_data=None):
-        if quotation_data:
-            self.id = str(quotation_data.get('_id'))
-            self.quote_number = quotation_data.get('quote_number')
-            self.user_id = quotation_data.get('user_id')
-            self.company_id = quotation_data.get('company_id')
-            self.items = quotation_data.get('items', [])
-            self.subtotal = quotation_data.get('subtotal', 0.0)
-            self.tax = quotation_data.get('tax', 0.0)
-            self.discount = quotation_data.get('discount', 0.0)
-            self.total = quotation_data.get('total', 0.0)
-            self.status = quotation_data.get('status', 'draft')  # draft, sent, accepted, rejected, expired
-            self.notes = quotation_data.get('notes', '')
-            self.valid_until = quotation_data.get('valid_until')
-            self.created_at = quotation_data.get('created_at', datetime.utcnow())
-            self.updated_at = quotation_data.get('updated_at', datetime.utcnow())
+    id = db.Column(db.Integer, primary_key=True)
+    quote_number = db.Column(db.String(20), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
+    subtotal = db.Column(db.Float, default=0.0)
+    tax = db.Column(db.Float, default=0.0)
+    discount = db.Column(db.Float, default=0.0)
+    total = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default='draft')  # draft, sent, accepted, rejected, expired
+    notes = db.Column(db.Text)
+    valid_until = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='quotations')
+    company = db.relationship('Company', backref='quotations')
+    items = db.relationship('QuotationItem', backref='quotation', lazy='dynamic')
+    
+    def calculate_totals(self):
+        """Calculate subtotal, tax, and total based on items."""
+        self.subtotal = sum(item.total_price for item in self.items)
+        self.total = self.subtotal + self.tax - self.discount
     
     def to_dict(self):
         """Convert quotation object to dictionary."""
         return {
+            'id': self.id,
             'quote_number': self.quote_number,
             'user_id': self.user_id,
             'company_id': self.company_id,
-            'items': self.items,
+            'items': [item.to_dict() for item in self.items],
             'subtotal': self.subtotal,
             'tax': self.tax,
             'discount': self.discount,
             'total': self.total,
             'status': self.status,
             'notes': self.notes,
-            'valid_until': self.valid_until,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'valid_until': self.valid_until.isoformat() if self.valid_until else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'user': self.user.to_dict() if self.user else None,
+            'company': self.company.to_dict() if self.company else None
         }
+
+
+class QuotationItem(db.Model):
+    """Quotation line items."""
+    __tablename__ = 'quotation_items'
     
-    def calculate_totals(self):
-        """Calculate subtotal, tax, and total based on items."""
-        self.subtotal = sum(item.get('price', 0) * item.get('quantity', 0) for item in self.items)
-        self.total = self.subtotal + self.tax - self.discount
+    id = db.Column(db.Integer, primary_key=True)
+    quotation_id = db.Column(db.Integer, db.ForeignKey('quotations.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    unit_price = db.Column(db.Float, nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
     
-    def save(self, db):
-        """Save quotation to database."""
-        quotation_data = self.to_dict()
-        quotation_data['updated_at'] = datetime.utcnow()
-        
-        if hasattr(self, 'id'):
-            # Update existing quotation
-            result = db.quotations.update_one(
-                {'_id': ObjectId(self.id)},
-                {'$set': quotation_data}
-            )
-            return result.modified_count > 0
-        else:
-            # Create new quotation
-            quotation_data['created_at'] = datetime.utcnow()
-            if not self.quote_number:
-                # Generate quote number (you might want to implement a better numbering system)
-                count = db.quotations.count_documents({}) + 1
-                self.quote_number = f"QT-{datetime.now().strftime('%Y%m%d')}-{count:04d}"
-                quotation_data['quote_number'] = self.quote_number
-            
-            result = db.quotations.insert_one(quotation_data)
-            self.id = str(result.inserted_id)
-            return result.acknowledged
+    def __init__(self, **kwargs):
+        super(QuotationItem, self).__init__(**kwargs)
+        self.calculate_total()
+    
+    def calculate_total(self):
+        """Calculate total price for this line item."""
+        if self.unit_price is not None and self.quantity is not None:
+            self.total_price = self.unit_price * self.quantity
+    
+    def to_dict(self):
+        """Convert quotation item to dictionary."""
+        return {
+            'id': self.id,
+            'quotation_id': self.quotation_id,
+            'product_id': self.product_id,
+            'quantity': self.quantity,
+            'unit_price': self.unit_price,
+            'total_price': self.total_price,
+            'product': self.product.to_dict() if self.product else None
+        }
