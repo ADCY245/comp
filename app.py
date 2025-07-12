@@ -1,9 +1,15 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
+from flask_cors import CORS
 
-# Import admin blueprint
-from routes.admin_routes import admin_bp as admin_blueprint
+# Import blueprints
+from blueprints.admin.routes import admin_bp as admin_blueprint
+from blueprints.auth.routes import auth_bp as auth_blueprint
+from blueprints.user.routes import user_bp as user_blueprint
+from blueprints.main.routes import main_bp as main_blueprint
+from blueprints.api.routes import api_bp as api_blueprint
+
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from waitress import serve
@@ -626,54 +632,80 @@ def refresh_email_config():
     global email_config_valid
     email_config_valid = check_email_config()
 
-# Initialize Flask app with logging
-import logging
-import sys
-from logging.handlers import RotatingFileHandler
+def create_app():
+    """Create and configure the Flask application."""
+    app = Flask(__name__)
+    
+    # Load configuration
+    app.config.from_pyfile('config.py')
+    
+    # Initialize Flask-Login
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message_category = 'info'
+    
+    # Configure logging
+    log_formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+    log_file = os.path.join(app.root_path, 'logs', 'app.log')
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    
+    file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(log_formatter)
+    file_handler.setLevel(logging.INFO)
+    
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    
+    # Initialize Flask-WTF CSRF protection
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['WTF_CSRF_SECRET_KEY'] = os.urandom(24)
+    app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
+    
+    # Initialize Flask-Mail
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
+    
+    # Configure session
+    app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session expires after 1 day
+    
+    # Register blueprints
+    from blueprints.admin.routes import admin_bp as admin_blueprint
+    from blueprints.auth.routes import auth_bp as auth_blueprint
+    from blueprints.user.routes import user_bp as user_blueprint
+    from blueprints.main.routes import main_bp as main_blueprint
+    from blueprints.api.routes import api_bp as api_blueprint
+    
+    app.register_blueprint(admin_blueprint, url_prefix='/admin')
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    app.register_blueprint(user_blueprint, url_prefix='/user')
+    app.register_blueprint(main_blueprint, url_prefix='/')
+    app.register_blueprint(api_blueprint, url_prefix='/api')
+    
+    # Add template filters
+    app.jinja_env.filters['regex_search'] = regex_search_filter
+    
+    # Initialize login manager
+    login_manager.user_loader(load_user)
+    
+    # Register error handlers
+    app.register_error_handler(404, page_not_found)
+    
+    app.logger.info('Application factory created')
+    return app
 
-# Configure root logger
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s: %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
-    ]
-)
+app = create_app()
 
-# Suppress Flask debug pin console output
-logging.getLogger('werkzeug').setLevel(logging.WARNING)
-
-# Create Flask app instance
-app = Flask(__name__)
-
-# Configure secret key
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Login')
-
-# Configure session
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session expires after 1 day
-
-# Add regex_search filter to Jinja2 environment
-@app.template_filter('regex_search')
-def regex_search_filter(s, pattern):
-    """Check if the pattern matches the string."""
-    if not s or not pattern:
-        return False
-    return bool(re.search(pattern, str(s)))
-
-app.logger.info("Flask app initialized")
-
-# Initialize cart store
 # -------------------- Cart storage abstractions --------------------
 class MongoCartStore:
     """MongoDB-backed cart store with one cart document per user."""
@@ -3844,13 +3876,13 @@ def admin_dealer_login():
         return redirect(url_for('index'))
     return render_template('admin.html')
 
+# Create app instance
+app = create_app()
+
 # Start app
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
-    if os.environ.get('FLASK_ENV') == 'production':
-        serve(app, host="0.0.0.0", port=port)
-    else:
-        app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_ENV') != 'production')
 
 # Initialize users dictionary after all function definitions
 if USE_MONGO:
