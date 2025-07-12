@@ -13,7 +13,6 @@ from logging.handlers import RotatingFileHandler
 from extensions import mongo, login_manager, mail
 
 # Import blueprints
-from blueprints.admin.routes import admin_bp as admin_blueprint
 from blueprints.auth.routes import auth_bp as auth_blueprint
 from blueprints.user.routes import user_bp as user_blueprint
 from blueprints.main.routes import main_bp as main_blueprint
@@ -69,7 +68,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # Register blueprints
-app.register_blueprint(admin_blueprint, url_prefix='/admin')
+
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
@@ -740,12 +739,11 @@ def create_app():
     
     # Import and register blueprints
     try:
-        from blueprints.admin.routes import admin_bp as admin_blueprint
         from blueprints.auth.routes import auth_bp as auth_blueprint
         from blueprints.user.routes import user_bp as user_blueprint
         from blueprints.main.routes import main_bp as main_blueprint
         from blueprints.api.routes import api_bp as api_blueprint
-        
+        from blueprints.admin.routes import admin_bp as admin_blueprint
         app.register_blueprint(admin_blueprint, url_prefix='/admin')
         app.register_blueprint(auth_blueprint, url_prefix='/auth')
         app.register_blueprint(user_blueprint, url_prefix='/user')
@@ -753,8 +751,7 @@ def create_app():
         app.register_blueprint(main_blueprint)
         
     except ImportError as e:
-        app.logger.error(f"Failed to import blueprints: {e}")
-        raise
+        app.logger.warning(f"Some blueprints could not be imported and were skipped: {e}")
     
     # Add template filters
     app.jinja_env.filters['regex_search'] = regex_search_filter
