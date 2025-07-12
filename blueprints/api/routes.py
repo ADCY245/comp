@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from functools import wraps
 import jwt
 import time
-from extensions import mongo as mongo_db
+from extensions import mongo
 from bson.objectid import ObjectId
 
 # Helper function to verify JWT token

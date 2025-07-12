@@ -8,11 +8,13 @@ import os
 
 # Initialize extensions
 db = SQLAlchemy()
-mongo = None
 login_manager = LoginManager()
 mail = Mail()
 csrf = CSRFProtect()
 cors = CORS(resources={r"/*": {"origins": "*"}})
+
+# MongoDB client will be initialized in init_extensions
+mongo = None
 
 def init_extensions(app):
     """Initialize Flask extensions with the application."""
@@ -23,7 +25,7 @@ def init_extensions(app):
         try:
             mongo = MongoClient(
                 app.config['MONGO_URI'],
-                tls=True if app.config.get('MONGO_TLS', 'true').lower() == 'true' else False,
+                tls=app.config.get('MONGO_TLS', 'true').lower() == 'true',
                 tlsAllowInvalidCertificates=app.config.get('MONGO_TLS_ALLOW_INVALID_CERTS', 'false').lower() == 'true'
             )
             # Test the connection
@@ -31,7 +33,7 @@ def init_extensions(app):
             app.logger.info("Successfully connected to MongoDB")
         except Exception as e:
             app.logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            raise
+            mongo = None
     
     # Initialize LoginManager
     login_manager.init_app(app)
