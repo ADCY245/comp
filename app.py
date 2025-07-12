@@ -14,9 +14,9 @@ from extensions import mongo, login_manager, mail
 
 # Import blueprints
 from blueprints.auth import auth_bp as auth_blueprint, init_auth
-from blueprints.user.routes import user_bp as user_blueprint
-from blueprints.main.routes import main_bp as main_blueprint
-from blueprints.api.routes import api_bp as api_blueprint
+from blueprints.user import user_bp as user_blueprint, init_user
+from blueprints.main import main_bp as main_blueprint, init_main
+from blueprints.api import api_bp as api_blueprint, init_api
 
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
@@ -641,8 +641,11 @@ def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__)
     
-    # Initialize auth blueprint
+    # Initialize blueprints
     init_auth(app)
+    init_user(app)
+    init_api(app)
+    init_main(app)
     
     # Load configuration
     env = os.getenv('FLASK_ENV', 'development')
