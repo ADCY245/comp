@@ -975,7 +975,8 @@ def load_user(user_id):
                 cart=user_data.get('cart', []),
                 reset_token=user_data.get('reset_token'),
                 reset_token_expiry=user_data.get('reset_token_expiry'),
-                company_id=user_data.get('company_id')
+                company_id=user_data.get('company_id'),
+                role=user_data.get('role', 'user')
             )
         return None
 
