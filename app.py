@@ -954,7 +954,8 @@ def load_user(user_id):
                 password_hash=doc['password_hash'],
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
+                company_id=doc.get('company_id'),
+                role=doc.get('role', 'user')
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
