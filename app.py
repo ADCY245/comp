@@ -4133,6 +4133,118 @@ def admin_dashboard():
 
     return render_template('admin/dashboard.html', title='Admin Dashboard', user=current_user)
 
+# Admin Dashboard API Endpoints
+@app.route('/api/admin/stats')
+@login_required
+def admin_stats():
+    """Get admin dashboard statistics."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        stats = {
+            'total_users': 0,
+            'active_sessions': 0,
+            'total_quotations': 0,
+            'recent_activity': []
+        }
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            # Get total users count
+            users_count = mongo_db.users.count_documents({})
+            stats['total_users'] = users_count
+            
+            # Get total quotations (assuming you have a quotations collection)
+            # quotations_count = mongo_db.quotations.count_documents({})
+            # stats['total_quotations'] = quotations_count
+            
+            # For now, simulate active sessions (you can implement real session tracking)
+            stats['active_sessions'] = 1  # Current admin user
+            
+            # Get recent activity (last 10 users registered)
+            recent_users = list(mongo_db.users.find(
+                {}, 
+                {'username': 1, 'email': 1, 'created_at': 1, 'role': 1}
+            ).sort('created_at', -1).limit(10))
+            
+            for user in recent_users:
+                stats['recent_activity'].append({
+                    'type': 'user_registered',
+                    'message': f"User {user.get('username', user.get('email', 'Unknown'))} registered",
+                    'timestamp': user.get('created_at', '').strftime('%Y-%m-%d %H:%M') if user.get('created_at') else 'Unknown',
+                    'role': user.get('role', 'user')
+                })
+        else:
+            # Fallback to JSON data
+            users = _load_users_json()
+            stats['total_users'] = len(users) if users else 0
+            stats['active_sessions'] = 1
+            
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Error getting admin stats: {str(e)}")
+        return jsonify({'error': 'Failed to load statistics'}), 500
+
+@app.route('/api/admin/chart-data')
+@login_required
+def admin_chart_data():
+    """Get chart data for admin dashboard."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        chart_data = {
+            'users_by_month': [],
+            'quotations_by_month': [],
+            'user_roles': []
+        }
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            # Get users by month (last 6 months)
+            from datetime import datetime, timedelta
+            import calendar
+            
+            now = datetime.now()
+            months_data = []
+            
+            for i in range(6):
+                month_start = now.replace(day=1) - timedelta(days=30*i)
+                month_end = month_start.replace(day=calendar.monthrange(month_start.year, month_start.month)[1])
+                
+                users_count = mongo_db.users.count_documents({
+                    'created_at': {
+                        '$gte': month_start,
+                        '$lte': month_end
+                    }
+                })
+                
+                months_data.append({
+                    'month': month_start.strftime('%b %Y'),
+                    'users': users_count,
+                    'quotations': 0  # Placeholder for quotations
+                })
+            
+            chart_data['users_by_month'] = list(reversed(months_data))
+            
+            # Get user roles distribution
+            roles_pipeline = [
+                {'$group': {'_id': '$role', 'count': {'$sum': 1}}}
+            ]
+            roles_data = list(mongo_db.users.aggregate(roles_pipeline))
+            
+            for role_data in roles_data:
+                chart_data['user_roles'].append({
+                    'role': role_data['_id'] or 'user',
+                    'count': role_data['count']
+                })
+        
+        return jsonify(chart_data)
+        
+    except Exception as e:
+        app.logger.error(f"Error getting chart data: {str(e)}")
+        return jsonify({'error': 'Failed to load chart data'}), 500
+
 # Product pages
 @app.route('/mpacks')
 @login_required
