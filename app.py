@@ -1081,6 +1081,16 @@ def cart():
         import traceback
         traceback.print_exc()
         app.logger.error(error_msg)
+        # Create email content with quotation ID
+        email_content = create_quotation_email_content(
+            cart_data['products'], 
+            company_name, 
+            0,  # total_pre_gst
+            0,  # gst_amount
+            0,  # total_post_gst
+            "",  # notes
+            ""  # quotation_id
+        )
         # Return empty cart with error message
         return render_template('cart.html', 
                            cart={"products": []}, 
@@ -4244,6 +4254,525 @@ def admin_chart_data():
     except Exception as e:
         app.logger.error(f"Error getting chart data: {str(e)}")
         return jsonify({'error': 'Failed to load chart data'}), 500
+
+# Admin Management Routes
+@app.route('/admin/manage-users')
+@login_required
+def admin_manage_users():
+    """Admin user management page."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
+
+@app.route('/api/admin/users')
+@login_required
+def admin_get_users():
+    """Get all users for admin management."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        users_list = []
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            users_cursor = mongo_db.users.find({}, {
+                'password_hash': 0  # Exclude password hash
+            }).sort('created_at', -1)
+            
+            for user_doc in users_cursor:
+                user_data = {
+                    'id': str(user_doc['_id']),
+                    'username': user_doc.get('username', ''),
+                    'email': user_doc.get('email', ''),
+                    'role': user_doc.get('role', 'user'),
+                    'company_name': user_doc.get('company_name', ''),
+                    'company_id': user_doc.get('company_id', ''),
+                    'created_at': user_doc.get('created_at', ''),
+                    'is_verified': user_doc.get('is_verified', False)
+                }
+                users_list.append(user_data)
+        else:
+            # Fallback to JSON
+            users = _load_users_json()
+            for user_id, user in users.items():
+                user_data = {
+                    'id': user_id,
+                    'username': user.username,
+                    'email': user.email,
+                    'role': getattr(user, 'role', 'user'),
+                    'company_name': getattr(user, 'company_name', ''),
+                    'company_id': getattr(user, 'company_id', ''),
+                    'created_at': '',
+                    'is_verified': getattr(user, 'is_verified', False)
+                }
+                users_list.append(user_data)
+        
+        return jsonify({'success': True, 'users': users_list})
+        
+    except Exception as e:
+        app.logger.error(f"Error getting users: {str(e)}")
+        return jsonify({'error': 'Failed to load users'}), 500
+
+@app.route('/api/admin/users/<user_id>')
+@login_required
+def admin_get_user(user_id):
+    """Get single user details."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            user_doc = mu_find_user_by_id(user_id)
+            if user_doc:
+                user_data = {
+                    'id': str(user_doc['_id']),
+                    'username': user_doc.get('username', ''),
+                    'email': user_doc.get('email', ''),
+                    'role': user_doc.get('role', 'user'),
+                    'company_name': user_doc.get('company_name', ''),
+                    'company_id': user_doc.get('company_id', ''),
+                    'is_verified': user_doc.get('is_verified', False)
+                }
+                return jsonify({'success': True, 'user': user_data})
+        
+        return jsonify({'error': 'User not found'}), 404
+        
+    except Exception as e:
+        app.logger.error(f"Error getting user: {str(e)}")
+        return jsonify({'error': 'Failed to load user'}), 500
+
+@app.route('/api/admin/users', methods=['POST'])
+@login_required
+def admin_create_user():
+    """Create new user."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        role = data.get('role', 'user').lower()
+        
+        if not all([username, email, password]):
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        
+        # Check if user already exists
+        if MONGO_AVAILABLE and USE_MONGO:
+            existing_user = mu_find_user_by_email_or_username(email)
+            if existing_user:
+                return jsonify({'error': 'User with this email already exists'}), 400
+            
+            # Create new user
+            from werkzeug.security import generate_password_hash
+            user_data = {
+                'username': username,
+                'email': email,
+                'password_hash': generate_password_hash(password),
+                'role': role,
+                'created_at': datetime.now(),
+                'is_verified': True,
+                'otp_verified': True,
+                'created_by': current_user.id
+            }
+            
+            result = mongo_db.users.insert_one(user_data)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'User created successfully',
+                'user_id': str(result.inserted_id)
+            })
+        
+        return jsonify({'error': 'Database not available'}), 500
+        
+    except Exception as e:
+        app.logger.error(f"Error creating user: {str(e)}")
+        return jsonify({'error': 'Failed to create user'}), 500
+
+def save_quotation_to_db(quotation_data):
+    """Save quotation to database."""
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            result = mongo_db.quotations.insert_one(quotation_data)
+            return str(result.inserted_id)
+        else:
+            # For JSON fallback, you could save to a quotations.json file
+            app.logger.warning("Quotation not saved - MongoDB not available")
+            return None
+    except Exception as e:
+        app.logger.error(f"Error saving quotation: {str(e)}")
+        return None
+
+def create_quotation_email_content(products, company_name, total_pre_gst, gst_amount, total_post_gst, notes="", quotation_id=None):
+    """Create HTML email content for quotation."""
+    try:
+        products_html = ""
+        for product in products:
+            products_html += f"""
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{product.get('name', 'N/A')}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{product.get('quantity', 0)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('unit_price', 0):,.2f}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('total_price', 0):,.2f}</td>
+            </tr>
+            """
+        
+        quotation_header = f"Quotation #{quotation_id}" if quotation_id else "Quotation Request"
+        
+        email_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{quotation_header}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                .container {{ max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
+                .header h1 {{ color: #007bff; margin: 0; }}
+                .info-section {{ margin-bottom: 20px; }}
+                .info-section h3 {{ color: #333; margin-bottom: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; }}
+                .total-section {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }}
+                .total-row {{ display: flex; justify-content: space-between; margin: 5px 0; }}
+                .final-total {{ font-size: 1.2em; font-weight: bold; color: #007bff; border-top: 2px solid #007bff; padding-top: 10px; }}
+                .notes {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #ffc107; }}
+                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{quotation_header}</h1>
+                    <p>Product Calculator - Professional Quotation Service</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Dear {company_name},</h3>
+                    <p>Thank you for your interest in our products. Please find below the detailed quotation as requested:</p>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th style="text-align: center;">Quantity</th>
+                            <th style="text-align: right;">Unit Price</th>
+                            <th style="text-align: right;">Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products_html}
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Subtotal (Pre-GST):</span>
+                        <span>₹{total_pre_gst:,.2f}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>GST (18%):</span>
+                        <span>₹{gst_amount:,.2f}</span>
+                    </div>
+                    <div class="total-row final-total">
+                        <span>Total Amount:</span>
+                        <span>₹{total_post_gst:,.2f}</span>
+                    </div>
+                </div>
+        """
+        
+        if notes:
+            email_content += f"""
+                <div class="notes">
+                    <h4>Additional Notes:</h4>
+                    <p>{notes}</p>
+                </div>
+            """
+        
+        email_content += f"""
+                <div class="footer">
+                    <p>This quotation is valid for 30 days from the date of issue.</p>
+                    <p>For any queries, please feel free to contact us.</p>
+                    <hr>
+                    <p><strong>Product Calculator</strong><br>
+                    Professional Quotation Service<br>
+                    Email: info@productcalculator.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return email_content
+        
+    except Exception as e:
+        app.logger.error(f"Error creating email content: {str(e)}")
+        return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
+
+@app.route('/api/admin/users/<user_id>', methods=['PUT'])
+@login_required
+def admin_update_user(user_id):
+    """Update user details."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        data = request.get_json()
+        update_data = {}
+        
+        if 'username' in data:
+            update_data['username'] = data['username'].strip()
+        if 'email' in data:
+            update_data['email'] = data['email'].strip().lower()
+        if 'role' in data:
+            update_data['role'] = data['role'].lower()
+        if 'password' in data and data['password'].strip():
+            from werkzeug.security import generate_password_hash
+            update_data['password_hash'] = generate_password_hash(data['password'].strip())
+        
+        update_data['updated_at'] = datetime.now()
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            from bson import ObjectId
+            result = mongo_db.users.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': update_data}
+            )
+            
+            if result.modified_count > 0:
+                return jsonify({'success': True, 'message': 'User updated successfully'})
+            else:
+                return jsonify({'error': 'User not found or no changes made'}), 404
+        
+        return jsonify({'error': 'Database not available'}), 500
+        
+    except Exception as e:
+        app.logger.error(f"Error updating user: {str(e)}")
+        return jsonify({'error': 'Failed to update user'}), 500
+
+@app.route('/api/admin/users/<user_id>', methods=['DELETE'])
+@login_required
+def admin_delete_user(user_id):
+    """Delete user."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            from bson import ObjectId
+            result = mongo_db.users.delete_one({'_id': ObjectId(user_id)})
+            
+            if result.deleted_count > 0:
+                return jsonify({'success': True, 'message': 'User deleted successfully'})
+            else:
+                return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({'error': 'Database not available'}), 500
+        
+    except Exception as e:
+        app.logger.error(f"Error deleting user: {str(e)}")
+        return jsonify({'error': 'Failed to delete user'}), 500
+
+# Company Management APIs
+@app.route('/api/admin/companies')
+@login_required
+def admin_get_companies():
+    """Get companies with pagination."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        page = int(request.args.get('page', 0))
+        limit = int(request.args.get('limit', 10))
+        skip = page * limit
+        
+        companies_list = []
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            companies_cursor = mongo_db.companies.find({}).skip(skip).limit(limit)
+            
+            for company_doc in companies_cursor:
+                company_data = {
+                    'id': str(company_doc['_id']),
+                    'name': company_doc.get('Company Name', ''),
+                    'email': company_doc.get('EmailID', ''),
+                    'address': company_doc.get('Address', ''),
+                    'created_at': company_doc.get('created_at', '')
+                }
+                companies_list.append(company_data)
+        
+        return jsonify({'success': True, 'companies': companies_list})
+        
+    except Exception as e:
+        app.logger.error(f"Error getting companies: {str(e)}")
+        return jsonify({'error': 'Failed to load companies'}), 500
+
+@app.route('/api/admin/companies/search')
+@login_required
+def admin_search_companies():
+    """Search companies."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        query = request.args.get('q', '').strip()
+        companies_list = []
+        
+        if query and MONGO_AVAILABLE and USE_MONGO:
+            import re
+            regex_pattern = f'.*{re.escape(query)}.*'
+            companies_cursor = mongo_db.companies.find({
+                '$or': [
+                    {'Company Name': {'$regex': regex_pattern, '$options': 'i'}},
+                    {'EmailID': {'$regex': regex_pattern, '$options': 'i'}}
+                ]
+            }).limit(20)
+            
+            for company_doc in companies_cursor:
+                company_data = {
+                    'id': str(company_doc['_id']),
+                    'name': company_doc.get('Company Name', ''),
+                    'email': company_doc.get('EmailID', ''),
+                    'address': company_doc.get('Address', '')
+                }
+                companies_list.append(company_data)
+        
+        return jsonify({'success': True, 'companies': companies_list})
+        
+    except Exception as e:
+        app.logger.error(f"Error searching companies: {str(e)}")
+        return jsonify({'error': 'Failed to search companies'}), 500
+
+# Quotation Management
+@app.route('/admin/quotations')
+@login_required
+def admin_quotations():
+    """Admin quotations management page."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    return render_template('admin/quotations.html', title='Quotation Management', user=current_user)
+
+@app.route('/api/admin/quotations')
+@login_required
+def admin_get_quotations():
+    """Get all quotations for admin."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        quotations_list = []
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            # Check if quotations collection exists
+            if 'quotations' in mongo_db.list_collection_names():
+                quotations_cursor = mongo_db.quotations.find({}).sort('created_at', -1)
+                
+                for quot_doc in quotations_cursor:
+                    quotation_data = {
+                        'id': quot_doc.get('sequential_id', str(quot_doc['_id'])),
+                        'user_id': quot_doc.get('user_id', ''),
+                        'username': quot_doc.get('username', ''),
+                        'user_email': quot_doc.get('user_email', ''),
+                        'company_name': quot_doc.get('company_name', ''),
+                        'company_email': quot_doc.get('company_email', ''),
+                        'total_amount_pre_gst': quot_doc.get('total_amount_pre_gst', 0),
+                        'total_amount_post_gst': quot_doc.get('total_amount_post_gst', 0),
+                        'created_at': quot_doc.get('created_at', ''),
+                        'products_count': len(quot_doc.get('products', []))
+                    }
+                    quotations_list.append(quotation_data)
+        
+        return jsonify({'success': True, 'quotations': quotations_list})
+        
+    except Exception as e:
+        app.logger.error(f"Error getting quotations: {str(e)}")
+        return jsonify({'error': 'Failed to load quotations'}), 500
+
+@app.route('/api/admin/quotations/<quotation_id>')
+@login_required
+def admin_get_quotation_details(quotation_id):
+    """Get detailed quotation for admin view."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            # Try to find by sequential_id first, then by _id
+            quotation = mongo_db.quotations.find_one({
+                '$or': [
+                    {'sequential_id': int(quotation_id) if quotation_id.isdigit() else quotation_id},
+                    {'_id': ObjectId(quotation_id) if len(quotation_id) == 24 else None}
+                ]
+            })
+            
+            if quotation:
+                quotation_data = {
+                    'id': quotation.get('sequential_id', str(quotation['_id'])),
+                    'user_id': quotation.get('user_id', ''),
+                    'username': quotation.get('username', ''),
+                    'user_email': quotation.get('user_email', ''),
+                    'company_name': quotation.get('company_name', ''),
+                    'company_email': quotation.get('company_email', ''),
+                    'products': quotation.get('products', []),
+                    'total_amount_pre_gst': quotation.get('total_amount_pre_gst', 0),
+                    'total_amount_post_gst': quotation.get('total_amount_post_gst', 0),
+                    'gst_amount': quotation.get('gst_amount', 0),
+                    'notes': quotation.get('notes', ''),
+                    'created_at': quotation.get('created_at', ''),
+                    'email_content': quotation.get('email_content', '')
+                }
+                return jsonify({'success': True, 'quotation': quotation_data})
+        
+        return jsonify({'error': 'Quotation not found'}), 404
+        
+    except Exception as e:
+        app.logger.error(f"Error getting quotation details: {str(e)}")
+        return jsonify({'error': 'Failed to load quotation details'}), 500
+
+# Active Sessions API
+@app.route('/api/admin/active-sessions')
+@login_required
+def admin_get_active_sessions():
+    """Get active user sessions with details."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        # For now, we'll show currently logged in users
+        # In a production app, you'd track active sessions in Redis or database
+        active_sessions = []
+        
+        # Add current admin user
+        if current_user.is_authenticated:
+            # Get current user's cart
+            cart = get_user_cart()
+            cart_total = 0
+            
+            for product in cart.get('products', []):
+                cart_total += product.get('total_price', 0)
+            
+            session_data = {
+                'user_id': current_user.id,
+                'username': current_user.username,
+                'email': current_user.email,
+                'role': getattr(current_user, 'role', 'user'),
+                'company_name': session.get('company_name', 'Not selected'),
+                'company_email': session.get('company_email', ''),
+                'cart_amount': cart_total,
+                'cart_items_count': len(cart.get('products', [])),
+                'last_activity': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            active_sessions.append(session_data)
+        
+        return jsonify({'success': True, 'sessions': active_sessions})
+        
+    except Exception as e:
+        app.logger.error(f"Error getting active sessions: {str(e)}")
+        return jsonify({'error': 'Failed to load active sessions'}), 500
 
 # Product pages
 @app.route('/mpacks')

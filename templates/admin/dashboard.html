@@ -253,17 +253,17 @@
                                 <i class="fas fa-user-plus me-2"></i>
                                 Add New User
                             </button>
-                            <button class="btn btn-success" onclick="viewAllUsers()">
+                            <button class="btn btn-info" onclick="viewAllUsers()">
                                 <i class="fas fa-users me-2"></i>
-                                View All Users
+                                Manage Users
                             </button>
-                            <button class="btn btn-info" onclick="exportData()">
-                                <i class="fas fa-download me-2"></i>
-                                Export Data
+                            <button class="btn btn-success" onclick="viewQuotationHistory()">
+                                <i class="fas fa-file-invoice me-2"></i>
+                                View Quotation History
                             </button>
-                            <button class="btn btn-warning" onclick="systemSettings()">
-                                <i class="fas fa-cog me-2"></i>
-                                System Settings
+                            <button class="btn btn-warning" onclick="viewActiveSessions()">
+                                <i class="fas fa-users-cog me-2"></i>
+                                Active Sessions
                             </button>
                         </div>
                     </div>
@@ -435,21 +435,150 @@
             container.innerHTML = html;
         }
         
-        // Quick action functions
+        // Quick Actions - Fully Functional
         function addNewUser() {
-            alert('Add New User functionality will be implemented');
+            // Redirect to manage users page and trigger add user modal
+            window.location.href = '/admin/manage-users?action=add';
         }
         
         function viewAllUsers() {
-            window.location.href = '/';
+            // Redirect to manage users page
+            window.location.href = '/admin/manage-users';
         }
         
-        function exportData() {
-            alert('Export Data functionality will be implemented');
+        function viewQuotationHistory() {
+            // Redirect to quotations page
+            window.location.href = '/admin/quotations';
         }
         
-        function systemSettings() {
-            alert('System Settings functionality will be implemented');
+        function viewActiveSessions() {
+            // Show active sessions modal
+            showActiveSessionsModal();
+        }
+        
+        // Active Sessions Modal
+        async function showActiveSessionsModal() {
+            try {
+                const response = await fetch('/api/admin/active-sessions');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error loading active sessions: ' + data.error);
+                    return;
+                }
+                
+                displayActiveSessionsModal(data.sessions);
+                
+            } catch (error) {
+                console.error('Error loading active sessions:', error);
+                alert('Error loading active sessions');
+            }
+        }
+        
+        function displayActiveSessionsModal(sessions) {
+            let modalHtml = `
+                <div class="modal fade" id="activeSessionsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Active User Sessions</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+            `;
+            
+            if (sessions.length === 0) {
+                modalHtml += `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
+                        <h5>No Active Sessions</h5>
+                        <p>No users are currently active in the system.</p>
+                    </div>
+                `;
+            } else {
+                modalHtml += `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Company</th>
+                                    <th>Cart Amount</th>
+                                    <th>Cart Items</th>
+                                    <th>Last Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                sessions.forEach(session => {
+                    const roleColor = session.role === 'admin' ? 'danger' : 
+                                    session.role === 'dealer' ? 'warning' : 'success';
+                    
+                    modalHtml += `
+                        <tr>
+                            <td>
+                                <strong>${session.username}</strong><br>
+                                <small class="text-muted">${session.email}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-${roleColor}">${session.role}</span>
+                            </td>
+                            <td>
+                                <strong>${session.company_name}</strong><br>
+                                <small class="text-muted">${session.company_email}</small>
+                            </td>
+                            <td>
+                                <strong>₹${session.cart_amount.toLocaleString('en-IN')}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">${session.cart_items_count} items</span>
+                            </td>
+                            <td>
+                                <small>${session.last_activity}</small>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                modalHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            modalHtml += `
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="refreshActiveSessions()">Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('activeSessionsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('activeSessionsModal')).show();
+        }
+        
+        function refreshActiveSessions() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('activeSessionsModal'));
+            modal.hide();
+            setTimeout(() => {
+                showActiveSessionsModal();
+            }, 300);
         }
     </script>
 </body>
