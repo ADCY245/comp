@@ -1,0 +1,34 @@
+{
+  "products": [
+    {
+      "id": "blt-001",
+      "name": "Heavy Duty Blanket",
+      "category": "Heavy Duty",
+      "thickness": 10,
+      "width": 150,
+      "length": 200,
+      "price": 150.00,
+      "description": "Heavy duty blanket for industrial use"
+    },
+    {
+      "id": "blt-002",
+      "name": "Standard Blanket",
+      "category": "Standard",
+      "thickness": 7,
+      "width": 140,
+      "length": 190,
+      "price": 120.00,
+      "description": "Standard blanket for regular use"
+    },
+    {
+      "id": "blt-003",
+      "name": "Light Duty Blanket",
+      "category": "Light Duty",
+      "thickness": 5,
+      "width": 130,
+      "length": 180,
+      "price": 95.00,
+      "description": "Light duty blanket for light use"
+    }
+  ]
+}

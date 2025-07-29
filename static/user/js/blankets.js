@@ -415,7 +415,7 @@ window.onload = () => {
     });
     
   // Load blanket categories
-  fetch("/blanket_categories")
+  fetch("/static/data/blanket_categories.json")
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -451,7 +451,7 @@ window.onload = () => {
     });
 
   // Load blankets data
-  fetch("/blanket_data")
+  fetch("/static/data/blanket_data.json")
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -544,7 +544,7 @@ window.onload = () => {
   loadThicknessData();
 
   // Load bar data
-  fetch("/bar_data")
+  fetch("/static/data/bar_data.json")
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

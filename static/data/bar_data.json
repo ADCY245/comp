@@ -1,0 +1,20 @@
+{
+  "bars": [
+    {
+      "id": "bar-001",
+      "name": "Standard Bar",
+      "thickness": 5,
+      "width": 50,
+      "price_per_meter": 25.00,
+      "description": "Standard bar for blanket installation"
+    },
+    {
+      "id": "bar-002",
+      "name": "Heavy Duty Bar",
+      "thickness": 8,
+      "width": 60,
+      "price_per_meter": 35.00,
+      "description": "Heavy duty bar for industrial use"
+    }
+  ]
+}
