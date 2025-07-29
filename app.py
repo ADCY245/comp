@@ -192,6 +192,49 @@ def send_alert_email(subject: str, body: str):
 MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
 DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
+
+# Initialize MongoDB client
+mongo_client = None
+mongo_db = None
+
+if USE_MONGO:
+    try:
+        from pymongo import MongoClient
+        from pymongo.errors import ConnectionFailure
+        
+        MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+        print(f"\n=== MongoDB Configuration ===")
+        print(f"Attempting to connect to MongoDB at: {MONGO_URI}")
+        print(f"Database: {DB_NAME}")
+        
+        # Initialize MongoDB client
+        mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5 second timeout
+        
+        # Test the connection
+        mongo_client.server_info()  # Will raise an exception if connection fails
+        
+        # Get the database
+        mongo_db = mongo_client[DB_NAME]
+        
+        # Initialize the users collection
+        from mongo_users import init_mongo_connection
+        users_col = init_mongo_connection(mongo_client, mongo_db)
+        
+        MONGO_AVAILABLE = True
+        print("✅ Successfully connected to MongoDB")
+        print("==============================\n")
+        
+    except Exception as e:
+        # Use ASCII-safe error message
+        print("[ERROR] Failed to connect to MongoDB:")
+        print(f"  {str(e)}")
+        print("Falling back to JSON storage")
+        print("To use MongoDB, please ensure:")
+        print("1. MongoDB is running")
+        print("2. Set the MONGO_URI environment variable (e.g., 'mongodb://localhost:27017/')")
+        print("3. Set USE_MONGO=True in your environment")
+        print("4. The database specified in DB_NAME exists")
+        print("==============================\n")
 MONGO_URI = os.getenv('MONGO_URI', '').strip()
 
 mongo_client = None
@@ -352,7 +395,7 @@ CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user'):
         self.id = id
         self.email = email
         self.username = username
@@ -363,6 +406,8 @@ class User(UserMixin):
         self.reset_token = reset_token
         self.reset_token_expiry = reset_token_expiry
         self.company_id = company_id
+        # Store role in lowercase for consistency
+        self.role = role.lower() if role else 'user'
 
     def to_dict(self):
         return {
@@ -374,6 +419,7 @@ class User(UserMixin):
             'reset_token': self.reset_token,
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
             'otp_verified': self.otp_verified,
+             'role': self.role,
             'company_id': self.company_id
         }
 
@@ -3772,8 +3818,13 @@ def api_login():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
-        
+    
     try:
+        app.logger.info("=== Login Request ===")
+        app.logger.info(f"Method: {request.method}")
+        app.logger.info(f"Headers: {dict(request.headers)}")
+        app.logger.info(f"Form data: {request.form}")
+        app.logger.info(f"JSON data: {request.get_json(silent=True)}")
         # Handle both form data and JSON
         if request.is_json:
             data = request.get_json()
@@ -3793,7 +3844,7 @@ def api_login():
             print('Login failed: Missing identifier or password')
             return jsonify({'error': 'Email/username and password are required'}), 400
             
-        if MONGO_AVAILABLE and USE_MONGO:
+        if MONGO_AVAILABLE and USE_MONGO and users_col is not None:
             try:
                 print('\n=== Login Debug ===')
                 print(f'MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}')
@@ -3854,13 +3905,18 @@ def api_login():
                 
                 print(f'Successfully created user object for login: {user.email} (ID: {user.id})')
                 
+                # Get user role from document
+                user_role = doc.get('role', 'user').lower()
+                
+                # Attach role before login
+                user.role = user_role
+                
                 # Log the user in
                 login_user(user)
-                print(f'User {user.username} logged in successfully')
+                print(f'User {user.username} logged in successfully with role: {user_role}')
                 
                 # Determine redirect URL based on user role
                 redirect_url = '/index'  # Default redirect
-                user_role = doc.get('role', 'user').lower()
                 
                 if user_role == 'admin':
                     redirect_url = '/admin/dashboard'  # Admin dashboard route
@@ -3892,9 +3948,9 @@ def api_login():
                 
             except Exception as e:
                 print(f'MongoDB login error: {str(e)}')
-                import traceback
-                traceback.print_exc()
-                return jsonify({'error': 'Authentication service unavailable'}), 500
+                print('Falling back to JSON storage')
+                # Continue to JSON fallback
+                pass
 
         # ---------------- JSON fallback path -----------------
         print('Falling back to JSON user storage')
@@ -3965,9 +4021,14 @@ def api_login():
         })
         
     except Exception as e:
-        print(f"Unexpected login error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        error_msg = f"Unexpected login error: {str(e)}"
+        app.logger.error(error_msg)
+        app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e),
+            'traceback': traceback.format_exc() if app.debug else None
+        }), 500
         return jsonify({'error': 'An unexpected error occurred during login'}), 500
 
 @app.route('/api/auth/logout', methods=['GET', 'POST'])
