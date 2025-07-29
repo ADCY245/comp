@@ -1879,7 +1879,7 @@ def login():
 def signup():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    return render_template('user/signup.html')
+    return render_template('signup.html')
 
 @app.route('/company-selection', methods=['GET', 'POST'])
 @login_required
@@ -4887,7 +4887,7 @@ def blankets():
     app.logger.info(f"Rendering blankets with company: {company_name}, email: {company_email}")
     
     # Create response and set company data in the session cookie
-    response = make_response(render_template('products/blankets/blankets.html',
+    response = make_response(render_template('user/products/blankets/blankets.html',
                          company_name=company_name,
                          company_email=company_email,
                          company_id=company_id,
@@ -4908,7 +4908,7 @@ def blankets():
 @app.route('/reset-password')
 def reset_password_page():
     # Ensure we're using the reset_password.html from the root templates directory
-    return render_template('user/reset_password.html')
+    return render_template('reset_password.html')
 
 # Helper functions to get company name and email by ID
 def get_company_name_by_id(company_id):
