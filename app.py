@@ -3858,20 +3858,30 @@ def api_login():
                 login_user(user)
                 print(f'User {user.username} logged in successfully')
                 
+                # Determine redirect URL based on user role
+                redirect_url = '/index'  # Default redirect
+                user_role = doc.get('role', 'user').lower()
+                
+                if user_role == 'admin':
+                    redirect_url = '/admin/dashboard'  # Admin dashboard route
+                elif user_role == 'dealer':
+                    redirect_url = '/dealer/dashboard'  # Dealer dashboard route
+                
                 if request.is_json:
                     response = jsonify({
                         'success': True,
                         'message': 'Login successful',
-                        'redirectTo': '/index',
+                        'redirectTo': redirect_url,
                         'user': {
                             'id': str(user.id),
                             'email': user.email,
-                            'username': user.username
+                            'username': user.username,
+                            'role': user_role
                         }
                     })
                 else:
-                    # For form submission, redirect directly
-                    return redirect(url_for('index'))
+                    # For form submission, redirect based on role
+                    return redirect(redirect_url)
                 
                 # Set session
                 session['user_id'] = str(user.id)
@@ -3933,14 +3943,24 @@ def api_login():
         login_user(user)
         print(f'User {user.username} logged in successfully (JSON storage)')
         
+        # Determine redirect URL based on user role for JSON fallback
+        user_role = getattr(user, 'role', 'user').lower()
+        redirect_url = '/index'  # Default redirect
+        
+        if user_role == 'admin':
+            redirect_url = '/admin/dashboard'
+        elif user_role == 'dealer':
+            redirect_url = '/dealer/dashboard'
+            
         return jsonify({
             'success': True,
             'message': 'Login successful',
-            'redirectTo': '/index',  # Changed to use index route
+            'redirectTo': redirect_url,
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'username': user.username
+                'username': user.username,
+                'role': user_role
             }
         })
         
