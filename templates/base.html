@@ -1,0 +1,5 @@
+{% if current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role.lower() == 'dealer' %}
+    {% extends 'dealer/base.html' %}
+{% else %}
+    {% extends 'user/base.html' %}
+{% endif %}

@@ -4983,7 +4983,13 @@ def get_company_email_by_id(company_id):
 # Error handling
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    # Check if user is logged in and has a role
+    if current_user.is_authenticated and hasattr(current_user, 'role'):
+        role = current_user.role.lower()
+        if role == 'dealer':
+            return render_template('dealer/404.html'), 404
+    # Default to user template
+    return render_template('user/404.html'), 404
 
 
 
@@ -4999,6 +5005,11 @@ def profile():
                            user=user,
                            company_name=company_name,
                            get_company_name_by_id=get_company_name_by_id)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                             'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 # Start app
 if __name__ == '__main__':
