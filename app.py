@@ -4116,14 +4116,21 @@ def api_profile_update():
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    # Check if user is admin
-    if not hasattr(current_user, 'role') or current_user.role != 'admin':
-        abort(403)  # Forbidden if not admin
-    
-    # Add any admin-specific data you want to pass to the template
-    return render_template('admin/dashboard.html', 
-                         title='Admin Dashboard',
-                         user=current_user)
+    """Admin dashboard view – accessible only to users with role 'admin'.
+    Adds verbose logging so we can debug any remaining 403 errors in prod.
+    """
+    # Extra diagnostics
+    app.logger.info("[ADMIN_DASH] is_authenticated=%s, role=%s", current_user.is_authenticated, getattr(current_user, 'role', None))
+
+    if not current_user.is_authenticated:
+        app.logger.warning("[ADMIN_DASH] Anonymous access – redirecting to login")
+        return redirect(url_for('login', next=request.path))
+
+    if getattr(current_user, 'role', None) != 'admin':
+        app.logger.warning("[ADMIN_DASH] Forbidden – user %s lacks admin role", current_user.get_id())
+        abort(403)
+
+    return render_template('admin/dashboard.html', title='Admin Dashboard', user=current_user)
 
 # Product pages
 @app.route('/mpacks')
