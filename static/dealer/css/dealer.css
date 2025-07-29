@@ -1,0 +1,66 @@
+/* Dealer-specific styles with red color scheme */
+:root {
+    --primary-color: #dc3545;
+    --primary-hover: #c82333;
+    --primary-light: #f8d7da;
+}
+
+/* Primary color overrides */
+.btn-primary,
+.bg-primary,
+.nav-pills .nav-link.active,
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary.active {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+}
+
+/* Navbar */
+.navbar {
+    --bs-navbar-active-color: white;
+    --bs-navbar-brand-color: white;
+    --bs-navbar-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Form controls */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+/* Cards */
+.card {
+    --bs-card-cap-bg: rgba(220, 53, 69, 0.03);
+    --bs-card-border-color: rgba(220, 53, 69, 0.125);
+}
+
+/* Table */
+.table-primary {
+    --bs-table-bg: var(--primary-light);
+}
+
+/* Pagination */
+.page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Alerts */
+.alert-primary {
+    --bs-alert-color: #58151c;
+    --bs-alert-bg: #f8d7da;
+    --bs-alert-border-color: #f1aeb5;
+}
+
+/* Utility classes */
+.dealer-bg-primary { background-color: var(--primary-color) !important; }
+.dealer-text-primary { color: var(--primary-color) !important; }
+.dealer-border-primary { border-color: var(--primary-color) !important; }

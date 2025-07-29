@@ -1857,12 +1857,12 @@ def index():
         if not isinstance(companies, list):
             companies = []
             
-        return render_template('index.html', companies=companies)
+        return render_template('user/index.html', companies=companies)
         
     except Exception as e:
         app.logger.error(f"Error in index route: {str(e)}")
         # Return empty companies list on error
-        return render_template('index.html', companies=[])
+        return render_template('user/index.html', companies=[])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -4907,6 +4907,7 @@ def blankets():
 # Reset password page
 @app.route('/reset-password')
 def reset_password_page():
+    # Ensure we're using the reset_password.html from the root templates directory
     return render_template('reset_password.html')
 
 # Helper functions to get company name and email by ID
