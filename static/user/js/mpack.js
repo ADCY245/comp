@@ -512,9 +512,6 @@ function loadSizes() {
   const sizeSection = document.getElementById("sizeSection");
   if (sizeSection) sizeSection.style.display = "block";
   
-  // Add cache busting to prevent caching issues
-  const cacheBuster = '?v=' + new Date().getTime();
-  
   // Show loading indicator
   const loadingIndicator = document.createElement('div');
   loadingIndicator.id = 'loadingIndicator';
@@ -522,119 +519,104 @@ function loadSizes() {
   loadingIndicator.textContent = 'Loading sizes and prices...';
   sizeSelect.parentNode.insertBefore(loadingIndicator, sizeSelect.nextSibling);
   
-  // Load both the sizes and prices
-  Promise.all([
-    // Load sizes for the selected thickness
-    fetch(`/static/products/chemical/${thickness}.json${cacheBuster}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Failed to load sizes for ${thickness} micron`);
-        return res.json();
-      }),
-    // Load all prices
-    fetch(`/static/products/chemical/price.json${cacheBuster}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load price data');
-        return res.json();
-      })
-  ])
-  .then(([sizesData, pricesData]) => {
-    // Clean up loading indicator
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    if (loadingIndicator) loadingIndicator.remove();
-    
-    if (!Array.isArray(sizesData) || !Array.isArray(pricesData)) {
-      throw new Error('Invalid data format received');
-    }
-    
-    // Create price lookup map
-    const priceLookup = {};
-    pricesData.forEach(priceItem => {
-      priceLookup[priceItem.id] = priceItem.price;
-    });
-    
-    // Reset size select
-    sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
-    sizeSelect.disabled = false;
-    
-    // Clear and rebuild price map
-    priceMap = {};
-    
-    // Populate size dropdown with prices
-    sizesData.forEach(item => {
-      const price = priceLookup[item.id] || 0;
-      const opt = document.createElement("option");
-      opt.value = item.id;
-      opt.textContent = `${item.width} x ${item.length}`;
-      opt.dataset.price = price; // Store price in data attribute
-      sizeSelect.appendChild(opt);
-      priceMap[item.id] = price;
-    });
-    
-    // Show size section
-    const sizeSection = document.getElementById("sizeSection");
-    if (sizeSection) sizeSection.style.display = "block";
-    
-    // Show other relevant sections
-    const priceSection = document.getElementById("priceSection");
-    const sheetInputSection = document.getElementById("sheetInputSection");
-    if (priceSection) priceSection.style.display = "block";
-    if (sheetInputSection) sheetInputSection.style.display = "block";
-    
-    // Reset discount state
-    const discountSelect = document.getElementById("discountSelect");
-    if (discountSelect) {
-      discountSelect.value = "";
-      currentDiscount = 0;
-    }
-    
-    const finalDiscountedPrice = document.getElementById("finalDiscountedPrice");
-    if (finalDiscountedPrice) finalDiscountedPrice.textContent = "0.00";
-    
-    const discountSection = document.getElementById("discountSection");
-    if (discountSection) discountSection.style.display = "block";
-    
-    const discountPromptSection = document.getElementById("discountPromptSection");
-    if (discountPromptSection) {
-      discountPromptSection.style.display = "block";
-      discountPromptSection.innerHTML = `
-        <label class="form-label">Apply Discount?</label>
-        <button class="btn btn-outline-primary btn-sm" onclick="showDiscountSection(true)">Yes</button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="showDiscountSection(false)">No</button>
-      `;
-    }
-  })
-  .catch(err => {
-    console.error(`Failed to load data for ${currentThickness} micron:`, err);
-    
-    // Clean up loading indicator
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    if (loadingIndicator) loadingIndicator.remove();
-    
-    // Reset size select
-    const sizeSelect = document.getElementById("sizeSelect");
-    if (sizeSelect) {
+  // Load data from mpack.json with cache busting
+  fetch(`/static/data/mpack.json?v=${new Date().getTime()}`)
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to load MPack data');
+      return res.json();
+    })
+    .then(data => {
+      // Clean up loading indicator
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      if (loadingIndicator) loadingIndicator.remove();
+      
+      // Find the selected thickness data
+      const thicknessData = data.mpack.find(item => item.id === thickness);
+      if (!thicknessData || !thicknessData.sizes) {
+        throw new Error(`No data found for ${thickness} micron`);
+      }
+      
+      // Reset size select
       sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
       sizeSelect.disabled = false;
       
-      // Create or update error message
-      let errorElement = document.getElementById('sizeError');
-      if (!errorElement) {
-        errorElement = document.createElement('div');
-        errorElement.id = 'sizeError';
-        errorElement.className = 'text-danger small mt-1';
-        sizeSelect.parentNode.insertBefore(errorElement, sizeSelect.nextSibling);
-      }
-      errorElement.textContent = `Error: ${err.message || 'Failed to load sizes'}. Please try again.`;
+      // Clear and rebuild price map
+      priceMap = {};
       
-      // Auto-hide error after 5 seconds
-      if (window.errorTimeout) clearTimeout(window.errorTimeout);
-      window.errorTimeout = setTimeout(() => {
-        if (errorElement && errorElement.parentNode) {
-          errorElement.remove();
+      // Populate size dropdown with prices
+      thicknessData.sizes.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = `${item.width} x ${item.length}`;
+        opt.dataset.price = item.price;
+        sizeSelect.appendChild(opt);
+        priceMap[item.id] = item.price;
+      });
+      
+      // Show UI sections
+      const sizeSection = document.getElementById("sizeSection");
+      const priceSection = document.getElementById("priceSection");
+      const sheetInputSection = document.getElementById("sheetInputSection");
+      
+      if (sizeSection) sizeSection.style.display = "block";
+      if (priceSection) priceSection.style.display = "block";
+      if (sheetInputSection) sheetInputSection.style.display = "block";
+      
+      // Reset discount state
+      const discountSelect = document.getElementById("discountSelect");
+      if (discountSelect) {
+        discountSelect.value = "";
+        currentDiscount = 0;
+      }
+      
+      const finalDiscountedPrice = document.getElementById("finalDiscountedPrice");
+      if (finalDiscountedPrice) finalDiscountedPrice.textContent = "0.00";
+      
+      const discountSection = document.getElementById("discountSection");
+      if (discountSection) discountSection.style.display = "block";
+      
+      const discountPromptSection = document.getElementById("discountPromptSection");
+      if (discountPromptSection) {
+        discountPromptSection.style.display = "block";
+        discountPromptSection.innerHTML = `
+          <label class="form-label">Apply Discount?</label>
+          <button class="btn btn-outline-primary btn-sm" onclick="showDiscountSection(true)">Yes</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="showDiscountSection(false)">No</button>
+        `;
+      }
+    })
+    .catch(err => {
+      console.error(`Failed to load data for ${thickness} micron:`, err);
+      
+      // Clean up loading indicator
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      if (loadingIndicator) loadingIndicator.remove();
+      
+      // Reset size select
+      const sizeSelect = document.getElementById("sizeSelect");
+      if (sizeSelect) {
+        sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
+        sizeSelect.disabled = false;
+        
+        // Create or update error message
+        let errorElement = document.getElementById('sizeError');
+        if (!errorElement) {
+          errorElement = document.createElement('div');
+          errorElement.id = 'sizeError';
+          errorElement.className = 'text-danger small mt-1';
+          sizeSelect.parentNode.insertBefore(errorElement, sizeSelect.nextSibling);
         }
-      }, 5000);
-    }
-  });
+        errorElement.textContent = `Error: ${err.message || 'Failed to load sizes'}. Please try again.`;
+        
+        // Auto-hide error after 5 seconds
+        if (window.errorTimeout) clearTimeout(window.errorTimeout);
+        window.errorTimeout = setTimeout(() => {
+          if (errorElement && errorElement.parentNode) {
+            errorElement.remove();
+          }
+        }, 5000);
+      }
+    });
 }
 
 function handleSizeSelection() {
