@@ -4091,33 +4091,7 @@ def api_profile_account():
         'role': user.role if hasattr(user, 'role') else 'user'
     })
 
-@app.route('/cart')
-@login_required
-def cart():
-    """Render the shopping cart page"""
-    try:
-        # Get company info from session
-        company_id = session.get('selected_company', {}).get('id')
-        company_name = session.get('selected_company', {}).get('name', '')
-        company_email = session.get('selected_company', {}).get('email', '')
-        
-        if not company_id:
-            # If no company is selected, redirect to home
-            return redirect(url_for('home'))
-            
-        # Get cart items (this would come from your database in a real implementation)
-        cart_items = []  # Replace with actual cart items query
-        
-        return render_template('user/cart.html',
-                           company_name=company_name,
-                           company_email=company_email,
-                           company_id=company_id,
-                           cart_items=cart_items)
-                           
-    except Exception as e:
-        app.logger.error(f"Error rendering cart: {str(e)}")
-        flash('An error occurred while loading your cart.', 'error')
-        return redirect(url_for('home'))
+
 
 @app.route('/api/profile/update', methods=['POST'])
 @login_required
@@ -4182,7 +4156,7 @@ def admin_stats():
     try:
         stats = {
             'total_users': 0,
-            'active_sessions': 0,
+                'active_sessions': 0,
             'total_quotations': 0,
             'recent_activity': []
         }
