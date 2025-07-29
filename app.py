@@ -4984,6 +4984,21 @@ def get_company_email_by_id(company_id):
 def page_not_found(e):
     return render_template('404.html'), 404
 
+
+
+@app.route('/profile')
+@login_required
+def profile():
+    """Render the profile page for the currently authenticated user."""
+    user = current_user
+    company_name = ''
+    if hasattr(user, 'company_id') and user.company_id:
+        company_name = get_company_name_by_id(user.company_id)
+    return render_template('profile/profile.html',
+                           user=user,
+                           company_name=company_name,
+                           get_company_name_by_id=get_company_name_by_id)
+
 # Start app
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
