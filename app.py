@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_from_directory, make_response, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -4049,6 +4049,19 @@ def api_profile_update():
     except Exception as e:
         app.logger.error(f"Error updating profile: {str(e)}")
         return jsonify({'error': 'Failed to update profile'}), 500
+
+# Admin Dashboard
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    # Check if user is admin
+    if not hasattr(current_user, 'role') or current_user.role != 'admin':
+        abort(403)  # Forbidden if not admin
+    
+    # Add any admin-specific data you want to pass to the template
+    return render_template('admin/dashboard.html', 
+                         title='Admin Dashboard',
+                         user=current_user)
 
 # Product pages
 @app.route('/mpacks')
