@@ -1879,7 +1879,7 @@ def login():
 def signup():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    return render_template('signup.html')
+    return render_template('user/signup.html')
 
 @app.route('/company-selection', methods=['GET', 'POST'])
 @login_required
@@ -2496,14 +2496,14 @@ def update_company():
 @login_required
 def add_company():
     """Render form page to add a new company"""
-    return render_template('add_company.html')
+    return render_template('user/add_company.html')
 
 
 @app.route('/add_machine')
 @login_required
 def add_machine():
     """Render form page to add a new machine"""
-    return render_template('add_machine.html')
+    return render_template('user/add_machine.html')
 
 
 # ----------------------------- API Endpoints ------------------------------
@@ -4823,7 +4823,7 @@ def mpacks():
     # Log the company info being sent to template
     app.logger.info(f"Rendering mpacks with company: {company_name}, email: {company_email}")
     
-    response = render_template('products/chemicals/mpack.html', 
+    response = render_template('user/products/chemicals/mpack.html', 
                            current_company={
                                'id': company_id,
                                'name': company_name,
@@ -4908,7 +4908,7 @@ def blankets():
 @app.route('/reset-password')
 def reset_password_page():
     # Ensure we're using the reset_password.html from the root templates directory
-    return render_template('reset_password.html')
+    return render_template('user/reset_password.html')
 
 # Helper functions to get company name and email by ID
 def get_company_name_by_id(company_id):
