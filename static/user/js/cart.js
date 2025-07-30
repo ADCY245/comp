@@ -490,39 +490,61 @@ window.createProductTypeModal = function() {
 }
 
 // Function to handle continue shopping
-function handleContinueShopping() {
+function handleContinueShopping(event) {
     try {
-        // Show the product type modal
-        const modal = createProductTypeModal();
+        // Prevent default action (navigation)
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        // Check if modal already exists
+        let modalElement = document.getElementById('productTypeModal');
+        let modal;
+        
+        if (!modalElement) {
+            // Create the modal if it doesn't exist
+            modal = createProductTypeModal();
+        } else {
+            // Initialize modal if it exists but isn't initialized
+            modal = bootstrap.Modal.getInstance(modalElement);
+            if (!modal) {
+                modal = new bootstrap.Modal(modalElement);
+            }
+        }
+        
+        // Show the modal
         if (modal) {
-            // Show the modal
             modal.show();
             
-            // Add company info to the URLs if available
-            const companyInfo = JSON.parse(localStorage.getItem('selectedCompany') || '{}');
-            if (companyInfo.id) {
-                const selectBlanketsBtn = document.getElementById('selectBlankets');
-                const selectMpacksBtn = document.getElementById('selectMpacks');
-                
-                if (selectBlanketsBtn) {
-                    selectBlanketsBtn.onclick = function() {
-                        window.location.href = `/blankets?company_id=${companyInfo.id}`;
-                    };
-                }
-                
-                if (selectMpacksBtn) {
-                    selectMpacksBtn.onclick = function() {
-                        window.location.href = `/mpacks?company_id=${companyInfo.id}`;
-                    };
-                }
+            // Update button handlers with latest company info
+            const companyId = sessionStorage.getItem('companyId') || 
+                            new URLSearchParams(window.location.search).get('company_id');
+            
+            const selectBlanketsBtn = document.getElementById('selectBlankets');
+            const selectMpacksBtn = document.getElementById('selectMpacks');
+            
+            if (selectBlanketsBtn) {
+                selectBlanketsBtn.onclick = function() {
+                    window.location.href = companyId ? 
+                        `/blankets?company_id=${companyId}` : 
+                        '/blankets';
+                };
+            }
+            
+            if (selectMpacksBtn) {
+                selectMpacksBtn.onclick = function() {
+                    window.location.href = companyId ? 
+                        `/mpacks?company_id=${companyId}` : 
+                        '/mpacks';
+                };
             }
         } else {
-            // Fallback to home page if modal creation fails
+            console.error('Failed to initialize product type modal');
             window.location.href = '/';
         }
     } catch (error) {
         console.error('Error in continue shopping:', error);
-        // Fallback to home page
         window.location.href = '/';
     }
 }
