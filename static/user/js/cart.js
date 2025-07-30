@@ -492,54 +492,38 @@ window.createProductTypeModal = function() {
 // Function to handle continue shopping
 function handleContinueShopping() {
     try {
-        // Get company info from localStorage
-        const companyInfo = JSON.parse(localStorage.getItem('selectedCompany') || '{}');
-        
-        // Create URL with company info
-        let url = '/product-selection';
-        const params = new URLSearchParams();
-        
-        if (companyInfo.id) params.append('company_id', companyInfo.id);
-        if (companyInfo.name) params.append('company_name', encodeURIComponent(companyInfo.name));
-        if (companyInfo.email) params.append('company_email', encodeURIComponent(companyInfo.email));
-        
-        if (params.toString()) {
-            url += '?' + params.toString();
+        // Show the product type modal
+        const modal = createProductTypeModal();
+        if (modal) {
+            // Show the modal
+            modal.show();
+            
+            // Add company info to the URLs if available
+            const companyInfo = JSON.parse(localStorage.getItem('selectedCompany') || '{}');
+            if (companyInfo.id) {
+                const selectBlanketsBtn = document.getElementById('selectBlankets');
+                const selectMpacksBtn = document.getElementById('selectMpacks');
+                
+                if (selectBlanketsBtn) {
+                    selectBlanketsBtn.onclick = function() {
+                        window.location.href = `/blankets?company_id=${companyInfo.id}`;
+                    };
+                }
+                
+                if (selectMpacksBtn) {
+                    selectMpacksBtn.onclick = function() {
+                        window.location.href = `/mpacks?company_id=${companyInfo.id}`;
+                    };
+                }
+            }
+        } else {
+            // Fallback to home page if modal creation fails
+            window.location.href = '/';
         }
-        
-        // Navigate to the product selection page with company info
-        window.location.href = url;
     } catch (error) {
-        console.error('Error showing product type modal:', error);
-        // Fallback in case modal fails to initialize
-        let companyId = '';
-        try {
-            // Try to get company ID from the page data
-            const companyInfoElement = document.querySelector('[data-company-id]');
-            if (companyInfoElement) {
-                companyId = companyInfoElement.getAttribute('data-company-id');
-            } else {
-                // Fallback to URL parameters or session storage
-                companyId = new URLSearchParams(window.location.search).get('company_id') || 
-                           sessionStorage.getItem('companyId') ||
-                           (() => {
-                               const storedCompany = sessionStorage.getItem('selected_company');
-                               return storedCompany ? JSON.parse(storedCompany).id : '';
-                           })();
-            }
-            
-            // Build the URL with company ID if available
-            const url = new URL('/product-selection', window.location.origin);
-            if (companyId) {
-                url.searchParams.append('company_id', companyId);
-            }
-            
-            window.location.href = url.toString();
-            
-        } catch (e) {
-            console.error('Error in continue shopping fallback:', e);
-            window.location.href = '/product-selection';
-        }
+        console.error('Error in continue shopping:', error);
+        // Fallback to home page
+        window.location.href = '/';
     }
 }
 
