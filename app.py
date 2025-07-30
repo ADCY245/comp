@@ -1058,7 +1058,7 @@ def cart():
             
         # Log the company info for debugging
         app.logger.info(f"Cart - Company: {company_name}, Email: {company_email}")
-        return render_template('cart.html',
+        return render_template('user/cart.html',
                            cart=cart_data,
                             products=cart_data.get('products', []),
                             company_name=company_name,
@@ -1092,7 +1092,7 @@ def cart():
             ""  # quotation_id
         )
         # Return empty cart with error message
-        return render_template('cart.html', 
+        return render_template('user/cart.html', 
                            cart={"products": []}, 
                            error=str(e),
                            company_name='',
