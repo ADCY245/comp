@@ -981,7 +981,7 @@ def load_user(user_id):
             )
         return None
 
-@app.route('/cart')
+@app.route('/cart', endpoint='view_cart')
 @login_required
 @company_required
 def cart():
@@ -1361,7 +1361,7 @@ def add_to_cart():
         }), 500
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
-@app.route('/get_cart')
+@app.route('/get_cart', endpoint='api_get_cart')
 @login_required
 def get_cart():
     """Return the current user's cart as JSON."""
@@ -1749,7 +1749,7 @@ def update_cart_discount():
         }), 500
 
 
-@app.route('/get_cart_count')
+@app.route('/get_cart_count', endpoint='api_get_cart_count')
 def get_cart_count():
     """Return the number of products currently in the user's cart."""
     try:
