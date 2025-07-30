@@ -145,7 +145,7 @@
       
       <div id="message" class="message" style="display: none;"></div>
       
-      <form id="loginForm" class="login-form" method="POST">
+      <form id="loginForm" class="login-form" onsubmit="event.preventDefault();">
       <div class="form-group">
         <label for="login">Email or Username</label>
         <input 
@@ -197,6 +197,6 @@
     </div>
   </div>
   
-  <script src="{{ url_for('static', filename='user/js/login.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 </body>
 </html>
