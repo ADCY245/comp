@@ -3177,7 +3177,7 @@ def quotation_preview():
         'cart_total': subtotal_after_discount  # cart_total is the subtotal after discount but before taxes
     }
     
-    return render_template('quotation.html', **context)
+    return render_template('user/quotation.html', **context)
 
 # ---------------------------------------------------------------------------
 # Send Quotation Route
