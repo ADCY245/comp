@@ -2104,11 +2104,17 @@ function updateItemDisplay(item, data) {
             quantityDisplayElement.textContent = quantity;
         }
         
-        // Update subtotal (net price Ã— quantity)
-        const subtotalDisplayElement = item.querySelector('.subtotal');
-        if (subtotalDisplayElement) {
-            subtotalDisplayElement.textContent = `₹${subtotal.toFixed(2)}`;
-        }
+        // Update subtotal (net price × quantity)
+        const subtotalDisplayElements = item.querySelectorAll('.subtotal, .subtotal-value');
+        subtotalDisplayElements.forEach(element => {
+            element.textContent = `₹${subtotal.toFixed(2)}`;
+        });
+        
+        // Also update any hidden inputs that might store the subtotal
+        const subtotalInputElements = item.querySelectorAll('input[type="hidden"][name$="_subtotal"]');
+        subtotalInputElements.forEach(input => {
+            input.value = subtotal.toFixed(2);
+        });
         
         // Update discount amount and after discount value
         const discountDisplayElement = item.querySelector('.discount-amount');
