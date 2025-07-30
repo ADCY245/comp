@@ -2271,7 +2271,19 @@ function updateItemDisplay(item, data) {
             
             // Update price displays
             updatePriceElement('.unit-price, .item-unit-price', unitPrice);
-            updatePriceElement('.subtotal, .item-subtotal', subtotal);
+            
+            // Explicitly update subtotal elements to ensure they're updated
+            const subtotalElements = item.querySelectorAll('.subtotal, .item-subtotal, .subtotal-value');
+            subtotalElements.forEach(el => {
+                el.textContent = `₹${subtotal.toFixed(2)}`;
+            });
+            
+            // Also update any hidden inputs that might store the subtotal
+            const subtotalInputElements = item.querySelectorAll('input[type="hidden"][name$="_subtotal"]');
+            subtotalInputElements.forEach(input => {
+                input.value = subtotal.toFixed(2);
+            });
+            
             updatePriceElement('.discount-amount, .item-discount', discountAmount);
             updatePriceElement('.total-before-gst, .pre-gst-total, .item-total-before-gst', totalBeforeGst);
             updatePriceElement('.gst-amount, .item-gst', gstAmount);
