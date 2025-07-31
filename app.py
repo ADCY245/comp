@@ -3437,46 +3437,68 @@ def send_quotation():
             discount_text.append(f"{max(mpack_discounts):.1f}% ")
         discount_text = ", ".join(discount_text)
         
-        # Calculate total discount amount
-        total_discount = sum(
-            p.get('calculations', {}).get('discount_amount', 0) 
-            for p in products 
-            if p.get('calculations', {}).get('discount_amount', 0) > 0
-        )
+        # Recalculate all product amounts to ensure consistency
+        for p in products:
+            # Get basic values with proper defaults
+            unit_price = float(p.get('unit_price', 0) or 0)
+            quantity = int(p.get('quantity', 1) or 1)
+            discount_percent = float(p.get('discount_percent', 0) or 0)
+            
+            # Calculate basic values
+            total_price = unit_price * quantity
+            discount_amount = (total_price * discount_percent) / 100
+            taxable_amount = total_price - discount_amount
+            
+            # Determine GST rate based on product type
+            product_type = p.get('type')
+            if product_type == 'blanket':
+                gst_rate = 0.18  # 18% for blankets
+            elif product_type == 'mpack':
+                gst_rate = 0.12  # 12% for mpack
+            else:
+                gst_rate = 0.18  # Default to 18%
+            
+            # Calculate GST and final amount
+            gst_amount = round(taxable_amount * gst_rate, 2)
+            final_total = round(taxable_amount + gst_amount, 2)
+            
+            # Update product calculations
+            p['calculations'] = {
+                'unit_price': unit_price,
+                'quantity': quantity,
+                'discount_percent': discount_percent,
+                'discount_amount': round(discount_amount, 2),
+                'taxable_amount': round(taxable_amount, 2),
+                'gst_rate': int(gst_rate * 100),  # Store as percentage
+                'gst_amount': gst_amount,
+                'total_price': round(total_price, 2),
+                'final_total': final_total
+            }
         
-        # Calculate subtotal (sum of all products' total prices)
+        # Calculate totals from recalculated product data
         subtotal = sum(
-            p.get('calculations', {}).get('total_price', 0)
+            float(p.get('calculations', {}).get('total_price', 0) or 0)
             for p in products
         )
         
-        # Calculate GST separately for blanket (18%) and mpack (12%) items
-        total_gst = 0
+        total_discount = sum(
+            float(p.get('calculations', {}).get('discount_amount', 0) or 0)
+            for p in products
+        )
         
-        for p in products:
-            product_type = p.get('type')
-            price = p.get('calculations', {}).get('total_price', 0)
-            discount = p.get('calculations', {}).get('discount_amount', 0)
-            taxable_amount = price - discount
-            
-            if product_type == 'blanket':
-                gst_rate = 0.18  # 18% GST for blankets
-            elif product_type == 'mpack':
-                gst_rate = 0.12  # 12% GST for mpack
-            else:
-                gst_rate = 0.18  # Default to 18% for any other product type
-                
-            product_gst = round(taxable_amount * gst_rate, 2)
-            total_gst += product_gst
-            
-            # Store the GST amount in the product for reference
-            if 'calculations' not in p:
-                p['calculations'] = {}
-            p['calculations']['gst_amount'] = product_gst
-            p['calculations']['gst_rate'] = int(gst_rate * 100)  # Store as percentage
+        total_gst = sum(
+            float(p.get('calculations', {}).get('gst_amount', 0) or 0)
+            for p in products
+        )
         
         # Calculate total amount after GST
         total_post_gst = round((subtotal - total_discount) + total_gst, 2)
+        
+        # Ensure no negative values
+        subtotal = max(0, subtotal)
+        total_discount = max(0, total_discount)
+        total_gst = max(0, total_gst)
+        total_post_gst = max(0, total_post_gst)
         
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
@@ -3677,11 +3699,11 @@ def send_quotation():
             'customer_name': customer_name,  # For backward compatibility
             'customer_email': customer_email,  # For backward compatibility
             'products': products,
-            'subtotal': subtotal,
-            'total_discount': total_discount,
-            'total_gst': total_gst,
-            'total_amount': total_post_gst,
-            'total_amount_pre_gst': subtotal - total_discount,  # Add pre-GST total for reporting
+            'subtotal': round(float(subtotal), 2),
+            'total_discount': round(float(total_discount), 2),
+            'total_gst': round(float(total_gst), 2),
+            'total_amount': round(float(total_post_gst), 2),
+            'total_amount_pre_gst': max(0, round(float(subtotal - total_discount), 2)),  # Ensure non-negative
             'notes': notes,
             'date_created': get_india_time(),
             'email_content': email_content
