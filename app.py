@@ -4844,22 +4844,48 @@ def admin_get_quotation_details(quotation_id):
             
             # Calculate amounts from products if available
             products = quotation.get('products', [])
+            
+            # Calculate subtotal (sum of all products' total prices)
             subtotal = sum(
-                float(p.get('unit_price', p.get('base_price', 0)) or 0) * float(p.get('quantity', 1) or 1)
+                float(p.get('calculations', {}).get('total_price', 0) or 0)
                 for p in products
             )
             
+            # Calculate total discount
             total_discount = sum(
                 float(p.get('calculations', {}).get('discount_amount', 0) or 0)
                 for p in products
             )
             
-            total_gst = sum(
-                float(p.get('calculations', {}).get('gst_amount', 0) or 0)
-                for p in products
-            )
+            # Calculate GST for each product based on its type
+            total_gst = 0
+            for p in products:
+                product_type = p.get('type')
+                price = float(p.get('calculations', {}).get('total_price', 0) or 0)
+                discount = float(p.get('calculations', {}).get('discount_amount', 0) or 0)
+                taxable_amount = price - discount
+                
+                if product_type == 'blanket':
+                    gst_rate = 0.18  # 18% GST for blankets
+                elif product_type == 'mpack':
+                    gst_rate = 0.12  # 12% GST for mpack
+                else:
+                    gst_rate = 0.18  # Default to 18% for any other product type
+                
+                product_gst = round(taxable_amount * gst_rate, 2)
+                total_gst += product_gst
+                
+                # Update the product's calculations
+                if 'calculations' not in p:
+                    p['calculations'] = {}
+                p['calculations']['gst_amount'] = product_gst
+                p['calculations']['gst_rate'] = int(gst_rate * 100)  # Store as percentage
             
+            # Calculate total amount before GST (subtotal - discount)
             total_amount_pre_gst = max(0, subtotal - total_discount)
+            
+            # Calculate final total (after GST)
+            total_amount = round(total_amount_pre_gst + total_gst, 2)
             
             # Prepare the response data
             formatted_quotation = {
@@ -4868,11 +4894,11 @@ def admin_get_quotation_details(quotation_id):
                 'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
                 'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
                 'products': products,
-                'subtotal': round(subtotal, 2),
-                'total_discount': round(total_discount, 2),
-                'total_gst': round(total_gst, 2),
-                'total_amount': round(total_amount_pre_gst + total_gst, 2),
-                'total_amount_pre_gst': round(total_amount_pre_gst, 2),
+                'subtotal': round(float(subtotal), 2),
+                'total_discount': round(float(total_discount), 2),
+                'total_gst': round(float(total_gst), 2),
+                'total_amount': round(float(total_amount), 2),
+                'total_amount_pre_gst': round(float(total_amount_pre_gst), 2),
                 'notes': quotation.get('notes', ''),
                 'status': quotation.get('status', 'unknown'),
                 'email_sent': quotation.get('email_sent', False),
@@ -4886,11 +4912,12 @@ def admin_get_quotation_details(quotation_id):
                 '_raw_user_email': user_email,
                 # Add calculation details for debugging
                 '_calculated': {
-                    'subtotal': subtotal,
-                    'total_discount': total_discount,
-                    'total_gst': total_gst,
-                    'total_amount_pre_gst': total_amount_pre_gst,
-                    'total_amount': total_amount_pre_gst + total_gst
+                    'subtotal': round(float(subtotal), 2),
+                    'total_discount': round(float(total_discount), 2),
+                    'total_gst': round(float(total_gst), 2),
+                    'total_amount_pre_gst': round(float(total_amount_pre_gst), 2),
+                    'total_amount': round(float(total_amount), 2),
+                    'calculation_method': 'recalculated_on_demand'
                 }
             }
             
