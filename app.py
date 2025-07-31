@@ -3444,6 +3444,40 @@ def send_quotation():
             if p.get('calculations', {}).get('discount_amount', 0) > 0
         )
         
+        # Calculate subtotal (sum of all products' total prices)
+        subtotal = sum(
+            p.get('calculations', {}).get('total_price', 0)
+            for p in products
+        )
+        
+        # Calculate GST separately for blanket (18%) and mpack (12%) items
+        total_gst = 0
+        
+        for p in products:
+            product_type = p.get('type')
+            price = p.get('calculations', {}).get('total_price', 0)
+            discount = p.get('calculations', {}).get('discount_amount', 0)
+            taxable_amount = price - discount
+            
+            if product_type == 'blanket':
+                gst_rate = 0.18  # 18% GST for blankets
+            elif product_type == 'mpack':
+                gst_rate = 0.12  # 12% GST for mpack
+            else:
+                gst_rate = 0.18  # Default to 18% for any other product type
+                
+            product_gst = round(taxable_amount * gst_rate, 2)
+            total_gst += product_gst
+            
+            # Store the GST amount in the product for reference
+            if 'calculations' not in p:
+                p['calculations'] = {}
+            p['calculations']['gst_amount'] = product_gst
+            p['calculations']['gst_rate'] = int(gst_rate * 100)  # Store as percentage
+        
+        # Calculate total amount after GST
+        total_post_gst = round((subtotal - total_discount) + total_gst, 2)
+        
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
         
