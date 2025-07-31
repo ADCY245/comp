@@ -4751,50 +4751,56 @@ def admin_get_quotation_details(quotation_id):
             if not quotation:
                 return jsonify({'error': 'Quotation not found'}), 404
                 
-    except Exception as e:
-        app.logger.error(f"Error fetching quotation: {str(e)}")
-        return jsonify({'error': 'Failed to fetch quotation'}), 500
-            
-        # Get user details if user_id exists
-        username = ''
-        user_email = ''
-        if 'user_id' in quotation and quotation['user_id']:
-            try:
-                from bson import ObjectId
-                user = mongo_db.users.find_one({'_id': ObjectId(quotation['user_id'])})
+            # Get user details if user_id exists
+            username = ''
+            user_email = ''
+            if 'user_id' in quotation:
+                user = None
+                if MONGO_AVAILABLE and USE_MONGO:
+                    user = mongo_db.users.find_one({'_id': ObjectId(quotation['user_id'])})
+                
+                if not user and os.path.exists(USERS_JSON):
+                    with open(USERS_JSON, 'r') as f:
+                        users = json.load(f)
+                        user = next((u for u in users if u['id'] == quotation['user_id']), None)
+                
                 if user:
                     username = user.get('username', '')
                     user_email = user.get('email', '')
-            except:
-                pass
-        
-        # Format the response with proper fallbacks
-        formatted_quotation = {
-            'id': str(quotation.get('_id', '')),
-            'quote_id': quotation.get('quote_id', 'N/A'),
-            'username': username or quotation.get('username', current_user.username if hasattr(current_user, 'username') else 'N/A'),
-            'user_email': user_email or quotation.get('user_email', current_user.email if hasattr(current_user, 'email') else 'N/A'),
-            'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
-            'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
-            'products': quotation.get('products', []),
-            'subtotal': float(quotation.get('subtotal', 0)),
-            'total_discount': float(quotation.get('total_discount', 0)),
-            'total_gst': float(quotation.get('total_gst', 0)),
-            'total_amount': float(quotation.get('total_amount', 0)),
-            'total_amount_pre_gst': float(quotation.get('total_amount_pre_gst', 
-                float(quotation.get('subtotal', 0)) - float(quotation.get('total_discount', 0)))),
-            'notes': quotation.get('notes', ''),
-            'status': quotation.get('status', 'unknown'),
-            'email_sent': quotation.get('email_sent', False),
-            'created_at': quotation.get('date_created', '').isoformat() if quotation.get('date_created') else '',
-            'email_content': quotation.get('email_content', ''),
-            # Add raw fields for debugging
-            '_raw_user_id': quotation.get('user_id', ''),
-            '_raw_username': quotation.get('username', ''),
-            '_raw_user_email': quotation.get('user_email', '')
-        }
-        
-        return jsonify({'success': True, 'quotation': formatted_quotation})
+            
+            # Convert ObjectId to string for JSON serialization
+            if '_id' in quotation:
+                quotation['_id'] = str(quotation['_id'])
+            if 'user_id' in quotation:
+                quotation['user_id'] = str(quotation['user_id'])
+            
+            # Prepare the response data
+            formatted_quotation = {
+                'id': str(quotation.get('_id', '')),
+                'quote_id': quotation.get('quote_id', 'N/A'),
+                'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
+                'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
+                'products': quotation.get('products', []),
+                'subtotal': float(quotation.get('subtotal', 0)),
+                'total_discount': float(quotation.get('total_discount', 0)),
+                'total_gst': float(quotation.get('total_gst', 0)),
+                'total_amount': float(quotation.get('total_amount', 0)),
+                'total_amount_pre_gst': float(quotation.get('total_amount_pre_gst', 
+                    float(quotation.get('subtotal', 0)) - float(quotation.get('total_discount', 0)))),
+                'notes': quotation.get('notes', ''),
+                'status': quotation.get('status', 'unknown'),
+                'email_sent': quotation.get('email_sent', False),
+                'created_at': quotation.get('date_created', '').isoformat() if hasattr(quotation.get('date_created'), 'isoformat') else str(quotation.get('date_created', '')),
+                'email_content': quotation.get('email_content', ''),
+                'username': username,
+                'user_email': user_email,
+                # Add raw fields for debugging
+                '_raw_user_id': quotation.get('user_id', ''),
+                '_raw_username': username,
+                '_raw_user_email': user_email
+            }
+            
+            return jsonify({'success': True, 'quotation': formatted_quotation})
         
     except Exception as e:
         app.logger.error(f"Error getting quotation details: {str(e)}")
