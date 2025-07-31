@@ -235,18 +235,8 @@ if USE_MONGO:
         print("3. Set USE_MONGO=True in your environment")
         print("4. The database specified in DB_NAME exists")
         print("==============================\n")
-MONGO_URI = os.getenv('MONGO_URI', '').strip()
 
-mongo_client = None
-mongo_db = None
-users_col = None
-
-print("\n=== MongoDB Configuration ===")
-print(f"USE_MONGO: {USE_MONGO}")
-print(f"MONGO_URI: {'Set' if MONGO_URI else 'Not set'}")
-print(f"DB_NAME: {DB_NAME}")
-
-if MONGO_URI and USE_MONGO:
+if not MONGO_AVAILABLE and USE_MONGO:
     try:
         print("Attempting to connect to MongoDB...")
         
