@@ -3601,20 +3601,22 @@ def send_quotation():
         # Prepare quotation data for database
         quotation_data = {
             'quote_id': quote_id,
-            'date_created': datetime.utcnow(),
-            'customer_name': customer_name,
-            'customer_email': customer_email,
-            'user_id': str(current_user.id) if hasattr(current_user, 'id') else None,
-            'user_email': current_user.email if hasattr(current_user, 'email') else None,
+            'user_id': str(current_user.id) if hasattr(current_user, 'id') else '',
+            'username': current_user.username if hasattr(current_user, 'username') else '',
+            'user_email': current_user.email if hasattr(current_user, 'email') else '',
+            'company_name': customer_name,  # This is the company name, not necessarily the user's name
+            'company_email': customer_email,  # This is the company email
+            'customer_name': customer_name,  # For backward compatibility
+            'customer_email': customer_email,  # For backward compatibility
             'products': products,
-            'subtotal': sum(p.get("calculations", {}).get("subtotal", 0) for p in products),
+            'subtotal': subtotal,
             'total_discount': total_discount,
-            'total_gst': sum(p.get("calculations", {}).get("gst_amount", 0) for p in products),
-            'total_amount': sum(p.get("calculations", {}).get("final_total", 0) for p in products),
+            'total_gst': total_gst,
+            'total_amount': total_post_gst,
+            'total_amount_pre_gst': subtotal - total_discount,  # Add pre-GST total for reporting
             'notes': notes,
-            'status': 'sent' if email_sent else 'draft',
-            'email_sent': email_sent,
-            'sent_at': datetime.utcnow() if email_sent else None
+            'date_created': datetime.utcnow(),
+            'email_content': email_content
         }
         
         # Save to database
@@ -4182,24 +4184,24 @@ def admin_stats():
             users_count = mongo_db.users.count_documents({})
             stats['total_users'] = users_count
             
-            # Get total quotations (assuming you have a quotations collection)
-            # quotations_count = mongo_db.quotations.count_documents({})
-            # stats['total_quotations'] = quotations_count
+            # Get total quotations count
+            if 'quotations' in mongo_db.list_collection_names():
+                stats['total_quotations'] = mongo_db.quotations.count_documents({})
             
-            # For now, simulate active sessions (you can implement real session tracking)
-            stats['active_sessions'] = 1  # Current admin user
+            # Get active sessions (for now just count logged in users)
+            # In a real app, you'd track active sessions in Redis or similar
+            stats['active_sessions'] = 1  # Placeholder
             
-            # Get recent activity (last 10 users registered)
+            # Get recent activity (last 5 registered users)
             recent_users = list(mongo_db.users.find(
-                {}, 
+                {},
                 {'username': 1, 'email': 1, 'created_at': 1, 'role': 1}
-            ).sort('created_at', -1).limit(10))
+            ).sort('created_at', -1).limit(5))
             
             for user in recent_users:
                 stats['recent_activity'].append({
-                    'type': 'user_registered',
-                    'message': f"User {user.get('username', user.get('email', 'Unknown'))} registered",
-                    'timestamp': user.get('created_at', '').strftime('%Y-%m-%d %H:%M') if user.get('created_at') else 'Unknown',
+                    'message': f"New user registered: {user.get('username', user.get('email', 'Unknown'))}",
+                    'timestamp': user.get('created_at', datetime.utcnow()).strftime('%Y-%m-%d %H:%M'),
                     'role': user.get('role', 'user')
                 })
         else:
@@ -4731,52 +4733,73 @@ def admin_get_quotation_details(quotation_id):
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
     
+    quotation = None
     try:
         if MONGO_AVAILABLE and USE_MONGO:
-            # Try to find by quote_id first, then by _id
-            quotation = mongo_db.quotations.find_one({
-                '$or': [
-                    {'quote_id': quotation_id},
-                    {'_id': ObjectId(quotation_id) if len(quotation_id) == 24 else None}
-                ]
-            })
+            from bson import ObjectId
+            # Try to find by quote_id first
+            quotation = mongo_db.quotations.find_one({'quote_id': quotation_id})
             
-            if quotation:
-                # Format the date for display
-                created_at = quotation.get('date_created')
-                if created_at and isinstance(created_at, datetime):
-                    formatted_date = created_at.strftime('%Y-%m-%d %H:%M:%S')
-                else:
-                    formatted_date = str(created_at) if created_at else 'N/A'
+            # If not found by quote_id, try by _id if it looks like an ObjectId
+            if not quotation and len(quotation_id) == 24:
+                try:
+                    quotation = mongo_db.quotations.find_one({'_id': ObjectId(quotation_id)})
+                except Exception as e:
+                    app.logger.warning(f"Invalid ObjectId format: {str(e)}")
+                    pass
+            
+            if not quotation:
+                return jsonify({'error': 'Quotation not found'}), 404
                 
-                # Calculate total amount pre-GST (subtotal - discount)
-                subtotal = float(quotation.get('subtotal', 0))
-                discount = float(quotation.get('total_discount', 0))
-                total_pre_gst = max(0, subtotal - discount)
-                
-                quotation_data = {
-                    'id': str(quotation.get('_id')),  # Convert ObjectId to string for JSON serialization
-                    'quote_id': quotation.get('quote_id', ''),
-                    'user_id': quotation.get('user_id', ''),
-                    'username': '',  # Not stored in quotation_data currently
-                    'user_email': quotation.get('user_email', ''),
-                    'company_name': quotation.get('customer_name', ''),
-                    'company_email': quotation.get('customer_email', ''),
-                    'products': quotation.get('products', []),
-                    'total_amount_pre_gst': total_pre_gst,
-                    'total_amount_post_gst': float(quotation.get('total_amount', 0)),
-                    'gst_amount': float(quotation.get('total_gst', 0)),
-                    'notes': quotation.get('notes', ''),
-                    'created_at': formatted_date,
-                    'email_content': quotation.get('email_content', '')
-                }
-                return jsonify({'success': True, 'quotation': quotation_data})
+    except Exception as e:
+        app.logger.error(f"Error fetching quotation: {str(e)}")
+        return jsonify({'error': 'Failed to fetch quotation'}), 500
+            
+        # Get user details if user_id exists
+        username = ''
+        user_email = ''
+        if 'user_id' in quotation and quotation['user_id']:
+            try:
+                from bson import ObjectId
+                user = mongo_db.users.find_one({'_id': ObjectId(quotation['user_id'])})
+                if user:
+                    username = user.get('username', '')
+                    user_email = user.get('email', '')
+            except:
+                pass
         
-        return jsonify({'error': 'Quotation not found'}), 404
+        # Format the response with proper fallbacks
+        formatted_quotation = {
+            'id': str(quotation.get('_id', '')),
+            'quote_id': quotation.get('quote_id', 'N/A'),
+            'username': username or quotation.get('username', current_user.username if hasattr(current_user, 'username') else 'N/A'),
+            'user_email': user_email or quotation.get('user_email', current_user.email if hasattr(current_user, 'email') else 'N/A'),
+            'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
+            'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
+            'products': quotation.get('products', []),
+            'subtotal': float(quotation.get('subtotal', 0)),
+            'total_discount': float(quotation.get('total_discount', 0)),
+            'total_gst': float(quotation.get('total_gst', 0)),
+            'total_amount': float(quotation.get('total_amount', 0)),
+            'total_amount_pre_gst': float(quotation.get('total_amount_pre_gst', 
+                float(quotation.get('subtotal', 0)) - float(quotation.get('total_discount', 0)))),
+            'notes': quotation.get('notes', ''),
+            'status': quotation.get('status', 'unknown'),
+            'email_sent': quotation.get('email_sent', False),
+            'created_at': quotation.get('date_created', '').isoformat() if quotation.get('date_created') else '',
+            'email_content': quotation.get('email_content', ''),
+            # Add raw fields for debugging
+            '_raw_user_id': quotation.get('user_id', ''),
+            '_raw_username': quotation.get('username', ''),
+            '_raw_user_email': quotation.get('user_email', '')
+        }
+        
+        return jsonify({'success': True, 'quotation': formatted_quotation})
         
     except Exception as e:
         app.logger.error(f"Error getting quotation details: {str(e)}")
-        return jsonify({'error': 'Failed to load quotation details'}), 500
+        app.logger.error(traceback.format_exc())  # Add full traceback to logs
+        return jsonify({'error': 'Failed to get quotation details', 'details': str(e)}), 500
 
 # Active Sessions API
 @app.route('/api/admin/active-sessions')
