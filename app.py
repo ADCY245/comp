@@ -4755,7 +4755,7 @@ def admin_get_quotation_details(quotation_id):
                 total_pre_gst = max(0, subtotal - discount)
                 
                 quotation_data = {
-                    'id': quotation.get('_id'),
+                    'id': str(quotation.get('_id')),  # Convert ObjectId to string for JSON serialization
                     'quote_id': quotation.get('quote_id', ''),
                     'user_id': quotation.get('user_id', ''),
                     'username': '',  # Not stored in quotation_data currently
