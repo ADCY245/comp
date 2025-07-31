@@ -4845,13 +4845,49 @@ def admin_get_quotation_details(quotation_id):
             # Calculate amounts from products if available
             products = quotation.get('products', [])
             
-            # Calculate subtotal (sum of all products' total prices)
+            # Recalculate all amounts to ensure consistency
+            for p in products:
+                # Get basic values with proper defaults
+                unit_price = float(p.get('unit_price', 0) or 0)
+                quantity = float(p.get('quantity', 1) or 1)
+                discount_percent = float(p.get('discount_percent', 0) or 0)
+                
+                # Calculate basic values
+                total_price = unit_price * quantity
+                discount_amount = (total_price * discount_percent) / 100
+                taxable_amount = total_price - discount_amount
+                
+                # Determine GST rate based on product type
+                product_type = p.get('type')
+                gst_rate = 0.18  # Default to 18%
+                if product_type == 'mpack':
+                    gst_rate = 0.12  # 12% for mpack
+                
+                # Calculate GST
+                gst_amount = round(taxable_amount * gst_rate, 2)
+                
+                # Update product calculations
+                if 'calculations' not in p:
+                    p['calculations'] = {}
+                
+                p['calculations'].update({
+                    'unit_price': unit_price,
+                    'quantity': quantity,
+                    'discount_percent': discount_percent,
+                    'discount_amount': round(discount_amount, 2),
+                    'taxable_amount': round(taxable_amount, 2),
+                    'gst_rate': int(gst_rate * 100),  # Store as percentage
+                    'gst_amount': gst_amount,
+                    'total_price': round(total_price, 2),
+                    'final_total': round(taxable_amount + gst_amount, 2)
+                })
+            
+            # Calculate totals from recalculated product data
             subtotal = sum(
                 float(p.get('calculations', {}).get('total_price', 0) or 0)
                 for p in products
             )
             
-            # Calculate total discount
             total_discount = sum(
                 float(p.get('calculations', {}).get('discount_amount', 0) or 0)
                 for p in products
