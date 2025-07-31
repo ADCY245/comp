@@ -4925,8 +4925,9 @@ def admin_get_quotation_details(quotation_id):
             
             # Prepare the response data
             formatted_quotation = {
-                'id': str(quotation.get('_id', '')),
+                'id': quotation.get('quote_id', str(quotation.get('_id', ''))),
                 'quote_id': quotation.get('quote_id', 'N/A'),
+                'mongo_id': str(quotation.get('_id', '')),  # Keep for reference if needed
                 'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
                 'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
                 'products': products,
