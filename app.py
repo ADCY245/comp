@@ -4687,19 +4687,33 @@ def admin_get_quotations():
         if MONGO_AVAILABLE and USE_MONGO:
             # Check if quotations collection exists
             if 'quotations' in mongo_db.list_collection_names():
-                quotations_cursor = mongo_db.quotations.find({}).sort('created_at', -1)
+                # Sort by date_created in descending order (newest first)
+                quotations_cursor = mongo_db.quotations.find({}).sort('date_created', -1)
                 
                 for quot_doc in quotations_cursor:
+                    # Format the date for display
+                    created_at = quot_doc.get('date_created')
+                    if created_at and isinstance(created_at, datetime):
+                        formatted_date = created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        formatted_date = str(created_at) if created_at else 'N/A'
+                    
+                    # Calculate total amount pre-GST (subtotal - discount)
+                    subtotal = float(quot_doc.get('subtotal', 0))
+                    discount = float(quot_doc.get('total_discount', 0))
+                    total_pre_gst = max(0, subtotal - discount)
+                    
                     quotation_data = {
-                        'id': quot_doc.get('sequential_id', str(quot_doc['_id'])),
+                        'id': str(quot_doc.get('_id', '')),  # Use MongoDB _id as the primary ID
+                        'quote_id': quot_doc.get('quote_id', ''),  # Human-readable quote ID
                         'user_id': quot_doc.get('user_id', ''),
-                        'username': quot_doc.get('username', ''),
+                        'username': '',  # Not stored in quotation_data currently
                         'user_email': quot_doc.get('user_email', ''),
-                        'company_name': quot_doc.get('company_name', ''),
-                        'company_email': quot_doc.get('company_email', ''),
-                        'total_amount_pre_gst': quot_doc.get('total_amount_pre_gst', 0),
-                        'total_amount_post_gst': quot_doc.get('total_amount_post_gst', 0),
-                        'created_at': quot_doc.get('created_at', ''),
+                        'company_name': quot_doc.get('customer_name', 'No Company'),
+                        'company_email': quot_doc.get('customer_email', ''),
+                        'total_amount_pre_gst': total_pre_gst,
+                        'total_amount_post_gst': float(quot_doc.get('total_amount', 0)),
+                        'created_at': formatted_date,
                         'products_count': len(quot_doc.get('products', []))
                     }
                     quotations_list.append(quotation_data)
@@ -4719,28 +4733,41 @@ def admin_get_quotation_details(quotation_id):
     
     try:
         if MONGO_AVAILABLE and USE_MONGO:
-            # Try to find by sequential_id first, then by _id
+            # Try to find by quote_id first, then by _id
             quotation = mongo_db.quotations.find_one({
                 '$or': [
-                    {'sequential_id': int(quotation_id) if quotation_id.isdigit() else quotation_id},
+                    {'quote_id': quotation_id},
                     {'_id': ObjectId(quotation_id) if len(quotation_id) == 24 else None}
                 ]
             })
             
             if quotation:
+                # Format the date for display
+                created_at = quotation.get('date_created')
+                if created_at and isinstance(created_at, datetime):
+                    formatted_date = created_at.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    formatted_date = str(created_at) if created_at else 'N/A'
+                
+                # Calculate total amount pre-GST (subtotal - discount)
+                subtotal = float(quotation.get('subtotal', 0))
+                discount = float(quotation.get('total_discount', 0))
+                total_pre_gst = max(0, subtotal - discount)
+                
                 quotation_data = {
-                    'id': quotation.get('sequential_id', str(quotation['_id'])),
+                    'id': quotation.get('_id'),
+                    'quote_id': quotation.get('quote_id', ''),
                     'user_id': quotation.get('user_id', ''),
-                    'username': quotation.get('username', ''),
+                    'username': '',  # Not stored in quotation_data currently
                     'user_email': quotation.get('user_email', ''),
-                    'company_name': quotation.get('company_name', ''),
-                    'company_email': quotation.get('company_email', ''),
+                    'company_name': quotation.get('customer_name', ''),
+                    'company_email': quotation.get('customer_email', ''),
                     'products': quotation.get('products', []),
-                    'total_amount_pre_gst': quotation.get('total_amount_pre_gst', 0),
-                    'total_amount_post_gst': quotation.get('total_amount_post_gst', 0),
-                    'gst_amount': quotation.get('gst_amount', 0),
+                    'total_amount_pre_gst': total_pre_gst,
+                    'total_amount_post_gst': float(quotation.get('total_amount', 0)),
+                    'gst_amount': float(quotation.get('total_gst', 0)),
                     'notes': quotation.get('notes', ''),
-                    'created_at': quotation.get('created_at', ''),
+                    'created_at': formatted_date,
                     'email_content': quotation.get('email_content', '')
                 }
                 return jsonify({'success': True, 'quotation': quotation_data})
