@@ -3608,10 +3608,36 @@ def send_quotation():
         else:
             app.logger.warning("Email configuration is incomplete. Email will not be sent.")
 
-        # Clear cart after attempting to send email
+        # Prepare quotation data for database
+        quotation_data = {
+            'quote_id': quote_id,
+            'date_created': datetime.utcnow(),
+            'customer_name': customer_name,
+            'customer_email': customer_email,
+            'user_id': str(current_user.id) if hasattr(current_user, 'id') else None,
+            'user_email': current_user.email if hasattr(current_user, 'email') else None,
+            'products': products,
+            'subtotal': sum(p.get("calculations", {}).get("subtotal", 0) for p in products),
+            'total_discount': total_discount,
+            'total_gst': sum(p.get("calculations", {}).get("gst_amount", 0) for p in products),
+            'total_amount': sum(p.get("calculations", {}).get("final_total", 0) for p in products),
+            'notes': notes,
+            'status': 'sent' if email_sent else 'draft',
+            'email_sent': email_sent,
+            'sent_at': datetime.utcnow() if email_sent else None
+        }
+        
+        # Save to database
+        saved_quote_id = save_quotation_to_db(quotation_data)
+        if not saved_quote_id:
+            app.logger.error("Failed to save quotation to database")
+        else:
+            app.logger.info(f"Quotation saved to database with ID: {saved_quote_id}")
+        
+        # Clear cart after saving to database and attempting to send email
         clear_cart()
         
-        # Instead of removing selected_company, keep it in the session
+        # Keep selected_company in the session
         # This ensures the company selection persists after sending a quotation
         
         return jsonify({
