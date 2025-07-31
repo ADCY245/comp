@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, Email
 from waitress import serve
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import hashlib
 import secrets
@@ -22,6 +22,40 @@ from dotenv import load_dotenv
 from bson.objectid import ObjectId
 import socket  # Added for socket.timeout and socket.gaierror
 import logging
+
+# Define India timezone (IST - UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_india_time():
+    """Get current time in India timezone (IST)"""
+    return datetime.now(IST)
+
+def get_next_quote_id():
+    """Generate the next sequential quote ID in format CGI_PC_Q{number}"""
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        try:
+            # Find the highest existing quote number
+            last_quote = mongo_db.quotations.find_one(
+                {'quote_id': {'$regex': '^CGI_PC_Q\\d+$'}},
+                sort=[('quote_id', -1)]  # Sort by quote_id in descending order
+            )
+            
+            if last_quote and 'quote_id' in last_quote:
+                # Extract the number part and increment
+                last_number = int(last_quote['quote_id'].split('_')[-1][1:])
+                next_number = last_number + 1
+            else:
+                next_number = 1
+                
+            return f"CGI_PC_Q{next_number}"
+            
+        except Exception as e:
+            app.logger.error(f"Error generating sequential quote ID: {str(e)}")
+            # Fallback to timestamp-based ID if there's an error
+            return f"CGI_PC_{int(get_india_time().timestamp())}"
+    else:
+        # Fallback to timestamp-based ID if MongoDB is not available
+        return f"CGI_PC_{int(get_india_time().timestamp())}"
 
 # Import MongoDB users module
 try:
@@ -3265,8 +3299,8 @@ def send_quotation():
         user_email = current_user.email if hasattr(current_user, 'email') else None
         recipients = list({email for email in [customer_email, 'operations@chemo.in', user_email] if email})
 
-        # Get current date
-        today = datetime.utcnow().strftime('%d/%m/%Y')
+        # Get current date in India timezone
+        today = get_india_time().strftime('%d/%m/%Y')
 
         # Table rows with header
         rows_html = """
@@ -3413,8 +3447,8 @@ def send_quotation():
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
         
-        # Generate a unique quote ID
-        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        # Generate a sequential quote ID
+        quote_id = get_next_quote_id()
 
         # Build email content with improved table layout and consistent white background
         email_content = f"""
@@ -3615,7 +3649,7 @@ def send_quotation():
             'total_amount': total_post_gst,
             'total_amount_pre_gst': subtotal - total_discount,  # Add pre-GST total for reporting
             'notes': notes,
-            'date_created': datetime.utcnow(),
+            'date_created': get_india_time(),
             'email_content': email_content
         }
         
@@ -4774,19 +4808,37 @@ def admin_get_quotation_details(quotation_id):
             if 'user_id' in quotation:
                 quotation['user_id'] = str(quotation['user_id'])
             
+            # Calculate amounts from products if available
+            products = quotation.get('products', [])
+            subtotal = sum(
+                float(p.get('unit_price', p.get('base_price', 0)) or 0) * float(p.get('quantity', 1) or 1)
+                for p in products
+            )
+            
+            total_discount = sum(
+                float(p.get('calculations', {}).get('discount_amount', 0) or 0)
+                for p in products
+            )
+            
+            total_gst = sum(
+                float(p.get('calculations', {}).get('gst_amount', 0) or 0)
+                for p in products
+            )
+            
+            total_amount_pre_gst = max(0, subtotal - total_discount)
+            
             # Prepare the response data
             formatted_quotation = {
                 'id': str(quotation.get('_id', '')),
                 'quote_id': quotation.get('quote_id', 'N/A'),
                 'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
                 'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
-                'products': quotation.get('products', []),
-                'subtotal': float(quotation.get('subtotal', 0) or 0),
-                'total_discount': float(quotation.get('total_discount', 0) or 0),
-                'total_gst': float(quotation.get('total_gst', 0) or 0),
-                'total_amount': float(quotation.get('total_amount', 0) or 0),
-                'total_amount_pre_gst': float(quotation.get('total_amount_pre_gst', 0) or 
-                    (float(quotation.get('subtotal', 0) or 0) - float(quotation.get('total_discount', 0) or 0))),
+                'products': products,
+                'subtotal': round(subtotal, 2),
+                'total_discount': round(total_discount, 2),
+                'total_gst': round(total_gst, 2),
+                'total_amount': round(total_amount_pre_gst + total_gst, 2),
+                'total_amount_pre_gst': round(total_amount_pre_gst, 2),
                 'notes': quotation.get('notes', ''),
                 'status': quotation.get('status', 'unknown'),
                 'email_sent': quotation.get('email_sent', False),
@@ -4797,7 +4849,15 @@ def admin_get_quotation_details(quotation_id):
                 # Add raw fields for debugging
                 '_raw_user_id': quotation.get('user_id', ''),
                 '_raw_username': username,
-                '_raw_user_email': user_email
+                '_raw_user_email': user_email,
+                # Add calculation details for debugging
+                '_calculated': {
+                    'subtotal': subtotal,
+                    'total_discount': total_discount,
+                    'total_gst': total_gst,
+                    'total_amount_pre_gst': total_amount_pre_gst,
+                    'total_amount': total_amount_pre_gst + total_gst
+                }
             }
             
             return jsonify({'success': True, 'quotation': formatted_quotation})
