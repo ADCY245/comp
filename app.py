@@ -2967,10 +2967,13 @@ def api_reset_password():
 def quotation_preview():
     app.logger.info("[DEBUG] quotation_preview() called")
     
-    # Get current date and time
-    current_datetime = datetime.now()
-    quote_date = current_datetime.strftime('%d-%m-%Y')
-    quote_time = current_datetime.strftime('%H:%M:%S')
+    # Get current date and time in IST
+    current_datetime = datetime.utcnow()
+    ist = timezone(timedelta(hours=5, minutes=30))
+    current_datetime_ist = current_datetime.replace(tzinfo=timezone.utc).astimezone(ist)
+    formatted_datetime = current_datetime_ist.strftime('%Y-%m-%d %H:%M:%S')
+    quote_date = current_datetime_ist.strftime('%Y-%m-%d')
+    quote_time = current_datetime_ist.strftime('%H:%M:%S')
     
     cart = get_user_cart()
     app.logger.info(f"[DEBUG] Cart contains {len(cart.get('products', []))} products")
@@ -4786,10 +4789,13 @@ def admin_get_quotations():
                 quotations_cursor = mongo_db.quotations.find({}).sort('date_created', -1)
                 
                 for quot_doc in quotations_cursor:
-                    # Format the date for display
+                    # Format the date for display in IST (UTC+5:30)
                     created_at = quot_doc.get('date_created')
                     if created_at and isinstance(created_at, datetime):
-                        formatted_date = created_at.strftime('%Y-%m-%d %H:%M:%S')
+                        # Convert UTC to IST (UTC+5:30)
+                        ist = timezone(timedelta(hours=5, minutes=30))
+                        created_at_ist = created_at.replace(tzinfo=timezone.utc).astimezone(ist)
+                        formatted_date = created_at_ist.strftime('%Y-%m-%d %H:%M:%S')
                     else:
                         formatted_date = str(created_at) if created_at else 'N/A'
                     
