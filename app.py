@@ -708,21 +708,24 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 # Create Flask app instance
 app = Flask(__name__)
 
-# Configure secret key
+# Configure secret key and session settings
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Login')
-
-# Configure session
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)  # Session expires after 12 hours
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # Only send cookie over HTTPS in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session expires after 1 day
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Route name for the login page
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Add regex_search filter to Jinja2 environment
 @app.template_filter('regex_search')
@@ -5009,6 +5012,11 @@ def admin_get_active_sessions():
             for product in cart.get('products', []):
                 cart_total += product.get('total_price', 0)
             
+            # Get current time in IST
+            from datetime import datetime, timezone
+            ist = timezone.utc.offset(datetime.now(), 19800)  # +5:30 hours = 19800 seconds
+            current_time_ist = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
+            
             session_data = {
                 'user_id': current_user.id,
                 'username': current_user.username,
@@ -5018,7 +5026,7 @@ def admin_get_active_sessions():
                 'company_email': session.get('company_email', ''),
                 'cart_amount': cart_total,
                 'cart_items_count': len(cart.get('products', [])),
-                'last_activity': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'last_activity': current_time_ist
             }
             active_sessions.append(session_data)
         
