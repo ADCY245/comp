@@ -363,8 +363,19 @@
             const card = document.createElement('div');
             card.className = 'quotation-card';
             
-            const createdDate = quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-IN') : 'N/A';
-            const createdTime = quotation.created_at ? new Date(quotation.created_at).toLocaleTimeString('en-IN') : '';
+            // Format date and time in IST (en-IN locale already uses IST)
+            let createdDate = 'N/A';
+            let createdTime = '';
+            if (quotation.created_at) {
+                const date = new Date(quotation.created_at);
+                createdDate = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                createdTime = date.toLocaleTimeString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
             
             card.innerHTML = `
                 <div class="row">
@@ -443,6 +454,7 @@
             
             const modalBody = document.getElementById('quotationModalBody');
             const createdDate = quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-IN') : 'N/A';
+            const createdTime = quotation.created_at ? new Date(quotation.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
             
             let productsHtml = '';
             if (quotation.products && quotation.products.length > 0) {
@@ -484,15 +496,16 @@
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6>Quotation Information</h6>
-                        <p><strong>ID:</strong> ${quotation.id}</p>
-                        <p><strong>Date:</strong> ${createdDate}</p>
+                        <p><strong>From:</strong> Chemo Graphic International</p>
+                        <p><strong>To:</strong> ${quotation.company_name || 'N/A'}</p>
+                        <p><strong>Date:</strong> ${createdDate} at ${createdTime}</p>
+                        <p><strong>Quotation ID:</strong> ${quotation.id}</p>
                         <p><strong>Products:</strong> ${quotation.products ? quotation.products.length : 0}</p>
                     </div>
                     <div class="col-md-6">
                         <h6>User Information</h6>
                         <p><strong>User:</strong> ${quotation.username || 'N/A'}</p>
                         <p><strong>Email:</strong> ${quotation.user_email || 'N/A'}</p>
-                        <p><strong>Company:</strong> ${quotation.company_name || 'N/A'}</p>
                     </div>
                 </div>
                 
