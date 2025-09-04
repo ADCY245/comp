@@ -363,16 +363,16 @@ if not MONGO_AVAILABLE and USE_MONGO:
             MONGO_AVAILABLE = True
             
         except Exception as e:
-            print(f"[ERROR] Error initializing mongo_users: {str(e)}")
+            print(f"❌ Error initializing mongo_users: {str(e)}")
             raise
         
     except Exception as e:
-        print(f"[ERROR] Unexpected error during MongoDB setup: {str(e)}")
+        print(f"❌ Unexpected error during MongoDB setup: {str(e)}")
         print("Falling back to JSON storage")
         MONGO_AVAILABLE = False
         
     except Exception as e:
-        print(f"[ERROR] MongoDB connection error: {str(e)}")
+        print(f"❌ MongoDB connection error: {str(e)}")
         print("Falling back to JSON storage")
         MONGO_AVAILABLE = False
         mongo_client = None
@@ -419,8 +419,7 @@ CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, 
-                 reset_token=None, reset_token_expiry=None, company_id=None, role='user', customers=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user'):
         self.id = id
         self.email = email
         self.username = username
@@ -433,14 +432,6 @@ class User(UserMixin):
         self.company_id = company_id
         # Store role in lowercase for consistency
         self.role = role.lower() if role else 'user'
-        self.customers = customers or []  # List of customer IDs assigned to this user
-        
-    def is_admin(self):
-        return self.role == 'admin'
-        
-    def can_access_customer(self, customer_id):
-        """Check if user can access a specific customer"""
-        return self.is_admin() or str(customer_id) in self.customers
 
     def to_dict(self):
         return {
@@ -476,285 +467,6 @@ class User(UserMixin):
             return data.get('user_id')
         except:
             return None
-
-# ---------------------------------------------------------------------------
-# Customer Management
-# ---------------------------------------------------------------------------
-
-def get_all_customers():
-    """Get all customers from the database."""
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            customers = list(mongo_db.customers.find({}, {'_id': 1, 'name': 1, 'email': 1, 'assigned_to': 1, 'created_by': 1, 'created_at': 1}))
-            for customer in customers:
-                customer['id'] = str(customer.pop('_id'))
-            return customers
-        except Exception as e:
-            app.logger.error(f"Error fetching customers from MongoDB: {str(e)}")
-            return []
-    else:
-        # Fallback to JSON storage
-        try:
-            with open(os.path.join('static', 'data', 'customers.json'), 'r') as f:
-                customers = json.load(f)
-                if not isinstance(customers, list):
-                    customers = []
-                return customers
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
-
-def save_customer(customer_data, customer_id=None):
-    """Save a customer to the database."""
-    customer_data['updated_at'] = datetime.now().isoformat()
-    
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            from bson import ObjectId
-            if customer_id:
-                # Update existing customer
-                result = mongo_db.customers.update_one(
-                    {'_id': ObjectId(customer_id)},
-                    {'$set': customer_data},
-                    upsert=False
-                )
-                return result.modified_count > 0
-            else:
-                # Create new customer
-                customer_data['created_at'] = customer_data['updated_at']
-                result = mongo_db.customers.insert_one(customer_data)
-                return str(result.inserted_id)
-        except Exception as e:
-            app.logger.error(f"Error saving customer to MongoDB: {str(e)}")
-            return False
-    else:
-        # Fallback to JSON storage
-        try:
-            customers = get_all_customers()
-            if customer_id:
-                # Update existing customer
-                for i, cust in enumerate(customers):
-                    if str(cust.get('id')) == str(customer_id):
-                        customer_data['id'] = customer_id
-                        customers[i] = customer_data
-                        break
-            else:
-                # Create new customer
-                customer_data['id'] = str(uuid.uuid4())
-                customer_data['created_at'] = customer_data['updated_at']
-                customers.append(customer_data)
-            
-            with open(os.path.join('static', 'data', 'customers.json'), 'w') as f:
-                json.dump(customers, f, indent=2)
-            
-            return customer_data['id']
-        except Exception as e:
-            app.logger.error(f"Error saving customer to JSON: {str(e)}")
-            return False
-
-# Customer Management Endpoints
-@app.route('/api/customers', methods=['GET', 'POST'])
-@login_required
-def manage_customers():
-    """Get all customers or create a new one."""
-    if request.method == 'GET':
-        customers = get_all_customers()
-        return jsonify({'success': True, 'customers': customers})
-    
-    # Handle POST - Create new customer
-    try:
-        data = request.get_json()
-        required_fields = ['name', 'email']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
-        
-        # Prepare customer data
-        customer_data = {
-            'name': data['name'].strip(),
-            'email': data['email'].lower().strip(),
-            'phone': data.get('phone', '').strip(),
-            'address': data.get('address', '').strip(),
-            'created_by': current_user.id,
-            'assigned_to': []
-        }
-        
-        # If admin is assigning to a specific user
-        if current_user.is_admin() and 'assigned_to' in data and data['assigned_to']:
-            customer_data['assigned_to'] = [data['assigned_to']]
-        else:
-            # Auto-assign to current user if not admin
-            customer_data['assigned_to'] = [current_user.id]
-        
-        # Save customer
-        customer_id = save_customer(customer_data)
-        if not customer_id:
-            return jsonify({'success': False, 'error': 'Failed to save customer'}), 500
-        
-        return jsonify({
-            'success': True,
-            'message': 'Customer created successfully',
-            'customer_id': customer_id
-        }), 201
-        
-    except Exception as e:
-        app.logger.error(f"Error creating customer: {str(e)}")
-        return jsonify({'success': False, 'error': 'Failed to create customer'}), 500
-
-@app.route('/api/customers/<customer_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
-def manage_customer(customer_id):
-    """Get, update, or delete a specific customer."""
-    if request.method == 'GET':
-        customers = get_all_customers()
-        customer = next((c for c in customers if str(c.get('id')) == str(customer_id)), None)
-        if not customer:
-            return jsonify({'success': False, 'error': 'Customer not found'}), 404
-        return jsonify({'success': True, 'customer': customer})
-    
-    elif request.method == 'PUT':
-        try:
-            data = request.get_json()
-            customer_data = {
-                'name': data.get('name', '').strip(),
-                'email': data.get('email', '').lower().strip(),
-                'phone': data.get('phone', '').strip(),
-                'address': data.get('address', '').strip()
-            }
-            
-            # Only allow updating assignments if admin
-            if current_user.is_admin() and 'assigned_to' in data:
-                customer_data['assigned_to'] = data['assigned_to'] if isinstance(data['assigned_to'], list) else [data['assigned_to']]
-            
-            success = save_customer(customer_data, customer_id)
-            if not success:
-                return jsonify({'success': False, 'error': 'Failed to update customer'}), 500
-                
-            return jsonify({'success': True, 'message': 'Customer updated successfully'})
-            
-        except Exception as e:
-            app.logger.error(f"Error updating customer: {str(e)}")
-            return jsonify({'success': False, 'error': 'Failed to update customer'}), 500
-    
-    elif request.method == 'DELETE':
-        if MONGO_AVAILABLE and USE_MONGO:
-            try:
-                from bson import ObjectId
-                result = mongo_db.customers.delete_one({'_id': ObjectId(customer_id)})
-                if result.deleted_count == 0:
-                    return jsonify({'success': False, 'error': 'Customer not found'}), 404
-            except Exception as e:
-                app.logger.error(f"Error deleting customer from MongoDB: {str(e)}")
-                return jsonify({'success': False, 'error': 'Failed to delete customer'}), 500
-        else:
-            try:
-                customers = get_all_customers()
-                initial_count = len(customers)
-                customers = [c for c in customers if str(c.get('id')) != str(customer_id)]
-                
-                if len(customers) == initial_count:
-                    return jsonify({'success': False, 'error': 'Customer not found'}), 404
-                
-                with open(os.path.join('static', 'data', 'customers.json'), 'w') as f:
-                    json.dump(customers, f, indent=2)
-            except Exception as e:
-                app.logger.error(f"Error deleting customer from JSON: {str(e)}")
-                return jsonify({'success': False, 'error': 'Failed to delete customer'}), 500
-        
-        return jsonify({'success': True, 'message': 'Customer deleted successfully'})
-
-# ---------------------------------------------------------------------------
-# Customer Assignment Helpers
-# ---------------------------------------------------------------------------
-
-def assign_customer_to_user(user_id, customer_id):
-    """Assign a customer to a user."""
-    customer_id = str(customer_id)
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            from bson import ObjectId
-            result = users_col.update_one(
-                {'_id': ObjectId(user_id)},
-                {'$addToSet': {'customers': customer_id}},
-                upsert=False
-            )
-            return result.modified_count > 0
-        except Exception as e:
-            app.logger.error(f"Error assigning customer to user: {str(e)}")
-            return False
-    else:
-        users = {}
-        updated = False
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-        
-        for user in users:
-            if str(user['id']) == str(user_id):
-                if 'customers' not in user:
-                    user['customers'] = []
-                if customer_id not in user['customers']:
-                    user['customers'].append(customer_id)
-                    updated = True
-        
-        if updated:
-            with open(USERS_FILE, 'w') as f:
-                json.dump(users, f, indent=2)
-        return updated
-
-def remove_customer_from_user(user_id, customer_id):
-    """Remove a customer assignment from a user."""
-    customer_id = str(customer_id)
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            from bson import ObjectId
-            result = users_col.update_one(
-                {'_id': ObjectId(user_id)},
-                {'$pull': {'customers': customer_id}}
-            )
-            return result.modified_count > 0
-        except Exception as e:
-            app.logger.error(f"Error removing customer from user: {str(e)}")
-            return False
-    else:
-        users = []
-        updated = False
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-        
-        for user in users:
-            if str(user['id']) == str(user_id):
-                if 'customers' in user and customer_id in user.get('customers', []):
-                    user['customers'].remove(customer_id)
-                    updated = True
-        
-        if updated:
-            with open(USERS_FILE, 'w') as f:
-                json.dump(users, f, indent=2)
-        return updated
-
-def get_users_for_customer(customer_id):
-    """Get all users who have access to a specific customer."""
-    customer_id = str(customer_id)
-    user_ids = []
-    
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            users = users_col.find({'customers': customer_id}, {'_id': 1})
-            user_ids = [str(user['_id']) for user in users]
-        except Exception as e:
-            app.logger.error(f"Error getting users for customer: {str(e)}")
-    else:
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-            user_ids = [
-                str(user['id']) 
-                for user in users 
-                if 'customers' in user and customer_id in user['customers']
-            ]
-    
-    return user_ids
 
 # ---------------------------------------------------------------------------
 # JSON persistence helpers
@@ -4551,7 +4263,7 @@ def admin_stats():
     try:
         stats = {
             'total_users': 0,
-            'active_sessions': 0,
+                'active_sessions': 0,
             'total_quotations': 0,
             'recent_activity': []
         }
@@ -4588,143 +4300,25 @@ def admin_stats():
             stats['active_sessions'] = 1
             
         return jsonify(stats)
+        
     except Exception as e:
-        app.logger.error(f"Error in admin_stats: {str(e)}")
-        return jsonify({
-            'error': 'Failed to load admin statistics',
-            'total_users': 0,
-            'active_sessions': 0,
-            'total_quotations': 0,
-            'recent_activity': []
-        }), 500
+        app.logger.error(f"Error getting admin stats: {str(e)}")
+        return jsonify({'error': 'Failed to load statistics'}), 500
+
 
 # Admin Management Routes
-
-@app.route('/api/admin/users', methods=['GET', 'POST'])
+@app.route('/admin/manage-users')
 @login_required
 def admin_manage_users():
-    """Get list of all users or create a new user with customer assignments."""
+    """Admin user management page."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
-    
-    if request.method == 'POST':
-        # Handle user creation
-        try:
-            data = request.get_json()
-            
-            # Validate required fields
-            required_fields = ['username', 'email', 'password', 'role']
-            for field in required_fields:
-                if not data.get(field):
-                    return jsonify({'error': f'Missing required field: {field}'}), 400
-            
-            # Check if user already exists
-            if MONGO_AVAILABLE and USE_MONGO:
-                if mongo_db.users.find_one({'email': data['email'].lower()}):
-                    return jsonify({'error': 'User with this email already exists'}), 400
-            else:
-                users = _load_users_json()
-                if any(u.get('email', '').lower() == data['email'].lower() for u in users.values()):
-                    return jsonify({'error': 'User with this email already exists'}), 400
-            
-            # Create user data
-            user_data = {
-                'username': data['username'].strip(),
-                'email': data['email'].lower().strip(),
-                'password_hash': generate_password_hash(data['password']),
-                'role': data['role'].lower(),
-                'is_verified': True,
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat(),
-                'customers': []
-            }
-            
-            # Add optional fields if provided
-            if 'company_id' in data:
-                user_data['company_id'] = data['company_id']
-            if 'company_name' in data:
-                user_data['company_name'] = data['company_name']
-            
-            # Save user to database
-            if MONGO_AVAILABLE and USE_MONGO:
-                result = mongo_db.users.insert_one(user_data)
-                user_id = str(result.inserted_id)
-            else:
-                users = _load_users_json()
-                user_id = str(uuid.uuid4())
-                users[user_id] = user_data
-                _save_users_json(users)
-            
-            # Assign customers if provided (and user is not admin)
-            if data['role'].lower() != 'admin' and 'customers' in data and isinstance(data['customers'], list):
-                for customer_id in data['customers']:
-                    assign_customer_to_user(user_id, customer_id)
-            
-            return jsonify({
-                'success': True,
-                'message': 'User created successfully',
-                'user_id': user_id
-            }), 201
-            
-        except Exception as e:
-            app.logger.error(f"Error creating user: {str(e)}")
-            return jsonify({'error': 'Failed to create user'}), 500
-    
-    # Handle GET request (list users)
-    try:
-        users_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Get all users from MongoDB
-            users_cursor = mongo_db.users.find({})
-            
-            for user_doc in users_cursor:
-                # For admins, they have access to all customers
-                customer_ids = [] if user_doc.get('role') == 'admin' else user_doc.get('customers', [])
-                
-                users_list.append({
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user_doc.get('role') == 'admin' else len(customer_ids)
-                })
-        else:
-            # Fallback to JSON file
-            users = _load_users_json()
-            
-            for user_id, user in users.items():
-                # For admins, they have access to all customers
-                customer_ids = [] if user.get('role') == 'admin' else user.get('customers', [])
-                
-                users_list.append({
-                    'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user.get('role') == 'admin' else len(customer_ids)
-                })
-        
-        return jsonify({'success': True, 'users': users_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting users list: {str(e)}")
-        return jsonify({'error': 'Failed to load users list'}), 500
+    return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
 
-
-# Remove the old GET /api/admin/users endpoint since we've combined it with POST
-# in the route above
+@app.route('/api/admin/users')
 @login_required
 def admin_get_users():
-    """Get list of all users with their customer assignments."""
+    """Get all users for admin management."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
     
@@ -4732,55 +4326,48 @@ def admin_get_users():
         users_list = []
         
         if MONGO_AVAILABLE and USE_MONGO:
-            # Get all users from MongoDB
-            users_cursor = mongo_db.users.find({})
+            users_cursor = mongo_db.users.find({}, {
+                'password_hash': 0  # Exclude password hash
+            }).sort('created_at', -1)
             
             for user_doc in users_cursor:
-                # For admins, they have access to all customers
-                customer_ids = [] if user_doc.get('role') == 'admin' else user_doc.get('customers', [])
-                
-                users_list.append({
+                user_data = {
                     'id': str(user_doc['_id']),
                     'username': user_doc.get('username', ''),
                     'email': user_doc.get('email', ''),
                     'role': user_doc.get('role', 'user'),
                     'company_name': user_doc.get('company_name', ''),
                     'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user_doc.get('role') == 'admin' else len(customer_ids)
-                })
+                    'created_at': user_doc.get('created_at', ''),
+                    'is_verified': user_doc.get('is_verified', False)
+                }
+                users_list.append(user_data)
         else:
-            # Fallback to JSON file
+            # Fallback to JSON
             users = _load_users_json()
-            
             for user_id, user in users.items():
-                # For admins, they have access to all customers
-                customer_ids = [] if user.get('role') == 'admin' else user.get('customers', [])
-                
-                users_list.append({
+                user_data = {
                     'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user.get('role') == 'admin' else len(customer_ids)
-                })
+                    'username': user.username,
+                    'email': user.email,
+                    'role': getattr(user, 'role', 'user'),
+                    'company_name': getattr(user, 'company_name', ''),
+                    'company_id': getattr(user, 'company_id', ''),
+                    'created_at': '',
+                    'is_verified': getattr(user, 'is_verified', False)
+                }
+                users_list.append(user_data)
         
         return jsonify({'success': True, 'users': users_list})
         
     except Exception as e:
-        app.logger.error(f"Error getting users list: {str(e)}")
-        return jsonify({'error': 'Failed to load users list'}), 500
-
+        app.logger.error(f"Error getting users: {str(e)}")
+        return jsonify({'error': 'Failed to load users'}), 500
 
 @app.route('/api/admin/users/<user_id>')
 @login_required
 def admin_get_user(user_id):
-    """Get single user details with customer assignments."""
+    """Get single user details."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
     
@@ -4788,13 +4375,6 @@ def admin_get_user(user_id):
         if MONGO_AVAILABLE and USE_MONGO:
             user_doc = mu_find_user_by_id(user_id)
             if user_doc:
-                # Get customer assignments
-                customer_ids = user_doc.get('customers', [])
-                
-                # If user is admin, they have access to all customers
-                if user_doc.get('role') == 'admin':
-                    customer_ids = []
-                    
                 user_data = {
                     'id': str(user_doc['_id']),
                     'username': user_doc.get('username', ''),
@@ -4802,30 +4382,7 @@ def admin_get_user(user_id):
                     'role': user_doc.get('role', 'user'),
                     'company_name': user_doc.get('company_name', ''),
                     'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids  # Include customer assignments
-                }
-                return jsonify({'success': True, 'user': user_data})
-        else:
-            # Fallback to JSON file
-            users = _load_users_json()
-            user = users.get(user_id)
-            if user:
-                customer_ids = user.get('customers', [])
-                
-                # If user is admin, they have access to all customers
-                if user.get('role') == 'admin':
-                    customer_ids = []
-                    
-                user_data = {
-                    'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids  # Include customer assignments
+                    'is_verified': user_doc.get('is_verified', False)
                 }
                 return jsonify({'success': True, 'user': user_data})
         
@@ -4835,6 +4392,55 @@ def admin_get_user(user_id):
         app.logger.error(f"Error getting user: {str(e)}")
         return jsonify({'error': 'Failed to load user'}), 500
 
+@app.route('/api/admin/users', methods=['POST'])
+@login_required
+def admin_create_user():
+    """Create new user."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        role = data.get('role', 'user').lower()
+        
+        if not all([username, email, password]):
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        
+        # Check if user already exists
+        if MONGO_AVAILABLE and USE_MONGO:
+            existing_user = mu_find_user_by_email_or_username(email)
+            if existing_user:
+                return jsonify({'error': 'User with this email already exists'}), 400
+            
+            # Create new user
+            from werkzeug.security import generate_password_hash
+            user_data = {
+                'username': username,
+                'email': email,
+                'password_hash': generate_password_hash(password),
+                'role': role,
+                'created_at': datetime.now(),
+                'is_verified': True,
+                'otp_verified': True,
+                'created_by': current_user.id
+            }
+            
+            result = mongo_db.users.insert_one(user_data)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'User created successfully',
+                'user_id': str(result.inserted_id)
+            })
+        
+        return jsonify({'error': 'Database not available'}), 500
+        
+    except Exception as e:
+        app.logger.error(f"Error creating user: {str(e)}")
+        return jsonify({'error': 'Failed to create user'}), 500
 
 def save_quotation_to_db(quotation_data):
     """Save quotation to database."""
@@ -4850,6 +4456,113 @@ def save_quotation_to_db(quotation_data):
         app.logger.error(f"Error saving quotation: {str(e)}")
         return None
 
+def create_quotation_email_content(products, company_name, total_pre_gst, gst_amount, total_post_gst, notes="", quotation_id=None):
+    """Create HTML email content for quotation."""
+    try:
+        products_html = ""
+        for product in products:
+            products_html += f"""
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{product.get('name', 'N/A')}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{product.get('quantity', 0)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('unit_price', 0):,.2f}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('total_price', 0):,.2f}</td>
+            </tr>
+            """
+        
+        quotation_header = f"Quotation #{quotation_id}" if quotation_id else "Quotation Request"
+        
+        email_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{quotation_header}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                .container {{ max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
+                .header h1 {{ color: #007bff; margin: 0; }}
+                .info-section {{ margin-bottom: 20px; }}
+                .info-section h3 {{ color: #333; margin-bottom: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; }}
+                .total-section {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }}
+                .total-row {{ display: flex; justify-content: space-between; margin: 5px 0; }}
+                .final-total {{ font-size: 1.2em; font-weight: bold; color: #007bff; border-top: 2px solid #007bff; padding-top: 10px; }}
+                .notes {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #ffc107; }}
+                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{quotation_header}</h1>
+                    <p>Product Calculator - Professional Quotation Service</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Dear {company_name},</h3>
+                    <p>Thank you for your interest in our products. Please find below the detailed quotation as requested:</p>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th style="text-align: center;">Quantity</th>
+                            <th style="text-align: right;">Unit Price</th>
+                            <th style="text-align: right;">Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products_html}
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Subtotal (Pre-GST):</span>
+                        <span>₹{total_pre_gst:,.2f}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>GST (18%):</span>
+                        <span>₹{gst_amount:,.2f}</span>
+                    </div>
+                    <div class="total-row final-total">
+                        <span>Total Amount:</span>
+                        <span>₹{total_post_gst:,.2f}</span>
+                    </div>
+                </div>
+        """
+        
+        if notes:
+            email_content += f"""
+                <div class="notes">
+                    <h4>Additional Notes:</h4>
+                    <p>{notes}</p>
+                </div>
+            """
+        
+        email_content += f"""
+                <div class="footer">
+                    <p>This quotation is valid for 30 days from the date of issue.</p>
+                    <p>For any queries, please feel free to contact us.</p>
+                    <hr>
+                    <p><strong>Product Calculator</strong><br>
+                    Professional Quotation Service<br>
+                    Email: info@productcalculator.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return email_content
+        
+    except Exception as e:
+        app.logger.error(f"Error creating email content: {str(e)}")
+        return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
 
 
 # Admin Management Routes
@@ -4861,20 +4574,259 @@ def admin_manage_users():
         abort(403)
     return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
 
-
-@app.route('/admin/manage-customers')
+@app.route('/api/admin/users')
 @login_required
-def admin_manage_customers():
-    """Admin customer management page."""
+def admin_get_users():
+    """Get all users for admin management."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
-    return render_template('admin/manage_customers.html', title='Manage Customers', user=current_user)
+    
+    try:
+        users_list = []
+        
+        if MONGO_AVAILABLE and USE_MONGO:
+            users_cursor = mongo_db.users.find({}, {
+                'password_hash': 0  # Exclude password hash
+            }).sort('created_at', -1)
+            
+            for user_doc in users_cursor:
+                user_data = {
+                    'id': str(user_doc['_id']),
+                    'username': user_doc.get('username', ''),
+                    'email': user_doc.get('email', ''),
+                    'role': user_doc.get('role', 'user'),
+                    'company_name': user_doc.get('company_name', ''),
+                    'company_id': user_doc.get('company_id', ''),
+                    'created_at': user_doc.get('created_at', ''),
+                    'is_verified': user_doc.get('is_verified', False)
+                }
+                users_list.append(user_data)
+        else:
+            # Fallback to JSON
+            users = _load_users_json()
+            for user_id, user in users.items():
+                user_data = {
+                    'id': user_id,
+                    'username': user.username,
+                    'email': user.email,
+                    'role': getattr(user, 'role', 'user'),
+                    'company_name': getattr(user, 'company_name', ''),
+                    'company_id': getattr(user, 'company_id', ''),
+                    'created_at': '',
+                    'is_verified': getattr(user, 'is_verified', False)
+                }
+                users_list.append(user_data)
+        
+        return jsonify({'success': True, 'users': users_list})
+        
+    except Exception as e:
+        app.logger.error(f"Error getting users: {str(e)}")
+        return jsonify({'error': 'Failed to load users'}), 500
 
+@app.route('/api/admin/users/<user_id>')
+@login_required
+def admin_get_user(user_id):
+    """Get single user details."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            user_doc = mu_find_user_by_id(user_id)
+            if user_doc:
+                user_data = {
+                    'id': str(user_doc['_id']),
+                    'username': user_doc.get('username', ''),
+                    'email': user_doc.get('email', ''),
+                    'role': user_doc.get('role', 'user'),
+                    'company_name': user_doc.get('company_name', ''),
+                    'company_id': user_doc.get('company_id', ''),
+                    'is_verified': user_doc.get('is_verified', False)
+                }
+                return jsonify({'success': True, 'user': user_data})
+        
+        return jsonify({'error': 'User not found'}), 404
+        
+    except Exception as e:
+        app.logger.error(f"Error getting user: {str(e)}")
+        return jsonify({'error': 'Failed to load user'}), 500
+
+@app.route('/api/admin/users', methods=['POST'])
+@login_required
+def admin_create_user():
+    """Create new user."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        role = data.get('role', 'user').lower()
+        
+        if not all([username, email, password]):
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        
+        # Check if user already exists
+        if MONGO_AVAILABLE and USE_MONGO:
+            existing_user = mu_find_user_by_email_or_username(email)
+            if existing_user:
+                return jsonify({'error': 'User with this email already exists'}), 400
+            
+            # Create new user
+            from werkzeug.security import generate_password_hash
+            user_data = {
+                'username': username,
+                'email': email,
+                'password_hash': generate_password_hash(password),
+                'role': role,
+                'created_at': datetime.now(),
+                'is_verified': True,
+                'otp_verified': True,
+                'created_by': current_user.id
+            }
+            
+            result = mongo_db.users.insert_one(user_data)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'User created successfully',
+                'user_id': str(result.inserted_id)
+            })
+        
+        return jsonify({'error': 'Database not available'}), 500
+        
+    except Exception as e:
+        app.logger.error(f"Error creating user: {str(e)}")
+        return jsonify({'error': 'Failed to create user'}), 500
+
+def save_quotation_to_db(quotation_data):
+    """Save quotation to database."""
+    try:
+        if MONGO_AVAILABLE and USE_MONGO:
+            result = mongo_db.quotations.insert_one(quotation_data)
+            return str(result.inserted_id)
+        else:
+            # For JSON fallback, you could save to a quotations.json file
+            app.logger.warning("Quotation not saved - MongoDB not available")
+            return None
+    except Exception as e:
+        app.logger.error(f"Error saving quotation: {str(e)}")
+        return None
+
+def create_quotation_email_content(products, company_name, total_pre_gst, gst_amount, total_post_gst, notes="", quotation_id=None):
+    """Create HTML email content for quotation."""
+    try:
+        products_html = ""
+        for product in products:
+            products_html += f"""
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{product.get('name', 'N/A')}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{product.get('quantity', 0)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('unit_price', 0):,.2f}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('total_price', 0):,.2f}</td>
+            </tr>
+            """
+        
+        quotation_header = f"Quotation #{quotation_id}" if quotation_id else "Quotation Request"
+        
+        email_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{quotation_header}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                .container {{ max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
+                .header h1 {{ color: #007bff; margin: 0; }}
+                .info-section {{ margin-bottom: 20px; }}
+                .info-section h3 {{ color: #333; margin-bottom: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; }}
+                .total-section {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }}
+                .total-row {{ display: flex; justify-content: space-between; margin: 5px 0; }}
+                .final-total {{ font-size: 1.2em; font-weight: bold; color: #007bff; border-top: 2px solid #007bff; padding-top: 10px; }}
+                .notes {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #ffc107; }}
+                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{quotation_header}</h1>
+                    <p>Product Calculator - Professional Quotation Service</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Dear {company_name},</h3>
+                    <p>Thank you for your interest in our products. Please find below the detailed quotation as requested:</p>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th style="text-align: center;">Quantity</th>
+                            <th style="text-align: right;">Unit Price</th>
+                            <th style="text-align: right;">Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products_html}
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Subtotal (Pre-GST):</span>
+                        <span>₹{total_pre_gst:,.2f}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>GST (18%):</span>
+                        <span>₹{gst_amount:,.2f}</span>
+                    </div>
+                    <div class="total-row final-total">
+                        <span>Total Amount:</span>
+                        <span>₹{total_post_gst:,.2f}</span>
+                    </div>
+                </div>
+        """
+        
+        if notes:
+            email_content += f"""
+                <div class="notes">
+                    <h4>Additional Notes:</h4>
+                    <p>{notes}</p>
+                </div>
+            """
+        
+        email_content += f"""
+                <div class="footer">
+                    <p>This quotation is valid for 30 days from the date of issue.</p>
+                    <p>For any queries, please feel free to contact us.</p>
+                    <hr>
+                    <p><strong>Product Calculator</strong><br>
+                    Professional Quotation Service<br>
+                    Email: info@productcalculator.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return email_content
+        
+    except Exception as e:
+        app.logger.error(f"Error creating email content: {str(e)}")
+        return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
 
 @app.route('/api/admin/users/<user_id>', methods=['PUT'])
 @login_required
 def admin_update_user(user_id):
-    """Update user details including customer assignments."""
+    """Update user details."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
     
@@ -4882,7 +4834,6 @@ def admin_update_user(user_id):
         data = request.get_json()
         update_data = {}
         
-        # Basic user info updates
         if 'username' in data:
             update_data['username'] = data['username'].strip()
         if 'email' in data:
@@ -4895,92 +4846,19 @@ def admin_update_user(user_id):
         
         update_data['updated_at'] = datetime.now()
         
-        # Handle customer assignments if provided
-        if 'customers' in data and isinstance(data['customers'], list):
-            # First, get current assignments to determine what changed
-            if MONGO_AVAILABLE and USE_MONGO:
-                from bson import ObjectId
-                current_user_data = mongo_db.users.find_one({'_id': ObjectId(user_id)})
-            else:
-                current_user_data = None
-                if os.path.exists(USERS_FILE):
-                    with open(USERS_FILE, 'r') as f:
-                        users = json.load(f)
-                        for u in users:
-                            if str(u['id']) == str(user_id):
-                                current_user_data = u
-                                break
+        if MONGO_AVAILABLE and USE_MONGO:
+            from bson import ObjectId
+            result = mongo_db.users.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': update_data}
+            )
             
-            if current_user_data:
-                # Get current assignments
-                current_customers = set(current_user_data.get('customers', []))
-                new_customers = set(str(cid) for cid in data['customers'] if cid)
-                
-                # Find added and removed customers
-                added_customers = new_customers - current_customers
-                removed_customers = current_customers - new_customers
-                
-                # Update the user's customer list
-                if MONGO_AVAILABLE and USE_MONGO:
-                    mongo_db.users.update_one(
-                        {'_id': ObjectId(user_id)},
-                        {'$set': {'customers': list(new_customers)}}
-                    )
-                else:
-                    if os.path.exists(USERS_FILE):
-                        with open(USERS_FILE, 'r+') as f:
-                            users = json.load(f)
-                            for u in users:
-                                if str(u['id']) == str(user_id):
-                                    u['customers'] = list(new_customers)
-                                    break
-                            f.seek(0)
-                            json.dump(users, f, indent=2)
-                            f.truncate()
-        
-        # Update other user data
-        if update_data:
-            if MONGO_AVAILABLE and USE_MONGO:
-                from bson import ObjectId
-                result = mongo_db.users.update_one(
-                    {'_id': ObjectId(user_id)},
-                    {'$set': update_data}
-                )
-                
-                if result.modified_count > 0 or 'customers' in data:
-                    return jsonify({
-                        'success': True, 
-                        'message': 'User updated successfully',
-                        'user_id': user_id
-                    })
-                else:
-                    return jsonify({'error': 'User not found or no changes made'}), 404
+            if result.modified_count > 0:
+                return jsonify({'success': True, 'message': 'User updated successfully'})
             else:
-                # JSON fallback
-                updated = False
-                if os.path.exists(USERS_FILE):
-                    with open(USERS_FILE, 'r+') as f:
-                        users = json.load(f)
-                        for user in users:
-                            if str(user['id']) == str(user_id):
-                                user.update(update_data)
-                                updated = True
-                                break
-                        if updated:
-                            f.seek(0)
-                            json.dump(users, f, indent=2)
-                            f.truncate()
-                
-                if updated or 'customers' in data:
-                    return jsonify({
-                        'success': True, 
-                        'message': 'User updated successfully',
-                        'user_id': user_id
-                    })
-                else:
-                    return jsonify({'error': 'User not found or no changes made'}), 404
+                return jsonify({'error': 'User not found or no changes made'}), 404
         
-        return jsonify({'error': 'No valid updates provided'}), 400
+        return jsonify({'error': 'Database not available'}), 500
         
     except Exception as e:
         app.logger.error(f"Error updating user: {str(e)}")
@@ -5010,43 +4888,7 @@ def admin_delete_user(user_id):
         return jsonify({'error': 'Failed to delete user'}), 500
 
 # Company Management APIs
-@app.route('/api/customers', methods=['GET'])
-@login_required
-def get_customers():
-    """Get list of all customers for admin interface."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            from bson import ObjectId
-            # Fetch customers from MongoDB
-            customers_cursor = mongo_db.customers.find({}, {'_id': 1, 'companyName': 1, 'name': 1})
-            customers = []
-            for customer in customers_cursor:
-                customer['id'] = str(customer.pop('_id'))
-                customers.append(customer)
-        else:
-            # Fallback to JSON file if MongoDB is not available
-            customers = []
-            if os.path.exists(os.path.join('static', 'data', 'customers.json')):
-                with open(os.path.join('static', 'data', 'customers.json'), 'r') as f:
-                    customers = json.load(f)
-                    # Ensure each customer has an id field
-                    for customer in customers:
-                        if '_id' in customer:
-                            customer['id'] = str(customer.pop('_id'))
-                        elif 'id' not in customer:
-                            customer['id'] = str(uuid.uuid4())
-        
-        return jsonify(customers)
-        
-    except Exception as e:
-        app.logger.error(f"Error fetching customers: {str(e)}")
-        return jsonify({'error': 'Failed to fetch customers'}), 500
-
-
-@app.route('/api/admin/companies', methods=['GET'])
+@app.route('/api/admin/companies')
 @login_required
 def admin_get_companies():
     """Get companies with pagination."""
