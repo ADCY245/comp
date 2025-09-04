@@ -22,6 +22,8 @@ from dotenv import load_dotenv
 from bson.objectid import ObjectId
 import socket  # Added for socket.timeout and socket.gaierror
 import logging
+import sys
+from pathlib import Path
 
 # Define India timezone (IST - UTC+5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -227,6 +229,11 @@ MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
 DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
 
+# Add the api directory to the Python path
+api_dir = str(Path(__file__).parent / 'api')
+if api_dir not in sys.path:
+    sys.path.append(api_dir)
+
 # Initialize MongoDB client
 mongo_client = None
 mongo_db = None
@@ -273,6 +280,9 @@ if USE_MONGO:
 if not MONGO_AVAILABLE and USE_MONGO:
     try:
         print("Attempting to connect to MongoDB...")
+        
+        # Make mongo_db available to the app context
+        app.mongo_db = None
         
         # Updated MongoDB connection with SSL options
         from pymongo import MongoClient
@@ -837,8 +847,7 @@ def load_user(user_id):
                 username=doc['username'],
                 password_hash=doc['password_hash'],
                 is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
+                otp_verified=doc.get('otp_verified', False)
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
