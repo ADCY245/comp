@@ -4305,64 +4305,6 @@ def admin_stats():
         app.logger.error(f"Error getting admin stats: {str(e)}")
         return jsonify({'error': 'Failed to load statistics'}), 500
 
-@app.route('/api/admin/chart-data')
-@login_required
-def admin_chart_data():
-    """Get chart data for admin dashboard."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        chart_data = {
-            'users_by_month': [],
-            'quotations_by_month': [],
-            'user_roles': []
-        }
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Get users by month (last 6 months)
-            from datetime import datetime, timedelta
-            import calendar
-            
-            now = datetime.now()
-            months_data = []
-            
-            for i in range(6):
-                month_start = now.replace(day=1) - timedelta(days=30*i)
-                month_end = month_start.replace(day=calendar.monthrange(month_start.year, month_start.month)[1])
-                
-                users_count = mongo_db.users.count_documents({
-                    'created_at': {
-                        '$gte': month_start,
-                        '$lte': month_end
-                    }
-                })
-                
-                months_data.append({
-                    'month': month_start.strftime('%b %Y'),
-                    'users': users_count,
-                    'quotations': 0  # Placeholder for quotations
-                })
-            
-            chart_data['users_by_month'] = list(reversed(months_data))
-            
-            # Get user roles distribution
-            roles_pipeline = [
-                {'$group': {'_id': '$role', 'count': {'$sum': 1}}}
-            ]
-            roles_data = list(mongo_db.users.aggregate(roles_pipeline))
-            
-            for role_data in roles_data:
-                chart_data['user_roles'].append({
-                    'role': role_data['_id'] or 'user',
-                    'count': role_data['count']
-                })
-        
-        return jsonify(chart_data)
-        
-    except Exception as e:
-        app.logger.error(f"Error getting chart data: {str(e)}")
-        return jsonify({'error': 'Failed to load chart data'}), 500
 
 # Admin Management Routes
 @app.route('/admin/manage-users')
@@ -4622,64 +4564,6 @@ def create_quotation_email_content(products, company_name, total_pre_gst, gst_am
         app.logger.error(f"Error creating email content: {str(e)}")
         return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
 
-@app.route('/api/admin/chart-data')
-@login_required
-def admin_chart_data():
-    """Get chart data for admin dashboard."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        chart_data = {
-            'users_by_month': [],
-            'quotations_by_month': [],
-            'user_roles': []
-        }
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Get users by month (last 6 months)
-            from datetime import datetime, timedelta
-            import calendar
-            
-            now = datetime.now()
-            months_data = []
-            
-            for i in range(6):
-                month_start = now.replace(day=1) - timedelta(days=30*i)
-                month_end = month_start.replace(day=calendar.monthrange(month_start.year, month_start.month)[1])
-                
-                users_count = mongo_db.users.count_documents({
-                    'created_at': {
-                        '$gte': month_start,
-                        '$lte': month_end
-                    }
-                })
-                
-                months_data.append({
-                    'month': month_start.strftime('%b %Y'),
-                    'users': users_count,
-                    'quotations': 0  # Placeholder for quotations
-                })
-            
-            chart_data['users_by_month'] = list(reversed(months_data))
-            
-            # Get user roles distribution
-            roles_pipeline = [
-                {'$group': {'_id': '$role', 'count': {'$sum': 1}}}
-            ]
-            roles_data = list(mongo_db.users.aggregate(roles_pipeline))
-            
-            for role_data in roles_data:
-                chart_data['user_roles'].append({
-                    'role': role_data['_id'] or 'user',
-                    'count': role_data['count']
-                })
-        
-        return jsonify(chart_data)
-        
-    except Exception as e:
-        app.logger.error(f"Error getting chart data: {str(e)}")
-        return jsonify({'error': 'Failed to load chart data'}), 500
 
 # Admin Management Routes
 @app.route('/admin/manage-users')
