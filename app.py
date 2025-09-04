@@ -4855,7 +4855,7 @@ def save_quotation_to_db(quotation_data):
 # Admin Management Routes
 @app.route('/admin/manage-users')
 @login_required
-def admin_manage_users():
+def admin_manage_users_page():
     """Admin user management page."""
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
