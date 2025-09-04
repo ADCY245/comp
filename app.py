@@ -363,16 +363,16 @@ if not MONGO_AVAILABLE and USE_MONGO:
             MONGO_AVAILABLE = True
             
         except Exception as e:
-            print(f"❌ Error initializing mongo_users: {str(e)}")
+            print(f"[ERROR] Error initializing mongo_users: {str(e)}")
             raise
         
     except Exception as e:
-        print(f"❌ Unexpected error during MongoDB setup: {str(e)}")
+        print(f"[ERROR] Unexpected error during MongoDB setup: {str(e)}")
         print("Falling back to JSON storage")
         MONGO_AVAILABLE = False
         
     except Exception as e:
-        print(f"❌ MongoDB connection error: {str(e)}")
+        print(f"[ERROR] MongoDB connection error: {str(e)}")
         print("Falling back to JSON storage")
         MONGO_AVAILABLE = False
         mongo_client = None
@@ -4263,7 +4263,7 @@ def admin_stats():
     try:
         stats = {
             'total_users': 0,
-                'active_sessions': 0,
+            'active_sessions': 0,
             'total_quotations': 0,
             'recent_activity': []
         }
@@ -4300,61 +4300,17 @@ def admin_stats():
             stats['active_sessions'] = 1
             
         return jsonify(stats)
-        
     except Exception as e:
-        app.logger.error(f"Error getting admin stats: {str(e)}")
-        return jsonify({'error': 'Failed to load statistics'}), 500
-
+        app.logger.error(f"Error in admin_stats: {str(e)}")
+        return jsonify({
+            'error': 'Failed to load admin statistics',
+            'total_users': 0,
+            'active_sessions': 0,
+            'total_quotations': 0,
+            'recent_activity': []
+        }), 500
 
 # Admin Management Routes
-@app.route('/api/admin/users')
-@login_required
-def admin_get_users():
-    """Get all users for admin management."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        users_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            users_cursor = mongo_db.users.find({}, {
-                'password_hash': 0  # Exclude password hash
-            }).sort('created_at', -1)
-            
-            for user_doc in users_cursor:
-                user_data = {
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'created_at': user_doc.get('created_at', ''),
-                    'is_verified': user_doc.get('is_verified', False)
-                }
-                users_list.append(user_data)
-        else:
-            # Fallback to JSON
-            users = _load_users_json()
-            for user_id, user in users.items():
-                user_data = {
-                    'id': user_id,
-                    'username': user.username,
-                    'email': user.email,
-                    'role': getattr(user, 'role', 'user'),
-                    'company_name': getattr(user, 'company_name', ''),
-                    'company_id': getattr(user, 'company_id', ''),
-                    'created_at': '',
-                    'is_verified': getattr(user, 'is_verified', False)
-                }
-                users_list.append(user_data)
-        
-        return jsonify({'success': True, 'users': users_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting users: {str(e)}")
-        return jsonify({'error': 'Failed to load users'}), 500
 
 @app.route('/api/admin/users/<user_id>')
 @login_required
@@ -4384,55 +4340,6 @@ def admin_get_user(user_id):
         app.logger.error(f"Error getting user: {str(e)}")
         return jsonify({'error': 'Failed to load user'}), 500
 
-@app.route('/api/admin/users', methods=['POST'])
-@login_required
-def admin_create_user():
-    """Create new user."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '').strip()
-        role = data.get('role', 'user').lower()
-        
-        if not all([username, email, password]):
-            return jsonify({'error': 'Username, email, and password are required'}), 400
-        
-        # Check if user already exists
-        if MONGO_AVAILABLE and USE_MONGO:
-            existing_user = mu_find_user_by_email_or_username(email)
-            if existing_user:
-                return jsonify({'error': 'User with this email already exists'}), 400
-            
-            # Create new user
-            from werkzeug.security import generate_password_hash
-            user_data = {
-                'username': username,
-                'email': email,
-                'password_hash': generate_password_hash(password),
-                'role': role,
-                'created_at': datetime.now(),
-                'is_verified': True,
-                'otp_verified': True,
-                'created_by': current_user.id
-            }
-            
-            result = mongo_db.users.insert_one(user_data)
-            
-            return jsonify({
-                'success': True, 
-                'message': 'User created successfully',
-                'user_id': str(result.inserted_id)
-            })
-        
-        return jsonify({'error': 'Database not available'}), 500
-        
-    except Exception as e:
-        app.logger.error(f"Error creating user: {str(e)}")
-        return jsonify({'error': 'Failed to create user'}), 500
 
 def save_quotation_to_db(quotation_data):
     """Save quotation to database."""
@@ -4448,113 +4355,6 @@ def save_quotation_to_db(quotation_data):
         app.logger.error(f"Error saving quotation: {str(e)}")
         return None
 
-def create_quotation_email_content(products, company_name, total_pre_gst, gst_amount, total_post_gst, notes="", quotation_id=None):
-    """Create HTML email content for quotation."""
-    try:
-        products_html = ""
-        for product in products:
-            products_html += f"""
-            <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">{product.get('name', 'N/A')}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{product.get('quantity', 0)}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('unit_price', 0):,.2f}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('total_price', 0):,.2f}</td>
-            </tr>
-            """
-        
-        quotation_header = f"Quotation #{quotation_id}" if quotation_id else "Quotation Request"
-        
-        email_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>{quotation_header}</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
-                .container {{ max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
-                .header h1 {{ color: #007bff; margin: 0; }}
-                .info-section {{ margin-bottom: 20px; }}
-                .info-section h3 {{ color: #333; margin-bottom: 10px; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; }}
-                .total-section {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }}
-                .total-row {{ display: flex; justify-content: space-between; margin: 5px 0; }}
-                .final-total {{ font-size: 1.2em; font-weight: bold; color: #007bff; border-top: 2px solid #007bff; padding-top: 10px; }}
-                .notes {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #ffc107; }}
-                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{quotation_header}</h1>
-                    <p>Product Calculator - Professional Quotation Service</p>
-                </div>
-                
-                <div class="info-section">
-                    <h3>Dear {company_name},</h3>
-                    <p>Thank you for your interest in our products. Please find below the detailed quotation as requested:</p>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th style="text-align: center;">Quantity</th>
-                            <th style="text-align: right;">Unit Price</th>
-                            <th style="text-align: right;">Total Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {products_html}
-                    </tbody>
-                </table>
-                
-                <div class="total-section">
-                    <div class="total-row">
-                        <span>Subtotal (Pre-GST):</span>
-                        <span>₹{total_pre_gst:,.2f}</span>
-                    </div>
-                    <div class="total-row">
-                        <span>GST (18%):</span>
-                        <span>₹{gst_amount:,.2f}</span>
-                    </div>
-                    <div class="total-row final-total">
-                        <span>Total Amount:</span>
-                        <span>₹{total_post_gst:,.2f}</span>
-                    </div>
-                </div>
-        """
-        
-        if notes:
-            email_content += f"""
-                <div class="notes">
-                    <h4>Additional Notes:</h4>
-                    <p>{notes}</p>
-                </div>
-            """
-        
-        email_content += f"""
-                <div class="footer">
-                    <p>This quotation is valid for 30 days from the date of issue.</p>
-                    <p>For any queries, please feel free to contact us.</p>
-                    <hr>
-                    <p><strong>Product Calculator</strong><br>
-                    Professional Quotation Service<br>
-                    Email: info@productcalculator.com</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        return email_content
-        
-    except Exception as e:
-        app.logger.error(f"Error creating email content: {str(e)}")
-        return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
 
 
 # Admin Management Routes
@@ -4566,254 +4366,6 @@ def admin_manage_users():
         abort(403)
     return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
 
-@app.route('/api/admin/users')
-@login_required
-def admin_get_users():
-    """Get all users for admin management."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        users_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            users_cursor = mongo_db.users.find({}, {
-                'password_hash': 0  # Exclude password hash
-            }).sort('created_at', -1)
-            
-            for user_doc in users_cursor:
-                user_data = {
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'created_at': user_doc.get('created_at', ''),
-                    'is_verified': user_doc.get('is_verified', False)
-                }
-                users_list.append(user_data)
-        else:
-            # Fallback to JSON
-            users = _load_users_json()
-            for user_id, user in users.items():
-                user_data = {
-                    'id': user_id,
-                    'username': user.username,
-                    'email': user.email,
-                    'role': getattr(user, 'role', 'user'),
-                    'company_name': getattr(user, 'company_name', ''),
-                    'company_id': getattr(user, 'company_id', ''),
-                    'created_at': '',
-                    'is_verified': getattr(user, 'is_verified', False)
-                }
-                users_list.append(user_data)
-        
-        return jsonify({'success': True, 'users': users_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting users: {str(e)}")
-        return jsonify({'error': 'Failed to load users'}), 500
-
-@app.route('/api/admin/users/<user_id>')
-@login_required
-def admin_get_user(user_id):
-    """Get single user details."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            user_doc = mu_find_user_by_id(user_id)
-            if user_doc:
-                user_data = {
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False)
-                }
-                return jsonify({'success': True, 'user': user_data})
-        
-        return jsonify({'error': 'User not found'}), 404
-        
-    except Exception as e:
-        app.logger.error(f"Error getting user: {str(e)}")
-        return jsonify({'error': 'Failed to load user'}), 500
-
-@app.route('/api/admin/users', methods=['POST'])
-@login_required
-def admin_create_user():
-    """Create new user."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '').strip()
-        role = data.get('role', 'user').lower()
-        
-        if not all([username, email, password]):
-            return jsonify({'error': 'Username, email, and password are required'}), 400
-        
-        # Check if user already exists
-        if MONGO_AVAILABLE and USE_MONGO:
-            existing_user = mu_find_user_by_email_or_username(email)
-            if existing_user:
-                return jsonify({'error': 'User with this email already exists'}), 400
-            
-            # Create new user
-            from werkzeug.security import generate_password_hash
-            user_data = {
-                'username': username,
-                'email': email,
-                'password_hash': generate_password_hash(password),
-                'role': role,
-                'created_at': datetime.now(),
-                'is_verified': True,
-                'otp_verified': True,
-                'created_by': current_user.id
-            }
-            
-            result = mongo_db.users.insert_one(user_data)
-            
-            return jsonify({
-                'success': True, 
-                'message': 'User created successfully',
-                'user_id': str(result.inserted_id)
-            })
-        
-        return jsonify({'error': 'Database not available'}), 500
-        
-    except Exception as e:
-        app.logger.error(f"Error creating user: {str(e)}")
-        return jsonify({'error': 'Failed to create user'}), 500
-
-def save_quotation_to_db(quotation_data):
-    """Save quotation to database."""
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            result = mongo_db.quotations.insert_one(quotation_data)
-            return str(result.inserted_id)
-        else:
-            # For JSON fallback, you could save to a quotations.json file
-            app.logger.warning("Quotation not saved - MongoDB not available")
-            return None
-    except Exception as e:
-        app.logger.error(f"Error saving quotation: {str(e)}")
-        return None
-
-def create_quotation_email_content(products, company_name, total_pre_gst, gst_amount, total_post_gst, notes="", quotation_id=None):
-    """Create HTML email content for quotation."""
-    try:
-        products_html = ""
-        for product in products:
-            products_html += f"""
-            <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">{product.get('name', 'N/A')}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{product.get('quantity', 0)}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('unit_price', 0):,.2f}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">₹{product.get('total_price', 0):,.2f}</td>
-            </tr>
-            """
-        
-        quotation_header = f"Quotation #{quotation_id}" if quotation_id else "Quotation Request"
-        
-        email_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>{quotation_header}</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
-                .container {{ max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }}
-                .header h1 {{ color: #007bff; margin: 0; }}
-                .info-section {{ margin-bottom: 20px; }}
-                .info-section h3 {{ color: #333; margin-bottom: 10px; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th {{ background-color: #007bff; color: white; padding: 12px; text-align: left; }}
-                .total-section {{ background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }}
-                .total-row {{ display: flex; justify-content: space-between; margin: 5px 0; }}
-                .final-total {{ font-size: 1.2em; font-weight: bold; color: #007bff; border-top: 2px solid #007bff; padding-top: 10px; }}
-                .notes {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #ffc107; }}
-                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{quotation_header}</h1>
-                    <p>Product Calculator - Professional Quotation Service</p>
-                </div>
-                
-                <div class="info-section">
-                    <h3>Dear {company_name},</h3>
-                    <p>Thank you for your interest in our products. Please find below the detailed quotation as requested:</p>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th style="text-align: center;">Quantity</th>
-                            <th style="text-align: right;">Unit Price</th>
-                            <th style="text-align: right;">Total Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {products_html}
-                    </tbody>
-                </table>
-                
-                <div class="total-section">
-                    <div class="total-row">
-                        <span>Subtotal (Pre-GST):</span>
-                        <span>₹{total_pre_gst:,.2f}</span>
-                    </div>
-                    <div class="total-row">
-                        <span>GST (18%):</span>
-                        <span>₹{gst_amount:,.2f}</span>
-                    </div>
-                    <div class="total-row final-total">
-                        <span>Total Amount:</span>
-                        <span>₹{total_post_gst:,.2f}</span>
-                    </div>
-                </div>
-        """
-        
-        if notes:
-            email_content += f"""
-                <div class="notes">
-                    <h4>Additional Notes:</h4>
-                    <p>{notes}</p>
-                </div>
-            """
-        
-        email_content += f"""
-                <div class="footer">
-                    <p>This quotation is valid for 30 days from the date of issue.</p>
-                    <p>For any queries, please feel free to contact us.</p>
-                    <hr>
-                    <p><strong>Product Calculator</strong><br>
-                    Professional Quotation Service<br>
-                    Email: info@productcalculator.com</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        return email_content
-        
-    except Exception as e:
-        app.logger.error(f"Error creating email content: {str(e)}")
-        return f"Quotation request for {company_name} - Total: ₹{total_post_gst:,.2f}"
 
 @app.route('/api/admin/users/<user_id>', methods=['PUT'])
 @login_required
