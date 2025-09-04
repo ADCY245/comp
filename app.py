@@ -5010,38 +5010,6 @@ def admin_delete_user(user_id):
         return jsonify({'error': 'Failed to delete user'}), 500
 
 # Company Management APIs
-@app.route('/api/customers', methods=['GET'])
-@login_required
-def get_customers():
-    """Get list of all customers for admin interface."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            from bson import ObjectId
-            # Fetch customers from MongoDB
-            customers_cursor = mongo_db.customers.find({}, {'_id': 1, 'companyName': 1, 'name': 1})
-            customers = []
-            for customer in customers_cursor:
-                customer['id'] = str(customer.pop('_id'))
-                customers.append(customer)
-        else:
-            # Fallback to JSON file if MongoDB is not available
-            customers = []
-            if os.path.exists(os.path.join('static', 'data', 'customers.json')):
-                with open(os.path.join('static', 'data', 'customers.json'), 'r') as f:
-                    customers = json.load(f)
-                    # Ensure each customer has an id field
-                    for customer in customers:
-                        if '_id' in customer:
-                            customer['id'] = str(customer.pop('_id'))
-                        elif 'id' not in customer:
-                            customer['id'] = str(uuid.uuid4())
-        
-        return jsonify(customers)
-        
-    except Exception as e:
         app.logger.error(f"Error fetching customers: {str(e)}")
         return jsonify({'error': 'Failed to fetch customers'}), 500
 
@@ -5078,6 +5046,57 @@ def admin_get_companies():
     except Exception as e:
         app.logger.error(f"Error getting companies: {str(e)}")
         return jsonify({'error': 'Failed to load companies'}), 500
+
+@app.route('/api/admin/companies/<company_id>')
+@login_required
+def get_company(company_id):
+    """Get a single company by ID."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    
+    try:
+        if not company_id:
+            return jsonify({'error': 'Company ID is required'}), 400
+            
+        if MONGO_AVAILABLE and USE_MONGO:
+            from bson.objectid import ObjectId
+            
+            # Validate if the ID is a valid ObjectId
+            if not ObjectId.is_valid(company_id):
+                return jsonify({'error': 'Invalid company ID format'}), 400
+                
+            company_doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
+            
+            if not company_doc:
+                return jsonify({'error': 'Company not found'}), 404
+                
+            company_data = {
+                'id': str(company_doc['_id']),
+                'name': company_doc.get('Company Name', ''),
+                'email': company_doc.get('EmailID', ''),
+                'address': company_doc.get('Address', ''),
+                'phone': company_doc.get('Phone', ''),
+                'gst_number': company_doc.get('GST Number', ''),
+                'created_at': company_doc.get('created_at', '')
+            }
+            
+            return jsonify({'success': True, 'company': company_data})
+        else:
+            # Fallback to JSON file
+            companies_file = os.path.join('static', 'data', 'companies.json')
+            if os.path.exists(companies_file):
+                with open(companies_file, 'r') as f:
+                    companies = json.load(f)
+                    
+                company = next((c for c in companies if str(c.get('id')) == company_id), None)
+                if company:
+                    return jsonify({'success': True, 'company': company})
+            
+            return jsonify({'error': 'Company not found'}), 404
+            
+    except Exception as e:
+        app.logger.error(f"Error getting company: {str(e)}")
+        return jsonify({'error': 'Failed to get company details'}), 500
 
 @app.route('/api/admin/companies/search')
 @login_required
