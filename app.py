@@ -4307,14 +4307,6 @@ def admin_stats():
 
 
 # Admin Management Routes
-@app.route('/admin/manage-users')
-@login_required
-def admin_manage_users():
-    """Admin user management page."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
-
 @app.route('/api/admin/users')
 @login_required
 def admin_get_users():

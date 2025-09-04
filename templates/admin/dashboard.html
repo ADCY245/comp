@@ -508,7 +508,13 @@
                 `;
                 
                 sessions.forEach(session => {
-                    const roleColor = session.role === 'admin' ? 'danger' : 'success';
+                    // Set role badge color - admin is red, company is blue, default is gray
+                    let roleColor = 'secondary';
+                    if (session.role === 'admin') {
+                        roleColor = 'danger';
+                    } else if (session.role === 'company') {
+                        roleColor = 'primary';
+                    }
                     
                     modalHtml += `
                         <tr>
@@ -517,7 +523,7 @@
                                 <small class="text-muted">${session.email}</small>
                             </td>
                             <td>
-                                <span class="badge bg-${roleColor}">${session.role}</span>
+                                <span class="badge bg-${roleColor} text-capitalize">${session.role}</span>
                             </td>
                             <td>
                                 <strong>${session.company_name}</strong><br>
