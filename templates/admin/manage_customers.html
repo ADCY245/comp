@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} | Admin Panel</title>
     
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -216,97 +218,94 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     
-    <script>
-        // Global variables
-        let customersTable;
-        let allUsers = [];
-        let currentUser = null;
+<script>
+    // Global variables
+    let customersTable;
+    let allUsers = [];
+    let currentUser = null;
 
-        // Initialize when document is ready
-        $(document).ready(function() {
-            // Initialize DataTable
-            customersTable = $('#customersTable').DataTable({
-                responsive: true,
-                order: [[4, 'desc']], // Sort by created date by default
-                columnDefs: [
-                    { orderable: false, targets: [5] } // Disable sorting on actions column
-                ]
-            });
+    // Initialize when document is ready
+    $(document).ready(function() {
+        // Initialize DataTable
+        customersTable = $('#customersTable').DataTable({
+            responsive: true,
+            order: [[4, 'desc']], // Sort by created date by default
+            columnDefs: [
+                { orderable: false, targets: [5] } // Disable sorting on actions column
+            ]
+        });
 
-            // Load current user data
-            fetch('/api/user')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.user) {
-                        currentUser = data.user;
-                        
-                        // Load initial data
-                        loadUsers();
-                        loadCustomers();
-                    } else {
-                        console.error('Failed to load current user data');
-                        showToast('Failed to load user data', 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading user data:', error);
-                    showToast('Error loading user data', 'danger');
+        // Load current user data
+        fetch('/api/user')
+            .then(response => response.json())
+            .then(data => {
+                if (data.user) {
+                    currentUser = data.user;
                     
-                    // Still try to load other data
+                    // Load initial data
                     loadUsers();
                     loadCustomers();
-                });
-        });
-        
-        // Global functions
-        function loadUsers() {
-            return fetch('/api/admin/users')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.users) {
-                        allUsers = data.users;
-                        updateUserDropdown();
-                        return data.users;
-                    } else {
-                        throw new Error(data.error || 'Failed to load users');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading users:', error);
-                    showToast('Error loading users', 'danger');
-                    throw error;
-                });
-        }
+                } else {
+                    console.error('Failed to load current user data');
+                    showToast('Failed to load user data', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading user data:', error);
+                showToast('Error loading user data', 'danger');
+                
+                // Still try to load other data
+                loadUsers();
+                loadCustomers();
+            });
+    });
+    
+    // Global functions
+    function loadUsers() {
+        return fetch('/api/users')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.users) {
+                    allUsers = data.users;
+                    updateUserDropdown();
+                    return data.users;
+                } else {
+                    throw new Error(data.error || 'Failed to load users');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading users:', error);
+                showToast('Error loading users', 'danger');
+                throw error;
+            });
+    }
 
-        function loadCustomers() {
-            return fetch('/api/admin/customers')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.customers) {
-                        populateCustomersTable(data.customers);
-                        return data.customers;
-                    } else {
-                        throw new Error(data.error || 'Failed to load customers');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading customers:', error);
-                    showToast('Error loading customers', 'danger');
-                    throw error;
-                });
-        }
+    function loadCustomers() {
+        return fetch('/api/customers')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.customers) {
+                    populateCustomersTable(data.customers);
+                    return data.customers;
+                } else {
+                    throw new Error(data.error || 'Failed to load customers');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading customers:', error);
+                showToast('Error loading customers', 'danger');
+                throw error;
+            });
+    }
 
-        // Update user dropdown in the form
+    // Update user dropdown in the form
     function updateUserDropdown() {
         const dropdown = document.getElementById('assignedTo');
         if (!dropdown) return;
@@ -425,68 +424,70 @@
     
     // Save customer
     function saveCustomer() {
-        const customerId = document.getElementById('customerId').value;
-        const name = document.getElementById('customerName').value.trim();
-        const email = document.getElementById('customerEmail').value.trim();
-        const phone = document.getElementById('customerPhone').value.trim();
-        const address = document.getElementById('customerAddress').value.trim();
-        const assignedTo = document.getElementById('assignedTo').value;
+        const form = document.getElementById('customerForm');
+        const customerId = form.dataset.id || '';
+        const saveBtn = document.getElementById('saveCustomerBtn');
+        const originalBtnText = saveBtn.innerHTML;
         
-        if (!name || !email) {
-            showToast('Please fill in all required fields', 'warning');
+        // Validate form
+        const name = form.elements['name'].value.trim();
+        const email = form.elements['email'].value.trim();
+        const phone = form.elements['phone'].value.trim();
+        const assignedTo = form.elements['assignedTo'].value;
+        
+        if (!name) {
+            showToast('Name is required', 'danger');
             return;
         }
         
-        const customerData = {
-            name,
-            email,
-            phone,
-            address
-        };
-        
-        // If admin is assigning to a specific user
-        if (currentUser.role === 'admin' && assignedTo) {
-            customerData.assigned_to = assignedTo;
-        }
-        
-        const method = customerId ? 'PUT' : 'POST';
-        const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
-        
-        // Show loading state
-        const saveBtn = document.getElementById('saveCustomerBtn');
-        const originalBtnText = saveBtn.innerHTML;
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...';
-        
-        fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify(customerData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(
-                    customerId ? 'Customer updated successfully' : 'Customer created successfully', 
-                    'success'
-                );
-                loadCustomers();
-                bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
-            } else {
-                throw new Error(data.error || 'Failed to save customer');
-            }
-        })
-        .catch(error => {
+        try {
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            
+            const customerData = {
+                name,
+                email,
+                phone,
+                assigned_to: assignedTo || null
+            };
+            
+            const method = customerId ? 'PUT' : 'POST';
+            const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
+            
+            fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(customerData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(
+                        customerId ? 'Customer updated successfully' : 'Customer created successfully', 
+                        'success'
+                    );
+                    loadCustomers();
+                    bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+                } else {
+                    throw new Error(data.error || 'Failed to save customer');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving customer:', error);
+                showToast(`Error: ${error.message}`, 'danger');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            });
+        } catch (error) {
             console.error('Error saving customer:', error);
             showToast(`Error: ${error.message}`, 'danger');
-        })
-        .finally(() => {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalBtnText;
-        });
+        }
     }
     
     // Edit customer
@@ -532,30 +533,31 @@
     }
     
     // Delete customer
-    function deleteCustomer(customerId) {
+    async function deleteCustomer(customerId) {
         if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
             return;
         }
         
-        fetch(`/api/customers/${customerId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
+        try {
+            const response = await fetch(`/api/customers/${customerId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            const data = await response.json();
+            if (response.ok && data.success) {
                 showToast('Customer deleted successfully', 'success');
                 loadCustomers();
             } else {
                 throw new Error(data.error || 'Failed to delete customer');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error deleting customer:', error);
             showToast(`Error: ${error.message}`, 'danger');
-        });
+        }
     }
     
     // Show toast notification
