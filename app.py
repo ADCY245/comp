@@ -59,11 +59,8 @@ def get_next_quote_id():
         # Fallback to timestamp-based ID if MongoDB is not available
         return f"CGI_PC_{int(get_india_time().timestamp())}"
 
-# Import API blueprints
+# Import API blueprints (will be registered after app creation)
 from api.customers import bp as customers_bp
-
-# Register blueprints
-app.register_blueprint(customers_bp)
 
 # Import MongoDB users module
 try:
@@ -1039,6 +1036,9 @@ def regex_search_filter(s, pattern):
     return bool(re.search(pattern, str(s)))
 
 app.logger.info("Flask app initialized")
+
+# Register blueprints
+app.register_blueprint(customers_bp)
 
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
