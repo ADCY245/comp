@@ -59,6 +59,12 @@ def get_next_quote_id():
         # Fallback to timestamp-based ID if MongoDB is not available
         return f"CGI_PC_{int(get_india_time().timestamp())}"
 
+# Import API blueprints
+from api.customers import bp as customers_bp
+
+# Register blueprints
+app.register_blueprint(customers_bp)
+
 # Import MongoDB users module
 try:
     from mongo_users import (

@@ -333,6 +333,7 @@
     <script>
         // Global variables
         let allUsers = [];
+        // Global variables
         let allCustomers = [];
         let currentUser = null;
         let currentPage = 0;
@@ -340,23 +341,52 @@
         let hasMoreCompanies = true;
         let isSearching = false;
         let currentSearchTerm = '';
-        let usersTable; // Store DataTable instance
-
-        // Initialize when document is ready
+        
+        // Table instances
+        let usersTable = null;
+        let companiesTable = null;
+        let customersTable = null;
+        
+        // Constants
+        const companiesPerPage = 10;
+        
         $(document).ready(function() {
-            // Initialize DataTable
-            usersTable = $('#usersTable').DataTable({
-                responsive: true,
-                order: [[4, 'desc']], // Sort by created date by default
-                columnDefs: [
-                    { orderable: false, targets: [5] } // Disable sorting on actions column
-                ]
-            });
+            try {
+                // Initialize DataTables with error handling
+                usersTable = $('#usersTable').DataTable({
+                    responsive: true,
+                    order: [[4, 'desc']],
+                    columnDefs: [
+                        { orderable: false, targets: [5] }
+                    ],
+                    // Add error handling
+                    error: function(settings, techNote, message) {
+                        console.error('DataTables error:', message);
+                    }
+                });
 
-            // Load initial data
-            loadUsers();
-            loadCompanies();
-            loadAllCustomers();
+                // Initialize other tables if they exist
+                if ($('#companiesTable').length) {
+                    companiesTable = $('#companiesTable').DataTable({
+                        responsive: true,
+                        // Add your companies table config
+                    });
+                }
+                
+                if ($('#customersTable').length) {
+                    customersTable = $('#customersTable').DataTable({
+                        responsive: true,
+                        // Add your customers table config
+                    });
+                }
+
+                // Load initial data
+                loadUsers();
+                loadCompanies();
+                loadAllCustomers();
+            } catch (error) {
+                console.error('Error initializing page:', error);
+            }
         });
         
         // Load users data
@@ -514,26 +544,6 @@
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             return new Date(dateString).toLocaleDateString();
-        }
-        
-        // Modal functions
-        // Load all customers for assignment
-        async function loadAllCustomers(selectedCustomerIds = []) {
-            try {
-                const response = await fetch('/api/customers');
-                if (response.ok) {
-                    allCustomers = await response.json();
-                    // If we have the user modal open, update the customer list
-                    if (document.getElementById('userModal').classList.contains('show')) {
-                        renderCustomerCheckboxes(selectedCustomerIds);
-                        toggleCustomerAssignment();
-                    }
-                } else {
-                    console.error('Failed to load customers');
-                }
-            } catch (error) {
-                console.error('Error loading customers:', error);
-            }
         }
 
         // Render customer checkboxes in the user modal
@@ -896,6 +906,32 @@
             }
         }
         
+        // Load all customers for assignment
+        async function loadAllCustomers(selectedCustomerIds = []) {
+            try {
+                const response = await fetch('/api/v1/customers');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Handle both response formats: data.data or data.customers
+                    const customers = data.data || data.customers || [];
+                    window.allCustomers = customers; // Store for filtering
+                    renderCustomerCheckboxes(customers, selectedCustomerIds);
+                } else {
+                    throw new Error(data.error || 'Failed to load customers');
+                }
+            } catch (error) {
+                console.error('Failed to load customers:', error);
+                // Fallback to empty array if API fails
+                window.allCustomers = [];
+                renderCustomerCheckboxes([], selectedCustomerIds);
+                showToast('Error loading customers. Please check console for details.', 'danger');
+            }
+        }
+
         // Search and pagination
         async function searchCompanies() {
             const query = document.getElementById('companySearch').value;
