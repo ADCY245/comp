@@ -313,6 +313,13 @@
                             <label for="companyAddress" class="form-label">Address</label>
                             <textarea class="form-control" id="companyAddress" name="companyAddress" rows="3"></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label for="companyAssignedTo" class="form-label">Customer Assigned To</label>
+                            <select class="form-select" id="companyAssignedTo" name="companyAssignedTo" multiple>
+                                <!-- Users will be loaded dynamically -->
+                            </select>
+                            <small class="text-muted">Select one or more users to assign this company's customers.</small>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -684,6 +691,9 @@
             document.getElementById('companyModalTitle').textContent = 'Add New Company';
             document.getElementById('companyForm').reset();
             document.getElementById('companyId').value = '';
+            populateCompanyAssignedTo();
+            const select = document.getElementById('companyAssignedTo');
+            if (select) Array.from(select.options).forEach(opt => opt.selected = false);
             new bootstrap.Modal(document.getElementById('companyModal')).show();
         }
         
@@ -833,6 +843,11 @@
             const form = document.getElementById('companyForm');
             const formData = new FormData(form);
             const companyData = Object.fromEntries(formData);
+            // Collect assigned users from multi-select
+            const assignedSelect = document.getElementById('companyAssignedTo');
+            if (assignedSelect) {
+                companyData.assigned_to = Array.from(assignedSelect.selectedOptions).map(o => o.value);
+            }
             
             try {
                 const url = companyData.companyId ? `/api/admin/companies/${companyData.companyId}` : '/api/admin/companies';
@@ -874,6 +889,16 @@
                     document.getElementById('companyName').value = company.name;
                     document.getElementById('companyEmail').value = company.email;
                     document.getElementById('companyAddress').value = company.address || '';
+
+                    // Populate and preselect assigned users if provided
+                    populateCompanyAssignedTo();
+                    const select = document.getElementById('companyAssignedTo');
+                    const assigned = (company.assigned_to || []).map(String);
+                    if (select) {
+                        Array.from(select.options).forEach(opt => {
+                            opt.selected = assigned.includes(opt.value);
+                        });
+                    }
                     
                     new bootstrap.Modal(document.getElementById('companyModal')).show();
                 }

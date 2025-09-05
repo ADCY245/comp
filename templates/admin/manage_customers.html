@@ -140,20 +140,45 @@
     $(document).ready(function() {
         console.log('Document ready, initializing DataTable...');
         
-        // Initialize DataTable
-        customersTable = $('#customersTable').DataTable({
-            responsive: true,
-            order: [[0, 'desc']],
-            columnDefs: [
-                { orderable: false, targets: -1 } // Disable sorting on actions column
-            ]
-        });
-        
-        console.log('DataTable initialized:', customersTable);
-        
-        // Load initial data
-        loadUsers();
-        loadCustomers();
+        try {
+            // Initialize DataTable with proper error handling
+            customersTable = $('#customersTable').DataTable({
+                responsive: true,
+                order: [[0, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: -1 }, // Disable sorting on actions column
+                    { targets: 0, visible: false } // Hide ID column
+                ],
+                language: {
+                    emptyTable: 'No customers found',
+                    zeroRecords: 'No matching customers found'
+                },
+                initComplete: function() {
+                    console.log('DataTable initialization complete');
+                },
+                error: function(settings, techNote, message) {
+                    console.error('DataTables error:', message);
+                    showToast('Error initializing table', 'danger');
+                }
+            });
+            
+            console.log('DataTable initialized:', customersTable);
+            
+            // Load initial data
+            loadUsers();
+            loadCustomers();
+        } catch (error) {
+            console.error('Error initializing DataTable:', error);
+            showToast('Error initializing table: ' + error.message, 'danger');
+            // Initialize empty DataTable as fallback
+            customersTable = $('#customersTable').DataTable({
+                responsive: true,
+                language: {
+                    emptyTable: 'Error loading data',
+                    zeroRecords: 'No matching records found'
+                }
+            });
+        }
     });
 
     // Load all users
@@ -176,18 +201,34 @@
 
     // Load customers
     function loadCustomers() {
-        fetch('/api/customers')
-            .then(response => response.json())
+        console.log('Loading customers...');
+        showToast('Loading customers...', 'info');
+        
+        fetch('/api/v1/customers')
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success && data.customers) {
-                    populateCustomersTable(data.customers);
+                console.log('Customers loaded:', data);
+                if (data && data.success && data.data) {
+                    populateCustomersTable(data.data);
+                    showToast('Customers loaded successfully', 'success');
                 } else {
-                    throw new Error(data.error || 'Failed to load customers');
+                    throw new Error(data.error || 'Invalid response format');
                 }
             })
             .catch(error => {
                 console.error('Error loading customers:', error);
-                showToast('Error loading customers', 'danger');
+                showToast(`Error loading customers: ${error.message}`, 'danger');
+                // Reinitialize the table with error state
+                if (customersTable) {
+                    customersTable.clear().draw();
+                }
             });
     }
 
@@ -396,36 +437,54 @@
 
     // Show toast notification
     function showToast(message, type = 'info') {
-        const toastContainer = document.getElementById('toastContainer');
-        const toastId = 'toast-' + Date.now();
-        
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
+        try {
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                // Create toast container if it doesn't exist
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                toastContainer.style.zIndex = '1100';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-            </div>
-        `;
-        
-        // Add toast to container
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        
-        // Initialize and show toast
-        const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement, {
-            autohide: true,
-            delay: 5000
-        });
-        
-        toast.show();
-        
-        // Remove toast after it's hidden
-        toastElement.addEventListener('hidden.bs.toast', function () {
-            toastElement.remove();
-        });
+            `;
+            
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = document.getElementById(toastId);
+            if (toastElement) {
+                const toast = new bootstrap.Toast(toastElement, {
+                    autohide: true,
+                    delay: 5000
+                });
+                
+                toast.show();
+                
+                // Remove toast after it's hidden
+                toastElement.addEventListener('hidden.bs.toast', function () {
+                    if (toastElement && toastElement.parentNode) {
+                        toastElement.parentNode.removeChild(toastElement);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error showing toast:', error);
+            // Fallback to alert if toast fails
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
     }
 </script>
 {% endblock %}
