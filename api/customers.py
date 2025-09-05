@@ -157,7 +157,7 @@ def create_customer():
             current_app.mongo.db.users.update_one(
                 {'_id': customer_data['assigned_to']},
                 {'$addToSet': {'customers': result.inserted_id}},
-                 'upsert': True
+                upsert=True
             )
         
         # Prepare response
