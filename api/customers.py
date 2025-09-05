@@ -256,7 +256,7 @@ def update_customer(customer_id):
                 current_app.mongo.db.users.update_one(
                     {'_id': new_assigned_to},
                     {'$addToSet': {'customers': ObjectId(customer_id)}},
-                    'upsert': True
+                    upsert=True
                 )
         
         # Prepare response
