@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request, current_app
 from functools import wraps
 from flask_login import current_user, login_required
-from bson import ObjectId
+from bson import ObjectId, json_util
 import json
 from datetime import datetime
-from flask_pymongo import PyMongo
 
 # Create blueprint for customer API routes
 bp = Blueprint('customers', __name__, url_prefix='/api/v1')
@@ -22,12 +21,25 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def get_mongo_db():
+    """Helper function to get MongoDB database instance."""
+    if hasattr(current_app, 'mongo_db') and current_app.mongo_db is not None:
+        return current_app.mongo_db
+    return None
+
 @bp.route('/customers', methods=['GET'])
 @login_required
 @admin_required
 def get_customers():
     """Get all customers."""
     try:
+        db = get_mongo_db()
+        if db is None:
+            return jsonify({
+                'success': False,
+                'error': 'Database not available',
+                'message': 'Could not connect to the database.'
+            }), 500
         # Get pagination parameters
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
@@ -44,14 +56,11 @@ def get_customers():
                 {'phone': {'$regex': search, '$options': 'i'}}
             ]
         
-        # Get MongoDB instance
-        mongo = PyMongo(current_app)
-        
         # Get total count
-        total = mongo.db.customers.count_documents(query)
+        total = db.customers.count_documents(query)
         
         # Get paginated results
-        customers = list(mongo.db.customers.find(
+        customers = list(db.customers.find(
             query,
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 'phone': 1, 
              'assigned_to': 1, 'created_at': 1, 'updated_at': 1}
@@ -96,11 +105,17 @@ def get_customer(customer_id):
                 'message': 'You do not have permission to access this customer.'
             }), 403
         
-        # Get MongoDB instance
-        mongo = PyMongo(current_app)
-        
+        # Get database instance
+        db = get_mongo_db()
+        if db is None:
+            return jsonify({
+                'success': False,
+                'error': 'Database not available',
+                'message': 'Could not connect to the database.'
+            }), 500
+            
         # Get customer by ID
-        customer = mongo.db.customers.find_one(
+        customer = db.customers.find_one(
             {'_id': ObjectId(customer_id)},
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 'phone': 1, 
              'assigned_to': 1, 'created_at': 1, 'updated_at': 1, 'notes': 1}
@@ -157,15 +172,21 @@ def create_customer():
             'updated_at': datetime.utcnow()
         }
         
-        # Get MongoDB instance
-        mongo = PyMongo(current_app)
-        
+        # Get database instance
+        db = get_mongo_db()
+        if db is None:
+            return jsonify({
+                'success': False,
+                'error': 'Database not available',
+                'message': 'Could not connect to the database.'
+            }), 500
+            
         # Insert new customer
-        result = mongo.db.customers.insert_one(customer_data)
+        result = db.customers.insert_one(customer_data)
         
         # If assigned_to is provided, update the user's customers list
         if customer_data['assigned_to']:
-            mongo.db.users.update_one(
+            db.users.update_one(
                 {'_id': customer_data['assigned_to']},
                 {'$addToSet': {'customers': result.inserted_id}},
                 upsert=True
@@ -240,7 +261,7 @@ def update_customer(customer_id):
         }
         
         # Update customer
-        result = mongo.db.customers.update_one(
+        result = db.customers.update_one(
             {'_id': ObjectId(customer_id)},
             {'$set': update_data}
         )
@@ -260,14 +281,14 @@ def update_customer(customer_id):
         if old_assigned_to != new_assigned_to:
             # Remove from old user's customers list
             if old_assigned_to:
-                mongo.db.users.update_one(
+                db.users.update_one(
                     {'_id': old_assigned_to},
                     {'$pull': {'customers': ObjectId(customer_id)}}
                 )
             
             # Add to new user's customers list
             if new_assigned_to:
-                mongo.db.users.update_one(
+                db.users.update_one(
                     {'_id': new_assigned_to},
                     {'$addToSet': {'customers': ObjectId(customer_id)}},
                     upsert=True
@@ -304,12 +325,19 @@ def update_customer(customer_id):
 def delete_customer(customer_id):
     """Delete a customer."""
     try:
+        # Get database instance
+        db = get_mongo_db()
+        if db is None:
+            return jsonify({
+                'success': False,
+                'error': 'Database not available',
+                'message': 'Could not connect to the database.'
+            }), 500
+            
         # Get customer to check for assigned_to
-        # Get MongoDB instance
-        mongo = PyMongo(current_app)
-        
-        customer = mongo.db.customers.find_one(
-            {'_id': ObjectId(customer_id)}
+        customer = db.customers.find_one(
+            {'_id': ObjectId(customer_id)},
+            {'assigned_to': 1}
         )
         
         if not customer:
@@ -319,15 +347,15 @@ def delete_customer(customer_id):
                 'message': 'Customer not found.'
             }), 404
         
-        # Remove from assigned user's customers list
+        # Remove from user's customers list if assigned
         if customer.get('assigned_to'):
-            mongo.db.users.update_one(
+            db.users.update_one(
                 {'_id': customer['assigned_to']},
                 {'$pull': {'customers': ObjectId(customer_id)}}
             )
         
-        # Delete customer
-        result = mongo.db.customers.delete_one({'_id': ObjectId(customer_id)})
+        # Delete the customer
+        result = db.customers.delete_one({'_id': ObjectId(customer_id)})
         
         if result.deleted_count == 0:
             return jsonify({

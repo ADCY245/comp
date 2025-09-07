@@ -80,7 +80,12 @@ except (ImportError, RuntimeError) as e:
     users_col = None
 
 # Load environment variables
-load_dotenv()
+config_path = os.path.join(os.path.dirname(__file__), 'config', 'config.env')
+if os.path.exists(config_path):
+    load_dotenv(config_path)
+else:
+    # Fall back to .env file if config/config.env doesn't exist
+    load_dotenv()
 
 # Debug environment variables
 print("\n=== Environment Variables ===")
@@ -231,7 +236,58 @@ def send_alert_email(subject: str, body: str):
 # Initialize MongoDB if available
 MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
-DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
+
+# Debug: Print MongoDB-related environment variables
+print("\n=== MongoDB Configuration ===")
+
+# Try to get MongoDB URI from different possible environment variable names
+MONGODB_URI = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URI')
+
+# Try to load from .env file if not found in environment
+if not MONGODB_URI:
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()  # Load from .env file if it exists
+        MONGODB_URI = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URI')
+    except ImportError:
+        pass  # python-dotenv not installed, continue without it
+
+if not MONGODB_URI:
+    print("⚠️ No MongoDB URI found in environment variables or .env file")
+    print("Please set either MONGODB_URI or MONGO_URI environment variable")
+else:
+    # Clean up the URI (remove any quotes or whitespace)
+    MONGODB_URI = MONGODB_URI.strip('"\'').strip()
+    
+    print(f"✅ Found MongoDB URI in environment")
+    # Mask password in the URI for security
+    if '@' in MONGODB_URI:
+        protocol_part = MONGODB_URI.split('@')[0]
+        masked_uri = protocol_part.split('//')[0] + '//' + '****:****@' + MONGODB_URI.split('@', 1)[1]
+        print(f"MongoDB URI: {masked_uri}")
+    else:
+        print(f"MongoDB URI: {MONGODB_URI}")
+
+# Extract DB_NAME from MONGODB_URI if available, otherwise use default
+DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Default value
+
+if MONGODB_URI:
+    try:
+        # Try to extract database name from connection string
+        if 'mongodb+srv://' in MONGODB_URI:
+            db_part = MONGODB_URI.split('mongodb+srv://')[1].split('?')[0]
+        elif 'mongodb://' in MONGODB_URI:
+            db_part = MONGODB_URI.split('mongodb://')[1].split('?')[0]
+        else:
+            db_part = ''
+            
+        if '/' in db_part:
+            DB_NAME = db_part.split('/')[1].split('?')[0] or DB_NAME
+    except Exception as e:
+        print(f"⚠️ Could not extract DB name from URI: {e}")
+
+print(f"Using database: {DB_NAME}")
+print("==============================\n")
 
 # Initialize Flask-PyMongo
 mongo = PyMongo()
@@ -245,18 +301,35 @@ if api_dir not in sys.path:
 mongo_client = None
 mongo_db = None
 
-if USE_MONGO:
+if USE_MONGO and MONGODB_URI:
     try:
         from pymongo import MongoClient
-        from pymongo.errors import ConnectionFailure
+        from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
         
-        MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
-        print(f"\n=== MongoDB Configuration ===")
-        print(f"Attempting to connect to MongoDB at: {MONGO_URI}")
-        print(f"Database: {DB_NAME}")
+        print(f"\n=== Attempting MongoDB Connection ===")
+        
+        # Connection parameters
+        mongo_params = {
+            'serverSelectionTimeoutMS': 5000,  # 5 second timeout
+            'retryWrites': True,
+            'w': 'majority',
+            'connectTimeoutMS': 5000,
+            'socketTimeoutMS': 5000
+        }
+        
+        # Add TLS/SSL options if using MongoDB Atlas
+        if 'mongodb+srv://' in MONGODB_URI:
+            mongo_params.update({
+                'tls': True,
+                'tlsAllowInvalidCertificates': True,
+                'tlsInsecure': True
+            })
+        
+        print(f"Connecting to MongoDB with URI: {MONGODB_URI.split('@')[-1] if '@' in MONGODB_URI else MONGODB_URI}")
+        print(f"Using database: {DB_NAME}")
         
         # Initialize MongoDB client
-        mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5 second timeout
+        mongo_client = MongoClient(MONGODB_URI, **mongo_params)
         
         # Test the connection
         mongo_client.server_info()  # Will raise an exception if connection fails
@@ -265,40 +338,73 @@ if USE_MONGO:
         mongo_db = mongo_client[DB_NAME]
         
         # Initialize the users collection
-        from mongo_users import init_mongo_connection
-        users_col = init_mongo_connection(mongo_client, mongo_db)
+        try:
+            from mongo_users import init_mongo_connection
+            users_col = init_mongo_connection(mongo_client, mongo_db)
+            print("✅ Successfully initialized users collection")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not initialize users collection: {str(e)}")
         
         MONGO_AVAILABLE = True
         print("✅ Successfully connected to MongoDB")
         print("==============================\n")
         
-    except Exception as e:
-        # Use ASCII-safe error message
-        print("[ERROR] Failed to connect to MongoDB:")
+    except ServerSelectionTimeoutError as e:
+        print("❌ MongoDB connection timed out. Please check your connection string and network.")
+        print(f"Error: {str(e)}")
+        print("Falling back to JSON storage\n")
+    except ConfigurationError as e:
+        print("❌ MongoDB configuration error:")
         print(f"  {str(e)}")
-        print("Falling back to JSON storage")
-        print("To use MongoDB, please ensure:")
-        print("1. MongoDB is running")
-        print("2. Set the MONGO_URI environment variable (e.g., 'mongodb://localhost:27017/')")
-        print("3. Set USE_MONGO=True in your environment")
-        print("4. The database specified in DB_NAME exists")
-        print("==============================\n")
-
-if not MONGO_AVAILABLE and USE_MONGO:
-    try:
-        print("Attempting to connect to MongoDB...")
+        print("Falling back to JSON storage\n")
+    except ConnectionFailure as e:
+        print("❌ Could not connect to MongoDB:")
+        print(f"  {str(e)}")
+        print("Falling back to JSON storage\n")
+    except Exception as e:
+        print("❌ Unexpected error connecting to MongoDB:")
+        print(f"  {str(e)}")
+        print("Falling back to JSON storage\n")
         
-        # Initialize Flask-PyMongo with MongoDB URI
-        app.config["MONGO_URI"] = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/' + DB_NAME)
+    if not MONGO_AVAILABLE:
+        print("To use MongoDB, please ensure:")
+        print("1. MongoDB is running and accessible")
+        print("2. The MONGO_URI environment variable is set correctly")
+        print("3. The database server allows connections from your IP address")
+        print("4. The database and user credentials are correct")
+        print("==============================\n")
+elif USE_MONGO and not MONGODB_URI:
+    print("⚠️ MongoDB URI not found. Please set MONGODB_URI environment variable.")
+    print("Falling back to JSON storage\n")
+
+# Initialize Flask-PyMongo if not already connected
+if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
+    try:
+        print("\n=== Initializing Flask-PyMongo ===")
+        
+        # Configure Flask-PyMongo
+        app.config["MONGO_URI"] = MONGODB_URI
+        app.config["MONGO_CONNECT"] = False  # Lazy connection
+        app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = 5000
+        
+        # Initialize PyMongo with the app
         mongo.init_app(app)
         
-        # Make mongo_db available to the app context
-        app.mongo_db = None
-        
-        # Updated MongoDB connection with SSL options
-        from pymongo import MongoClient
-
-        from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
+        # Test the connection
+        with app.app_context():
+            try:
+                # This will trigger the connection
+                mongo.db.command('ping')
+                mongo_db = mongo.db
+                MONGO_AVAILABLE = True
+                print("✅ Successfully connected to MongoDB via Flask-PyMongo")
+                print("==============================\n")
+            except Exception as e:
+                print(f"❌ Flask-PyMongo connection failed: {str(e)}")
+                print("Falling back to JSON storage\n")
+    except Exception as e:
+        print(f"❌ Error initializing Flask-PyMongo: {str(e)}")
+        print("Falling back to JSON storage\n")
         
         # Initialize connection variables
         mongo_client = None
@@ -1044,6 +1150,36 @@ def regex_search_filter(s, pattern):
     return bool(re.search(pattern, str(s)))
 
 app.logger.info("Flask app initialized")
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint to verify MongoDB connection."""
+    try:
+        if MONGO_AVAILABLE and mongo_db is not None:
+            # Test the connection by pinging the database
+            mongo_client.server_info()
+            return jsonify({
+                'status': 'success',
+                'message': 'MongoDB connection is healthy',
+                'database': DB_NAME,
+                'mongo_available': MONGO_AVAILABLE
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'MongoDB is not available',
+                'database': DB_NAME,
+                'mongo_available': MONGO_AVAILABLE,
+                'use_mongo': USE_MONGO
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'MongoDB connection failed: {str(e)}',
+            'database': DB_NAME,
+            'mongo_available': MONGO_AVAILABLE,
+            'use_mongo': USE_MONGO
+        }), 500
 
 # Register blueprints
 app.register_blueprint(customers_bp)
