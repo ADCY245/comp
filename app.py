@@ -383,29 +383,46 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
         print("\n=== Initializing MongoDB Connection ===")
         
         # Parse the connection string
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
         from pymongo import MongoClient
         from pymongo.errors import ConfigurationError, ConnectionFailure
         
-        # Use direct PyMongo connection instead of Flask-PyMongo for more control
+        # Clean the MongoDB URI by removing conflicting TLS parameters
+        def clean_mongodb_uri(uri):
+            parsed = urlparse(uri)
+            query = parse_qs(parsed.query)
+            
+            # Remove any conflicting TLS parameters
+            for param in ['tlsInsecure', 'tlsAllowInvalidCertificates']:
+                if param in query:
+                    del query[param]
+            
+            # Rebuild the query string
+            new_query = urlencode(query, doseq=True)
+            
+            # Rebuild the URI
+            return urlunparse(parsed._replace(query=new_query))
+        
+        # Clean the MongoDB URI
+        clean_uri = clean_mongodb_uri(MONGODB_URI)
+        
+        # Configure client options
         client_options = {
             'serverSelectionTimeoutMS': 5000,
             'connectTimeoutMS': 10000,
             'socketTimeoutMS': 30000,
             'retryWrites': True,
-            'w': 'majority'
+            'w': 'majority',
+            'tls': True,
+            'tlsAllowInvalidCertificates': False,
+            'tlsAllowInvalidHostnames': False
         }
         
-        # For MongoDB Atlas, we need to use TLS but with specific options
-        if 'mongodb+srv://' in MONGODB_URI:
-            client_options.update({
-                'tls': True,
-                'tlsInsecure': False,
-                'tlsAllowInvalidCertificates': False,
-                'tlsAllowInvalidHostnames': False
-            })
+        print(f"Connecting to MongoDB with URI: {clean_uri.split('@')[-1] if '@' in clean_uri else clean_uri}")
+        print(f"Using database: {DB_NAME}")
         
         # Create the client with the specified options
-        mongo_client = MongoClient(MONGODB_URI, **client_options)
+        mongo_client = MongoClient(clean_uri, **client_options)
         
         # Test the connection
         mongo_client.admin.command('ping')
@@ -426,6 +443,37 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
         MONGO_AVAILABLE = False
         print(f"❌ MongoDB connection failed: {str(e)}")
         print("Falling back to JSON storage\n")
+        
+        # If we can't connect, try to provide helpful error messages
+        if 'tls' in str(e).lower() or 'certificate' in str(e).lower():
+            print("⚠️  TLS/SSL Certificate error. Trying with allowInvalidCertificates...")
+            try:
+                client_options['tlsAllowInvalidCertificates'] = True
+                mongo_client = MongoClient(clean_uri, **client_options)
+                mongo_client.admin.command('ping')
+                mongo_db = mongo_client[DB_NAME]
+                MONGO_AVAILABLE = True
+                app.mongo_client = mongo_client
+                app.mongo_db = mongo_db
+                print("✅ Connected with allowInvalidCertificates=True")
+                print("⚠️  WARNING: Using unverified certificates is not recommended for production")
+            except Exception as e2:
+                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
+        
+        if not MONGO_AVAILABLE:
+            print("\nTo resolve connection issues:")
+            print("1. Verify your MongoDB Atlas cluster is running and accessible")
+            print("2. Check if your IP is whitelisted in MongoDB Atlas")
+            print("3. Verify your database user credentials")
+            print("4. Check if the database exists and the user has proper permissions")
+            print("5. Try connecting with MongoDB Compass or mongo shell to test the connection")
+            print("6. Check for any network/firewall issues")
+            print("7. If using a free tier, ensure you haven't exceeded the usage limits")
+            print("\nFor MongoDB Atlas, ensure:")
+            print("- Your IP is whitelisted in Network Access")
+            print("- The database user has the correct permissions")
+            print("- The cluster is not paused")
+            print("==============================\n")
         
         # Initialize connection variables
         mongo_client = None
