@@ -377,52 +377,54 @@ elif USE_MONGO and not MONGODB_URI:
     print("⚠️ MongoDB URI not found. Please set MONGODB_URI environment variable.")
     print("Falling back to JSON storage\n")
 
-# Initialize Flask-PyMongo if not already connected
+# Initialize MongoDB connection directly with PyMongo
 if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
     try:
-        print("\n=== Initializing Flask-PyMongo ===")
+        print("\n=== Initializing MongoDB Connection ===")
         
-        # Clean up the MongoDB URI - remove any conflicting TLS options
-        import urllib.parse
-        from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+        # Parse the connection string
+        from pymongo import MongoClient
+        from pymongo.errors import ConfigurationError, ConnectionFailure
         
-        # Parse the URI
-        parsed = urlparse(MONGODB_URI)
-        query_params = parse_qs(parsed.query)
+        # Use direct PyMongo connection instead of Flask-PyMongo for more control
+        client_options = {
+            'serverSelectionTimeoutMS': 5000,
+            'connectTimeoutMS': 10000,
+            'socketTimeoutMS': 30000,
+            'retryWrites': True,
+            'w': 'majority'
+        }
         
-        # Remove conflicting TLS parameters
-        query_params.pop('tlsInsecure', None)
-        query_params.pop('tlsAllowInvalidCertificates', None)
+        # For MongoDB Atlas, we need to use TLS but with specific options
+        if 'mongodb+srv://' in MONGODB_URI:
+            client_options.update({
+                'tls': True,
+                'tlsInsecure': False,
+                'tlsAllowInvalidCertificates': False,
+                'tlsAllowInvalidHostnames': False
+            })
         
-        # Rebuild the URI
-        clean_query = urlencode(query_params, doseq=True)
-        clean_uri = parsed._replace(query=clean_query).geturl()
-        
-        # Configure Flask-PyMongo with the cleaned URI
-        app.config["MONGO_URI"] = clean_uri
-        app.config["MONGO_CONNECT"] = False  # Lazy connection
-        app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = 5000
-        app.config["MONGO_TLS"] = True  # Enable TLS
-        app.config["MONGO_TLS_ALLOW_INVALID_CERTIFICATES"] = False
-        
-        # Initialize PyMongo with the app
-        mongo.init_app(app)
+        # Create the client with the specified options
+        mongo_client = MongoClient(MONGODB_URI, **client_options)
         
         # Test the connection
-        with app.app_context():
-            try:
-                # This will trigger the connection
-                mongo.db.command('ping')
-                mongo_db = mongo.db
-                MONGO_AVAILABLE = True
-                print("✅ Successfully connected to MongoDB via Flask-PyMongo")
-                print(f"Connected to database: {mongo_db.name}")
-                print("==============================\n")
-            except Exception as e:
-                print(f"❌ Flask-PyMongo connection failed: {str(e)}")
-                print("Falling back to JSON storage\n")
+        mongo_client.admin.command('ping')
+        
+        # Get the database
+        mongo_db = mongo_client[DB_NAME]
+        
+        # Set global variables
+        MONGO_AVAILABLE = True
+        app.mongo_client = mongo_client
+        app.mongo_db = mongo_db
+        
+        print("✅ Successfully connected to MongoDB")
+        print(f"Connected to database: {mongo_db.name}")
+        print("==============================\n")
+        
     except Exception as e:
-        print(f"❌ Error initializing Flask-PyMongo: {str(e)}")
+        MONGO_AVAILABLE = False
+        print(f"❌ MongoDB connection failed: {str(e)}")
         print("Falling back to JSON storage\n")
         
         # Initialize connection variables

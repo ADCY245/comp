@@ -23,8 +23,27 @@ def admin_required(f):
 
 def get_mongo_db():
     """Helper function to get MongoDB database instance."""
-    if hasattr(current_app, 'mongo_db') and current_app.mongo_db is not None:
-        return current_app.mongo_db
+    try:
+        # First try to get from Flask-PyMongo
+        if hasattr(current_app, 'mongo') and current_app.mongo and hasattr(current_app.mongo, 'db'):
+            return current_app.mongo.db
+            
+        # Fall back to direct PyMongo connection
+        if hasattr(current_app, 'mongo_db') and current_app.mongo_db is not None:
+            return current_app.mongo_db
+            
+        # If we get here, try to initialize the connection
+        from app import app, MONGO_AVAILABLE, MONGODB_URI, DB_NAME
+        if MONGO_AVAILABLE and MONGODB_URI:
+            from pymongo import MongoClient
+            client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+            current_app.mongo_db = client[DB_NAME]
+            return current_app.mongo_db
+            
+        return None
+    except Exception as e:
+        print(f"⚠️ Error getting MongoDB database: {str(e)}")
+        return None
     return None
 
 @bp.route('/customers', methods=['GET'])
