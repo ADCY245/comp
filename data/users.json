@@ -1,0 +1,11 @@
+{
+  "admin": {
+    "id": "admin",
+    "email": "admin@example.com",
+    "username": "admin",
+    "password_hash": "pbkdf2:sha256:600000$Bvm3Xt4fCOTXOEPk$6136d7330ec69e480746d9b4558265b846c2d89d77e5038de987e921d61f4d42",
+    "is_verified": true,
+    "otp_verified": true,
+    "role": "admin"
+  }
+}

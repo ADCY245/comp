@@ -83,15 +83,19 @@ async function handleLogin(e) {
     // Show loading state
     setLoading(true);
     
-    // Create form data
-    const formData = new FormData();
-    formData.append('identifier', login);
-    formData.append('password', password);
+    // Create request data
+    const requestData = {
+      identifier: login,
+      password: password
+    };
     
     // Send login request
     const response = await fetch('/api/auth/login', {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
     });
     
     // Handle redirect for form submission

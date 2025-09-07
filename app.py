@@ -1,3 +1,4 @@
+import traceback
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_from_directory, make_response, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -4563,17 +4564,28 @@ def api_login():
         app.logger.info("=== Login Request ===")
         app.logger.info(f"Method: {request.method}")
         app.logger.info(f"Headers: {dict(request.headers)}")
-        app.logger.info(f"Form data: {request.form}")
-        app.logger.info(f"JSON data: {request.get_json(silent=True)}")
-        # Handle both form data and JSON
-        if request.is_json:
+        
+        # Check content type to determine how to parse the request
+        content_type = request.headers.get('Content-Type', '').lower()
+        
+        if 'application/json' in content_type:
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'Invalid JSON data'}), 400, {'Content-Type': 'application/json'}
+                app.logger.error("No JSON data received")
+                return jsonify({
+                    'success': False,
+                    'error': 'No JSON data received',
+                    'message': 'Please provide login credentials in JSON format'
+                }), 400
         else:
-            data = request.form
+            data = request.form.to_dict()
             if not data:
-                return jsonify({'error': 'Invalid form data'}), 400, {'Content-Type': 'application/json'}
+                app.logger.error("No form data received")
+                return jsonify({
+                    'success': False,
+                    'error': 'No form data received',
+                    'message': 'Please provide login credentials'
+                }), 400
 
         identifier = (data.get('identifier') or data.get('email') or data.get('username', '')).strip()
         password = (data.get('password') or '').strip()
@@ -4692,14 +4704,27 @@ def api_login():
 
         # ---------------- JSON fallback path -----------------
         print('Falling back to JSON user storage')
-        global users
-        users = load_users()
         
-        # Check if user exists in our loaded users
+        # Load users from JSON file
+        users_dict = load_users()
         user = None
-        for user_id, u in users.items():
-            if u.email == identifier or u.username == identifier:
-                user = u
+        
+        # Find user by email or username in the loaded users
+        for user_id, user_data in users_dict.items():
+            if (user_data.get('email') == identifier or 
+                user_data.get('username') == identifier):
+                # Create User object from dictionary
+                user = User(
+                    id=user_data.get('id', user_id),
+                    email=user_data.get('email'),
+                    username=user_data.get('username'),
+                    password_hash=user_data.get('password_hash'),
+                    is_verified=user_data.get('is_verified', False),
+                    otp_verified=user_data.get('otp_verified', False)
+                )
+                # Set role if exists
+                if 'role' in user_data:
+                    user.role = user_data['role'].lower()
                 break
                 
         if not user:
