@@ -62,6 +62,7 @@ def get_next_quote_id():
 
 # Import API blueprints (will be registered after app creation)
 from api.customers import bp as customers_bp
+from api.companies import bp as companies_bp
 
 # Import MongoDB users module
 try:
@@ -658,7 +659,8 @@ CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 # User class
 class User(UserMixin):
     def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, 
-                 reset_token=None, reset_token_expiry=None, company_id=None, role='user', customers=None):
+                 reset_token=None, reset_token_expiry=None, company_id=None, role='user', customers=None,
+                 assigned_companies=None):
         self.id = id
         self.email = email
         self.username = username
@@ -671,27 +673,105 @@ class User(UserMixin):
         self.company_id = company_id
         # Store role in lowercase for consistency
         self.role = role.lower() if role else 'user'
-        self.customers = customers or []  # List of customer IDs assigned to this user
+        # List of customer IDs directly assigned to this user
+        self.customers = customers or []
+        # List of company IDs - users will have access to all customers from these companies
+        self.assigned_companies = assigned_companies or []
         
     def is_admin(self):
         return self.role == 'admin'
         
     def can_access_customer(self, customer_id):
-        """Check if user can access a specific customer"""
-        return self.is_admin() or str(customer_id) in self.customers
+        """Check if user can access a specific customer
+        
+        Returns True if:
+        1. User is admin
+        2. Customer is directly assigned to user
+        3. Customer belongs to a company assigned to the user
+        """
+        if self.is_admin():
+            return True
+            
+        # Check direct customer assignment
+        if str(customer_id) in self.customers:
+            return True
+            
+        # Check company-based access
+        if hasattr(self, 'assigned_companies') and self.assigned_companies:
+            # Get MongoDB instance
+            from flask import current_app
+            from bson import ObjectId
+            
+            try:
+                # Get the customer's company ID
+                customer = current_app.mongo_db.customers.find_one(
+                    {'_id': ObjectId(customer_id)},
+                    {'company_id': 1}
+                )
+                
+                if customer and 'company_id' in customer:
+                    # Check if the customer's company is in the user's assigned companies
+                    return str(customer['company_id']) in self.assigned_companies
+                    
+            except Exception as e:
+                current_app.logger.error(f"Error checking company-based access: {str(e)}")
+                
+        return False
+        
+    def get_accessible_customers(self):
+        """Get all customer IDs that this user has access to
+        
+        Returns:
+            list: List of customer IDs that the user can access
+        """
+        from flask import current_app
+        from bson import ObjectId
+        
+        try:
+            # If admin, return all customers
+            if self.is_admin():
+                return [str(c['_id']) for c in current_app.mongo_db.customers.find({}, {'_id': 1})]
+                
+            accessible_customers = set()
+            
+            # Add directly assigned customers
+            accessible_customers.update(self.customers)
+            
+            # Add customers from assigned companies
+            if hasattr(self, 'assigned_companies') and self.assigned_companies:
+                # Convert company IDs to ObjectId for query
+                company_ids = [ObjectId(cid) for cid in self.assigned_companies if cid]
+                
+                if company_ids:
+                    # Find all customers from assigned companies
+                    company_customers = current_app.mongo_db.customers.find(
+                        {'company_id': {'$in': company_ids}},
+                        {'_id': 1}
+                    )
+                    
+                    # Add customer IDs to the set
+                    for customer in company_customers:
+                        accessible_customers.add(str(customer['_id']))
+            
+            return list(accessible_customers)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error getting accessible customers: {str(e)}")
+            return []
 
     def to_dict(self):
         return {
             'id': self.id,
             'email': self.email,
             'username': self.username,
-            'password_hash': self.password_hash,
             'is_verified': self.is_verified,
+            'otp_verified': self.otp_verified,
             'reset_token': self.reset_token,
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
-            'otp_verified': self.otp_verified,
-             'role': self.role,
-            'company_id': self.company_id
+            'company_id': self.company_id,
+            'role': self.role,
+            'customers': self.customers,
+            'assigned_companies': self.assigned_companies
         }
 
     def set_password(self, password):
@@ -1327,6 +1407,7 @@ def health_check():
 
 # Register blueprints
 app.register_blueprint(customers_bp)
+app.register_blueprint(companies_bp)
 
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
@@ -5172,6 +5253,15 @@ def admin_manage_customers():
     if getattr(current_user, 'role', None) != 'admin':
         abort(403)
     return render_template('admin/manage_customers.html', title='Manage Customers', user=current_user)
+
+
+@app.route('/admin/company-assignments')
+@login_required
+def manage_company_assignments():
+    """Admin page for managing user-company assignments."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    return render_template('admin/manage_company_assignments.html', title='Manage Company Assignments', user=current_user)
 
 
 @app.route('/api/admin/users/<user_id>', methods=['PUT'])
