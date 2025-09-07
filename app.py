@@ -88,6 +88,11 @@ else:
     # Fall back to .env file if config/config.env doesn't exist
     load_dotenv()
 
+# Configure console output to use UTF-8 encoding
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 # Debug environment variables
 print("\n=== Environment Variables ===")
 print(f"MONGO_URI: {'Set' if os.getenv('MONGO_URI') else 'Not set'}")
@@ -240,17 +245,22 @@ def send_alert_email(subject: str, body: str):
     app.logger.error(error_msg, exc_info=True)
     return False
 
-# Initialize MongoDB if available
+# Initialize MongoDB settings
 MONGO_AVAILABLE = False
-USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
+# Default to False to use JSON fallback if MongoDB is not available
+USE_MONGO = os.environ.get('USE_MONGO', 'false').lower() == 'true' and os.environ.get('MONGO_URI') is not None
 
-# Debug: Print MongoDB-related environment variables
-print("\n=== MongoDB Configuration ===")
-
-# Try to get MongoDB URI from different possible environment variable names
+# Get MongoDB URI from environment variable
 MONGODB_URI = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URI')
 
-# Try to load from .env file if not found in environment
+# Get database name from environment variable or use default
+DB_NAME = os.environ.get('DB_NAME', 'moneda_db')
+
+# MongoDB client and database references
+mongo_client = None
+mongo_db = None
+users_col = None
+
 if not MONGODB_URI:
     try:
         from dotenv import load_dotenv
@@ -443,184 +453,41 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
             # Create indexes if they don't exist
             users_col.create_index("email", unique=True)
             users_col.create_index("username", unique=True)
-            users_col.create_index("username_lower", unique=True)
-            print("✅ Created indexes on users collection")
-        except Exception as e:
-            print(f"⚠️ Could not create indexes (they may already exist): {str(e)}")
-        
-        # Initialize mongo_users with the connection
-        try:
-            from mongo_users import init_mongo_connection
-            users_col = init_mongo_connection(mongo_client, mongo_db)
-            print("✅ mongo_users initialized successfully")
-            
-            # Store the collections in the app context
-            app.mongo_client = mongo_client
-            app.mongo_db = mongo_db
-            app.users_col = users_col
-            
-            # Print database stats
-            print(f"Database: {mongo_db.name}")
-            collections = mongo_db.list_collection_names()
-            print(f"Collections: {collections}")
-            
-            if users_col is not None:
-                try:
-                    user_count = users_col.count_documents({})
-                    print(f"Users count: {user_count}")
-                except Exception as e:
-                    print(f"⚠️ Could not count users: {str(e)}")
-                    
-        except Exception as e:
-            print(f"❌ Error initializing mongo_users: {str(e)}")
-            raise
-        
-        # Set global variables
-        MONGO_AVAILABLE = True
-        
-        print("✅ Successfully connected to MongoDB")
-        print(f"Connected to database: {mongo_db.name}")
-        print("==============================\n")
-        
-    except Exception as e:
-        MONGO_AVAILABLE = False
-        print(f"❌ MongoDB connection failed: {str(e)}")
-        print("Falling back to JSON storage\n")
-        
-        # If we can't connect, try to provide helpful error messages
-        if 'tls' in str(e).lower() or 'certificate' in str(e).lower():
-            print("⚠️  TLS/SSL Certificate error. Trying with allowInvalidCertificates...")
-            try:
-                client_options['tlsAllowInvalidCertificates'] = True
-                mongo_client = MongoClient(clean_uri, **client_options)
-                mongo_client.admin.command('ping')
-                mongo_db = mongo_client[DB_NAME]
-                MONGO_AVAILABLE = True
-                app.mongo_client = mongo_client
-                app.mongo_db = mongo_db
-                print("✅ Connected with allowInvalidCertificates=True")
-                print("⚠️  WARNING: Using unverified certificates is not recommended for production")
-            except Exception as e2:
-                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
-        
-        if not MONGO_AVAILABLE:
-            print("\nTo resolve connection issues:")
-            print("1. Verify your MongoDB Atlas cluster is running and accessible")
-            print("2. Check if your IP is whitelisted in MongoDB Atlas")
-            print("3. Verify your database user credentials")
-            print("4. Check if the database exists and the user has proper permissions")
-            print("5. Try connecting with MongoDB Compass or mongo shell to test the connection")
-            print("6. Check for any network/firewall issues")
-            print("7. If using a free tier, ensure you haven't exceeded the usage limits")
-            print("\nFor MongoDB Atlas, ensure:")
-            print("- Your IP is whitelisted in Network Access")
-            print("- The database user has the correct permissions")
-            print("- The cluster is not paused")
-            print("==============================\n")
-        
-        # Initialize connection variables
-        mongo_client = None
-        connection_successful = False
-        
-        try:
-            import certifi
-            CA_FILE = certifi.where()
-        except ImportError:
-            CA_FILE = None
-            print("⚠️  certifi not installed; proceeding without custom CA bundle")
-        # First try with SSL and valid CA bundle
-        try:
-            mongo_client = MongoClient(
-                MONGO_URI,
-                tls=True,
-                tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                retryWrites=True,
-                w='majority',
-                connectTimeoutMS=10000,
-                socketTimeoutMS=10000,
-                serverSelectionTimeoutMS=10000,
-                maxIdleTimeMS=10000
-            )
-            # Test the connection
             mongo_client.admin.command('ping')
-            print("✅ MongoDB connection successful with SSL")
-            connection_successful = True
-        except Exception as e:
-            print(f"❌ MongoDB TLS connection failed: {str(e)}")
-            print("Attempting connection with allowInvalidCertificates...")
-            try:
-                mongo_client = MongoClient(
-                    MONGO_URI,
-                    tls=True,
-                    tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                    tlsAllowInvalidCertificates=True,
-                    retryWrites=True,
-                    w='majority',
-                    connectTimeoutMS=10000,
-                    socketTimeoutMS=10000,
-                    serverSelectionTimeoutMS=10000,
-                    maxIdleTimeMS=10000
-                )
-                # Test the connection
-                mongo_client.admin.command('ping')
-                print("✅ MongoDB connection successful with invalid certificates")
-                connection_successful = True
-            except Exception as e2:
-                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
-        
-        # Set connection status and initialise collections only if successful
-        if connection_successful and mongo_client:
             MONGO_AVAILABLE = True
             print("✅ MongoDB connection successful")
-
-            # Set up database and collections
+            
+            # Initialize database and collections
             mongo_db = mongo_client[DB_NAME]
             users_col = mongo_db['users']
-        else:
-            MONGO_AVAILABLE = False
-            print("❌ MongoDB connection failed – this application requires MongoDB. Exiting.")
-            raise SystemExit("MongoDB connection required but unavailable")
-        
-        # Initialize mongo_users with the connection
-        try:
-            from mongo_users import init_mongo_connection
-            users_col = init_mongo_connection(mongo_client, mongo_db)
-            print("✅ mongo_users initialized successfully")
             
-            # Print database stats
-            print(f"Using database: {mongo_db.name}")
-            collections = mongo_db.list_collection_names()
-            print(f"Collections: {collections}")
-            
-            if users_col is not None:
-                try:
-                    user_count = users_col.count_documents({})
-                    print(f"Users count: {user_count}")
-                except Exception as e:
-                    print(f"⚠️ Could not count users: {str(e)}")
-            
-            MONGO_AVAILABLE = True
+            # Set up database references
+            app.mongo_client = mongo_client
+            app.mongo_db = mongo_db
             
         except Exception as e:
-            print(f"[ERROR] Error initializing mongo_users: {str(e)}")
-            raise
-        
+            print(f"❌ MongoDB connection failed: {str(e)}")
+            print("Falling back to JSON storage")
+            MONGO_AVAILABLE = False
+            
     except Exception as e:
-        print(f"[ERROR] Unexpected error during MongoDB setup: {str(e)}")
+        print(f"[ERROR] Error setting up MongoDB: {str(e)}")
         print("Falling back to JSON storage")
         MONGO_AVAILABLE = False
         
-    except Exception as e:
-        print(f"[ERROR] MongoDB connection error: {str(e)}")
-        print("Falling back to JSON storage")
-        MONGO_AVAILABLE = False
-        mongo_client = None
-        mongo_db = None
-        users_col = None
-else:
-    print("MongoDB not enabled in configuration")
+# If we don't have MongoDB, make sure we have the data directory
+if not MONGO_AVAILABLE:
+    print("\n=== Using JSON Storage ===")
+    print("MongoDB is not available, using JSON file storage")
+    print("Data will be stored in the 'data' directory")
+    print("==============================\n")
     
-print("==============================\n")
+    # Initialize empty users collection for JSON fallback
+    users_col = None
+    
+    # Create data directory if it doesn't exist
+    os.makedirs('data', exist_ok=True)
+
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION = 3600  # 1 hour
@@ -800,26 +667,60 @@ class User(UserMixin):
 # ---------------------------------------------------------------------------
 
 def get_all_customers():
-    """Get all customers from the database."""
-    if MONGO_AVAILABLE and USE_MONGO:
+    """Get all customers from the database or JSON fallback."""
+    # First try to get from MongoDB if available
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
         try:
-            customers = list(mongo_db.customers.find({}, {'_id': 1, 'name': 1, 'email': 1, 'assigned_to': 1, 'created_by': 1, 'created_at': 1}))
+            # Check if customers collection exists
+            collections = mongo_db.list_collection_names()
+            if 'customers' not in collections:
+                print("[INFO] 'customers' collection does not exist in MongoDB, using JSON fallback")
+                return _get_customers_from_json()
+                
+            # Get customers from MongoDB
+            customers = list(mongo_db.customers.find(
+                {},
+                {'_id': 1, 'name': 1, 'email': 1, 'assigned_to': 1, 'created_by': 1, 'created_at': 1}
+            ))
+            
+            # Convert ObjectId to string
             for customer in customers:
                 customer['id'] = str(customer.pop('_id'))
+                
             return customers
+            
         except Exception as e:
-            app.logger.error(f"Error fetching customers from MongoDB: {str(e)}")
-            return []
+            print(f"[WARNING] Error fetching customers from MongoDB, falling back to JSON: {str(e)}")
+            return _get_customers_from_json()
     else:
-        # Fallback to JSON storage
-        try:
-            with open(os.path.join('static', 'data', 'customers.json'), 'r') as f:
-                customers = json.load(f)
-                if not isinstance(customers, list):
-                    customers = []
-                return customers
-        except (FileNotFoundError, json.JSONDecodeError):
+        # Use JSON fallback
+        return _get_customers_from_json()
+
+def _get_customers_from_json():
+    """Get customers from JSON file."""
+    json_path = os.path.join('static', 'data', 'customers.json')
+    try:
+        if not os.path.exists(json_path):
+            print(f"[INFO] Customers JSON file not found at {json_path}, creating empty list")
+            # Create empty customers file if it doesn't exist
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+            with open(json_path, 'w') as f:
+                json.dump([], f)
             return []
+            
+        with open(json_path, 'r') as f:
+            customers = json.load(f)
+            if not isinstance(customers, list):
+                print("[WARNING] Customers JSON is not a list, initializing empty list")
+                return []
+            return customers
+            
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Error parsing customers JSON: {str(e)}")
+        return []
+    except Exception as e:
+        print(f"[ERROR] Error reading customers from JSON: {str(e)}")
+        return []
 
 def save_customer(customer_data, customer_id=None):
     """Save a customer to the database."""
@@ -1408,6 +1309,47 @@ def health_check():
 # Register blueprints
 app.register_blueprint(customers_bp)
 app.register_blueprint(companies_bp)
+
+@app.route('/api/debug/mongodb')
+def debug_mongodb():
+    """Debug endpoint to check MongoDB connection and collections."""
+    try:
+        if not MONGO_AVAILABLE or not USE_MONGO or mongo_db is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'MongoDB not available',
+                'MONGO_AVAILABLE': MONGO_AVAILABLE,
+                'USE_MONGO': USE_MONGO,
+                'mongo_db_is_none': mongo_db is None
+            })
+            
+        # Test the connection
+        mongo_db.command('ping')
+        
+        # List all collections
+        collections = mongo_db.list_collection_names()
+        
+        # Count documents in customers collection if it exists
+        customer_count = 0
+        if 'customers' in collections:
+            customer_count = mongo_db.customers.count_documents({})
+        
+        return jsonify({
+            'status': 'success',
+            'collections': collections,
+            'customer_count': customer_count,
+            'database': mongo_db.name,
+            'server_info': mongo_db.command('serverStatus')
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'type': type(e).__name__
+        }), 500
 
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------

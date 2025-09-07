@@ -1047,7 +1047,13 @@
                 if (loadingIndicator) loadingIndicator.style.display = 'block';
                 if (customerList) customerList.style.display = 'none';
                 
-                const response = await fetch('/api/customers');
+                // Make sure we're using the correct API endpoint
+                const response = await fetch('/api/customers', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
