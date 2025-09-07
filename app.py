@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_from_directory, make_response, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
+from flask_pymongo import PyMongo
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from waitress import serve
@@ -232,6 +233,9 @@ MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
 DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
 
+# Initialize Flask-PyMongo
+mongo = PyMongo()
+
 # Add the api directory to the Python path
 api_dir = str(Path(__file__).parent / 'api')
 if api_dir not in sys.path:
@@ -283,6 +287,10 @@ if USE_MONGO:
 if not MONGO_AVAILABLE and USE_MONGO:
     try:
         print("Attempting to connect to MongoDB...")
+        
+        # Initialize Flask-PyMongo with MongoDB URI
+        app.config["MONGO_URI"] = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/' + DB_NAME)
+        mongo.init_app(app)
         
         # Make mongo_db available to the app context
         app.mongo_db = None

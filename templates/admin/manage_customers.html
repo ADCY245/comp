@@ -143,6 +143,8 @@
         try {
             // Initialize DataTable with proper error handling
             customersTable = $('#customersTable').DataTable({
+                processing: true,
+                serverSide: false,
                 responsive: true,
                 order: [[0, 'desc']],
                 columnDefs: [
@@ -151,33 +153,25 @@
                 ],
                 language: {
                     emptyTable: 'No customers found',
-                    zeroRecords: 'No matching customers found'
+                    zeroRecords: 'No matching customers found',
+                    processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i> Loading...'
                 },
                 initComplete: function() {
                     console.log('DataTable initialization complete');
+                    // Load initial data after table is ready
+                    loadUsers();
+                    loadCustomers();
                 },
                 error: function(settings, techNote, message) {
                     console.error('DataTables error:', message);
-                    showToast('Error initializing table', 'danger');
+                    showToast('Error initializing table: ' + message, 'danger');
                 }
             });
             
             console.log('DataTable initialized:', customersTable);
-            
-            // Load initial data
-            loadUsers();
-            loadCustomers();
         } catch (error) {
             console.error('Error initializing DataTable:', error);
             showToast('Error initializing table: ' + error.message, 'danger');
-            // Initialize empty DataTable as fallback
-            customersTable = $('#customersTable').DataTable({
-                responsive: true,
-                language: {
-                    emptyTable: 'Error loading data',
-                    zeroRecords: 'No matching records found'
-                }
-            });
         }
     });
 
@@ -204,32 +198,55 @@
         console.log('Loading customers...');
         showToast('Loading customers...', 'info');
         
-        fetch('/api/v1/customers')
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.error || `HTTP error! status: ${response.status}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Customers loaded:', data);
-                if (data && data.success && data.data) {
-                    populateCustomersTable(data.data);
-                    showToast('Customers loaded successfully', 'success');
-                } else {
-                    throw new Error(data.error || 'Invalid response format');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading customers:', error);
-                showToast(`Error loading customers: ${error.message}`, 'danger');
-                // Reinitialize the table with error state
+        // Try multiple endpoints for backward compatibility
+        const endpoints = [
+            '/api/v1/customers',
+            '/api/customers'
+        ];
+        
+        let currentEndpointIndex = 0;
+        
+        const tryLoad = () => {
+            if (currentEndpointIndex >= endpoints.length) {
+                showToast('Failed to load customers: All endpoints failed', 'danger');
                 if (customersTable) {
                     customersTable.clear().draw();
                 }
-            });
+                return;
+            }
+            
+            const endpoint = endpoints[currentEndpointIndex];
+            console.log(`Trying endpoint: ${endpoint}`);
+            
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                        }).catch(() => {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Customers loaded from', endpoint, ':', data);
+                    const customers = data?.success ? data.data : data;
+                    if (Array.isArray(customers)) {
+                        populateCustomersTable(customers);
+                        showToast('Customers loaded successfully', 'success');
+                    } else {
+                        throw new Error(data?.error || 'Invalid response format: expected array of customers');
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error loading customers from ${endpoint}:`, error);
+                    currentEndpointIndex++;
+                    tryLoad(); // Try next endpoint
+                });
+        };
+        
+        tryLoad();
     }
 
     // Update user dropdown in the form
@@ -258,33 +275,32 @@
             return;
         }
         
-        // Clear existing data
-        customersTable.clear();
-        
-        // Add rows
-        customers.forEach(customer => {
-            customersTable.row.add([
-                customer.id || '',
-                customer.name || '',
-                customer.email || '',
-                customer.phone || '',
-                customer.assigned_to ? (customer.assigned_to.username || '') : '',
-                customer.created_at ? new Date(customer.created_at).toLocaleString() : '',
-                `
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editCustomer('${customer.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${customer.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-                `
-            ]);
-        });
-        
-        // Redraw table
-        customersTable.draw();
+        try {
+            // Clear existing data
+            customersTable.clear();
+            
+            // Process and add rows
+            const rows = customers.map(customer => ({
+                id: customer.id || '',
+                name: customer.name || '',
+                email: customer.email || '',
+                phone: customer.phone || '',
+                assigned_to: customer.assigned_to ? 
+                    (typeof customer.assigned_to === 'object' ? 
+                        (customer.assigned_to.username || customer.assigned_to.email || '') : 
+                        String(customer.assigned_to)) : '',
+                created_at: customer.created_at ? 
+                    (new Date(customer.created_at)).toLocaleString() : '',
+                _: '' // This will be used for the actions column
+            }));
+            
+            // Add rows to DataTable
+            customersTable.rows.add(rows).draw();
+            
+        } catch (error) {
+            console.error('Error populating customers table:', error);
+            showToast('Error displaying customer data: ' + error.message, 'danger');
+        }
     }
 
     // Show add customer modal

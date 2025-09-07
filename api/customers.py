@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from bson import ObjectId
 import json
 from datetime import datetime
+from flask_pymongo import PyMongo
 
 # Create blueprint for customer API routes
 bp = Blueprint('customers', __name__, url_prefix='/api/v1')
@@ -43,11 +44,14 @@ def get_customers():
                 {'phone': {'$regex': search, '$options': 'i'}}
             ]
         
+        # Get MongoDB instance
+        mongo = PyMongo(current_app)
+        
         # Get total count
-        total = current_app.mongo.db.customers.count_documents(query)
+        total = mongo.db.customers.count_documents(query)
         
         # Get paginated results
-        customers = list(current_app.mongo.db.customers.find(
+        customers = list(mongo.db.customers.find(
             query,
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 'phone': 1, 
              'assigned_to': 1, 'created_at': 1, 'updated_at': 1}
@@ -92,7 +96,11 @@ def get_customer(customer_id):
                 'message': 'You do not have permission to access this customer.'
             }), 403
         
-        customer = current_app.mongo.db.customers.find_one(
+        # Get MongoDB instance
+        mongo = PyMongo(current_app)
+        
+        # Get customer by ID
+        customer = mongo.db.customers.find_one(
             {'_id': ObjectId(customer_id)},
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 'phone': 1, 
              'assigned_to': 1, 'created_at': 1, 'updated_at': 1, 'notes': 1}
@@ -149,12 +157,15 @@ def create_customer():
             'updated_at': datetime.utcnow()
         }
         
-        # Insert customer
-        result = current_app.mongo.db.customers.insert_one(customer_data)
+        # Get MongoDB instance
+        mongo = PyMongo(current_app)
+        
+        # Insert new customer
+        result = mongo.db.customers.insert_one(customer_data)
         
         # If assigned_to is provided, update the user's customers list
         if customer_data['assigned_to']:
-            current_app.mongo.db.users.update_one(
+            mongo.db.users.update_one(
                 {'_id': customer_data['assigned_to']},
                 {'$addToSet': {'customers': result.inserted_id}},
                 upsert=True
@@ -204,7 +215,10 @@ def update_customer(customer_id):
             }), 400
         
         # Get existing customer to check for assigned_to changes
-        existing_customer = current_app.mongo.db.customers.find_one(
+        # Get MongoDB instance
+        mongo = PyMongo(current_app)
+        
+        existing_customer = mongo.db.customers.find_one(
             {'_id': ObjectId(customer_id)}
         )
         
@@ -226,7 +240,7 @@ def update_customer(customer_id):
         }
         
         # Update customer
-        result = current_app.mongo.db.customers.update_one(
+        result = mongo.db.customers.update_one(
             {'_id': ObjectId(customer_id)},
             {'$set': update_data}
         )
@@ -246,14 +260,14 @@ def update_customer(customer_id):
         if old_assigned_to != new_assigned_to:
             # Remove from old user's customers list
             if old_assigned_to:
-                current_app.mongo.db.users.update_one(
+                mongo.db.users.update_one(
                     {'_id': old_assigned_to},
                     {'$pull': {'customers': ObjectId(customer_id)}}
                 )
             
             # Add to new user's customers list
             if new_assigned_to:
-                current_app.mongo.db.users.update_one(
+                mongo.db.users.update_one(
                     {'_id': new_assigned_to},
                     {'$addToSet': {'customers': ObjectId(customer_id)}},
                     upsert=True
@@ -291,7 +305,10 @@ def delete_customer(customer_id):
     """Delete a customer."""
     try:
         # Get customer to check for assigned_to
-        customer = current_app.mongo.db.customers.find_one(
+        # Get MongoDB instance
+        mongo = PyMongo(current_app)
+        
+        customer = mongo.db.customers.find_one(
             {'_id': ObjectId(customer_id)}
         )
         
@@ -304,15 +321,13 @@ def delete_customer(customer_id):
         
         # Remove from assigned user's customers list
         if customer.get('assigned_to'):
-            current_app.mongo.db.users.update_one(
+            mongo.db.users.update_one(
                 {'_id': customer['assigned_to']},
                 {'$pull': {'customers': ObjectId(customer_id)}}
             )
         
         # Delete customer
-        result = current_app.mongo.db.customers.delete_one(
-            {'_id': ObjectId(customer_id)}
-        )
+        result = mongo.db.customers.delete_one({'_id': ObjectId(customer_id)})
         
         if result.deleted_count == 0:
             return jsonify({
