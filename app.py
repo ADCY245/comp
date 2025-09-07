@@ -97,6 +97,12 @@ print("===========================\n")
 # CORS Configuration
 from flask_cors import CORS
 app = Flask(__name__)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
