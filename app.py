@@ -382,10 +382,28 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
     try:
         print("\n=== Initializing Flask-PyMongo ===")
         
-        # Configure Flask-PyMongo
-        app.config["MONGO_URI"] = MONGODB_URI
+        # Clean up the MongoDB URI - remove any conflicting TLS options
+        import urllib.parse
+        from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+        
+        # Parse the URI
+        parsed = urlparse(MONGODB_URI)
+        query_params = parse_qs(parsed.query)
+        
+        # Remove conflicting TLS parameters
+        query_params.pop('tlsInsecure', None)
+        query_params.pop('tlsAllowInvalidCertificates', None)
+        
+        # Rebuild the URI
+        clean_query = urlencode(query_params, doseq=True)
+        clean_uri = parsed._replace(query=clean_query).geturl()
+        
+        # Configure Flask-PyMongo with the cleaned URI
+        app.config["MONGO_URI"] = clean_uri
         app.config["MONGO_CONNECT"] = False  # Lazy connection
         app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = 5000
+        app.config["MONGO_TLS"] = True  # Enable TLS
+        app.config["MONGO_TLS_ALLOW_INVALID_CERTIFICATES"] = False
         
         # Initialize PyMongo with the app
         mongo.init_app(app)
@@ -398,6 +416,7 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
                 mongo_db = mongo.db
                 MONGO_AVAILABLE = True
                 print("✅ Successfully connected to MongoDB via Flask-PyMongo")
+                print(f"Connected to database: {mongo_db.name}")
                 print("==============================\n")
             except Exception as e:
                 print(f"❌ Flask-PyMongo connection failed: {str(e)}")
