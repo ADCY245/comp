@@ -430,10 +430,46 @@ if not MONGO_AVAILABLE and USE_MONGO and MONGODB_URI:
         # Get the database
         mongo_db = mongo_client[DB_NAME]
         
+        # Ensure the users collection exists and has the required indexes
+        users_col = mongo_db['users']
+        try:
+            # Create indexes if they don't exist
+            users_col.create_index("email", unique=True)
+            users_col.create_index("username", unique=True)
+            users_col.create_index("username_lower", unique=True)
+            print("✅ Created indexes on users collection")
+        except Exception as e:
+            print(f"⚠️ Could not create indexes (they may already exist): {str(e)}")
+        
+        # Initialize mongo_users with the connection
+        try:
+            from mongo_users import init_mongo_connection
+            users_col = init_mongo_connection(mongo_client, mongo_db)
+            print("✅ mongo_users initialized successfully")
+            
+            # Store the collections in the app context
+            app.mongo_client = mongo_client
+            app.mongo_db = mongo_db
+            app.users_col = users_col
+            
+            # Print database stats
+            print(f"Database: {mongo_db.name}")
+            collections = mongo_db.list_collection_names()
+            print(f"Collections: {collections}")
+            
+            if users_col is not None:
+                try:
+                    user_count = users_col.count_documents({})
+                    print(f"Users count: {user_count}")
+                except Exception as e:
+                    print(f"⚠️ Could not count users: {str(e)}")
+                    
+        except Exception as e:
+            print(f"❌ Error initializing mongo_users: {str(e)}")
+            raise
+        
         # Set global variables
         MONGO_AVAILABLE = True
-        app.mongo_client = mongo_client
-        app.mongo_db = mongo_db
         
         print("✅ Successfully connected to MongoDB")
         print(f"Connected to database: {mongo_db.name}")
@@ -1016,46 +1052,79 @@ def _load_users_json():
 
 # ... (rest of the code remains the same)
 
+@login_manager.user_loader
 def load_user(user_id):
     """Load user by ID from either MongoDB or JSON."""
-    if MONGO_AVAILABLE and USE_MONGO:
-        # Try MongoDB first
+    if not user_id:
+        return None
+        
+    if USE_MONGO and MONGO_AVAILABLE:
         try:
-            print(f'Loading user from MongoDB with ID: {user_id}')
-            doc = mu_find_user_by_id(user_id)
-            if not doc:
-                print(f'User not found in MongoDB with ID: {user_id}')
-                return None
+            # First try to use the users_col from app context
+            if hasattr(app, 'users_col') and app.users_col is not None:
+                from bson import ObjectId
+                try:
+                    user_data = app.users_col.find_one({"$or": [
+                        {"_id": ObjectId(user_id)},
+                        {"_id": user_id}
+                    ]})
+                    
+                    if user_data:
+                        # Convert MongoDB document to User object
+                        return User(
+                            id=str(user_data['_id']),
+                            email=user_data.get('email'),
+                            username=user_data.get('username'),
+                            password_hash=user_data.get('password_hash'),
+                            is_verified=user_data.get('is_verified', False),
+                            otp_verified=user_data.get('otp_verified', False),
+                            company_id=user_data.get('company_id'),
+                            role=user_data.get('role', 'user'),
+                            customers=user_data.get('customers', [])
+                        )
+                except Exception as e:
+                    print(f"Error loading user {user_id} from MongoDB: {str(e)}")
+            
+            # Fall back to mongo_users module if direct collection access fails
+            try:
+                from mongo_users import find_user_by_id
+                user_data = find_user_by_id(user_id)
                 
-            user = User(
-                id=str(doc['_id']),  # Convert ObjectId to string
-                email=doc['email'],
-                username=doc['username'],
-                password_hash=doc['password_hash'],
-                is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False)
-            )
-            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
-            return user
+                if user_data:
+                    # Convert MongoDB document to User object
+                    return User(
+                        id=str(user_data['_id']),
+                        email=user_data.get('email'),
+                        username=user_data.get('username'),
+                        password_hash=user_data.get('password_hash'),
+                        is_verified=user_data.get('is_verified', False),
+                        otp_verified=user_data.get('otp_verified', False),
+                        company_id=user_data.get('company_id'),
+                        role=user_data.get('role', 'user'),
+                        customers=user_data.get('customers', [])
+                    )
+            except Exception as e:
+                print(f"Error loading user {user_id} via mongo_users: {str(e)}")
+                
         except Exception as e:
-            print(f"Error loading user {user_id}: {e}")
-            return None
+            print(f"Unexpected error in load_user: {str(e)}")
     
-    # Fall back to JSON users
-    users = _load_users_json()
-    user_data = users.get(user_id) if hasattr(users, 'get') else None
+    # Fall back to JSON loading if MongoDB is not available or user not found
+    if not hasattr(app, 'users'):
+        app.users = _load_users_json()
+    
+    user_data = app.users.get(user_id)
     if user_data:
         return User(
             id=user_id,
-            email=user_data['email'],
-            username=user_data.get('username', user_data['email'].split('@')[0]),
-            password_hash=user_data['password_hash'],
+            email=user_data.get('email'),
+            username=user_data.get('username'),
+            password_hash=user_data.get('password_hash'),
             is_verified=user_data.get('is_verified', False),
             otp_verified=user_data.get('otp_verified', False),
-            cart=user_data.get('cart', []),
-            reset_token=user_data.get('reset_token'),
-            reset_token_expiry=user_data.get('reset_token_expiry'),
-            company_id=user_data.get('company_id')
+            company_id=user_data.get('company_id'),
+            role=user_data.get('role', 'user'),
+            customers=user_data.get('customers', [])
         )
     return None
 
