@@ -4,50 +4,76 @@ let currentCompanyPage = 1; // Current page number for companies pagination
 
 // Initialize DataTables for admin tables
 $(document).ready(function() {
-    // Initialize companies table if it exists
-    if ($('#companiesTable').length) {
-        $('#companiesTable').DataTable({
-            "pageLength": companiesPerPage,
-            "responsive": true,
-            "order": [[0, "desc"]],
-            "language": {
-                "search": "_INPUT_",
-                "searchPlaceholder": "Search companies..."
-            }
-        });
+    // Initialize companies table if it exists and not already initialized
+    if ($('#companiesTable').length && !$.fn.DataTable.isDataTable('#companiesTable')) {
+        try {
+            $('#companiesTable').DataTable({
+                "pageLength": companiesPerPage,
+                "responsive": true,
+                "order": [[0, "desc"]],
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search companies..."
+                },
+                "columnDefs": [
+                    {
+                        "targets": -1, // Last column (actions)
+                        "orderable": false,
+                        "searchable": false
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error('Error initializing companies table:', e);
+        }
     }
 
-    // Initialize users table if it exists
-    if ($('#usersTable').length) {
-        $('#usersTable').DataTable({
-            "pageLength": 10,
-            "responsive": true,
-            "order": [[0, "desc"]],
-            "language": {
-                "search": "_INPUT_",
-                "searchPlaceholder": "Search users..."
-            }
-        });
+    // Initialize users table if it exists and not already initialized
+    if ($('#usersTable').length && !$.fn.DataTable.isDataTable('#usersTable')) {
+        try {
+            $('#usersTable').DataTable({
+                "pageLength": 10,
+                "responsive": true,
+                "order": [[0, "desc"]],
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search users..."
+                },
+                "columnDefs": [
+                    {
+                        "targets": -1, // Last column (actions)
+                        "orderable": false,
+                        "searchable": false
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error('Error initializing users table:', e);
+        }
     }
 
-    // Initialize customers table if it exists
-    if ($('#customersTable').length) {
-        window.customersTable = $('#customersTable').DataTable({
-            "pageLength": 10,
-            "responsive": true,
-            "order": [[0, "desc"]],
-            "language": {
-                "search": "_INPUT_",
-                "searchPlaceholder": "Search customers..."
-            },
-            "columnDefs": [
-                {
-                    "targets": -1, // Last column (actions)
-                    "orderable": false,
-                    "searchable": false
-                }
-            ]
-        });
+    // Initialize customers table if it exists and not already initialized
+    if ($('#customersTable').length && !$.fn.DataTable.isDataTable('#customersTable')) {
+        try {
+            window.customersTable = $('#customersTable').DataTable({
+                "pageLength": 10,
+                "responsive": true,
+                "order": [[0, "desc"]],
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search customers..."
+                },
+                "columnDefs": [
+                    {
+                        "targets": -1, // Last column (actions)
+                        "orderable": false,
+                        "searchable": false
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error('Error initializing customers table:', e);
+        }
     }
 });
 
