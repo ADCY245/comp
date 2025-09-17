@@ -4782,6 +4782,109 @@ def admin_search_companies():
         app.logger.error(f"Error searching companies: {str(e)}")
         return jsonify({'error': 'Failed to search companies'}), 500
 
+
+# ---------------------------------------------------------------------------
+# Admin Company Detail CRUD Endpoints (create, view, update, delete)
+# ---------------------------------------------------------------------------
+
+@app.route('/api/admin/companies', methods=['POST'])
+@login_required
+def admin_create_company():
+    """Create a new company (admin only)."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+    if not request.is_json:
+        return jsonify({'error': 'Expected JSON payload'}), 400
+
+    try:
+        data = request.get_json()
+        name = data.get('companyName') or data.get('name')
+        email = data.get('companyEmail') or data.get('email')
+        address = data.get('companyAddress') or data.get('address', '')
+        now = datetime.utcnow()
+
+        if not name or not email:
+            return jsonify({'error': 'Name and email are required'}), 400
+
+        if MONGO_AVAILABLE and USE_MONGO:
+            company_doc = {
+                'Company Name': name,
+                'EmailID': email,
+                'Address': address,
+                'created_at': now,
+                'updated_at': now
+            }
+            result = mongo_db.companies.insert_one(company_doc)
+            return jsonify({'success': True, 'company_id': str(result.inserted_id)})
+
+        return jsonify({'error': 'Database not available'}), 500
+    except Exception as e:
+        app.logger.error(f"Error creating company: {e}")
+        return jsonify({'error': 'Failed to create company'}), 500
+
+
+@app.route('/api/admin/companies/<company_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def admin_company_detail(company_id):
+    """Retrieve, update, or delete a company by ID (admin only)."""
+    if getattr(current_user, 'role', None) != 'admin':
+        abort(403)
+
+    if not (MONGO_AVAILABLE and USE_MONGO):
+        return jsonify({'error': 'Database not available'}), 500
+
+    from bson import ObjectId
+
+    try:
+        company_oid = ObjectId(company_id)
+    except Exception:
+        return jsonify({'error': 'Invalid company ID'}), 400
+
+    try:
+        if request.method == 'GET':
+            company_doc = mongo_db.companies.find_one({'_id': company_oid})
+            if not company_doc:
+                return jsonify({'error': 'Company not found'}), 404
+            company_data = {
+                'id': str(company_doc['_id']),
+                'name': company_doc.get('Company Name', ''),
+                'email': company_doc.get('EmailID', ''),
+                'address': company_doc.get('Address', ''),
+                'created_at': company_doc.get('created_at', '')
+            }
+            return jsonify({'success': True, 'company': company_data})
+
+        elif request.method == 'PUT':
+            if not request.is_json:
+                return jsonify({'error': 'Expected JSON payload'}), 400
+            data = request.get_json()
+            updates = {}
+            if 'companyName' in data or 'name' in data:
+                updates['Company Name'] = data.get('companyName') or data.get('name')
+            if 'companyEmail' in data or 'email' in data:
+                updates['EmailID'] = data.get('companyEmail') or data.get('email')
+            if 'companyAddress' in data or 'address' in data:
+                updates['Address'] = data.get('companyAddress') or data.get('address')
+            updates['updated_at'] = datetime.utcnow()
+            if not updates:
+                return jsonify({'error': 'No valid fields to update'}), 400
+
+            result = mongo_db.companies.update_one({'_id': company_oid}, {'$set': updates})
+            if result.matched_count == 0:
+                return jsonify({'error': 'Company not found'}), 404
+            return jsonify({'success': True, 'message': 'Company updated successfully'})
+
+        elif request.method == 'DELETE':
+            result = mongo_db.companies.delete_one({'_id': company_oid})
+            if result.deleted_count == 0:
+                return jsonify({'error': 'Company not found'}), 404
+            return jsonify({'success': True, 'message': 'Company deleted successfully'})
+
+    except Exception as e:
+        app.logger.error(f"Error processing company detail: {e}")
+        return jsonify({'error': 'Failed to process request'}), 500
+
+
 # Quotation Management
 @app.route('/admin/quotations')
 @login_required
