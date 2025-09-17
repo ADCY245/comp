@@ -1,0 +1,62 @@
+services:
+  # Python/Flask Service
+  - type: web
+    name: wqa-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      # Python and Server Configuration
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 10000
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app.py
+      - key: NODE_ENV
+        value: production
+
+  # PHP Service
+  - type: web
+    name: php-auth
+    env: php
+    buildCommand: cd php && composer install
+    startCommand: cd php && php -S 0.0.0.0:$PORT -t .
+    envVars:
+      - key: PORT
+        value: 10001
+      - key: MONGODB_URI
+        fromDatabase:
+          name: mongodb
+          property: connectionString
+      - key: DB_NAME
+        value: your_database_name
+      - key: JWT_SECRET
+        generateValue: true
+
+      # JWT Configuration
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+      # Email Configuration
+      - key: EMAIL_FROM
+        value: noreply@yourdomain.com
+      - key: EMAIL_FROM_NAME
+        value: Product Calculator
+
+      # SMTP Configuration
+      # Note: Set these as secret environment variables in Render dashboard
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+
+      # Frontend URL (for email links)
+      - key: FRONTEND_URL
+        value: https://comp-0qv1.onrender.com/

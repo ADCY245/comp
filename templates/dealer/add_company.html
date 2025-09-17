@@ -1,0 +1,118 @@
+{% extends "dealer/base.html" %}
+
+{% block title %}Add New Company{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Add New Company</h4>
+                </div>
+                <div class="card-body">
+                    <form id="addCompanyForm">
+                        <div class="mb-3">
+                            <label for="companyName" class="form-label">Company Name *</label>
+                            <input type="text" class="form-control" id="companyName" required>
+                            <div class="invalid-feedback">
+                                Please provide a company name.
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="companyEmail" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="companyEmail" required>
+                            <div class="invalid-feedback">
+                                Please provide a valid email address.
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
+                                Add Company
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Response Message -->
+            <div id="responseMessage" class="mt-3 d-none">
+                <div class="alert" role="alert">
+                    <p id="messageText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('addCompanyForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const responseDiv = document.getElementById('responseMessage');
+    const messageText = document.getElementById('messageText');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!form.checkValidity()) {
+            e.stopPropagation();
+            form.classList.add('was-validated');
+            return;
+        }
+
+        const companyData = {
+            name: document.getElementById('companyName').value.trim(),
+            email: document.getElementById('companyEmail').value.trim()
+        };
+
+        try {
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            const response = await fetch('/api/dealer/companies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(companyData)
+            });
+
+            const data = await response.json();
+            
+            // Show response message
+            responseDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
+            
+            if (response.ok) {
+                responseDiv.classList.add('alert-success');
+                messageText.textContent = 'Company added successfully!';
+                form.reset();
+                form.classList.remove('was-validated');
+                
+                // Redirect to companies list after a short delay
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("dealer_companies") }}';
+                }, 1500);
+            } else {
+                responseDiv.classList.add('alert-danger');
+                messageText.textContent = data.message || 'Failed to add company. Please try again.';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            responseDiv.classList.remove('d-none', 'alert-success');
+            responseDiv.classList.add('alert-danger');
+            messageText.textContent = 'An error occurred. Please try again.';
+        } finally {
+            // Reset loading state
+            submitBtn.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,5 @@
+{% if current_user.is_authenticated and current_user is defined and current_user.role is defined and current_user.role|lower == 'dealer' %}
+    {% extends 'dealer/base.html' %}
+{% else %}
+    {% extends 'user/base.html' %}
+{% endif %}
