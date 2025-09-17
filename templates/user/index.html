@@ -111,7 +111,7 @@
                                 <input type="text" class="form-control form-control-lg" id="companyInput" 
                                        placeholder="Start typing company name..." autocomplete="off" required>
                                 <div id="searchResults" class="search-results mt-1"></div>
-                                <div class="form-text">Start typing to filter companies or leave empty to see all</div>
+                                <div class="form-text">Click to see all companies or type to filter</div>
                             </div>
                             
                             <!-- Dropdown (hidden by default) -->
@@ -377,8 +377,19 @@ const ChemoApp = (function() {
             });
         }
         
+        if (elements.toggleSearch) {
+            elements.toggleSearch.addEventListener('change', toggleSearchMode);
+        }
+        
         if (elements.companyInput) {
             elements.companyInput.addEventListener('input', handleCompanySearch);
+            elements.companyInput.addEventListener('focus', showAllCompanies);
+            elements.companyInput.addEventListener('click', function(e) {
+                // Only show all companies if the search results are not already visible
+                if (elements.searchResults.style.display !== 'block') {
+                    showAllCompanies();
+                }
+            });
         }
         
         if (elements.selectCompanyBtn) {
@@ -433,18 +444,36 @@ const ChemoApp = (function() {
         });
     }
 
+    // Show all companies in search results
+    function showAllCompanies() {
+        elements.searchResults.innerHTML = '';
+        state.companies.forEach(company => {
+            const item = document.createElement('div');
+            item.className = 'search-item';
+            item.innerHTML = `
+                <strong>${company.name || 'Unnamed Company'}</strong><br>
+                <small class="text-muted">${company.email || ''}</small>
+            `;
+            item.addEventListener('click', () => selectCompanyFromResults(company));
+            elements.searchResults.appendChild(item);
+        });
+        elements.searchResults.style.display = 'block';
+    }
+
     // Handle company search input
     function handleCompanySearch(e) {
         const query = e.target.value.trim().toLowerCase();
         elements.searchResults.innerHTML = '';
-        elements.searchResults.style.display = 'none';
         
-        // If search is empty, show all companies
-        const results = query === '' 
-            ? [...state.companies] 
-            : state.companies.filter(company => 
-                company.name && company.name.toLowerCase().includes(query)
-              );
+        if (query === '') {
+            showAllCompanies();
+            return;
+        }
+        
+        // Filter companies based on search query
+        const results = state.companies.filter(company => 
+            company.name && company.name.toLowerCase().includes(query)
+        );
         
         if (results.length === 0) {
             const noResults = document.createElement('div');
@@ -464,9 +493,7 @@ const ChemoApp = (function() {
             });
         }
         
-        if (query !== '') {
-            elements.searchResults.style.display = 'block';
-        }
+        elements.searchResults.style.display = 'block';
     }
 
     // Select company from search results
