@@ -1881,17 +1881,37 @@ def _filter_companies_for_current_user(companies):
     """Admins see all companies; normal users see only their assigned customers."""
     try:
         # If not logged in or admin, return full list
-        if not current_user.is_authenticated or getattr(current_user, 'role', 'user').lower() == 'admin':
+                if (
+            not current_user.is_authenticated or
+            getattr(current_user, 'role', 'user').lower() in ('admin', 'hod')
+        ):
             return companies
-        assigned_ids = []
+                # --- Begin debug helpers for customer assignment ---
+        assigned_ids = []  # Will collect company IDs assigned to the current user
+        raw_assignment_field = None
         if MONGO_AVAILABLE and USE_MONGO:
             try:
-                doc = mu_find_user_by_id(str(current_user.id))
+                                doc = mu_find_user_by_id(str(current_user.id))
+                raw_assignment_field = doc.get('customers_assigned') if doc else None
                 if doc:
-                    assigned_ids = [str(cid) for cid in doc.get('customers_assigned', [])]
+                    # Log raw assignment field for easier debugging
+                    app.logger.debug(f"User {current_user.id} raw customers_assigned: {raw_assignment_field}")
+                    # Normalise the assignment list: support ObjectId, string or dict with 'id'
+                    normalised = []
+                    for cid in (raw_assignment_field or []):
+                        try:
+                            if isinstance(cid, dict) and 'id' in cid:
+                                normalised.append(str(cid['id']))
+                            else:
+                                normalised.append(str(cid))
+                        except Exception as conv_err:
+                            app.logger.warning(f"Could not convert assigned company id {cid}: {conv_err}")
+                    assigned_ids = normalised
             except Exception as e:
-                app.logger.error(f"Error reading user assignments: {e}")
+                app.logger.error(f"Error reading user assignments for user {current_user.id}: {e}")
         # Fallback – empty list blocks everything
+                # Debug: show end result of assignments collected
+        app.logger.debug(f"Assigned company IDs after normalisation: {assigned_ids}")
         if not assigned_ids:
             return []
         return [c for c in (companies or []) if str(c.get('id')) in assigned_ids]
@@ -4711,6 +4731,51 @@ def admin_delete_user(user_id):
     except Exception as e:
         app.logger.error(f"Error deleting user: {str(e)}")
         return jsonify({'error': 'Failed to delete user'}), 500
+
+# ---------------------------------------------------------------------------
+# Customer Assignment API (Admin / HOD only)
+# ---------------------------------------------------------------------------
+
+@app.route('/api/admin/users/<user_id>/assign_customers', methods=['PUT'])
+@login_required
+def admin_assign_customers(user_id):
+    """Assign a list of company IDs to a salesperson (or any user).
+
+    Expected JSON body:
+        {
+            "company_ids": ["<companyId1>", "<companyId2>", ...]
+        }
+    """
+    allowed_roles = {'admin', 'hod'}
+    if getattr(current_user, 'role', '').lower() not in allowed_roles:
+        abort(403)
+
+    try:
+        data = request.get_json(force=True)
+        company_ids = data.get('company_ids', []) if isinstance(data, dict) else []
+        if not isinstance(company_ids, list):
+            return jsonify({'error': 'company_ids must be a list'}), 400
+
+        # Normalise to strings and drop falsy values
+        clean_ids = [str(cid) for cid in company_ids if cid]
+
+        if MONGO_AVAILABLE and USE_MONGO:
+            from bson import ObjectId
+            result = mongo_db.users.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': {
+                    'customers_assigned': clean_ids,
+                    'updated_at': datetime.utcnow()
+                }}
+            )
+            if result.matched_count == 0:
+                return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({'success': True, 'assigned_ids': clean_ids})
+
+    except Exception as e:
+        app.logger.error(f"Error assigning customers: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to assign customers'}), 500
 
 # Company Management APIs
 @app.route('/api/admin/companies')

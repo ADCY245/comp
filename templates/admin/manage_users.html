@@ -232,7 +232,15 @@
                             <select class="form-select" id="role" name="role" required>
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
+                                <option value="hod">HOD</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="assignedCompanies" class="form-label">Assigned Customers</label>
+                            <select multiple class="form-select" id="assignedCompanies" name="assignedCompanies" size="6">
+                                <!-- Companies filled in dynamically -->
+                            </select>
+                            <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple customers</small>
                         </div>
                     </form>
                 </div>
@@ -294,6 +302,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadUsers();
             loadCompanies();
+            populateCompanyDropdown();
             
             // Check if we should auto-open add user modal
             const urlParams = new URLSearchParams(window.location.search);
@@ -410,6 +419,24 @@
             });
         }
         
+        // Populate dropdown for company assignments
+        async function populateCompanyDropdown() {
+            try {
+                const response = await fetch(`/api/admin/companies?page=0&limit=1000`);
+                const data = await response.json();
+                if (data.success) {
+                    const select = document.getElementById('assignedCompanies');
+                    select.innerHTML = '';
+                    data.companies.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (err) { console.error('dropdown companies load error', err); }
+        }
+
         // Create company item element
         function createCompanyItem(company) {
             const item = document.createElement('div');
@@ -463,6 +490,22 @@
             new bootstrap.Modal(document.getElementById('companyModal')).show();
         }
         
+        // Save user-company assignments
+        async function saveUserAssignments(userId) {
+            const selectedIds = Array.from(document.getElementById('assignedCompanies').selectedOptions).map(o => o.value);
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/assign_customers`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_ids: selectedIds })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    console.warn('Assignments save error', data);
+                }
+            } catch (err) { console.error('Assignments saving failed', err); }
+        }
+
         // CRUD operations
         async function saveUser() {
             const form = document.getElementById('userForm');
@@ -484,6 +527,10 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // Persist company assignments (only if editing existing user)
+                    if (userData.userId) {
+                        await saveUserAssignments(userData.userId);
+                    }
                     bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
                     loadUsers();
                     alert('User saved successfully!');
@@ -510,6 +557,11 @@
                     document.getElementById('email').value = user.email;
                     document.getElementById('role').value = user.role;
                     document.getElementById('password').required = false;
+                    // Preselect assigned customers if present
+                    const companySelect = document.getElementById('assignedCompanies');
+                    Array.from(companySelect.options).forEach(opt => {
+                        opt.selected = (user.customers_assigned || []).includes(opt.value);
+                    });
                     
                     new bootstrap.Modal(document.getElementById('userModal')).show();
                 }
