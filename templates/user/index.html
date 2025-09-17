@@ -98,13 +98,34 @@
                         <input type="hidden" name="company_name" id="companyName">
                         <input type="hidden" name="company_email" id="companyEmail">
                         <div class="form-group mb-4">
-                            <label for="companyInput" class="form-label fw-medium">Search for your company</label>
-                            <div class="position-relative">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="companyInput" class="form-label fw-medium mb-0">Search for your company</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="toggleSearch" checked>
+                                    <label class="form-check-label" for="toggleSearch">Search</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Search Input (visible by default) -->
+                            <div id="searchContainer" class="position-relative">
                                 <input type="text" class="form-control form-control-lg" id="companyInput" 
                                        placeholder="Start typing company name..." autocomplete="off" required>
                                 <div id="searchResults" class="search-results mt-1"></div>
+                                <div class="form-text">Type at least 2 characters to see matching results</div>
                             </div>
-                            <div class="form-text">Type at least 2 characters to see matching results</div>
+                            
+                            <!-- Dropdown (hidden by default) -->
+                            <div id="dropdownContainer" class="d-none">
+                                <select class="form-select form-select-lg" id="companyDropdown">
+                                    <option value="" selected disabled>Select a company...</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-muted">Can't find your company?</small>
+                                <a href="{{ url_for('add_company') }}" class="text-decoration-none">Add New Company</a>
+                            </div>
                         </div>
                         <div class="d-grid gap-2">
                             <button type="button" id="selectCompanyBtn" class="btn btn-primary btn-lg" disabled>
@@ -188,7 +209,11 @@ const ChemoApp = (function() {
         productNav: document.getElementById('productNav'),
         mpacksLink: document.getElementById('mpacksLink'),
         blanketsLink: document.getElementById('blanketsLink'),
-        cartCount: document.getElementById('cartCount')
+        cartCount: document.getElementById('cartCount'),
+        toggleSearch: document.getElementById('toggleSearch'),
+        searchContainer: document.getElementById('searchContainer'),
+        dropdownContainer: document.getElementById('dropdownContainer'),
+        companyDropdown: document.getElementById('companyDropdown')
     };
 
     // Initialize the application
@@ -203,6 +228,12 @@ const ChemoApp = (function() {
         // Reset state
         state.selectedCompany = null;
         
+        // Sort companies alphabetically by name
+        state.companies.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Populate dropdown with companies
+        populateCompanyDropdown();
+        
         // Set up UI
         setupEventListeners();
         setupProductButtons();
@@ -211,6 +242,64 @@ const ChemoApp = (function() {
         showCompanySelection();
         
         updateCartCount();
+    }
+    
+    // Populate the company dropdown with sorted companies
+    function populateCompanyDropdown() {
+        if (!elements.companyDropdown) return;
+        
+        // Clear existing options except the first one
+        while (elements.companyDropdown.options.length > 1) {
+            elements.companyDropdown.remove(1);
+        }
+        
+        // Add companies to dropdown
+        state.companies.forEach(company => {
+            const option = document.createElement('option');
+            option.value = company.id;
+            option.textContent = company.name;
+            elements.companyDropdown.appendChild(option);
+        });
+    }
+    
+    // Toggle between search and dropdown modes
+    function toggleSearchMode() {
+        if (elements.toggleSearch.checked) {
+            // Switch to search mode
+            elements.searchContainer.classList.remove('d-none');
+            elements.dropdownContainer.classList.add('d-none');
+            elements.companyInput.focus();
+        } else {
+            // Switch to dropdown mode
+            elements.searchContainer.classList.add('d-none');
+            elements.dropdownContainer.classList.remove('d-none');
+            elements.companyDropdown.focus();
+        }
+        // Clear any selected company when switching modes
+        clearCompanySelection();
+    }
+    
+    // Handle company selection from dropdown
+    function handleDropdownSelection() {
+        const selectedId = elements.companyDropdown.value;
+        if (!selectedId) {
+            clearCompanySelection();
+            return;
+        }
+        
+        const company = state.companies.find(c => c.id === selectedId);
+        if (company) {
+            selectCompanyFromResults(company);
+        }
+    }
+    
+    // Clear the current company selection
+    function clearCompanySelection() {
+        state.selectedCompany = null;
+        elements.selectCompanyBtn.disabled = true;
+        elements.companyIdInput.value = '';
+        elements.companyNameInput.value = '';
+        elements.companyEmailInput.value = '';
     }
     
     // Show company selection section
