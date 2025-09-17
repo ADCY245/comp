@@ -147,7 +147,8 @@ def create_user(email, username, password, **kwargs):
         'updated_at': now,
         'is_verified': False,
         'otp_verified': False,
-        'role': 'user'
+        'role': 'user',
+        'customers_assigned': []  # New field: list of customer/company IDs assigned to the user
     }
     
     # Add any additional fields

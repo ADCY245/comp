@@ -1873,17 +1873,38 @@ def load_companies_data():
         app.logger.error(f"Unexpected error in load_companies_data: {str(e)}", exc_info=True)
         return []
 
+# ---------------------------------------------------------------------------
+# Helper: restrict companies list based on current user's role/assignments
+# ---------------------------------------------------------------------------
+
+def _filter_companies_for_current_user(companies):
+    """Admins see all companies; normal users see only their assigned customers."""
+    try:
+        # If not logged in or admin, return full list
+        if not current_user.is_authenticated or getattr(current_user, 'role', 'user').lower() == 'admin':
+            return companies
+        assigned_ids = []
+        if MONGO_AVAILABLE and USE_MONGO:
+            try:
+                doc = mu_find_user_by_id(str(current_user.id))
+                if doc:
+                    assigned_ids = [str(cid) for cid in doc.get('customers_assigned', [])]
+            except Exception as e:
+                app.logger.error(f"Error reading user assignments: {e}")
+        # Fallback – empty list blocks everything
+        if not assigned_ids:
+            return []
+        return [c for c in (companies or []) if str(c.get('id')) in assigned_ids]
+    except Exception as e:
+        app.logger.error(f"Error filtering companies: {e}")
+        return companies
+
 @app.route('/')
 @app.route('/index')
 @login_required
 def index():
     try:
-        companies = load_companies_data()
-        
-        # Ensure companies is a list before passing to template
-        if not isinstance(companies, list):
-            companies = []
-            
+        companies = _filter_companies_for_current_user(load_companies_data() or [])
         return render_template('user/index.html', companies=companies)
         
     except Exception as e:
@@ -2079,7 +2100,7 @@ def forgot_password_redirect():
 def api_get_companies():
     """Get all companies from the database"""
     try:
-        companies = load_companies_data()  # Use the helper function directly
+        companies = _filter_companies_for_current_user(load_companies_data())  # Apply access filter
         if not companies:
             return jsonify({'error': 'No companies found'}), 404
             
@@ -2088,6 +2109,7 @@ def api_get_companies():
             companies = [{'id': k, 'name': v.get('name'), 'email': v.get('email')} 
                         for k, v in companies.items()]
             
+        companies = _filter_companies_for_current_user(companies)
         return jsonify(companies)
     except Exception as e:
         app.logger.error(f"Error getting companies: {str(e)}")
@@ -2261,6 +2283,7 @@ def search_companies():
             else:
                 companies = []
         
+        companies = _filter_companies_for_current_user(companies)
         return jsonify(companies)
     except Exception as e:
         app.logger.error(f"Error searching companies: {str(e)}")
@@ -4046,8 +4069,6 @@ def api_login():
                 
                 if user_role == 'admin':
                     redirect_url = '/admin/dashboard'  # Admin dashboard route
-                elif user_role == 'dealer':
-                    redirect_url = '/dealer/dashboard'  # Dealer dashboard route
                 
                 if request.is_json:
                     response = jsonify({
@@ -4131,8 +4152,6 @@ def api_login():
         
         if user_role == 'admin':
             redirect_url = '/admin/dashboard'
-        elif user_role == 'dealer':
-            redirect_url = '/dealer/dashboard'
             
         return jsonify({
             'success': True,
@@ -5251,12 +5270,7 @@ def get_company_email_by_id(company_id):
 # Error handling
 @app.errorhandler(404)
 def page_not_found(e):
-    # Check if user is logged in and has a role
-    if current_user.is_authenticated and hasattr(current_user, 'role'):
-        role = current_user.role.lower()
-        if role == 'dealer':
-            return render_template('dealer/404.html'), 404
-    # Default to user template
+    """Return a role-appropriate 404 page (currently only user template)."""
     return render_template('user/404.html'), 404
 
 
