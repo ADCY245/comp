@@ -1878,45 +1878,43 @@ def load_companies_data():
 # ---------------------------------------------------------------------------
 
 def _filter_companies_for_current_user(companies):
-    """Admins see all companies; normal users see only their assigned customers."""
+    """Return a list of companies visible to the currently logged-in user.
+
+    * Admins and HODs see every company
+    * Other users see only the companies whose IDs are in their `customers_assigned` list
+    """
     try:
-        # If not logged in or admin, return full list
-                if (
-            not current_user.is_authenticated or
-            getattr(current_user, 'role', 'user').lower() in ('admin', 'hod')
-        ):
+        # 1. Fast-exit for admins / HODs or anonymous
+        role = getattr(current_user, 'role', 'user').lower() if current_user.is_authenticated else 'anon'
+        if role in ('admin', 'hod') or role == 'anon':
             return companies
-                # --- Begin debug helpers for customer assignment ---
-        assigned_ids = []  # Will collect company IDs assigned to the current user
-        raw_assignment_field = None
+
+        # 2. Gather the customer assignments for this user
+        assigned_ids: list[str] = []
         if MONGO_AVAILABLE and USE_MONGO:
             try:
-                                doc = mu_find_user_by_id(str(current_user.id))
-                raw_assignment_field = doc.get('customers_assigned') if doc else None
-                if doc:
-                    # Log raw assignment field for easier debugging
-                    app.logger.debug(f"User {current_user.id} raw customers_assigned: {raw_assignment_field}")
-                    # Normalise the assignment list: support ObjectId, string or dict with 'id'
-                    normalised = []
-                    for cid in (raw_assignment_field or []):
-                        try:
-                            if isinstance(cid, dict) and 'id' in cid:
-                                normalised.append(str(cid['id']))
-                            else:
-                                normalised.append(str(cid))
-                        except Exception as conv_err:
-                            app.logger.warning(f"Could not convert assigned company id {cid}: {conv_err}")
-                    assigned_ids = normalised
-            except Exception as e:
-                app.logger.error(f"Error reading user assignments for user {current_user.id}: {e}")
-        # Fallback – empty list blocks everything
-                # Debug: show end result of assignments collected
-        app.logger.debug(f"Assigned company IDs after normalisation: {assigned_ids}")
+                user_doc = mu_find_user_by_id(str(current_user.id))
+                raw = user_doc.get('customers_assigned', []) if user_doc else []
+                # Normalise every id to string
+                for cid in raw:
+                    if isinstance(cid, dict) and 'id' in cid:
+                        assigned_ids.append(str(cid['id']))
+                    else:
+                        assigned_ids.append(str(cid))
+            except Exception as err:
+                app.logger.error("Failed loading customers_assigned for user %s: %s", current_user.id, err)
+
+        app.logger.debug("Assigned company IDs for user %s ⇒ %s", current_user.id, assigned_ids)
+
+        # 3. If no assignment, block access
         if not assigned_ids:
             return []
+
+        # 4. Filter provided companies list
         return [c for c in (companies or []) if str(c.get('id')) in assigned_ids]
+
     except Exception as e:
-        app.logger.error(f"Error filtering companies: {e}")
+        app.logger.exception("Error in _filter_companies_for_current_user: %s", e)
         return companies
 
 @app.route('/')
