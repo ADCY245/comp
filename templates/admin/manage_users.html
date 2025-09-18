@@ -139,7 +139,6 @@
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th>Role</th>
-                                        <th>Company</th>
                                         <th>Created</th>
                                         <th>Actions</th>
                                     </tr>
@@ -343,7 +342,6 @@
                     <td>${user.username}</td>
                     <td>${user.email}</td>
                     <td><span class="badge role-badge bg-${getRoleBadgeColor(user.role)}">${user.role}</span></td>
-                    <td>${user.company_name || 'N/A'}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary btn-action" onclick="editUser('${user.id}')">
