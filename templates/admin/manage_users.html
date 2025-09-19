@@ -271,12 +271,30 @@
                             <input type="text" class="form-control" id="companyName" name="companyName" required>
                         </div>
                         <div class="mb-3">
-                            <label for="companyEmail" class="form-label">Email</label>
+                            <label for="companyEmail" class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" class="form-control" id="companyEmail" name="companyEmail" required>
                         </div>
                         <div class="mb-3">
-                            <label for="companyAddress" class="form-label">Address</label>
-                            <textarea class="form-control" id="companyAddress" name="companyAddress" rows="3"></textarea>
+                            <label for="companyPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="companyPhone" name="companyPhone" pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addressLine1" class="form-label">Address Line 1 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="addressLine1" name="addressLine1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addressLine2" class="form-label">Address Line 2</label>
+                            <input type="text" class="form-control" id="addressLine2" name="addressLine2">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="state" class="form-label">State <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="state" name="state" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="pincode" class="form-label">Pincode <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="pincode" name="pincode" pattern="[0-9]{6}" title="Please enter a valid 6-digit pincode" required>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Registration Type <span class="text-danger">*</span></label>
@@ -505,12 +523,21 @@
         }
         
         function showAddCompanyModal() {
-            document.getElementById('companyForm').reset();
+            const form = document.getElementById('companyForm');
+            form.reset();
             document.getElementById('companyId').value = '';
             document.getElementById('companyModalTitle').textContent = 'Add New Company';
             // Set default to RC and show GSTIN field
             document.getElementById('rcType').checked = true;
             toggleGSTINField(true);
+            
+            // Add required attribute to mandatory fields
+            const requiredFields = ['companyName', 'companyEmail', 'companyPhone', 'addressLine1', 'state', 'pincode'];
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) element.required = true;
+            });
+            
             new bootstrap.Modal(document.getElementById('companyModal')).show();
         }
         
@@ -654,7 +681,11 @@
                     body: JSON.stringify({
                         name: data.companyName,
                         email: data.companyEmail,
-                        address: data.companyAddress,
+                        phone: data.companyPhone,
+                        addressLine1: data.addressLine1,
+                        addressLine2: data.addressLine2,
+                        state: data.state,
+                        pincode: data.pincode,
                         gstin: gstin,
                         registrationType: registrationType
                     })
@@ -685,8 +716,12 @@
                     document.getElementById('companyModalTitle').textContent = 'Edit Company';
                     document.getElementById('companyId').value = company._id;
                     document.getElementById('companyName').value = company.name || '';
-                    document.getElementById('companyEmail').value = company.email || '';
-                    document.getElementById('companyAddress').value = company.address || '';
+document.getElementById('companyEmail').value = company.email || '';
+                    document.getElementById('companyPhone').value = company.phone || '';
+                    document.getElementById('addressLine1').value = company.addressLine1 || '';
+                    document.getElementById('addressLine2').value = company.addressLine2 || '';
+                    document.getElementById('state').value = company.state || '';
+                    document.getElementById('pincode').value = company.pincode || '';
                     
                     // Set registration type and GSTIN
                     if (company.gstin === 'URC' || company.registrationType === 'URC') {
