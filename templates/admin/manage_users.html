@@ -167,9 +167,13 @@
                                 <button class="btn btn-light btn-sm me-2" onclick="showAddCompanyModal()">
                                     <i class="fas fa-plus me-1"></i> Add Company
                                 </button>
-                                <button class="btn btn-outline-light btn-sm" onclick="showAllCompanies()">
-                                    <i class="fas fa-list me-1"></i> View All
+                                <button class="btn btn-outline-light btn-sm me-2" onclick="exportCompaniesToExcel()">
+                                    <i class="fas fa-file-export me-1"></i> Export
                                 </button>
+                                <label class="btn btn-outline-light btn-sm mb-0" style="cursor: pointer;">
+                                    <i class="fas fa-file-import me-1"></i> Import
+                                    <input type="file" id="importExcel" accept=".xlsx, .xls" style="display: none;" onchange="importCompaniesFromExcel(this)">
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -291,6 +295,8 @@
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <!-- SheetJS (xlsx) for Excel handling -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <script>
         let usersTable;
@@ -694,6 +700,95 @@
         
         function showAllCompanies() {
             window.open('/admin/companies/all', '_blank');
+        }
+        
+        // Export companies to Excel
+        function exportCompaniesToExcel() {
+            fetch('/api/companies')
+                .then(response => response.json())
+                .then(companies => {
+                    // Prepare data for Excel
+                    const data = companies.map(company => ({
+                        'Company Name': company.name || '',
+                        'Email': company.email || '',
+                        'Phone': company.phone || '',
+                        'Address': company.address || '',
+                        'Created At': company.createdAt ? new Date(company.createdAt).toLocaleString() : ''
+                    }));
+
+                    // Create workbook and worksheet
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Companies');
+
+                    // Generate Excel file and trigger download
+                    const fileName = `companies_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                })
+                .catch(error => {
+                    console.error('Error exporting companies:', error);
+                    alert('Failed to export companies. Please try again.');
+                });
+        }
+
+        // Import companies from Excel
+        function importCompaniesFromExcel(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    // Validate and format data
+                    const companies = jsonData.map(row => ({
+                        name: row['Company Name'] || '',
+                        email: row['Email'] || '',
+                        phone: row['Phone'] ? String(row['Phone']) : '',
+                        address: row['Address'] || ''
+                    })).filter(company => company.name); // Only include companies with names
+
+                    if (companies.length === 0) {
+                        alert('No valid company data found in the Excel file.');
+                        return;
+                    }
+
+                    // Send data to server
+                    fetch('/api/companies/import', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ companies })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(`Successfully imported ${data.importedCount} companies.`);
+                            loadCompanies(0); // Refresh the companies list
+                        } else {
+                            throw new Error(data.message || 'Failed to import companies');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error importing companies:', error);
+                        alert(`Error importing companies: ${error.message}`);
+                    });
+
+                } catch (error) {
+                    console.error('Error processing Excel file:', error);
+                    alert('Error processing Excel file. Please make sure it is a valid Excel file.');
+                } finally {
+                    // Reset the file input
+                    input.value = '';
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
         }
     </script>
 </body>
