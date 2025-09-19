@@ -238,6 +238,12 @@ const ChemoApp = (function() {
         setupEventListeners();
         setupProductButtons();
         
+        // Ensure dropdown is shown by default
+        if (elements.toggleSearch) {
+            elements.toggleSearch.checked = false;
+            toggleSearchMode();
+        }
+        
         // Always show company selection on page load
         showCompanySelection();
         
