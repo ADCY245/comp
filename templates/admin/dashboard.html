@@ -45,7 +45,16 @@
         }
         .chart-container {
             position: relative;
-            height: 300px;
+            width: 100%;
+            min-height: 250px;
+            max-height: 400px;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                min-height: 200px;
+                max-height: 300px;
+            }
         }
         .activity-item {
             padding: 0.75rem;
