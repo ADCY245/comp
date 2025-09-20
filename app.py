@@ -4973,21 +4973,44 @@ def admin_get_quotations():
                     total_post_gst = float(quot_doc.get('total_amount', 0))
                     gst_amount = max(0, total_post_gst - total_pre_gst)
                     
+                    # Get company name from various possible fields
+                    company_name = (
+                        quot_doc.get('company_name') or 
+                        quot_doc.get('customer_name') or 
+                        quot_doc.get('company') or 
+                        'N/A'
+                    )
+                    
+                    # Get company email from various possible fields
+                    company_email = quot_doc.get('company_email', quot_doc.get('customer_email', ''))
+                    
+                    # Get status, default to 'draft' if not set
+                    status = quot_doc.get('status', 'draft')
+                    
+                    # Get products count
+                    products_count = len(quot_doc.get('products', []))
+                    
+                    # Get total amount, default to 0 if not set
+                    total_amount = float(quot_doc.get('total_amount', 0))
+                    
                     quotation_data = {
                         'id': str(quot_doc.get('_id', '')),  # Use MongoDB _id as the primary ID
                         'quote_id': quot_doc.get('quote_id', ''),  # Human-readable quote ID
                         'user_id': quot_doc.get('user_id', ''),
                         'username': quot_doc.get('username', ''),  # Add username from quotation data
                         'user_email': quot_doc.get('user_email', ''),
-                        'company_name': quot_doc.get('company_name', quot_doc.get('customer_name', 'No Company')),
-                        'company_email': quot_doc.get('company_email', quot_doc.get('customer_email', '')),
-                        'customer_name': quot_doc.get('customer_name', ''),  # For backward compatibility
-                        'customer_email': quot_doc.get('customer_email', ''),  # For backward compatibility
+                        'company_name': company_name,
+                        'company_email': company_email,
+                        'customer_name': company_name,  # For backward compatibility
+                        'customer_email': company_email,  # For backward compatibility
                         'total_amount_pre_gst': total_pre_gst,
-                        'gst_amount': gst_amount,
+                        'total_gst': gst_amount,
+                        'total_amount': total_amount,
                         'total_amount_post_gst': total_post_gst,
                         'created_at': formatted_date,
-                        'products_count': len(quot_doc.get('products', []))
+                        'products_count': products_count,
+                        'status': status,
+                        'total_discount': float(quot_doc.get('total_discount', 0))
                     }
                     quotations_list.append(quotation_data)
         
