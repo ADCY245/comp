@@ -387,6 +387,11 @@ const ChemoApp = (function() {
             elements.toggleSearch.addEventListener('change', toggleSearchMode);
         }
         
+        // Add change event listener for company dropdown
+        if (elements.companyDropdown) {
+            elements.companyDropdown.addEventListener('change', handleDropdownSelection);
+        }
+        
         if (elements.companyInput) {
             elements.companyInput.addEventListener('input', handleCompanySearch);
             elements.companyInput.addEventListener('focus', showAllCompanies);
