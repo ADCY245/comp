@@ -527,10 +527,12 @@
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h6>Amount Summary</h6>
-                                <p class="mb-1">Pre-GST: ₹${(quotation.total_amount_pre_gst || 0).toLocaleString('en-IN')}</p>
-                                <p class="mb-1">GST: ₹${(quotation.gst_amount || 0).toLocaleString('en-IN')}</p>
+                                <p class="mb-1">Subtotal: ₹${(quotation.subtotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                <p class="mb-1">Discount: -₹${(quotation.total_discount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                <p class="mb-1">Pre-GST: ₹${(quotation.total_amount_pre_gst || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                <p class="mb-1">GST: ₹${(quotation.total_gst || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                 <hr>
-                                <h5 class="text-success">Total: ₹${(quotation.total_amount_post_gst || 0).toLocaleString('en-IN')}</h5>
+                                <h5 class="text-success">Total: ₹${(quotation.total_amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h5>
                             </div>
                         </div>
                     </div>

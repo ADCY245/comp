@@ -4436,27 +4436,7 @@ def admin_get_users():
                 user_data = {
                     'id': str(user_doc['_id']),
                     'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'created_at': user_doc.get('created_at', ''),
-                    'is_verified': user_doc.get('is_verified', False)
-                }
-                users_list.append(user_data)
-        else:
-            # Fallback to JSON
-            users = _load_users_json()
-            for user_id, user in users.items():
-                user_data = {
-                    'id': user_id,
-                    'username': user.username,
-                    'email': user.email,
-                    'role': getattr(user, 'role', 'user'),
-                    'company_name': getattr(user, 'company_name', ''),
-                    'company_id': getattr(user, 'company_id', ''),
-                    'created_at': '',
-                    'is_verified': getattr(user, 'is_verified', False)
+                    'email': user_doc.get('email', '')
                 }
                 users_list.append(user_data)
         
