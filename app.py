@@ -4989,6 +4989,10 @@ def admin_get_quotations():
                     discount = float(quot_doc.get('total_discount', 0))
                     total_pre_gst = max(0, subtotal - discount)
                     
+                    # Calculate GST amount (difference between post-GST and pre-GST amounts)
+                    total_post_gst = float(quot_doc.get('total_amount', 0))
+                    gst_amount = max(0, total_post_gst - total_pre_gst)
+                    
                     quotation_data = {
                         'id': str(quot_doc.get('_id', '')),  # Use MongoDB _id as the primary ID
                         'quote_id': quot_doc.get('quote_id', ''),  # Human-readable quote ID
@@ -4998,7 +5002,8 @@ def admin_get_quotations():
                         'company_name': quot_doc.get('customer_name', 'No Company'),
                         'company_email': quot_doc.get('customer_email', ''),
                         'total_amount_pre_gst': total_pre_gst,
-                        'total_amount_post_gst': float(quot_doc.get('total_amount', 0)),
+                        'gst_amount': gst_amount,
+                        'total_amount_post_gst': total_post_gst,
                         'created_at': formatted_date,
                         'products_count': len(quot_doc.get('products', []))
                     }
