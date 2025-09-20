@@ -4977,10 +4977,12 @@ def admin_get_quotations():
                         'id': str(quot_doc.get('_id', '')),  # Use MongoDB _id as the primary ID
                         'quote_id': quot_doc.get('quote_id', ''),  # Human-readable quote ID
                         'user_id': quot_doc.get('user_id', ''),
-                        'username': '',  # Not stored in quotation_data currently
+                        'username': quot_doc.get('username', ''),  # Add username from quotation data
                         'user_email': quot_doc.get('user_email', ''),
-                        'company_name': quot_doc.get('customer_name', 'No Company'),
-                        'company_email': quot_doc.get('customer_email', ''),
+                        'company_name': quot_doc.get('company_name', quot_doc.get('customer_name', 'No Company')),
+                        'company_email': quot_doc.get('company_email', quot_doc.get('customer_email', '')),
+                        'customer_name': quot_doc.get('customer_name', ''),  # For backward compatibility
+                        'customer_email': quot_doc.get('customer_email', ''),  # For backward compatibility
                         'total_amount_pre_gst': total_pre_gst,
                         'gst_amount': gst_amount,
                         'total_amount_post_gst': total_post_gst,
