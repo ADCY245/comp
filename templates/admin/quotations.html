@@ -505,6 +505,11 @@
                         <h6>Quotation Information</h6>
                         <p><strong>From:</strong> Chemo Graphic International</p>
                         <p><strong>To:</strong> ${quotation.company_name || quotation.customer_name || quotation.company || 'N/A'}</p>
+                        ${quotation.company_name || quotation.customer_name || quotation.company ? '' : 
+                            `<div class="alert alert-warning mt-2">
+                                <small>Debug: No company name found in quotation data. Available fields: ${Object.keys(quotation).join(', ')}</small>
+                            </div>`
+                        }
                         <p><strong>Date:</strong> ${createdDate} at ${createdTime}</p>
                         <p><strong>Quotation ID:</strong> ${quotation.id}</p>
                         <p><strong>Products:</strong> ${quotation.products ? quotation.products.length : 0}</p>

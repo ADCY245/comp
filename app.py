@@ -5124,13 +5124,28 @@ def admin_get_quotation_details(quotation_id):
             # Calculate final total (after GST)
             total_amount = round(total_amount_pre_gst + total_gst, 2)
             
+            # Debug: Log all available quotation keys and company-related fields
+            app.logger.info(f"Quotation fields: {list(quotation.keys())}")
+            app.logger.info(f"Company name candidates - company_name: {quotation.get('company_name')}, customer_name: {quotation.get('customer_name')}, company: {quotation.get('company')}")
+            
+            # Get company name from various possible fields
+            company_name = (
+                quotation.get('company_name') or 
+                quotation.get('customer_name') or 
+                quotation.get('company') or 
+                'N/A'
+            )
+            
             # Prepare the response data
             formatted_quotation = {
                 'id': quotation.get('quote_id', str(quotation.get('_id', ''))),
                 'quote_id': quotation.get('quote_id', 'N/A'),
                 'mongo_id': str(quotation.get('_id', '')),  # Keep for reference if needed
-                'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
+                'company_name': company_name,
+                'customer_name': company_name,  # Add as customer_name for backward compatibility
+                'company': company_name,        # Add as company for backward compatibility
                 'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
+                'customer_email': quotation.get('customer_email', quotation.get('company_email', 'N/A')),
                 'products': products,
                 'subtotal': round(float(subtotal), 2),
                 'total_discount': round(float(total_discount), 2),
