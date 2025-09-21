@@ -1,0 +1,111 @@
+/* Theme Colors */
+:root {
+  /* New Color Palette */
+  --bs-primary: #8E793E;    /* Gold */
+  --bs-secondary: #AD947F;  /* Taupe */
+  --bs-success: #8E793E;    /* Gold (same as primary for consistency) */
+  --bs-danger: #8B0000;     /* Dark Red */
+  --bs-warning: #D4A76A;    /* Light Brown */
+  --bs-info: #050A30;       /* Dark Blue */
+  --bs-light: #EAEAEA;      /* Light Gray */
+  --bs-dark: #231F20;       /* Dark Gray */
+  
+  /* Text Colors */
+  --bs-body-color: #231F20;
+  --bs-body-bg: #ffffff;
+  
+  /* Border Colors */
+  --bs-border-color: #8B8383;
+  
+  /* Link Colors */
+  --bs-link-color: #8E793E;
+  --bs-link-hover-color: #7a6a36;
+}
+
+/* Buttons */
+.btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: #7a6a36;
+  --bs-btn-hover-border-color: #7a6a36;
+  --bs-btn-active-bg: #6a5b2f;
+  --bs-btn-active-border-color: #6a5b2f;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+}
+
+/* Alerts */
+.alert-primary {
+  --bs-alert-color: var(--bs-primary);
+  --bs-alert-bg: rgba(142, 121, 62, 0.1);
+  --bs-alert-border-color: var(--bs-primary);
+}
+
+/* Navbar */
+.navbar {
+  --bs-navbar-color: #ffffff;
+  --bs-navbar-hover-color: #AD947F;
+  --bs-navbar-active-color: #8E793E;
+  --bs-navbar-brand-color: #ffffff;
+  --bs-navbar-brand-hover-color: #AD947F;
+}
+
+/* Cards */
+.card {
+  --bs-card-border-color: #8B8383;
+}
+
+/* Tables */
+.table {
+  --bs-table-color: var(--bs-body-color);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: #8B8383;
+  --bs-table-striped-bg: rgba(142, 121, 62, 0.05);
+  --bs-table-hover-bg: rgba(142, 121, 62, 0.1);
+}
+
+/* Form Controls */
+.form-control:focus {
+  border-color: #8E793E;
+  box-shadow: 0 0 0 0.25rem rgba(142, 121, 62, 0.25);
+}
+
+/* Pagination */
+.page-link {
+  color: #8E793E;
+}
+
+.page-item.active .page-link {
+  background-color: #8E793E;
+  border-color: #8E793E;
+}
+
+/* Badges */
+.badge-primary {
+  background-color: #8E793E;
+}
+
+/* Backgrounds */
+.bg-primary {
+  background-color: #8E793E !important;
+}
+
+.bg-secondary {
+  background-color: #AD947F !important;
+}
+
+/* Text Colors */
+.text-primary {
+  color: #8E793E !important;
+}
+
+.text-secondary {
+  color: #AD947F !important;
+}
