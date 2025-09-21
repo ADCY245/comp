@@ -5,10 +5,25 @@
 {% block extra_css %}
 {{ super() }}
 <style>
+    :root {
+        --primary: #050A30;
+        --secondary: #8E793E;
+        --accent: #AD947F;
+        --text: #231F20;
+        --background: #EAEAEA;
+        --muted: #8B8383;
+    }
+    
+    body {
+        background-color: var(--background);
+        color: var(--text);
+    }
+    
     .search-container {
         position: relative;
         margin-bottom: 20px;
     }
+    
     .search-input {
         width: 100%;
         padding: 12px 15px;
@@ -17,10 +32,13 @@
         font-size: 16px;
         transition: all 0.3s ease;
     }
+    
     .search-input:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        border-color: var(--secondary);
+        box-shadow: 0 0 0 0.25rem rgba(142, 121, 62, 0.25);
+        outline: none;
     }
+    
     .search-results {
         position: absolute;
         width: 100%;
@@ -34,34 +52,99 @@
         margin-top: 8px;
         display: none;
     }
+    
     .search-item {
-        padding: 10px;
+        padding: 10px 15px;
         cursor: pointer;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
     }
+    
     .search-item:hover {
         background-color: #f5f5f5;
     }
+    
     .product-nav {
         margin: 2rem 0;
         display: none;
     }
+    
     .nav-pills .nav-link {
-        color: #0d6efd;
+        color: var(--primary);
         font-weight: 500;
         padding: 0.5rem 1.5rem;
         margin: 0 0.5rem;
         border-radius: 20px;
     }
+    
     .nav-pills .nav-link.active {
-        background-color: #0d6efd;
+        background-color: var(--secondary);
         color: white;
     }
+    
+    .nav-pills .nav-link:hover:not(.active) {
+        background-color: rgba(142, 121, 62, 0.1);
+    }
+    
     .welcome-message {
         margin: 2rem 0;
         padding: 1.5rem;
         background-color: #f8f9fa;
         border-radius: 8px;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .alert-info {
+        background-color: rgba(5, 10, 48, 0.1);
+        color: var(--primary);
+        border-left: 4px solid var(--primary);
+    }
+    
+    .alert-success {
+        background-color: rgba(142, 121, 62, 0.1);
+        color: #5e4f2c;
+        border-left: 4px solid var(--secondary);
+    }
+    
+    .company-card {
+        cursor: pointer;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: white;
+    }
+    
+    .company-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        border-color: var(--secondary);
+    }
+    
+    .company-logo {
+        height: 120px;
+        background-color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .company-card:hover .company-logo {
+        background-color: var(--secondary);
+    }
+    
+    .company-card .card-title {
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+        font-weight: 600;
     }
 </style>
 {% endblock %}
