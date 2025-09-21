@@ -221,9 +221,9 @@
         <div class="row mb-4">
             <div class="col-lg-8 mb-4">
                 <div class="card stats-card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-chart-line me-2" style="color: var(--bs-primary);"></i>
+                    <div class="card-header" style="background-color: var(--bs-info);">
+                        <h5 class="card-title mb-0 text-white">
+                            <i class="fas fa-chart-line me-2"></i>
                             Users & Quotations Over Time
                         </h5>
                     </div>
@@ -237,9 +237,9 @@
             
             <div class="col-lg-4 mb-4">
                 <div class="card stats-card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-chart-pie me-2" style="color: var(--bs-secondary);"></i>
+                    <div class="card-header" style="background-color: var(--bs-info);">
+                        <h5 class="card-title mb-0 text-white">
+                            <i class="fas fa-chart-pie me-2"></i>
                             User Roles Distribution
                         </h5>
                     </div>
@@ -252,53 +252,24 @@
             </div>
         </div>
 
-        <!-- Recent Activity & Quick Actions -->
+        <!-- Recent Activity -->
         <div class="row">
-            <div class="col-lg-8 mb-4">
+            <div class="col-12 mb-4">
                 <div class="card stats-card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-clock me-2 text-info"></i>
+                    <div class="card-header" style="background-color: var(--bs-info);">
+                        <h5 class="card-title mb-0 text-white">
+                            <i class="fas fa-history me-2"></i>
                             Recent Activity
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div id="recentActivity">
+                        <div id="recentActivity" class="recent-activity">
                             <div class="text-center text-muted">
-                                <i class="fas fa-spinner fa-spin me-2"></i>
-                                Loading recent activity...
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 mb-0">Loading activity...</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 mb-4">
-                <div class="card stats-card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-bolt me-2 text-warning"></i>
-                            Quick Actions
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="addNewUser()">
-                                <i class="fas fa-user-plus me-2"></i>
-                                Add New User
-                            </button>
-                            <button class="btn btn-info" onclick="viewAllUsers()">
-                                <i class="fas fa-users me-2"></i>
-                                Manage Users
-                            </button>
-                            <button class="btn btn-success" onclick="viewQuotationHistory()">
-                                <i class="fas fa-file-invoice me-2"></i>
-                                View Quotation History
-                            </button>
-                            <button class="btn btn-warning" onclick="viewActiveSessions()">
-                                <i class="fas fa-users-cog me-2"></i>
-                                Active Sessions
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -381,15 +352,19 @@
                     datasets: [{
                         label: 'New Users',
                         data: data.map(item => item.users),
-                        borderColor: 'var(--bs-primary)',
-                        backgroundColor: 'rgba(142, 121, 62, 0.1)',
+                        borderColor: '#8E793E',
+                        backgroundColor: 'rgba(142, 121, 62, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#8E793E',
                         tension: 0.4,
                         fill: true
                     }, {
                         label: 'Quotations Sent',
                         data: data.map(item => item.quotations),
-                        borderColor: 'var(--bs-secondary)',
-                        backgroundColor: 'rgba(173, 148, 127, 0.1)',
+                        borderColor: '#050A30',
+                        backgroundColor: 'rgba(5, 10, 48, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#050A30',
                         tension: 0.4,
                         fill: true
                     }]
@@ -404,7 +379,15 @@
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
@@ -422,12 +405,14 @@
                     datasets: [{
                         data: data.map(item => item.count),
                         backgroundColor: [
-                            'var(--bs-primary)',
-                            'var(--bs-secondary)',
-                            'var(--bs-warning)',
-                            'var(--bs-danger)',
-                            'var(--bs-info)'
-                        ]
+                            '#8E793E',    // Primary (Gold)
+                            '#AD947F',    // Secondary (Taupe)
+                            '#D4A76A',    // Warning (Light Brown)
+                            '#8B0000',    // Danger (Dark Red)
+                            '#050A30'     // Info (Dark Blue)
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -469,26 +454,7 @@
             container.innerHTML = html;
         }
         
-        // Quick Actions - Fully Functional
-        function addNewUser() {
-            // Redirect to manage users page and trigger add user modal
-            window.location.href = '/admin/manage-users?action=add';
-        }
-        
-        function viewAllUsers() {
-            // Redirect to manage users page
-            window.location.href = '/admin/manage-users';
-        }
-        
-        function viewQuotationHistory() {
-            // Redirect to quotations page
-            window.location.href = '/admin/quotations';
-        }
-        
-        function viewActiveSessions() {
-            // Show active sessions modal
-            showActiveSessionsModal();
-        }
+        // Active Sessions Modal functionality remains available for other parts of the dashboard
         
         // Active Sessions Modal
         async function showActiveSessionsModal() {
