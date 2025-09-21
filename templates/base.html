@@ -1,5 +1,23 @@
 {% if current_user.is_authenticated and current_user is defined and current_user.role is defined and current_user.role|lower == 'dealer' %}
     {% extends 'dealer/base.html' %}
+    <style>
+        .company-info-card {
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #8E793E;
+        }
+        .navbar {
+            background-color: #050A30 !important;
+        }
+    </style>
 {% else %}
     {% extends 'user/base.html' %}
+    <style>
+        .company-info-card {
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #8E793E;
+        }
+        .navbar {
+            background-color: #050A30 !important;
+        }
+    </style>
 {% endif %}

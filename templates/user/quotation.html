@@ -7,7 +7,10 @@
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
-        background: #fff;
+        background: #ffffff;
+        border: 1px solid #8B8383;
+        border-radius: 8px;
+        margin-top: 20px;
     }
     .quote-header {
         display: flex;
@@ -20,20 +23,20 @@
         margin: 20px 0;
     }
     th, td {
-        border: 1px solid #dee2e6;
+        border: 1px solid #8B8383;
         padding: 8px 12px;
         text-align: left;
     }
     thead {
-        background-color: #f8f9fa;
+        background-color: #EAEAEA;
     }
     .card {
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border: none;
     }
     .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0,0,0,.125);
+        background-color: #EAEAEA;
+        border-bottom: 1px solid #8B8383;
     }
     .company-logo {
         max-width: 150px;
@@ -140,7 +143,7 @@
     </div>
 
     <div class="card shadow-sm mt-4">
-        <div class="card-header bg-light">
+        <div class="card-header" style="background-color: #EAEAEA;">
             <h5 class="mb-0">Quotation Details</h5>
         </div>
         <div class="card-body p-4">
@@ -285,7 +288,7 @@
     <span class="text-muted">CGI - Chemo Graphics INTERNATIONAL</span></p>
 </div>
         </div>
-        <div class="card-footer bg-light">
+        <div class="card-footer" style="background-color: #EAEAEA; text-align: right;">
             <div class="text-center">
                 <button onclick="window.print()" class="btn btn-primary me-2">
                     <i class="fas fa-print me-1"></i> Print Quotation
