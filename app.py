@@ -307,6 +307,13 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Route name for the login page
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
 class MongoCartStore:
