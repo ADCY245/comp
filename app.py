@@ -227,37 +227,59 @@ MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
 DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
 
-# Initialize MongoDB client
+# Initialize MongoDB client - use lazy initialization to avoid fork safety issues
 mongo_client = None
 mongo_db = None
 
-if USE_MONGO:
+def get_mongo_client():
+    """Get MongoDB client with lazy initialization to avoid fork safety issues."""
+    global mongo_client, mongo_db, MONGO_AVAILABLE
+
+    if mongo_client is not None:
+        return mongo_client
+
+    if not USE_MONGO:
+        return None
+
     try:
         from pymongo import MongoClient
         from pymongo.errors import ConnectionFailure
-        
+
         MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
         print(f"\n=== MongoDB Configuration ===")
         print(f"Attempting to connect to MongoDB at: {MONGO_URI}")
         print(f"Database: {DB_NAME}")
-        
-        # Initialize MongoDB client
-        mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5 second timeout
-        
+
+        # Initialize MongoDB client with production-safe settings
+        mongo_client = MongoClient(
+            MONGO_URI,
+            serverSelectionTimeoutMS=5000,  # 5 second timeout
+            connectTimeoutMS=10000,        # 10 second connection timeout
+            socketTimeoutMS=10000,         # 10 second socket timeout
+            maxIdleTimeMS=30000,           # 30 second max idle time
+            retryWrites=True,
+            w='majority',                  # Write concern for production
+            # Add TLS/SSL configuration for production
+            tls=True if 'mongodb+srv' in MONGO_URI else False,
+            tlsAllowInvalidCertificates=False  # Set to True only for development
+        )
+
         # Test the connection
         mongo_client.server_info()  # Will raise an exception if connection fails
-        
+
         # Get the database
         mongo_db = mongo_client[DB_NAME]
-        
+
         # Initialize the users collection
         from mongo_users import init_mongo_connection
         users_col = init_mongo_connection(mongo_client, mongo_db)
-        
+
         MONGO_AVAILABLE = True
         print("✅ Successfully connected to MongoDB")
         print("==============================\n")
-        
+
+        return mongo_client
+
     except Exception as e:
         # Use ASCII-safe error message
         print("[ERROR] Failed to connect to MongoDB:")
@@ -269,443 +291,12 @@ if USE_MONGO:
         print("3. Set USE_MONGO=True in your environment")
         print("4. The database specified in DB_NAME exists")
         print("==============================\n")
-
-if not MONGO_AVAILABLE and USE_MONGO:
-    try:
-        print("Attempting to connect to MongoDB...")
-        
-        # Updated MongoDB connection with SSL options
-        from pymongo import MongoClient
-
-        from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
-        
-        # Initialize connection variables
-        mongo_client = None
-        connection_successful = False
-        
-        try:
-            import certifi
-            CA_FILE = certifi.where()
-        except ImportError:
-            CA_FILE = None
-            print("⚠️  certifi not installed; proceeding without custom CA bundle")
-        # First try with SSL and valid CA bundle
-        try:
-            mongo_client = MongoClient(
-                MONGO_URI,
-                tls=True,
-                tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                retryWrites=True,
-                w='majority',
-                connectTimeoutMS=10000,
-                socketTimeoutMS=10000,
-                serverSelectionTimeoutMS=10000,
-                maxIdleTimeMS=10000
-            )
-            # Test the connection
-            mongo_client.admin.command('ping')
-            print("✅ MongoDB connection successful with SSL")
-            connection_successful = True
-        except Exception as e:
-            print(f"❌ MongoDB TLS connection failed: {str(e)}")
-            print("Attempting connection with allowInvalidCertificates...")
-            try:
-                mongo_client = MongoClient(
-                    MONGO_URI,
-                    tls=True,
-                    tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                    tlsAllowInvalidCertificates=True,
-                    retryWrites=True,
-                    w='majority',
-                    connectTimeoutMS=10000,
-                    socketTimeoutMS=10000,
-                    serverSelectionTimeoutMS=10000,
-                    maxIdleTimeMS=10000
-                )
-                # Test the connection
-                mongo_client.admin.command('ping')
-                print("✅ MongoDB connection successful with invalid certificates")
-                connection_successful = True
-            except Exception as e2:
-                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
-        
-        # Set connection status and initialise collections only if successful
-        if connection_successful and mongo_client:
-            MONGO_AVAILABLE = True
-            print("✅ MongoDB connection successful")
-
-            # Set up database and collections
-            mongo_db = mongo_client[DB_NAME]
-            users_col = mongo_db['users']
-        else:
-            MONGO_AVAILABLE = False
-            print("❌ MongoDB connection failed – this application requires MongoDB. Exiting.")
-            raise SystemExit("MongoDB connection required but unavailable")
-        
-        # Initialize mongo_users with the connection
-        try:
-            from mongo_users import init_mongo_connection
-            users_col = init_mongo_connection(mongo_client, mongo_db)
-            print("✅ mongo_users initialized successfully")
-            
-            # Print database stats
-            print(f"Using database: {mongo_db.name}")
-            collections = mongo_db.list_collection_names()
-            print(f"Collections: {collections}")
-            
-            if users_col is not None:
-                try:
-                    user_count = users_col.count_documents({})
-                    print(f"Users count: {user_count}")
-                except Exception as e:
-                    print(f"⚠️ Could not count users: {str(e)}")
-            
-            MONGO_AVAILABLE = True
-            
-        except Exception as e:
-            print(f"❌ Error initializing mongo_users: {str(e)}")
-            raise
-        
-    except Exception as e:
-        print(f"❌ Unexpected error during MongoDB setup: {str(e)}")
-        print("Falling back to JSON storage")
-        MONGO_AVAILABLE = False
-        
-    except Exception as e:
-        print(f"❌ MongoDB connection error: {str(e)}")
-        print("Falling back to JSON storage")
-        MONGO_AVAILABLE = False
         mongo_client = None
         mongo_db = None
-        users_col = None
-else:
-    print("MongoDB not enabled in configuration")
-    
-print("==============================\n")
-JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION = 3600  # 1 hour
+        MONGO_AVAILABLE = False
+        return None
 
-# Email Configuration
-SMTP_SERVER = os.getenv('SMTP_HOST')
-SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USERNAME = os.getenv('SMTP_USER')
-SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
-EMAIL_FROM = os.getenv('EMAIL_FROM')
-EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME')
-
-# Frontend URL for email links
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-
-# Persistent file paths (Render users can attach a Disk at /var/data or set USERS_FILE_PATH/CART_FILE_PATH)
-def _resolve_data_dir():
-    # Determine writable directory for persistence
-    preferred = os.getenv('DATA_DIR', '/var/data')
-    try:
-        os.makedirs(preferred, exist_ok=True)
-        test_path = os.path.join(preferred, '.write_test')
-        with open(test_path, 'w') as fp:
-            fp.write('ok')
-        os.remove(test_path)
-        return preferred
-    except Exception:
-        fallback = os.path.join('static', 'data')
-        os.makedirs(fallback, exist_ok=True)
-        return fallback
-
-DATA_DIR = _resolve_data_dir()
-USERS_FILE = os.getenv('USERS_FILE_PATH', os.path.join(DATA_DIR, 'users.json'))
-CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
-
-# User class
-class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user'):
-        self.id = id
-        self.email = email
-        self.username = username
-        self.password_hash = password_hash
-        self.is_verified = is_verified
-        self.otp_verified = otp_verified
-        self.cart = cart if cart is not None else []
-        self.reset_token = reset_token
-        self.reset_token_expiry = reset_token_expiry
-        self.company_id = company_id
-        # Store role in lowercase for consistency
-        self.role = role.lower() if role else 'user'
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'email': self.email,
-            'username': self.username,
-            'password_hash': self.password_hash,
-            'is_verified': self.is_verified,
-            'reset_token': self.reset_token,
-            'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
-            'otp_verified': self.otp_verified,
-             'role': self.role,
-            'company_id': self.company_id
-        }
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def generate_auth_token(self, expires_in=JWT_EXPIRATION):
-        return jwt.encode(
-            {'user_id': self.id, 'exp': datetime.utcnow() + timedelta(seconds=expires_in)},
-            JWT_SECRET,
-            algorithm=JWT_ALGORITHM
-        )
-
-    @staticmethod
-    def verify_auth_token(token):
-        try:
-            data = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            return data.get('user_id')
-        except:
-            return None
-
-# ---------------------------------------------------------------------------
-# JSON persistence helpers
-# ---------------------------------------------------------------------------
-# Existing private helpers (_load_users_json / _save_users_json) are used by
-# the rest of the code via these thin wrappers so the earlier calls to
-# load_users()/save_users() continue to work without refactor.
-
-def _load_users_json():
-    """Load users from JSON file."""
-    try:
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
-        
-        # Try to read the file
-        try:
-            with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                content = f.read()
-                if not content.strip():
-                    content = '{}'
-                users_data = json.loads(content)
-        except (FileNotFoundError, json.JSONDecodeError):
-            # If file doesn't exist or is invalid JSON, create a new empty file
-            with open(USERS_FILE, 'w', encoding='utf-8') as f:
-                f.write('{}')
-            users_data = {}
-            
-        users = {}
-        for user_id, user_data in users_data.items():
-            try:
-                # Ensure all required fields exist
-                if not all(key in user_data for key in ['email', 'username', 'password_hash']):
-                    print(f"Skipping invalid user data: missing required fields")
-                    continue
-                
-                users[user_id] = User(
-                    id=user_id,
-                    email=user_data['email'],
-                    username=user_data['username'],
-                    password_hash=user_data['password_hash'],
-                    is_verified=user_data.get('is_verified', False),
-                    otp_verified=user_data.get('otp_verified', False),
-                    cart=user_data.get('cart', []),
-                    reset_token=user_data.get('reset_token'),
-                    reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
-                    company_id=user_data.get('company_id')
-                )
-            except Exception as e:
-                print(f"Error loading user {user_id}: {e}")
-                continue
-        return users
-    except Exception as e:
-        print(f"Error loading users: {e}")
-        try:
-            # Create a fresh empty file with proper encoding
-            os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
-            with open(USERS_FILE, 'w', encoding='utf-8') as f:
-                f.write('{}')
-            return {}  # Return empty dict after creating new file
-        except Exception as e:
-            print(f"Error creating users file: {e}")
-        return {}
-
-# ... (rest of the code remains the same)
-
-def load_user(user_id):
-    """Load user by ID from either MongoDB or JSON."""
-    if MONGO_AVAILABLE and USE_MONGO:
-        # Try MongoDB first
-        try:
-            print(f'Loading user from MongoDB with ID: {user_id}')
-            doc = mu_find_user_by_id(user_id)
-            if not doc:
-                print(f'User not found in MongoDB with ID: {user_id}')
-                return None
-                
-            user = User(
-                id=str(doc['_id']),  # Convert ObjectId to string
-                email=doc['email'],
-                username=doc['username'],
-                password_hash=doc['password_hash'],
-                is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
-            )
-            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
-            return user
-        except Exception as e:
-            print(f"Error loading user {user_id}: {e}")
-            return None
-    
-    # Fall back to JSON users
-    users = _load_users_json()
-    user_data = users.get(user_id) if hasattr(users, 'get') else None
-    if user_data:
-        return User(
-            id=user_id,
-            email=user_data['email'],
-            username=user_data.get('username', user_data['email'].split('@')[0]),
-            password_hash=user_data['password_hash'],
-            is_verified=user_data.get('is_verified', False),
-            otp_verified=user_data.get('otp_verified', False),
-            cart=user_data.get('cart', []),
-            reset_token=user_data.get('reset_token'),
-            reset_token_expiry=user_data.get('reset_token_expiry'),
-            company_id=user_data.get('company_id')
-        )
-    return None
-
-def save_users(users_dict=None):
-    """Legacy wrapper around _save_users_json."""
-    return _save_users_json(users_dict)
-
-def _save_users_json(users_dict=None):
-    """Save users to JSON file. If no argument is provided, saves the global users dictionary."""
-    try:
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
-        
-        # Get the users data to save
-        if users_dict is None:
-            users_dict = users
-            
-        # Create a temporary file
-        temp_file = USERS_FILE + '.tmp'
-        
-        # Convert users to dictionary format
-        user_data = {user_id: user.to_dict() for user_id, user in users_dict.items()}
-        
-        # Write to temporary file
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(user_data, f, indent=2)
-        
-        # Replace original file with temporary file atomically
-        try:
-            os.replace(temp_file, USERS_FILE)
-        except FileNotFoundError:
-            # If file doesn't exist, just rename the temp file
-            os.rename(temp_file, USERS_FILE)
-        
-        # Verify the file was saved correctly
-        try:
-            with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                saved_data = json.load(f)
-                if len(saved_data) != len(user_data):
-                    raise Exception("File save verification failed")
-        except Exception as e:
-            print(f"Error verifying saved file: {e}")
-            return False
-        
-        return True
-    except Exception as e:
-        print(f"Error saving users: {e}")
-        try:
-            # Clean up temp file if it exists
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-        except Exception as cleanup_error:
-            print(f"Error cleaning up temp file: {cleanup_error}")
-        return False
-
-# ----- Mongo wrappers overriding JSON if USE_MONGO -----
-if USE_MONGO:
-    def load_users():
-        users_local = {}
-        try:
-            for doc in users_col.find():
-                users_local[doc['_id']] = User(
-                    id=doc['_id'],
-                    email=doc.get('email'),
-                    username=doc.get('username'),
-                    password_hash=doc.get('password_hash'),
-                    is_verified=doc.get('is_verified', False),
-                    otp_verified=doc.get('otp_verified', False)
-                )
-        except Exception as e:
-            print(f"Error loading users from MongoDB: {e}")
-        return users_local
-
-    def save_users(users_dict=None):
-        try:
-            if users_dict is None:
-                users_dict = users
-            for uid, user in users_dict.items():
-                users_col.update_one({'_id': uid}, {'$set': user.to_dict()}, upsert=True)
-            return True
-        except Exception as e:
-            print(f"Error saving users to MongoDB: {e}")
-            return False
-
-    users = load_users() # Initialize users from MongoDB
-else:
-    # Fallback to JSON versions defined above
-    load_users = _load_users_json
-    save_users = _save_users_json
-    users = load_users() # Initialize users from JSON
-
-# Add logging for debugging
-
-print(f"SMTP Configuration:\n"
-      f"SMTP_HOST: {SMTP_SERVER}\n"
-      f"SMTP_PORT: {SMTP_PORT}\n"
-      f"SMTP_USER: {SMTP_USERNAME}\n"
-      f"EMAIL_FROM: {EMAIL_FROM}")
-
-def check_email_config():
-    """Check if email configuration is valid."""
-    if not SMTP_SERVER or not SMTP_USERNAME or not SMTP_PASSWORD or not EMAIL_FROM:
-        print("Warning: Email configuration is incomplete")
-        return False
-    return True
-
-# Initialize email configuration
-email_config_valid = check_email_config()
-
-def refresh_email_config():
-    """Periodically refresh email configuration."""
-    global email_config_valid
-    email_config_valid = check_email_config()
-
-# Initialize Flask app with logging
-import logging
-import sys
-from logging.handlers import RotatingFileHandler
-
-# Configure root logger
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s: %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
-    ]
-)
-
-# Suppress Flask debug pin console output
-logging.getLogger('werkzeug').setLevel(logging.WARNING)
-
-# Create Flask app instance
+# Initialize Flask app first
 app = Flask(__name__)
 
 # Configure secret key and session settings
@@ -716,35 +307,24 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
 
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'  # Route name for the login page
-login_manager.login_message = 'Please log in to access this page.'
-login_manager.login_message_category = 'info'
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-# Add regex_search filter to Jinja2 environment
-@app.template_filter('regex_search')
-def regex_search_filter(s, pattern):
-    """Check if the pattern matches the string."""
-    if not s or not pattern:
-        return False
-    return bool(re.search(pattern, str(s)))
-
-app.logger.info("Flask app initialized")
-
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
 class MongoCartStore:
     """MongoDB-backed cart store with one cart document per user."""
 
     def __init__(self, db):
-        self.col = db.get_collection('carts')
-        app.logger.info("[DEBUG] Initialized MongoCartStore with collection: %s", self.col.name)
+        self.db = db
+        self._col = None
+
+    @property
+    def col(self):
+        """Get the carts collection, initializing MongoDB connection if needed."""
+        if self._col is None:
+            # Ensure MongoDB is connected
+            get_mongo_client()
+            self._col = self.db.get_collection('carts')
+            app.logger.info("[DEBUG] Initialized MongoCartStore with collection: %s", self._col.name)
+        return self._col
 
     def _doc(self, user_id):
         doc = self.col.find_one({"user_id": user_id})
@@ -776,7 +356,7 @@ class MongoCartStore:
         )
         if products:
             app.logger.debug("[DEBUG] Sample product being saved: %s", str(products[0])[:200])
-            
+
         result = self.col.update_one(
             {"user_id": user_id},
             {
@@ -840,13 +420,103 @@ class CartStore:
         self.cart = cart
         return self._save_cart(cart)
 
-# Choose the appropriate cart store implementation
-if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-    print("Using MongoCartStore for cart persistence")
-    cart_store = MongoCartStore(mongo_db)
-else:
-    print("Using local JSON CartStore for cart persistence")
-    cart_store = CartStore()
+# Cart caching mechanism to prevent repeated DB queries
+cart_cache = {}
+CACHE_TIMEOUT = 30  # Cache cart data for 30 seconds
+MAX_CACHE_SIZE = 100  # Maximum number of cached carts
+
+def get_cached_cart(user_id):
+    """Get cart from cache if available and not expired."""
+    cache_key = f"cart_{user_id}"
+    if cache_key in cart_cache:
+        cached_data, timestamp = cart_cache[cache_key]
+        if datetime.utcnow().timestamp() - timestamp < CACHE_TIMEOUT:
+            app.logger.debug(f"[CACHE] Returning cached cart for user {user_id}")
+            return cached_data
+        else:
+            # Cache expired, remove it
+            del cart_cache[cache_key]
+    return None
+
+def set_cached_cart(user_id, cart_data):
+    """Cache cart data for the user."""
+    cache_key = f"cart_{user_id}"
+
+    # Clean up expired entries if cache is getting full
+    if len(cart_cache) >= MAX_CACHE_SIZE:
+        cleanup_expired_cache()
+
+    cart_cache[cache_key] = (cart_data, datetime.utcnow().timestamp())
+    app.logger.debug(f"[CACHE] Cached cart for user {user_id}")
+
+def clear_cart_cache(user_id=None):
+    """Clear cart cache for a specific user or all users."""
+    if user_id:
+        cache_key = f"cart_{user_id}"
+        if cache_key in cart_cache:
+            del cart_cache[cache_key]
+            app.logger.debug(f"[CACHE] Cleared cache for user {user_id}")
+    else:
+        cart_cache.clear()
+        app.logger.debug("[CACHE] Cleared all cart cache")
+
+def cleanup_expired_cache():
+    """Remove expired entries from cache to prevent memory leaks."""
+    current_time = datetime.utcnow().timestamp()
+    expired_keys = []
+
+    for key, (data, timestamp) in cart_cache.items():
+        if current_time - timestamp >= CACHE_TIMEOUT:
+            expired_keys.append(key)
+
+    for key in expired_keys:
+        del cart_cache[key]
+
+    if expired_keys:
+        app.logger.debug(f"[CACHE] Cleaned up {len(expired_keys)} expired cache entries")
+
+    # If still too many entries, remove oldest entries
+    if len(cart_cache) >= MAX_CACHE_SIZE:
+        oldest_keys = sorted(cart_cache.keys(), key=lambda k: cart_cache[k][1])[:len(cart_cache) - MAX_CACHE_SIZE + 10]
+        for key in oldest_keys:
+            del cart_cache[key]
+        app.logger.debug(f"[CACHE] Removed {len(oldest_keys)} oldest cache entries")
+
+# Enhanced MongoCartStore with caching
+class CachedMongoCartStore(MongoCartStore):
+    """MongoDB-backed cart store with caching to reduce database queries."""
+
+    def get_cart(self, user_id):
+        # Check cache first
+        cached_cart = get_cached_cart(user_id)
+        if cached_cart is not None:
+            return cached_cart
+
+        # Cache miss - get from database
+        app.logger.debug(f"[CACHE] Cache miss for user {user_id}, fetching from DB")
+        cart_data = super().get_cart(user_id)
+
+        # Cache the result
+        set_cached_cart(user_id, cart_data)
+        return cart_data
+
+    def save_cart(self, user_id, products):
+        # Save to database first
+        result = super().save_cart(user_id, products)
+
+        # Clear cache for this user
+        clear_cart_cache(user_id)
+
+        return result
+
+    def clear_cart(self, user_id):
+        # Clear from database first
+        result = super().clear_cart(user_id)
+
+        # Clear cache for this user
+        clear_cart_cache(user_id)
+
+        return result
 
 # -------------------- Cart helper wrappers --------------------
 
@@ -854,17 +524,20 @@ def get_user_cart():
     """Return a dict with a products list for the current user using MongoDB."""
     try:
         app.logger.info(f"[DEBUG] get_user_cart() called for user: {getattr(current_user, 'id', 'no-user')}")
-        
+
         if not hasattr(current_user, 'id'):
             app.logger.warning("[DEBUG] No current_user.id, returning empty cart")
             return {"products": []}
-            
+
+        # Get the cart store with lazy initialization
+        store = get_cart_store()
+
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            app.logger.info("[DEBUG] Using MongoDB for cart storage")
+            app.logger.info(f"[DEBUG] Using MongoDB for cart storage")
             app.logger.info(f"[DEBUG] MongoDB status - MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if mongo_db is not None else 'None'}")
-            
+
             try:
-                products = cart_store.get_cart(current_user.id)
+                products = store.get_cart(current_user.id)
                 app.logger.info(f"[DEBUG] Retrieved {len(products) if products else 0} products from MongoDB")
                 if products:
                     app.logger.debug(f"[DEBUG] Sample product from MongoDB: {str(products[0])[:200]}...")
@@ -881,14 +554,14 @@ def get_user_cart():
                         quantity = int(product.get('quantity', 1))
                         discount_percent = float(product.get('discount_percent', 0))
                         gst_percent = float(product.get('gst_percent', 18))
-                        
+
                         price_per_unit = base_price + bar_price
                         subtotal = price_per_unit * quantity
                         discount_amount = subtotal * (discount_percent / 100)
                         discounted_subtotal = subtotal - discount_amount
                         gst_amount = (discounted_subtotal * gst_percent) / 100
                         final_total = discounted_subtotal + gst_amount
-                        
+
                         product['calculations'] = {
                             'price_per_unit': round(price_per_unit, 2),
                             'subtotal': round(subtotal, 2),
@@ -902,13 +575,13 @@ def get_user_cart():
                         quantity = int(product.get('quantity', 1))
                         discount_percent = float(product.get('discount_percent', 0))
                         gst_percent = float(product.get('gst_percent', 12))
-                        
+
                         discount_amount = (price * discount_percent / 100)
                         price_after_discount = price - discount_amount
                         gst_amount = (price_after_discount * gst_percent / 100)
                         final_unit_price = price_after_discount + gst_amount
                         final_total = final_unit_price * quantity
-                        
+
                         product['calculations'] = {
                             'unit_price': round(price, 2),
                             'discount_amount': round(discount_amount, 2),
@@ -917,18 +590,18 @@ def get_user_cart():
                             'final_unit_price': round(final_unit_price, 2),
                             'final_total': round(final_total, 2)
                         }
-            
+
             return {"products": products or []}
-            
+
         # If we get here, MongoDB is not available
         app.logger.warning("[DEBUG] MongoDB is not available for cart storage")
         app.logger.warning(f"[DEBUG] MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if 'mongo_db' in globals() and mongo_db is not None else 'None'}")
         return {"products": []}
-        
+
     except Exception as e:
-        print(f"Error in get_user_cart: {e}")
+        app.logger.error(f"[DEBUG] Error in get_user_cart: {str(e)}")
         import traceback
-        traceback.print_exc()
+        app.logger.error(f"[DEBUG] Traceback: {traceback.format_exc()}")
         return {"products": []}
 
 def save_user_cart(cart_dict):
@@ -937,32 +610,38 @@ def save_user_cart(cart_dict):
         if not hasattr(current_user, 'id'):
             print("Cannot save cart: No user ID available")
             return
-            
+
         if not isinstance(cart_dict, dict) or 'products' not in cart_dict:
             print("Invalid cart format")
             return
-            
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-            cart_store.save_cart(current_user.id, cart_dict['products'])
-        else:
-            print("MongoDB is not available for cart storage")
-            
+
+        # Get the cart store with lazy initialization
+        store = get_cart_store()
+
+        # Use the cart store to save cart data
+        store.save_cart(str(current_user.id), cart_dict['products'])
+
     except Exception as e:
-        print(f"Error in save_user_cart: {e}")
+        app.logger.error(f"Error saving cart: {str(e)}")
         import traceback
-        traceback.print_exc()
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
 
-# Initialize users dictionary (only for JSON fallback)
-if USE_MONGO:
-    users = {}
-else:
-    # Removed this line - it's causing the error
-    # users = load_users()
-    pass
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
+def clear_user_cart():
+    """Clear cart for current user."""
+    try:
+        if not hasattr(current_user, 'id'):
+            print("Cannot clear cart: No user ID available")
+            return
+
+        # Get the cart store with lazy initialization
+        store = get_cart_store()
+
+        # Use the cart store to clear cart data
+        store.clear_cart(str(current_user.id))
+
+    except Exception as e:
+        app.logger.error(f"Error clearing cart: {str(e)}")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1782,11 +1461,24 @@ def get_cart_count():
     try:
         if not current_user.is_authenticated:
             return jsonify({'count': 0})
-            
+
+        # Use cached cart count to prevent repeated DB queries
+        user_id = str(current_user.id)
+        cached_cart = get_cached_cart(user_id)
+
+        if cached_cart is not None:
+            count = len(cached_cart.get('products', []))
+            app.logger.debug(f"[CACHE] Using cached cart count for user {user_id}: {count}")
+            return jsonify({'count': count})
+
+        # Cache miss - get from database
+        app.logger.debug(f"[CACHE] Cache miss for cart count, fetching from DB for user {user_id}")
         cart = get_user_cart()
-        return jsonify({'count': len(cart.get('products', []))})
+        count = len(cart.get('products', []))
+        return jsonify({'count': count})
+
     except Exception as e:
-        print(f"Error in get_cart_count: {e}")
+        app.logger.error(f"Error in get_cart_count: {str(e)}")
         return jsonify({'count': 0})
 
 def load_companies_data():
@@ -5498,3 +5190,6 @@ if USE_MONGO:
 else:
     users = load_users()
     print(f"Loaded {len(users)} users from file")
+
+# Initialize cart store with lazy loading
+cart_store = None
