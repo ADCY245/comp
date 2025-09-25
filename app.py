@@ -3257,7 +3257,7 @@ def generate_quotation_email(products, customer_info, user, notes, quote_id, tod
     """Generate HTML email content for quotation"""
     try:
         # Import here to avoid circular imports
-        from flask import render_template_string
+        from flask import render_template_string, current_app
         
         # Calculate totals
         subtotal = sum(
@@ -3417,7 +3417,7 @@ def send_quotation_email(recipients, subject, html_content):
     try:
         # Import here to avoid circular imports
         from flask_mail import Message
-        from app import mail
+        from app import mail, app
         
         msg = Message(
             subject=subject,
@@ -3468,34 +3468,35 @@ def send_quotation():
         
         # Try to get from user's company_id if available
         if hasattr(current_user, 'company_id') and current_user.company_id:
-            customer_info['name'] = get_company_name_by_id(current_user.company_id)
-            customer_info['email'] = get_company_email_by_id(current_user.company_id)
+            customer_name = get_company_name_by_id(current_user.company_id)
+            customer_email = get_company_email_by_id(current_user.company_id)
         
         # Fallback to session data if needed
-        if customer_info['name'] == 'Not specified' or not customer_info['email']:
+        if customer_name == 'Not specified' or not customer_email:
             selected_company = session.get('selected_company', {})
             if not isinstance(selected_company, dict):
                 selected_company = {}
-                
-            if not customer_info['email']:
-                customer_info['email'] = (
+            
+            # Get from session if available
+            if not customer_email:
+                customer_email = (
                     selected_company.get('email') or 
                     session.get('company_email') or 
                     getattr(current_user, 'email', '')
                 )
-                
-            if customer_info['name'] == 'Not specified':
-                customer_info['name'] = (
+            
+            if customer_name == 'Not specified':
+                customer_name = (
                     selected_company.get('name') or 
                     session.get('company_name') or 
                     getattr(current_user, 'company_name', 'Not specified')
                 )
         
         # Final fallback to user's email if still no email
-        if not customer_info['email'] and hasattr(current_user, 'email'):
-            customer_info['email'] = current_user.email
-            
-        if not customer_info['email']:
+        if not customer_email and hasattr(current_user, 'email'):
+            customer_email = current_user.email
+        
+        if not customer_email:
             return jsonify({'error': 'Customer email is required'}), 400
             
         # 4. Generate a quote ID
@@ -3506,36 +3507,39 @@ def send_quotation():
         from threading import Thread
         
         def process_quotation():
-            try:
-                # Generate email content
-                email_content = generate_quotation_email(
-                    products, 
-                    customer_info, 
-                    current_user, 
-                    notes, 
-                    quote_id,
-                    today
-                )
-                
-                # Prepare recipients
-                recipients = list({
-                    customer_info['email'], 
-                    'operations@chemo.in', 
-                    getattr(current_user, 'email', '')
-                } - {None, ''})
-                
-                # Send email
-                send_quotation_email(
-                    recipients=recipients,
-                    subject=f"Quotation #{quote_id} - {customer_info['name']}",
-                    html_content=email_content
-                )
-                
-                # Log success
-                app.logger.info(f"Quotation {quote_id} processed successfully")
-                
-            except Exception as e:
-                app.logger.error(f"Error processing quotation {quote_id}: {str(e)}", exc_info=True)
+            # Create a new app context for the background thread
+            with app.app_context():
+                try:
+                    # Generate email content
+                    email_content = generate_quotation_email(
+                        products, 
+                        customer_info, 
+                        current_user._get_current_object(),  # Get the actual user object
+                        notes, 
+                        quote_id,
+                        today
+                    )
+                    
+                    # Prepare recipients
+                    recipients = list({
+                        customer_info['email'], 
+                        'operations@chemo.in', 
+                        getattr(current_user, 'email', '')
+                    } - {None, ''})
+                    
+                    # Send email
+                    send_quotation_email(
+                        recipients=recipients,
+                        subject=f"Quotation #{quote_id} - {customer_info['name']}",
+                        html_content=email_content
+                    )
+                    
+                    # Log success
+                    app.logger.info(f"Successfully processed quotation {quote_id}")
+                    
+                except Exception as e:
+                    app.logger.error(f"Error processing quotation {quote_id}: {str(e)}")
+                    app.logger.error(traceback.format_exc())
         
         # Start background thread
         thread = Thread(target=process_quotation)
