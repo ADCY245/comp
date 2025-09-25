@@ -234,29 +234,20 @@ mongo_db = None
 
 if USE_MONGO:
     try:
-        from pymongo import MongoClient
+        # Lazily create the MongoClient **after** gunicorn forks to avoid fork-unsafe sockets.
+        from lazy_mongo import get_db
+        mongo_db = get_db()
+        mongo_client = mongo_db.client
         from pymongo.errors import ConnectionFailure
         
-        MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
-        print(f"\n=== MongoDB Configuration ===")
-        print(f"Attempting to connect to MongoDB at: {MONGO_URI}")
-        print(f"Database: {DB_NAME}")
         
-        # Initialize MongoDB client
-        mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5 second timeout
         
-        # Test the connection
-        mongo_client.server_info()  # Will raise an exception if connection fails
-        
-        # Get the database
-        mongo_db = mongo_client[DB_NAME]
         
         # Initialize the users collection
         from mongo_users import init_mongo_connection
         users_col = init_mongo_connection(mongo_client, mongo_db)
         
         MONGO_AVAILABLE = True
-        print("✅ Successfully connected to MongoDB")
         print("==============================\n")
         
     except Exception as e:
