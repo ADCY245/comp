@@ -429,6 +429,16 @@ if USE_MONGO and MONGODB_URI:
     try:
         if initialize_mongodb() and mongo_db is not None:
             print("✅ MongoDB initialized successfully")
+            try:
+                # Ensure mongo_users module has an initialized collection reference
+                users_col = init_mongo_connection(mongo_client, mongo_db)
+                mongo_users_col = users_col
+                app.users_col = users_col
+                print("✅ mongo_users collection initialized")
+            except Exception as init_err:
+                print(f"❌ Error initializing mongo_users collection: {init_err}")
+                if not JSON_FALLBACK:
+                    raise
         else:
             print("⚠️ MongoDB initialization failed")
     except Exception as e:
