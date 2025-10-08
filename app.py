@@ -354,9 +354,7 @@ def initialize_mongodb():
             'minPoolSize': 1,
             'retryWrites': True,
             'w': 'majority',
-            'serverSelectionTimeoutMS': 10000,  # Increased timeout for server selection
-            'authSource': 'admin',  # Specify the authentication database
-            'authMechanism': 'SCRAM-SHA-256'  # Explicitly set auth mechanism for Atlas
+            'serverSelectionTimeoutMS': 10000  # Increased timeout for server selection
         }
         
         # Clean the MongoDB URI
@@ -364,7 +362,7 @@ def initialize_mongodb():
         query = parse_qs(parsed_uri.query)
         
         # Remove any conflicting TLS parameters
-        for param in ['tlsInsecure', 'tlsAllowInvalidCertificates', 'authSource', 'authMechanism']:
+        for param in ['tlsInsecure', 'tlsAllowInvalidCertificates']:
             if param in query:
                 del query[param]
         
