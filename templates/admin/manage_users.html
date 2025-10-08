@@ -866,7 +866,15 @@
 
         // Show toast notification
         function showToast(message, type = 'info') {
-            const toastContainer = document.getElementById('toastContainer');
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.setAttribute('aria-live', 'polite');
+                toastContainer.setAttribute('aria-atomic', 'true');
+                document.body.appendChild(toastContainer);
+            }
             const toastId = 'toast-' + Date.now();
             const toastHtml = `
                 <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -879,7 +887,12 @@
                 </div>
             `;
             
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            try {
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            } catch (err) {
+                console.error('Failed to render toast', err, message);
+                return;
+            }
             const toastElement = document.getElementById(toastId);
             const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 5000 });
             toast.show();

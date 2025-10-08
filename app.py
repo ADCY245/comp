@@ -1372,6 +1372,26 @@ def health_check():
 
 # Register blueprints
 app.register_blueprint(customers_bp)
+
+# Compatibility routes for legacy frontend calls (expects /api/customers)
+@app.route('/api/customers', methods=['GET', 'POST'])
+@login_required
+def legacy_customers_collection():
+    """Proxy to `/api/v1/customers` for backwards compatibility."""
+    if request.method == 'GET':
+        return current_app.view_functions['customers.get_customers']()
+    return current_app.view_functions['customers.create_customer']()
+
+
+@app.route('/api/customers/<customer_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def legacy_customers_item(customer_id):
+    """Proxy to `/api/v1/customers/<id>` for backwards compatibility."""
+    if request.method == 'GET':
+        return current_app.view_functions['customers.get_customer'](customer_id)
+    if request.method == 'PUT':
+        return current_app.view_functions['customers.update_customer'](customer_id)
+    return current_app.view_functions['customers.delete_customer'](customer_id)
 app.register_blueprint(companies_bp)
 
 @app.route('/api/test-mongodb')
@@ -1708,53 +1728,31 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    if not user_id:
-        app.logger.warning("load_user called with empty user_id")
-        return None
-        
     if MONGO_AVAILABLE and USE_MONGO:
         if not ensure_mongo_users_initialized():
             app.logger.error("[AUTH] users_col not initialized; unable to load user")
             return None
-            
         try:
-            app.logger.debug(f'Loading user from MongoDB with ID: {user_id}')
+            print(f'Loading user from MongoDB with ID: {user_id}')
             doc = mu_find_user_by_id(user_id)
             if not doc:
-                app.logger.warning(f'User not found in MongoDB with ID: {user_id}')
-                return None
-            
-            # Check for required fields
-            required_fields = ['email', 'username', 'password_hash']
-            for field in required_fields:
-                if field not in doc:
-                    app.logger.error(f"User document missing required field: {field}. User ID: {user_id}")
-                    return None
-            
-            # Create user with safe field access
-            try:
-                user = User(
-                    id=str(doc.get('_id', user_id)),
-                    email=doc['email'],
-                    username=doc['username'],
-                    password_hash=doc['password_hash'],
-                    is_verified=doc.get('is_verified', False),
-                    otp_verified=doc.get('otp_verified', False),
-                    company_id=doc.get('company_id'),
-                    role=doc.get('role', 'user'),
-                    customers=doc.get('customers', []),
-                    assigned_companies=doc.get('assigned_companies', [])
-                )
-                app.logger.debug(f'Successfully loaded user: {user.email} (ID: {user.id})')
-                return user
-                
-            except Exception as create_error:
-                app.logger.error(f"Error creating User object: {str(create_error)}\nUser data: {doc}", 
-                               exc_info=True)
+                print(f'User not found in MongoDB with ID: {user_id}')
                 return None
                 
+            user = User(
+                id=str(doc['_id']),  # Convert ObjectId to string
+                email=doc['email'],
+                username=doc['username'],
+                password_hash=doc['password_hash'],
+                is_verified=doc.get('is_verified', False),
+                otp_verified=doc.get('otp_verified', False),
+                company_id=doc.get('company_id'),
+                role=doc.get('role', 'user')
+            )
+            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
+            return user
         except Exception as e:
-            app.logger.error(f"Error loading user {user_id}: {str(e)}", exc_info=True)
+            print(f"Error loading user {user_id}: {e}")
             return None
     else:
         print('MongoDB not available, falling back to JSON users')
