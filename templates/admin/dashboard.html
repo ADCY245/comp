@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Product Calculator</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .admin-navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .admin-navbar .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white !important;
+        }
+        .admin-navbar .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            margin: 0 0.5rem;
+            padding: 0.5rem 1rem !important;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .admin-navbar .nav-link:hover {
+            background: rgba(255,255,255,0.2);
+            color: white !important;
+        }
+        .stats-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .activity-item {
+            padding: 0.75rem;
+            border-left: 3px solid #007bff;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .activity-item.admin {
+            border-left-color: #dc3545;
+        }
+        .activity-item.user {
+            border-left-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <!-- Admin Navigation -->
+    <nav class="navbar navbar-expand-lg admin-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-calculator me-2"></i>
+                Product Calculator
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="adminNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/manage-users">
+                            <i class="fas fa-users me-1"></i> Manage Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/quotations">
+                            <i class="fas fa-file-invoice me-1"></i> Check Quotations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i> Users Page
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/auth/logout">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="container-fluid mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="text-dark mb-0">Admin Dashboard</h2>
+                <p class="text-muted">Welcome back, {{ user.username }}!</p>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card stats-card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-uppercase mb-1">Total Users</h6>
+                                <h3 class="mb-0" id="totalUsers">Loading...</h3>
+                            </div>
+                            <div>
+                                <i class="fas fa-users fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card stats-card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-uppercase mb-1">Active Sessions</h6>
+                                <h3 class="mb-0" id="activeSessions">0</h3>
+                            </div>
+                            <div>
+                                <i class="fas fa-user-check fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card stats-card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-uppercase mb-1">Total Quotations</h6>
+                                <h3 class="mb-0" id="totalQuotations">0</h3>
+                            </div>
+                            <div>
+                                <i class="fas fa-file-invoice fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card stats-card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-uppercase mb-1">Admin Users</h6>
+                                <h3 class="mb-0" id="adminUsers">0</h3>
+                            </div>
+                            <div>
+                                <i class="fas fa-user-shield fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-4">
+                <div class="card stats-card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2 text-primary"></i>
+                            Users & Quotations Over Time
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="usersChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="card stats-card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-pie me-2 text-success"></i>
+                            User Roles Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="rolesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Quick Actions -->
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card stats-card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock me-2 text-info"></i>
+                            Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentActivity">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin me-2"></i>
+                                Loading recent activity...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="card stats-card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bolt me-2 text-warning"></i>
+                            Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="addNewUser()">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Add New User
+                            </button>
+                            <button class="btn btn-info" onclick="viewAllUsers()">
+                                <i class="fas fa-users me-2"></i>
+                                Manage Users
+                            </button>
+                            <button class="btn btn-success" onclick="viewQuotationHistory()">
+                                <i class="fas fa-file-invoice me-2"></i>
+                                View Quotation History
+                            </button>
+                            <button class="btn btn-warning" onclick="viewActiveSessions()">
+                                <i class="fas fa-users-cog me-2"></i>
+                                Active Sessions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let usersChart, rolesChart;
+        
+        // Load dashboard data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+            loadChartData();
+        });
+        
+        // Load dashboard statistics
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error loading stats:', data.error);
+                    return;
+                }
+                
+                // Update stats cards
+                document.getElementById('totalUsers').textContent = data.total_users;
+                document.getElementById('activeSessions').textContent = data.active_sessions;
+                document.getElementById('totalQuotations').textContent = data.total_quotations;
+                
+                // Calculate admin users from recent activity
+                const adminCount = data.recent_activity.filter(activity => activity.role === 'admin').length;
+                document.getElementById('adminUsers').textContent = adminCount;
+                
+                // Update recent activity
+                updateRecentActivity(data.recent_activity);
+                
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+                document.getElementById('totalUsers').textContent = 'Error';
+                document.getElementById('activeSessions').textContent = 'Error';
+            }
+        }
+        
+        // Load chart data
+        async function loadChartData() {
+            try {
+                const response = await fetch('/api/admin/chart-data');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error loading chart data:', data.error);
+                    return;
+                }
+                
+                // Create users chart
+                createUsersChart(data.users_by_month);
+                
+                // Create roles chart
+                createRolesChart(data.user_roles);
+                
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+            }
+        }
+        
+        // Create users over time chart
+        function createUsersChart(data) {
+            const ctx = document.getElementById('usersChart').getContext('2d');
+            
+            usersChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.month),
+                    datasets: [{
+                        label: 'New Users',
+                        data: data.map(item => item.users),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Quotations Sent',
+                        data: data.map(item => item.quotations),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create user roles pie chart
+        function createRolesChart(data) {
+            const ctx = document.getElementById('rolesChart').getContext('2d');
+            
+            rolesChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(item => item.role.charAt(0).toUpperCase() + item.role.slice(1)),
+                    datasets: [{
+                        data: data.map(item => item.count),
+                        backgroundColor: [
+                            '#007bff',
+                            '#28a745',
+                            '#ffc107',
+                            '#dc3545',
+                            '#6f42c1'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update recent activity
+        function updateRecentActivity(activities) {
+            const container = document.getElementById('recentActivity');
+            
+            if (activities.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No recent activity</div>';
+                return;
+            }
+            
+            const html = activities.map(activity => `
+                <div class="activity-item ${activity.role}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${activity.message}</strong>
+                            <br>
+                            <small class="text-muted">${activity.timestamp}</small>
+                        </div>
+                        <span class="badge bg-${activity.role === 'admin' ? 'danger' : 'success'}">
+                            ${activity.role}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // Quick Actions - Fully Functional
+        function addNewUser() {
+            // Redirect to manage users page and trigger add user modal
+            window.location.href = '/admin/manage-users?action=add';
+        }
+        
+        function viewAllUsers() {
+            // Redirect to manage users page
+            window.location.href = '/admin/manage-users';
+        }
+        
+        function viewQuotationHistory() {
+            // Redirect to quotations page
+            window.location.href = '/admin/quotations';
+        }
+        
+        function viewActiveSessions() {
+            // Show active sessions modal
+            showActiveSessionsModal();
+        }
+        
+        // Active Sessions Modal
+        async function showActiveSessionsModal() {
+            try {
+                const response = await fetch('/api/admin/active-sessions');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error loading active sessions: ' + data.error);
+                    return;
+                }
+                
+                displayActiveSessionsModal(data.sessions);
+                
+            } catch (error) {
+                console.error('Error loading active sessions:', error);
+                alert('Error loading active sessions');
+            }
+        }
+        
+        function displayActiveSessionsModal(sessions) {
+            let modalHtml = `
+                <div class="modal fade" id="activeSessionsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Active User Sessions</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+            `;
+            
+            if (sessions.length === 0) {
+                modalHtml += `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
+                        <h5>No Active Sessions</h5>
+                        <p>No users are currently active in the system.</p>
+                    </div>
+                `;
+            } else {
+                modalHtml += `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Company</th>
+                                    <th>Cart Amount</th>
+                                    <th>Cart Items</th>
+                                    <th>Last Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                sessions.forEach(session => {
+                    // Set role badge color - admin is red, company is blue, default is gray
+                    let roleColor = 'secondary';
+                    if (session.role === 'admin') {
+                        roleColor = 'danger';
+                    } else if (session.role === 'company') {
+                        roleColor = 'primary';
+                    }
+                    
+                    modalHtml += `
+                        <tr>
+                            <td>
+                                <strong>${session.username}</strong><br>
+                                <small class="text-muted">${session.email}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-${roleColor} text-capitalize">${session.role}</span>
+                            </td>
+                            <td>
+                                <strong>${session.company_name}</strong><br>
+                                <small class="text-muted">${session.company_email}</small>
+                            </td>
+                            <td>
+                                <strong>₹${session.cart_amount.toLocaleString('en-IN')}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">${session.cart_items_count} items</span>
+                            </td>
+                            <td>
+                                <small>${session.last_activity}</small>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                modalHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            modalHtml += `
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="refreshActiveSessions()">Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('activeSessionsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('activeSessionsModal')).show();
+        }
+        
+        function refreshActiveSessions() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('activeSessionsModal'));
+            modal.hide();
+            setTimeout(() => {
+                showActiveSessionsModal();
+            }, 300);
+        }
+    </script>
+</body>
+</html>

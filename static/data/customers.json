@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "Acme Corporation",
+    "email": "contact@acme.com",
+    "assigned_to": [],
+    "created_by": "admin",
+    "created_at": "2023-01-01T00:00:00Z"
+  },
+  {
+    "id": "2",
+    "name": "Globex Corp",
+    "email": "info@globex.com",
+    "assigned_to": [],
+    "created_by": "admin",
+    "created_at": "2023-01-02T00:00:00Z"
+  },
+  {
+    "id": "3",
+    "name": "Initech",
+    "email": "support@initech.com",
+    "assigned_to": [],
+    "created_by": "admin",
+    "created_at": "2023-01-03T00:00:00Z"
+  }
+]

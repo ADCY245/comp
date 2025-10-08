@@ -1,0 +1,506 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }} | Admin Panel{% endblock %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            margin: 0 0.1rem;
+            border-radius: 0.25rem;
+        }
+        .customer-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        .customer-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        .toast-container {
+            z-index: 1090;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="text-dark mb-0">Manage Customers</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Customers</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="card">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Customer List</h5>
+                <button class="btn btn-primary" onclick="showAddCustomerModal()">
+                    <i class="fas fa-plus me-1"></i> Add Customer
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="customersTable" class="table table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Assigned To</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Customer Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerModalTitle">Add New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="customerForm" onsubmit="event.preventDefault(); saveCustomer();">
+                <input type="hidden" name="id" id="customerId">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="assignedTo" class="form-label">Assigned To</label>
+                            <select class="form-select" id="assignedTo" name="assignedTo">
+                                <option value="">-- Select User --</option>
+                                <!-- Users will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveCustomerBtn">
+                        <i class="fas fa-save me-1"></i> Save Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script>
+    // Global variables
+    let customersTable;
+    let allUsers = [];
+    let currentUser = null;
+
+    // Initialize when document is ready
+    $(document).ready(function() {
+        console.log('Document ready, initializing DataTable...');
+        
+        try {
+            // Initialize DataTable with proper error handling
+            customersTable = $('#customersTable').DataTable({
+                processing: true,
+                serverSide: false,
+                responsive: true,
+                order: [[0, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: -1 }, // Disable sorting on actions column
+                    { targets: 0, visible: false } // Hide ID column
+                ],
+                language: {
+                    emptyTable: 'No customers found',
+                    zeroRecords: 'No matching customers found',
+                    processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i> Loading...'
+                },
+                initComplete: function() {
+                    console.log('DataTable initialization complete');
+                    // Load initial data after table is ready
+                    loadUsers();
+                    loadCustomers();
+                },
+                error: function(settings, techNote, message) {
+                    console.error('DataTables error:', message);
+                    showToast('Error initializing table: ' + message, 'danger');
+                }
+            });
+            
+            console.log('DataTable initialized:', customersTable);
+        } catch (error) {
+            console.error('Error initializing DataTable:', error);
+            showToast('Error initializing table: ' + error.message, 'danger');
+        }
+    });
+
+    // Load all users
+    function loadUsers() {
+        fetch('/api/users')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.users) {
+                    allUsers = data.users;
+                    updateUserDropdown();
+                } else {
+                    throw new Error(data.error || 'Failed to load users');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading users:', error);
+                showToast('Error loading users', 'danger');
+            });
+    }
+
+    // Load customers
+    function loadCustomers() {
+        console.log('Loading customers...');
+        showToast('Loading customers...', 'info');
+        
+        // Try multiple endpoints for backward compatibility
+        const endpoints = [
+            '/api/v1/customers',
+            '/api/customers'
+        ];
+        
+        let currentEndpointIndex = 0;
+        
+        const tryLoad = () => {
+            if (currentEndpointIndex >= endpoints.length) {
+                showToast('Failed to load customers: All endpoints failed', 'danger');
+                if (customersTable) {
+                    customersTable.clear().draw();
+                }
+                return;
+            }
+            
+            const endpoint = endpoints[currentEndpointIndex];
+            console.log(`Trying endpoint: ${endpoint}`);
+            
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                        }).catch(() => {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Customers loaded from', endpoint, ':', data);
+                    const customers = data?.success ? data.data : data;
+                    if (Array.isArray(customers)) {
+                        populateCustomersTable(customers);
+                        showToast('Customers loaded successfully', 'success');
+                    } else {
+                        throw new Error(data?.error || 'Invalid response format: expected array of customers');
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error loading customers from ${endpoint}:`, error);
+                    currentEndpointIndex++;
+                    tryLoad(); // Try next endpoint
+                });
+        };
+        
+        tryLoad();
+    }
+
+    // Update user dropdown in the form
+    function updateUserDropdown() {
+        const dropdown = document.getElementById('assignedTo');
+        if (!dropdown) return;
+        
+        // Clear existing options except the first one
+        while (dropdown.options.length > 1) {
+            dropdown.remove(1);
+        }
+        
+        // Add users to dropdown
+        allUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.username} (${user.email})`;
+            dropdown.appendChild(option);
+        });
+    }
+
+    // Populate customers table
+    function populateCustomersTable(customers) {
+        if (!customersTable) {
+            console.error('DataTable not initialized');
+            return;
+        }
+        
+        try {
+            // Clear existing data
+            customersTable.clear();
+            
+            // Process and add rows
+            const rows = customers.map(customer => ({
+                id: customer.id || '',
+                name: customer.name || '',
+                email: customer.email || '',
+                phone: customer.phone || '',
+                assigned_to: customer.assigned_to ? 
+                    (typeof customer.assigned_to === 'object' ? 
+                        (customer.assigned_to.username || customer.assigned_to.email || '') : 
+                        String(customer.assigned_to)) : '',
+                created_at: customer.created_at ? 
+                    (new Date(customer.created_at)).toLocaleString() : '',
+                _: '' // This will be used for the actions column
+            }));
+            
+            // Add rows to DataTable
+            customersTable.rows.add(rows).draw();
+            
+        } catch (error) {
+            console.error('Error populating customers table:', error);
+            showToast('Error displaying customer data: ' + error.message, 'danger');
+        }
+    }
+
+    // Show add customer modal
+    function showAddCustomerModal() {
+        const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+        const form = document.getElementById('customerForm');
+        
+        // Reset form
+        form.reset();
+        form.dataset.id = '';
+        document.getElementById('customerModalTitle').textContent = 'Add New Customer';
+        
+        // Show modal
+        modal.show();
+    }
+
+    // Save customer
+    function saveCustomer() {
+        const form = document.getElementById('customerForm');
+        const customerId = form.dataset.id || '';
+        const saveBtn = document.getElementById('saveCustomerBtn');
+        const originalBtnText = saveBtn.innerHTML;
+        
+        // Validate form
+        const name = form.elements['name'].value.trim();
+        const email = form.elements['email'].value.trim();
+        const phone = form.elements['phone'].value.trim();
+        const assignedTo = form.elements['assignedTo'].value;
+        
+        if (!name) {
+            showToast('Name is required', 'danger');
+            return;
+        }
+        
+        try {
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            
+            const customerData = {
+                name,
+                email,
+                phone,
+                assigned_to: assignedTo || null
+            };
+            
+            const method = customerId ? 'PUT' : 'POST';
+            const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
+            
+            fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(customerData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(
+                        customerId ? 'Customer updated successfully' : 'Customer created successfully', 
+                        'success'
+                    );
+                    loadCustomers();
+                    bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+                } else {
+                    throw new Error(data.error || 'Failed to save customer');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving customer:', error);
+                showToast(`Error: ${error.message}`, 'danger');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            });
+        } catch (error) {
+            console.error('Error saving customer:', error);
+            showToast(`Error: ${error.message}`, 'danger');
+        }
+    }
+
+    // Edit customer
+    function editCustomer(customerId) {
+        fetch(`/api/customers/${customerId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.customer) {
+                    const customer = data.customer;
+                    const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+                    const form = document.getElementById('customerForm');
+                    
+                    // Fill form
+                    form.dataset.id = customer.id;
+                    document.getElementById('customerId').value = customer.id;
+                    document.getElementById('name').value = customer.name || '';
+                    document.getElementById('email').value = customer.email || '';
+                    document.getElementById('phone').value = customer.phone || '';
+                    
+                    if (customer.assigned_to) {
+                        document.getElementById('assignedTo').value = customer.assigned_to.id;
+                    } else {
+                        document.getElementById('assignedTo').value = '';
+                    }
+                    
+                    // Update modal title
+                    document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+                    
+                    // Show modal
+                    modal.show();
+                } else {
+                    throw new Error(data.error || 'Failed to load customer data');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading customer data:', error);
+                showToast(`Error: ${error.message}`, 'danger');
+            });
+    }
+
+    // Delete customer
+    async function deleteCustomer(customerId) {
+        if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/customers/${customerId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            const data = await response.json();
+            if (response.ok && data.success) {
+                showToast('Customer deleted successfully', 'success');
+                loadCustomers();
+            } else {
+                throw new Error(data.error || 'Failed to delete customer');
+            }
+        } catch (error) {
+            console.error('Error deleting customer:', error);
+            showToast(`Error: ${error.message}`, 'danger');
+        }
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        try {
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                // Create toast container if it doesn't exist
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                toastContainer.style.zIndex = '1100';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = document.getElementById(toastId);
+            if (toastElement) {
+                const toast = new bootstrap.Toast(toastElement, {
+                    autohide: true,
+                    delay: 5000
+                });
+                
+                toast.show();
+                
+                // Remove toast after it's hidden
+                toastElement.addEventListener('hidden.bs.toast', function () {
+                    if (toastElement && toastElement.parentNode) {
+                        toastElement.parentNode.removeChild(toastElement);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error showing toast:', error);
+            // Fallback to alert if toast fails
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+</script>
+{% endblock %}
