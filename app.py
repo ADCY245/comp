@@ -328,6 +328,35 @@ if MONGODB_URI:
 print(f"Using database: {DB_NAME}")
 print("==============================\n")
 
+# Helper to ensure mongo_users users_col is initialized per process
+def ensure_mongo_users_initialized():
+    """Ensure `mongo_users.users_col` is ready in the current process."""
+    global users_col, mongo_users_col
+
+    if not (USE_MONGO and MONGO_AVAILABLE):
+        return False
+
+    if users_col is not None:
+        return True
+
+    if mongo_client is None or mongo_db is None:
+        app.logger.error("MongoDB client or database not initialized")
+        return False
+
+    try:
+        users_col = init_mongo_connection(mongo_client, mongo_db)
+        mongo_users_col = users_col
+        app.users_col = users_col
+        app.logger.info("[DEBUG] Reinitialized mongo_users collection reference")
+        return True
+    except Exception as err:
+        app.logger.error(f"Failed to initialize mongo_users collection: {err}")
+        return False
+
+# Expose helper on app for other modules
+app.ensure_mongo_users_initialized = ensure_mongo_users_initialized
+
+
 def initialize_mongodb():
     """Initialize MongoDB connection and set up collections with authentication"""
     global mongo_client, mongo_db, mongo_users_col, MONGO_AVAILABLE
@@ -899,6 +928,9 @@ def assign_customer_to_user(user_id, customer_id):
     """Assign a customer to a user."""
     customer_id = str(customer_id)
     if MONGO_AVAILABLE and USE_MONGO:
+        if not ensure_mongo_users_initialized():
+            app.logger.error("[assign_customer_to_user] users_col not initialized")
+            return False
         try:
             from bson import ObjectId
             result = users_col.update_one(
@@ -934,6 +966,9 @@ def remove_customer_from_user(user_id, customer_id):
     """Remove a customer assignment from a user."""
     customer_id = str(customer_id)
     if MONGO_AVAILABLE and USE_MONGO:
+        if not ensure_mongo_users_initialized():
+            app.logger.error("[remove_customer_from_user] users_col not initialized")
+            return False
         try:
             from bson import ObjectId
             result = users_col.update_one(
@@ -968,6 +1003,9 @@ def get_users_for_customer(customer_id):
     user_ids = []
     
     if MONGO_AVAILABLE and USE_MONGO:
+        if not ensure_mongo_users_initialized():
+            app.logger.error("[get_users_for_customer] users_col not initialized")
+            return []
         try:
             users = users_col.find({'customers': customer_id}, {'_id': 1})
             user_ids = [str(user['_id']) for user in users]
@@ -1671,6 +1709,9 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     if MONGO_AVAILABLE and USE_MONGO:
+        if not ensure_mongo_users_initialized():
+            app.logger.error("[AUTH] users_col not initialized; unable to load user")
+            return None
         try:
             print(f'Loading user from MongoDB with ID: {user_id}')
             doc = mu_find_user_by_id(user_id)
@@ -4544,6 +4585,9 @@ def api_register_complete():
         print(f'Registration attempt - Email: {email}, Username: {username}')
 
         if MONGO_AVAILABLE and USE_MONGO:
+            if not ensure_mongo_users_initialized():
+                app.logger.error("[REGISTER] users_col not initialized")
+                return jsonify({'error': 'Authentication service unavailable'}), 503
             try:
                 # Check for existing user
                 existing_user = mu_find_user_by_email_or_username(email) or mu_find_user_by_email_or_username(username)
@@ -4678,9 +4722,9 @@ def api_login():
                 'error': 'Email/username and password are required',
                 'message': 'Please provide both email/username and password'
             }), 400
-            
+
         # Check if MongoDB is available and should be used
-        if not MONGO_AVAILABLE or not USE_MONGO or users_col is None:
+        if not MONGO_AVAILABLE or not USE_MONGO or not ensure_mongo_users_initialized():
             error_msg = 'MongoDB authentication is required but not available'
             app.logger.error(error_msg)
             return jsonify({
