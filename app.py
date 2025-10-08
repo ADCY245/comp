@@ -4991,6 +4991,48 @@ def admin_stats():
 
 # Admin Management Routes
 
+
+def _serialize_admin_user_doc(user_doc):
+    """Convert a user document into a JSON-serializable admin payload."""
+
+    def _convert(value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, list):
+            return [_convert(item) for item in value]
+        if isinstance(value, dict):
+            return {key: _convert(val) for key, val in value.items()}
+        return value
+
+    role = user_doc.get('role', 'user')
+    customers_raw = user_doc.get('customers') or user_doc.get('customers_assigned') or []
+    customers_clean = _convert(customers_raw)
+
+    payload = {
+        'id': _convert(user_doc.get('_id')),
+        'username': user_doc.get('username', ''),
+        'email': user_doc.get('email', ''),
+        'role': role,
+        'company_name': user_doc.get('company_name', ''),
+        'company_id': _convert(user_doc.get('company_id', '')),
+        'company_email': user_doc.get('company_email', ''),
+        'is_verified': bool(user_doc.get('is_verified', False)),
+        'customers': [] if role == 'admin' else customers_clean,
+        'customers_count': 0 if role == 'admin' else len(customers_clean),
+        'created_at': _convert(user_doc.get('created_at')),
+        'updated_at': _convert(user_doc.get('updated_at')),
+        'assigned_companies': _convert(user_doc.get('assigned_companies', [])),
+    }
+
+    for field in ('phone', 'status', 'last_login'):
+        if field in user_doc:
+            payload[field] = _convert(user_doc[field])
+
+    return payload
+
+
 @app.route('/api/admin/users', methods=['GET', 'POST'])
 @login_required
 def admin_manage_users():
@@ -5066,43 +5108,17 @@ def admin_manage_users():
         users_list = []
         
         if MONGO_AVAILABLE and USE_MONGO:
-            # Get all users from MongoDB
-            users_cursor = mongo_db.users.find({})
-            
-            for user_doc in users_cursor:
-                # For admins, they have access to all customers
-                customer_ids = [] if user_doc.get('role') == 'admin' else user_doc.get('customers', [])
-                
-                users_list.append({
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user_doc.get('role') == 'admin' else len(customer_ids)
-                })
+            if not ensure_mongo_users_initialized():
+                app.logger.error("[ADMIN] users_col not initialized before listing users")
+                return jsonify({'error': 'Authentication service unavailable'}), 503
+
+            for user_doc in mongo_db.users.find({}):
+                users_list.append(_serialize_admin_user_doc(user_doc))
         else:
-            # Fallback to JSON file
-            users = _load_users_json()
-            
-            for user_id, user in users.items():
-                # For admins, they have access to all customers
-                customer_ids = [] if user.get('role') == 'admin' else user.get('customers', [])
-                
-                users_list.append({
-                    'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user.get('role') == 'admin' else len(customer_ids)
-                })
+            for user_id, user in _load_users_json().items():
+                doc = dict(user)
+                doc['_id'] = user_id
+                users_list.append(_serialize_admin_user_doc(doc))
         
         return jsonify({'success': True, 'users': users_list})
         
@@ -5123,43 +5139,17 @@ def admin_get_users():
         users_list = []
         
         if MONGO_AVAILABLE and USE_MONGO:
-            # Get all users from MongoDB
-            users_cursor = mongo_db.users.find({})
-            
-            for user_doc in users_cursor:
-                # For admins, they have access to all customers
-                customer_ids = [] if user_doc.get('role') == 'admin' else user_doc.get('customers', [])
-                
-                users_list.append({
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user_doc.get('role') == 'admin' else len(customer_ids)
-                })
+            if not ensure_mongo_users_initialized():
+                app.logger.error("[ADMIN] users_col not initialized before listing users")
+                return jsonify({'error': 'Authentication service unavailable'}), 503
+
+            for user_doc in mongo_db.users.find({}):
+                users_list.append(_serialize_admin_user_doc(user_doc))
         else:
-            # Fallback to JSON file
-            users = _load_users_json()
-            
-            for user_id, user in users.items():
-                # For admins, they have access to all customers
-                customer_ids = [] if user.get('role') == 'admin' else user.get('customers', [])
-                
-                users_list.append({
-                    'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids,
-                    'customers_count': 0 if user.get('role') == 'admin' else len(customer_ids)
-                })
+            for user_id, user in _load_users_json().items():
+                doc = dict(user)
+                doc['_id'] = user_id
+                users_list.append(_serialize_admin_user_doc(doc))
         
         return jsonify({'success': True, 'users': users_list})
         
