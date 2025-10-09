@@ -397,6 +397,53 @@
                     });
                 }
 
+        async function populateCompanyAssignedTo(selectedUserIds = []) {
+            const select = document.getElementById('companyAssignedTo');
+            if (!select) return;
+
+            const selectedIdsString = Array.isArray(selectedUserIds)
+                ? selectedUserIds.map(String)
+                : [];
+
+            try {
+                if (!Array.isArray(allUsers) || allUsers.length === 0) {
+                    const response = await fetch('/api/admin/users');
+                    const data = await response.json();
+                    if (data.success) {
+                        allUsers = Array.isArray(data.users) ? data.users : [];
+                    } else {
+                        console.error('Failed to load users for company assignment:', data.error);
+                        return;
+                    }
+                }
+
+                select.innerHTML = '';
+
+                const sortedUsers = [...allUsers].sort((a, b) => {
+                    const nameA = (a.username || a.email || '').toLowerCase();
+                    const nameB = (b.username || b.email || '').toLowerCase();
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+                    return 0;
+                });
+
+                sortedUsers.forEach(user => {
+                    const value = String(user._id || user.id || '');
+                    if (!value) return;
+                    const label = user.username || user.email || value;
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    if (selectedIdsString.includes(option.value)) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error populating company assignment list:', error);
+            }
+        }
+
                 // Load initial data
                 loadUsers();
                 loadCompanies();
@@ -412,7 +459,10 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        allUsers = Array.isArray(data.users) ? data.users : [];
                         populateUsersTable(data.users);
+                        // Refresh company assignment select if modal is open
+                        populateCompanyAssignedTo();
                     } else {
                         console.error('Failed to load users:', data.error);
                         alert('Failed to load users. Please try again.');
@@ -793,11 +843,11 @@
             modal.show();
         }
         
-        function showAddCompanyModal() {
+        async function showAddCompanyModal() {
             document.getElementById('companyModalTitle').textContent = 'Add New Company';
             document.getElementById('companyForm').reset();
             document.getElementById('companyId').value = '';
-            populateCompanyAssignedTo();
+            await populateCompanyAssignedTo();
             const select = document.getElementById('companyAssignedTo');
             if (select) Array.from(select.options).forEach(opt => opt.selected = false);
             new bootstrap.Modal(document.getElementById('companyModal')).show();
@@ -1010,7 +1060,7 @@
                     document.getElementById('companyAddress').value = company.address || '';
 
                     // Populate and preselect assigned users if provided
-                    populateCompanyAssignedTo();
+                    await populateCompanyAssignedTo(company.assigned_to || []);
                     const select = document.getElementById('companyAssignedTo');
                     const assigned = (company.assigned_to || []).map(String);
                     if (select) {
