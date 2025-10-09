@@ -54,7 +54,7 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user me-1"></i> Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="adminLogoutButton"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -88,6 +88,46 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutButton = document.getElementById('adminLogoutButton');
+            if (!logoutButton) return;
+
+            logoutButton.addEventListener('click', async function(event) {
+                event.preventDefault();
+
+                if (!confirm('Are you sure you want to sign out?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ url_for("api_logout") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return;
+                    }
+
+                    if (response.ok) {
+                        window.location.href = '{{ url_for("login") }}';
+                    } else {
+                        console.error('Logout failed with status:', response.status);
+                        window.location.href = '{{ url_for("api_logout") }}';
+                    }
+                } catch (error) {
+                    console.error('Error during logout:', error);
+                    window.location.href = '{{ url_for("api_logout") }}';
+                }
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

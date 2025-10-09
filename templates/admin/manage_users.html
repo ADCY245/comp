@@ -357,46 +357,6 @@
         // Constants
         const companiesPerPage = 10;
         
-        $(document).ready(function() {
-            try {
-                // Initialize DataTables with error handling
-                usersTable = $('#usersTable').DataTable({
-                    responsive: true,
-                    order: [[4, 'desc']],  // Sort by Created date by default
-                    columnDefs: [
-                        { orderable: false, targets: [5] },  // Actions column
-                        { width: '15%', targets: [0] },      // Username
-                        { width: '25%', targets: [1] },      // Email
-                        { width: '10%', targets: [2] },      // Role
-                        { width: '15%', targets: [3] },      // Assigned Customers
-                        { width: '15%', targets: [4] },      // Created
-                        { width: '20%', targets: [5] }       // Actions
-                    ],
-                    // Add error handling
-                    error: function(settings, techNote, message) {
-                        console.error('DataTables error:', message);
-                    },
-                    // Disable automatic width calculation
-                    autoWidth: false,
-                    // Enable horizontal scrolling if needed
-                    scrollX: true
-                });
-
-                // Initialize other tables if they exist
-                if ($('#companiesTable').length) {
-                    companiesTable = $('#companiesTable').DataTable({
-                        responsive: true,
-                        // Add your companies table config
-                    });
-                }
-                
-                if ($('#customersTable').length) {
-                    customersTable = $('#customersTable').DataTable({
-                        responsive: true,
-                        // Add your customers table config
-                    });
-                }
-
         async function populateCompanyAssignedTo(selectedUserIds = []) {
             const select = document.getElementById('companyAssignedTo');
             if (!select) return;
@@ -443,6 +403,46 @@
                 console.error('Error populating company assignment list:', error);
             }
         }
+
+        $(document).ready(function() {
+            try {
+                // Initialize DataTables with error handling
+                usersTable = $('#usersTable').DataTable({
+                    responsive: true,
+                    order: [[4, 'desc']],  // Sort by Created date by default
+                    columnDefs: [
+                        { orderable: false, targets: [5] },  // Actions column
+                        { width: '15%', targets: [0] },      // Username
+                        { width: '25%', targets: [1] },      // Email
+                        { width: '10%', targets: [2] },      // Role
+                        { width: '15%', targets: [3] },      // Assigned Customers
+                        { width: '15%', targets: [4] },      // Created
+                        { width: '20%', targets: [5] }       // Actions
+                    ],
+                    // Add error handling
+                    error: function(settings, techNote, message) {
+                        console.error('DataTables error:', message);
+                    },
+                    // Disable automatic width calculation
+                    autoWidth: false,
+                    // Enable horizontal scrolling if needed
+                    scrollX: true
+                });
+
+                // Initialize other tables if they exist
+                if ($('#companiesTable').length) {
+                    companiesTable = $('#companiesTable').DataTable({
+                        responsive: true,
+                        // Add your companies table config
+                    });
+                }
+                
+                if ($('#customersTable').length) {
+                    customersTable = $('#customersTable').DataTable({
+                        responsive: true,
+                        // Add your customers table config
+                    });
+                }
 
                 // Load initial data
                 loadUsers();
