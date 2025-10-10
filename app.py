@@ -188,132 +188,156 @@ def send_alert_email(subject: str, body: str):
     app.logger.error(error_msg, exc_info=True)
     return False
 
-# Initialize MongoDB if available
-MONGO_AVAILABLE = False
-USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
-DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
-MONGO_URI = os.getenv('MONGO_URI', '').strip()
+# MongoDB Configuration
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+import time
 
+MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+DB_NAME = os.environ.get('DB_NAME', 'moneda_db')
+MONGO_AVAILABLE = False
+USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'
+
+# Initialize MongoDB client
 mongo_client = None
 mongo_db = None
 users_col = None
 
-print("\n=== MongoDB Configuration ===")
-print(f"USE_MONGO: {USE_MONGO}")
-print(f"MONGO_URI: {'Set' if MONGO_URI else 'Not set'}")
-print(f"DB_NAME: {DB_NAME}")
-
-if MONGO_URI and USE_MONGO:
-    try:
-        print("Attempting to connect to MongoDB...")
+def init_mongodb():
+    global mongo_client, mongo_db, users_col, MONGO_AVAILABLE
+    
+    if not USE_MONGO:
+        print("MongoDB is disabled via environment variable")
+        return
         
-        # Updated MongoDB connection with SSL options
-        from pymongo import MongoClient
-
-        from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
-        
-        # Initialize connection variables
-        mongo_client = None
-        connection_successful = False
-        
+    max_retries = 3
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
         try:
-            import certifi
-            CA_FILE = certifi.where()
-        except ImportError:
-            CA_FILE = None
-            print("⚠️  certifi not installed; proceeding without custom CA bundle")
-        # First try with SSL and valid CA bundle
-        try:
+            print(f"Attempting to connect to MongoDB (Attempt {attempt + 1}/{max_retries})...")
             mongo_client = MongoClient(
                 MONGO_URI,
-                tls=True,
-                tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                retryWrites=True,
-                w='majority',
+                serverSelectionTimeoutMS=10000,  # 10 second timeout
                 connectTimeoutMS=10000,
-                socketTimeoutMS=10000,
-                serverSelectionTimeoutMS=10000,
-                maxIdleTimeMS=10000
+                socketTimeoutMS=30000
             )
+            
             # Test the connection
-            mongo_client.admin.command('ping')
-            print("✅ MongoDB connection successful with SSL")
-            connection_successful = True
-        except Exception as e:
-            print(f"❌ MongoDB TLS connection failed: {str(e)}")
-            print("Attempting connection with allowInvalidCertificates...")
-            try:
-                mongo_client = MongoClient(
-                    MONGO_URI,
-                    tls=True,
-                    tlsCAFile=certifi.where(),  # Use certifi CA bundle
-                    tlsAllowInvalidCertificates=True,
-                    retryWrites=True,
-                    w='majority',
-                    connectTimeoutMS=10000,
-                    socketTimeoutMS=10000,
-                    serverSelectionTimeoutMS=10000,
-                    maxIdleTimeMS=10000
-                )
-                # Test the connection
-                mongo_client.admin.command('ping')
-                print("✅ MongoDB connection successful with invalid certificates")
-                connection_successful = True
-            except Exception as e2:
-                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
-        
-        # Set connection status and initialise collections only if successful
-        if connection_successful and mongo_client:
-            MONGO_AVAILABLE = True
-            print("✅ MongoDB connection successful")
-
-            # Set up database and collections
+            mongo_client.server_info()
             mongo_db = mongo_client[DB_NAME]
             users_col = mongo_db['users']
-        else:
-            MONGO_AVAILABLE = False
-            print("❌ MongoDB connection failed – this application requires MongoDB. Exiting.")
-            raise SystemExit("MongoDB connection required but unavailable")
-        
-        # Initialize mongo_users with the connection
-        try:
-            from mongo_users import init_mongo_connection
-            users_col = init_mongo_connection(mongo_client, mongo_db)
-            print("✅ mongo_users initialized successfully")
             
-            # Print database stats
-            print(f"Using database: {mongo_db.name}")
-            collections = mongo_db.list_collection_names()
-            print(f"Collections: {collections}")
-            
-            if users_col is not None:
-                try:
-                    user_count = users_col.count_documents({})
-                    print(f"Users count: {user_count}")
-                except Exception as e:
-                    print(f"⚠️ Could not count users: {str(e)}")
+            # Create indexes if they don't exist
+            users_col.create_index('email', unique=True)
+            users_col.create_index('username', unique=True)
             
             MONGO_AVAILABLE = True
+            print("Successfully connected to MongoDB")
+            return
             
-        except Exception as e:
-            print(f"❌ Error initializing mongo_users: {str(e)}")
-            raise
-        
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            print(f"MongoDB connection attempt {attempt + 1} failed: {str(e)}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print("Could not connect to MongoDB after multiple attempts. Falling back to JSON storage.")
+                MONGO_AVAILABLE = False
+
+# Initialize MongoDB connection
+init_mongodb()
+
+def mu_find_user_by_email_or_username(identifier):
+    """Find a user by email or username in MongoDB"""
+    if not MONGO_AVAILABLE or not users_col:
+        return None
+    try:
+        return users_col.find_one({
+            '$or': [
+                {'email': identifier},
+                {'username': identifier}
+            ]
+        })
     except Exception as e:
-        print(f"❌ Unexpected error during MongoDB setup: {str(e)}")
-        print("Falling back to JSON storage")
-        MONGO_AVAILABLE = False
-        
-    except Exception as e:
-        print(f"❌ MongoDB connection error: {str(e)}")
-        print("Falling back to JSON storage")
-        MONGO_AVAILABLE = False
-        mongo_client = None
-        mongo_db = None
-        users_col = None
-else:
-    print("MongoDB not enabled in configuration")
+        print(f"Error finding user by email/username: {str(e)}")
+        return None
+
+def mu_create_user(email, username, password):
+    """Create a new user in MongoDB"""
+    if not MONGO_AVAILABLE or not users_col:
+        return None
     
+    try:
+        from werkzeug.security import generate_password_hash
+        user_data = {
+            'email': email,
+            'username': username,
+            'password_hash': generate_password_hash(password),
+            'is_verified': False,
+            'otp_verified': False,
+            'created_at': time.time(),
+            'updated_at': time.time()
+        }
+        result = users_col.insert_one(user_data)
+        return str(result.inserted_id)
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        return None
+
+def mu_find_user_by_id(user_id):
+    """Find a user by ID in MongoDB"""
+    if not MONGO_AVAILABLE or not users_col:
+        return None
+    
+    try:
+        from bson.objectid import ObjectId
+        return users_col.find_one({'_id': ObjectId(user_id)})
+    except Exception as e:
+        print(f"Error finding user by ID: {str(e)}")
+        return None
+
+# Health check endpoint
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    mongo_status = "connected" if MONGO_AVAILABLE else "disconnected"
+    status = {
+        'status': 'ok',
+        'timestamp': time.time(),
+        'mongo_available': MONGO_AVAILABLE,
+        'use_mongo': USE_MONGO,
+        'mongo_status': mongo_status,
+        'app': 'pathways',
+        'version': '1.0.0'
+    }
+    
+    # Add MongoDB connection status details if available
+    if MONGO_AVAILABLE and mongo_client:
+        try:
+            # Test the connection with a quick operation
+            mongo_client.admin.command('ping')
+            status['mongo_connection'] = 'healthy'
+            
+            # Add some basic database stats
+            if mongo_db:
+                status['database'] = mongo_db.name
+                status['collections'] = mongo_db.list_collection_names()
+                
+                # Add user count if users collection exists
+                if 'users' in status['collections']:
+                    status['user_count'] = mongo_db.users.count_documents({})
+                    
+        except Exception as e:
+            status['mongo_connection'] = 'error'
+            status['mongo_error'] = str(e)
+            
+    return jsonify(status)
+
+# This was an incorrectly indented else block - removed as it's not part of any if statement
+if not USE_MONGO:
+    print("MongoDB not enabled in configuration")
+
 print("==============================\n")
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
@@ -3714,54 +3738,122 @@ def api_register_complete():
                     traceback.print_exc()
                     return jsonify({'error': 'Failed to create user in database'}), 500
                 
-                new_user = User(
-                    id=str(doc['_id']),
-                    email=doc['email'],
-                    username=doc['username'],
-                    password_hash=doc['password_hash'],
-                    is_verified=doc.get('is_verified', False),
-                    otp_verified=doc.get('otp_verified', False)
-                )
-                
             except Exception as e:
-                print(f"❌ MongoDB Error: {str(e)}")
+                error_msg = f"❌ MongoDB Error: {str(e)}"
+                print(error_msg)
                 traceback.print_exc()
+                
+                # Try to clean up any partially created user
+                try:
+                    if 'user_id' in locals() and user_id:
+                        users_col.delete_one({'_id': user_id})
+                except Exception as cleanup_error:
+                    print(f"Error during cleanup: {str(cleanup_error)}")
+                
                 return jsonify({'error': 'Failed to create user in database'}), 500
+                
         else:
             # Fallback to JSON storage
-            print('Using JSON storage fallback')
-            users = load_users()
-            
-            # Check for existing user
-            if any(u.email == email or u.username == username for u in users.values()):
-                return jsonify({'error': 'Email or username already exists'}), 400
+            log_time("Using JSON storage fallback")
+            try:
+                users = load_users()
                 
-            user_id = str(uuid.uuid4())
-            new_user = User(user_id, email, username, password)
-            new_user.set_password(password)
-            users[user_id] = new_user
-            
-            if not save_users():
-                return jsonify({'error': 'Failed to save user data'}), 500
+                # Check for existing user in the loaded data
+                if any(u.email.lower() == email.lower() or u.username.lower() == username.lower() 
+                      for u in users.values() if hasattr(u, 'email') and hasattr(u, 'username')):
+                    return jsonify({'error': 'Email or username already exists'}), 409
+                    
+                # Create new user
+                user_id = str(uuid.uuid4())
+                new_user = User(user_id, email, username, password)
+                new_user.set_password(password)
+                users[user_id] = new_user
+                
+                # Save with retry logic
+                max_retries = 3
+                for attempt in range(max_retries):
+                    if save_users(users):
+                        break
+                    if attempt == max_retries - 1:
+                        return jsonify({'error': 'Failed to save user data after multiple attempts'}), 500
+                    time.sleep(0.5)  # Short delay before retry
+                    
+                log_time("User created in JSON storage")
+                
+            except Exception as e:
+                error_msg = f"❌ JSON storage error: {str(e)}"
+                print(error_msg)
+                traceback.print_exc()
+                return jsonify({'error': 'Failed to create user in JSON storage'}), 500
 
-        # Auto-login the newly registered user
-        login_user(new_user)
-        print(f'User {username} registered and logged in successfully')
-        
-        return jsonify({
-            'success': True,
-            'message': 'Registration successful',
-            'redirectTo': '/index',  # Redirect to index after successful registration
-            'user': {
-                'id': new_user.id,
-                'email': new_user.email,
-                'username': new_user.username
+        # 4. Finalize registration
+        try:
+            # Auto-login the newly registered user
+            login_user(new_user)
+            
+            # Log successful registration
+            log_time(f"User {username} registered and logged in successfully")
+            
+            # Prepare success response
+            response_data = {
+                'success': True,
+                'message': 'Registration successful',
+                'redirectTo': '/index',  # Redirect to index after successful registration
+                'user': {
+                    'id': new_user.id,
+                    'email': new_user.email,
+                    'username': new_user.username
+                },
+                'timestamp': time.time(),
+                'executionTime': f"{time.time() - start_time:.2f}s"
             }
-        })
+            
+            # Add additional debug info in development
+            if app.debug or app.config.get('ENV') == 'development':
+                response_data['debug'] = {
+                    'mongoAvailable': MONGO_AVAILABLE,
+                    'useMongo': USE_MONGO,
+                    'userStorage': 'MongoDB' if MONGO_AVAILABLE and USE_MONGO else 'JSON',
+                    'userCount': users_col.count_documents({}) if MONGO_AVAILABLE and USE_MONGO else len(users)
+                }
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            error_msg = f"❌ Error during login after registration: {str(e)}"
+            print(error_msg)
+            traceback.print_exc()
+            
+            # Even if login fails, registration was successful
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful. Please log in.',
+                'redirectTo': '/login',
+                'error': 'Auto-login failed'
+            }), 200
         
     except Exception as e:
-        print(f"Registration error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        error_msg = f"❌ Registration error: {str(e)}"
+        print(error_msg)
+        traceback.print_exc()
+        
+        # Log the full error for debugging
+        app.logger.error("Registration failed", exc_info=True)
+        
+        # Return a more specific error message if possible
+        error_detail = str(e)
+        if "duplicate key error" in error_detail.lower():
+            if "email" in error_detail.lower():
+                return jsonify({'error': 'A user with this email already exists'}), 409
+            elif "username" in error_detail.lower():
+                return jsonify({'error': 'This username is already taken'}), 409
+                
+        return jsonify({
+            'error': 'An error occurred during registration',
+            'details': str(e) if app.debug else None,
+            'timestamp': time.time(),
+            'executionTime': f"{time.time() - start_time:.2f}s"
+        }), 500
 
 @app.route('/api/auth/login', methods=['GET', 'POST', 'OPTIONS'])
 def api_login():
