@@ -3951,20 +3951,21 @@ def api_login():
         return jsonify({'error': 'An unexpected error occurred during login'}), 500
 
 @app.route('/api/auth/logout', methods=['GET', 'POST'])
+@app.route('/logout', methods=['GET', 'POST'])  # Add this line to support both /api/auth/logout and /logout
 @login_required
 def api_logout():
     try:
         logout_user()
         session.clear()  # Clear the session data
-        if request.method == 'POST':
+        if request.method == 'POST' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True, 'message': 'Logged out successfully'})
         return redirect(url_for('login'))
     except Exception as e:
         print(f"Logout error: {str(e)}")
-        if request.method == 'POST':
+        if request.method == 'POST' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'error': 'Internal server error'}), 500
         flash('An error occurred during logout', 'error')
-        return redirect(url_for('home'))
+        return redirect(url_for('login'))  # Always redirect to login on error
 
 @app.route('/api/auth/user', methods=['GET'])
 def api_user():

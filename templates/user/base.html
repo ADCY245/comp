@@ -238,7 +238,7 @@
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('api_profile_account') }}"><i class="bi bi-person"></i> Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" id="logoutButton" data-bs-toggle="modal" data-bs-target="#logoutModal"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('api_logout') }}" id="logoutButton"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
                         </ul>
                     </li>
                     {% else %}
@@ -264,11 +264,62 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="{{ url_for('api_logout') }}" class="btn btn-danger">Sign Out</a>
+                    <button type="button" class="btn btn-danger" id="confirmLogout">Sign Out</button>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle logout button click
+        const logoutButton = document.getElementById('logoutButton');
+        const confirmLogout = document.getElementById('confirmLogout');
+        const logoutModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+        
+        if (logoutButton) {
+            logoutButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                logoutModal.show();
+            });
+        }
+        
+        if (confirmLogout) {
+            confirmLogout.addEventListener('click', function() {
+                // Show loading state
+                confirmLogout.disabled = true;
+                confirmLogout.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Signing out...';
+                
+                // Perform logout via AJAX
+                fetch('{{ url_for("api_logout") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Logout failed');
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '{{ url_for("login") }}';
+                    } else {
+                        window.location.href = '{{ url_for("login") }}';
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    window.location.href = '{{ url_for("login") }}';
+                });
+            });
+        }
+    });
+    </script>
     
     <!-- Flash Messages Container (Fixed at top) -->
     <div id="flash-messages" style="position: fixed; top: 20px; left: 0; right: 0; z-index: 1100; display: flex; justify-content: center; pointer-events: none;">
