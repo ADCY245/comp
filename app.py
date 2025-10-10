@@ -1,17 +1,12 @@
-import traceback
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_from_directory, make_response, abort, current_app
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from flask_pymongo import PyMongo
-from pymongo import MongoClient, errors
-from pymongo.errors import ServerSelectionTimeoutError
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 from waitress import serve
 import os
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import uuid
 import hashlib
 import secrets
@@ -27,46 +22,6 @@ from dotenv import load_dotenv
 from bson.objectid import ObjectId
 import socket  # Added for socket.timeout and socket.gaierror
 import logging
-import sys
-from pathlib import Path
-
-# Define India timezone (IST - UTC+5:30)
-IST = timezone(timedelta(hours=5, minutes=30))
-
-def get_india_time():
-    """Get current time in India timezone (IST)"""
-    return datetime.now(IST)
-
-def get_next_quote_id():
-    """Generate the next sequential quote ID in format CGI_PC_Q{number}"""
-    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-        try:
-            # Find the highest existing quote number
-            last_quote = mongo_db.quotations.find_one(
-                {'quote_id': {'$regex': '^CGI_PC_Q\\d+$'}},
-                sort=[('quote_id', -1)]  # Sort by quote_id in descending order
-            )
-            
-            if last_quote and 'quote_id' in last_quote:
-                # Extract the number part and increment
-                last_number = int(last_quote['quote_id'].split('_')[-1][1:])
-                next_number = last_number + 1
-            else:
-                next_number = 1
-                
-            return f"CGI_PC_Q{next_number}"
-            
-        except Exception as e:
-            app.logger.error(f"Error generating sequential quote ID: {str(e)}")
-            # Fallback to timestamp-based ID if there's an error
-            return f"CGI_PC_{int(get_india_time().timestamp())}"
-    else:
-        # Fallback to timestamp-based ID if MongoDB is not available
-        return f"CGI_PC_{int(get_india_time().timestamp())}"
-
-# Import API blueprints (will be registered after app creation)
-from api.customers import bp as customers_bp
-from api.companies import bp as companies_bp
 
 # Import MongoDB users module
 try:
@@ -85,35 +40,18 @@ except (ImportError, RuntimeError) as e:
     users_col = None
 
 # Load environment variables
-config_path = os.path.join(os.path.dirname(__file__), 'config', 'config.env')
-if os.path.exists(config_path):
-    load_dotenv(config_path)
-else:
-    # Fall back to .env file if config/config.env doesn't exist
-    load_dotenv()
-
-# Configure console output to use UTF-8 encoding
-import sys
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+load_dotenv()
 
 # Debug environment variables
 print("\n=== Environment Variables ===")
 print(f"MONGO_URI: {'Set' if os.getenv('MONGO_URI') else 'Not set'}")
 print(f"DB_NAME: {os.getenv('DB_NAME', 'moneda_db')}")
-print(f"USE_MONGO (env): {os.getenv('USE_MONGO', 'Not set')}")
-print(f"JSON_FALLBACK (env): {os.getenv('JSON_FALLBACK', 'Not set')}")
+print(f"USE_MONGO: {os.getenv('USE_MONGO', 'Not set')}")
 print("===========================\n")
 
 # CORS Configuration
 from flask_cors import CORS
 app = Flask(__name__)
-
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
@@ -250,283 +188,133 @@ def send_alert_email(subject: str, body: str):
     app.logger.error(error_msg, exc_info=True)
     return False
 
-# Initialize MongoDB settings
-# Enforce MongoDB usage - don't allow JSON fallback
+# Initialize MongoDB if available
 MONGO_AVAILABLE = False
-# Determine whether to use MongoDB or fall back to JSON storage.
-# USE_MONGO can now be explicitly controlled via the USE_MONGO environment variable.
-USE_MONGO_ENV = os.getenv('USE_MONGO')
-if USE_MONGO_ENV is not None:
-    USE_MONGO = USE_MONGO_ENV.lower() in ['1', 'true', 'yes']
-else:
-    # Default to True only if a MongoDB URI is present
-    USE_MONGO = bool(os.getenv('MONGODB_URI') or os.getenv('MONGO_URI'))
+USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'  # Default to True
+DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Get DB_NAME from environment or use default
+MONGO_URI = os.getenv('MONGO_URI', '').strip()
 
-# JSON_FALLBACK can be enabled with JSON_FALLBACK=true to allow a graceful
-# fallback to flat-file JSON storage when the Mongo connection fails.
-JSON_FALLBACK = os.getenv('JSON_FALLBACK', 'False').lower() in ['1', 'true', 'yes']
-
-# Get MongoDB URI from environment variables
-MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')
-DB_NAME = os.getenv('DB_NAME', 'moneda_db')
-
-# Initialize MongoDB client and collections
 mongo_client = None
 mongo_db = None
 users_col = None
 
-# Import MongoDB client and errors
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
+print("\n=== MongoDB Configuration ===")
+print(f"USE_MONGO: {USE_MONGO}")
+print(f"MONGO_URI: {'Set' if MONGO_URI else 'Not set'}")
+print(f"DB_NAME: {DB_NAME}")
 
-# Import mongo_users after initializing MongoDB connection
-from mongo_users import init_mongo_connection, users_col as mongo_users_col
-
-if not MONGODB_URI:
+if MONGO_URI and USE_MONGO:
     try:
-        from dotenv import load_dotenv
-        load_dotenv()  # Load from .env file if it exists
-        MONGODB_URI = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URI')
-    except ImportError:
-        pass  # python-dotenv not installed, continue without it
-
-if not MONGODB_URI:
-    error_msg = "❌ MongoDB connection string is required. Please set either MONGODB_URI or MONGO_URI environment variable"
-    print(error_msg)
-    raise ValueError(error_msg)
-else:
-    # Clean up the URI (remove any quotes or whitespace)
-    MONGODB_URI = MONGODB_URI.strip('"\'').strip()
-    
-    print(f"✅ Found MongoDB URI in environment")
-    # Mask password in the URI for security
-    if '@' in MONGODB_URI:
-        protocol_part = MONGODB_URI.split('@')[0]
-        masked_uri = protocol_part.split('//')[0] + '//' + '****:****@' + MONGODB_URI.split('@', 1)[1]
-        print(f"MongoDB URI: {masked_uri}")
-    else:
-        print(f"MongoDB URI: {MONGODB_URI}")
-
-# Extract DB_NAME from MONGODB_URI if available, otherwise use default
-DB_NAME = os.environ.get('DB_NAME', 'moneda_db')  # Default value
-
-if MONGODB_URI:
-    try:
-        # Try to extract database name from connection string
-        if 'mongodb+srv://' in MONGODB_URI:
-            db_part = MONGODB_URI.split('mongodb+srv://')[1].split('?')[0]
-        elif 'mongodb://' in MONGODB_URI:
-            db_part = MONGODB_URI.split('mongodb://')[1].split('?')[0]
-        else:
-            db_part = ''
-            
-        if '/' in db_part:
-            DB_NAME = db_part.split('/')[1].split('?')[0] or DB_NAME
-    except Exception as e:
-        print(f"⚠️ Could not extract DB name from URI: {e}")
-
-print(f"Using database: {DB_NAME}")
-print("==============================\n")
-
-# Helper to ensure mongo_users users_col is initialized per process
-def ensure_mongo_users_initialized():
-    """Ensure `mongo_users.users_col` is ready in the current process."""
-    global users_col, mongo_users_col
-
-    if not (USE_MONGO and MONGO_AVAILABLE):
-        return False
-
-    if users_col is not None:
-        return True
-
-    if mongo_client is None or mongo_db is None:
-        app.logger.error("MongoDB client or database not initialized")
-        return False
-
-    try:
-        users_col = init_mongo_connection(mongo_client, mongo_db)
-        mongo_users_col = users_col
-        app.users_col = users_col
-        app.logger.info("[DEBUG] Reinitialized mongo_users collection reference")
-        return True
-    except Exception as err:
-        app.logger.error(f"Failed to initialize mongo_users collection: {err}")
-        return False
-
-# Expose helper on app for other modules
-app.ensure_mongo_users_initialized = ensure_mongo_users_initialized
-
-
-def initialize_mongodb():
-    """Initialize MongoDB connection and set up collections with authentication"""
-    global mongo_client, mongo_db, mongo_users_col, MONGO_AVAILABLE
-    
-    if not (USE_MONGO and MONGODB_URI):
-        print("⚠️ MongoDB URI not provided or USE_MONGO is False. Using JSON fallback.")
-        return False
-    
-    try:
-        print("\n=== MongoDB Connection ===")
-        # Mask the password in the logs
-        masked_uri = MONGODB_URI
-        if '@' in MONGODB_URI:
-            parts = MONGODB_URI.split('@')
-            masked_uri = f"mongodb+srv://****:****@{parts[1]}"
-        print(f"MongoDB URI: {masked_uri}")
-        print(f"Database: {DB_NAME}")
+        print("Attempting to connect to MongoDB...")
         
-        # Connection parameters
-        mongo_params = {
-            'connectTimeoutMS': 10000,
-            'socketTimeoutMS': 30000,  # Increased timeout for initial connection
-            'maxPoolSize': 100,
-            'minPoolSize': 1,
-            'retryWrites': True,
-            'w': 'majority',
-            'serverSelectionTimeoutMS': 10000  # Increased timeout for server selection
-        }
+        # Updated MongoDB connection with SSL options
+        from pymongo import MongoClient
+
+        from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
         
-        # Clean the MongoDB URI
-        parsed_uri = urlparse(MONGODB_URI)
-        query = parse_qs(parsed_uri.query)
+        # Initialize connection variables
+        mongo_client = None
+        connection_successful = False
         
-        # Remove any conflicting TLS parameters
-        for param in ['tlsInsecure', 'tlsAllowInvalidCertificates']:
-            if param in query:
-                del query[param]
-        
-        # Rebuild the URI with cleaned query parameters
-        clean_uri = urlunparse(parsed_uri._replace(query=urlencode(query, doseq=True)))
-        
-        print(f"Connecting to MongoDB with URI: {clean_uri.split('@')[-1] if '@' in clean_uri else clean_uri}")
-        
-        # Initialize MongoDB client
-        mongo_client = MongoClient(clean_uri, **mongo_params)
-        
-        # Test the connection with authentication
         try:
-            # This will force authentication
+            import certifi
+            CA_FILE = certifi.where()
+        except ImportError:
+            CA_FILE = None
+            print("⚠️  certifi not installed; proceeding without custom CA bundle")
+        # First try with SSL and valid CA bundle
+        try:
+            mongo_client = MongoClient(
+                MONGO_URI,
+                tls=True,
+                tlsCAFile=certifi.where(),  # Use certifi CA bundle
+                retryWrites=True,
+                w='majority',
+                connectTimeoutMS=10000,
+                socketTimeoutMS=10000,
+                serverSelectionTimeoutMS=10000,
+                maxIdleTimeMS=10000
+            )
+            # Test the connection
             mongo_client.admin.command('ping')
-            print("✅ MongoDB server ping successful")
-            
-            # Get the database
+            print("✅ MongoDB connection successful with SSL")
+            connection_successful = True
+        except Exception as e:
+            print(f"❌ MongoDB TLS connection failed: {str(e)}")
+            print("Attempting connection with allowInvalidCertificates...")
+            try:
+                mongo_client = MongoClient(
+                    MONGO_URI,
+                    tls=True,
+                    tlsCAFile=certifi.where(),  # Use certifi CA bundle
+                    tlsAllowInvalidCertificates=True,
+                    retryWrites=True,
+                    w='majority',
+                    connectTimeoutMS=10000,
+                    socketTimeoutMS=10000,
+                    serverSelectionTimeoutMS=10000,
+                    maxIdleTimeMS=10000
+                )
+                # Test the connection
+                mongo_client.admin.command('ping')
+                print("✅ MongoDB connection successful with invalid certificates")
+                connection_successful = True
+            except Exception as e2:
+                print(f"❌ MongoDB connection with invalid certificates also failed: {str(e2)}")
+        
+        # Set connection status and initialise collections only if successful
+        if connection_successful and mongo_client:
+            MONGO_AVAILABLE = True
+            print("✅ MongoDB connection successful")
+
+            # Set up database and collections
             mongo_db = mongo_client[DB_NAME]
-            
-            # Initialize collections
-            mongo_users_col = mongo_db.users
-            
-            # Try to access the collection with authentication
-            try:
-                # This will fail if not authenticated
-                user_count = mongo_users_col.count_documents({})
-                print(f"✅ Successfully connected to users collection ({user_count} users found)")
-                
-                # Create indexes if they don't exist
-                mongo_users_col.create_index("email", unique=True)
-                mongo_users_col.create_index("username", unique=True)
-                
-                MONGO_AVAILABLE = True
-                print("✅ MongoDB initialization complete")
-                return True
-                
-            except Exception as auth_error:
-                print(f"❌ Authentication failed for database '{DB_NAME}': {str(auth_error)}")
-                print("Please check if the database user has proper permissions.")
-                raise
-                
-        except Exception as conn_error:
-            print(f"❌ Failed to connect to MongoDB: {str(conn_error)}")
-            print("Please check your MongoDB connection string and network settings.")
-            raise
-            
-    except Exception as e:
-        print(f"❌ Error initializing MongoDB: {str(e)}")
-        print(traceback.format_exc())
-        MONGO_AVAILABLE = False
-        if not JSON_FALLBACK:
-            raise RuntimeError("MongoDB connection failed and JSON fallback is disabled") from e
-
-# Initialize MongoDB-related variables at module level
-MONGO_AVAILABLE = False
-mongo_client = None
-mongo_db = None
-mongo_users_col = None
-
-# Initialize MongoDB connection
-if USE_MONGO and MONGODB_URI:
-    print("\n=== Initializing MongoDB Connection ===")
-    try:
-        if initialize_mongodb() and mongo_db is not None:
-            print("✅ MongoDB initialized successfully")
-            try:
-                # Ensure mongo_users module has an initialized collection reference
-                users_col = init_mongo_connection(mongo_client, mongo_db)
-                mongo_users_col = users_col
-                app.users_col = users_col
-                print("✅ mongo_users collection initialized")
-            except Exception as init_err:
-                print(f"❌ Error initializing mongo_users collection: {init_err}")
-                if not JSON_FALLBACK:
-                    raise
+            users_col = mongo_db['users']
         else:
-            print("⚠️ MongoDB initialization failed")
-    except Exception as e:
-        print(f"❌ Error during MongoDB initialization: {str(e)}")
-        if not JSON_FALLBACK:
-            raise
-        # Initialize mongo_users with the MongoDB connection
+            MONGO_AVAILABLE = False
+            print("❌ MongoDB connection failed – this application requires MongoDB. Exiting.")
+            raise SystemExit("MongoDB connection required but unavailable")
+        
+        # Initialize mongo_users with the connection
         try:
-            mongo_users_col = init_mongo_connection(mongo_client, mongo_db)
-            print("✅ Successfully initialized mongo_users with MongoDB connection")
+            from mongo_users import init_mongo_connection
+            users_col = init_mongo_connection(mongo_client, mongo_db)
+            print("✅ mongo_users initialized successfully")
+            
+            # Print database stats
+            print(f"Using database: {mongo_db.name}")
+            collections = mongo_db.list_collection_names()
+            print(f"Collections: {collections}")
+            
+            if users_col is not None:
+                try:
+                    user_count = users_col.count_documents({})
+                    print(f"Users count: {user_count}")
+                except Exception as e:
+                    print(f"⚠️ Could not count users: {str(e)}")
+            
+            MONGO_AVAILABLE = True
+            
         except Exception as e:
             print(f"❌ Error initializing mongo_users: {str(e)}")
-            print(traceback.format_exc())
-            if not JSON_FALLBACK:
-                raise
-
-# Initialize Flask-PyMongo
-mongo = PyMongo()
-
-# Add the api directory to the Python path
-api_dir = str(Path(__file__).parent / 'api')
-if api_dir not in sys.path:
-    sys.path.append(api_dir)
-
-# Final check and cleanup
-if not MONGO_AVAILABLE:
-    print("\n=== Using JSON Storage ===")
-    print("MongoDB is not available, using JSON file storage")
-    print("Data will be stored in the 'data' directory")
-    print("==============================\n")
-    
-    # Clean up any MongoDB connections
-    if 'mongo_client' in globals() and mongo_client is not None:
-        try:
-            mongo_client.close()
-        except Exception as e:
-            print(f"Error closing MongoDB connection: {e}")
+            raise
+        
+    except Exception as e:
+        print(f"❌ Unexpected error during MongoDB setup: {str(e)}")
+        print("Falling back to JSON storage")
+        MONGO_AVAILABLE = False
+        
+    except Exception as e:
+        print(f"❌ MongoDB connection error: {str(e)}")
+        print("Falling back to JSON storage")
+        MONGO_AVAILABLE = False
         mongo_client = None
         mongo_db = None
-        mongo_users_col = None
-    
-    # Create data directory if it doesn't exist
-    os.makedirs('data', exist_ok=True)
-    
-    # Initialize users dictionary for JSON fallback
-    users = {}
+        users_col = None
 else:
-    # Initialize users dictionary from MongoDB
-    users = {}
-    try:
-        if mongo_users_col is not None:
-            for user_doc in mongo_users_col.find():
-                users[str(user_doc['_id'])] = user_doc
-    except Exception as e:
-        print(f"Error loading users from MongoDB: {e}")
-        users = {}
-
+    print("MongoDB not enabled in configuration")
+    
 print("==============================\n")
-
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION = 3600  # 1 hour
@@ -564,9 +352,7 @@ CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, 
-                 reset_token=None, reset_token_expiry=None, company_id=None, role='user', customers=None,
-                 assigned_companies=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None):
         self.id = id
         self.email = email
         self.username = username
@@ -577,107 +363,18 @@ class User(UserMixin):
         self.reset_token = reset_token
         self.reset_token_expiry = reset_token_expiry
         self.company_id = company_id
-        # Store role in lowercase for consistency
-        self.role = role.lower() if role else 'user'
-        # List of customer IDs directly assigned to this user
-        self.customers = customers or []
-        # List of company IDs - users will have access to all customers from these companies
-        self.assigned_companies = assigned_companies or []
-        
-    def is_admin(self):
-        return self.role == 'admin'
-        
-    def can_access_customer(self, customer_id):
-        """Check if user can access a specific customer
-        
-        Returns True if:
-        1. User is admin
-        2. Customer is directly assigned to user
-        3. Customer belongs to a company assigned to the user
-        """
-        if self.is_admin():
-            return True
-            
-        # Check direct customer assignment
-        if str(customer_id) in self.customers:
-            return True
-            
-        # Check company-based access
-        if hasattr(self, 'assigned_companies') and self.assigned_companies:
-            # Get MongoDB instance
-            from flask import current_app
-            from bson import ObjectId
-            
-            try:
-                # Get the customer's company ID
-                customer = current_app.mongo_db.customers.find_one(
-                    {'_id': ObjectId(customer_id)},
-                    {'company_id': 1}
-                )
-                
-                if customer and 'company_id' in customer:
-                    # Check if the customer's company is in the user's assigned companies
-                    return str(customer['company_id']) in self.assigned_companies
-                    
-            except Exception as e:
-                current_app.logger.error(f"Error checking company-based access: {str(e)}")
-                
-        return False
-        
-    def get_accessible_customers(self):
-        """Get all customer IDs that this user has access to
-        
-        Returns:
-            list: List of customer IDs that the user can access
-        """
-        from flask import current_app
-        from bson import ObjectId
-        
-        try:
-            # If admin, return all customers
-            if self.is_admin():
-                return [str(c['_id']) for c in current_app.mongo_db.customers.find({}, {'_id': 1})]
-                
-            accessible_customers = set()
-            
-            # Add directly assigned customers
-            accessible_customers.update(self.customers)
-            
-            # Add customers from assigned companies
-            if hasattr(self, 'assigned_companies') and self.assigned_companies:
-                # Convert company IDs to ObjectId for query
-                company_ids = [ObjectId(cid) for cid in self.assigned_companies if cid]
-                
-                if company_ids:
-                    # Find all customers from assigned companies
-                    company_customers = current_app.mongo_db.customers.find(
-                        {'company_id': {'$in': company_ids}},
-                        {'_id': 1}
-                    )
-                    
-                    # Add customer IDs to the set
-                    for customer in company_customers:
-                        accessible_customers.add(str(customer['_id']))
-            
-            return list(accessible_customers)
-            
-        except Exception as e:
-            current_app.logger.error(f"Error getting accessible customers: {str(e)}")
-            return []
 
     def to_dict(self):
         return {
             'id': self.id,
             'email': self.email,
             'username': self.username,
+            'password_hash': self.password_hash,
             'is_verified': self.is_verified,
-            'otp_verified': self.otp_verified,
             'reset_token': self.reset_token,
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
-            'company_id': self.company_id,
-            'role': self.role,
-            'customers': self.customers,
-            'assigned_companies': self.assigned_companies
+            'otp_verified': self.otp_verified,
+            'company_id': self.company_id
         }
 
     def set_password(self, password):
@@ -700,328 +397,6 @@ class User(UserMixin):
             return data.get('user_id')
         except:
             return None
-
-# ---------------------------------------------------------------------------
-# Customer Management
-# ---------------------------------------------------------------------------
-
-def get_all_customers():
-    """Get all customers from the database or JSON fallback."""
-    # First try to get from MongoDB if available
-    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-        try:
-            # Check if customers collection exists
-            collections = mongo_db.list_collection_names()
-            if 'customers' not in collections:
-                print("[INFO] 'customers' collection does not exist in MongoDB, using JSON fallback")
-                return _get_customers_from_json()
-                
-            # Get customers from MongoDB
-            customers = list(mongo_db.customers.find(
-                {},
-                {'_id': 1, 'name': 1, 'email': 1, 'assigned_to': 1, 'created_by': 1, 'created_at': 1}
-            ))
-            
-            # Convert ObjectId to string
-            for customer in customers:
-                customer['id'] = str(customer.pop('_id'))
-                
-            return customers
-            
-        except Exception as e:
-            print(f"[WARNING] Error fetching customers from MongoDB, falling back to JSON: {str(e)}")
-            return _get_customers_from_json()
-    else:
-        # Use JSON fallback
-        return _get_customers_from_json()
-
-def _get_customers_from_json():
-    """Get customers from JSON file."""
-    json_path = os.path.join('static', 'data', 'customers.json')
-    try:
-        if not os.path.exists(json_path):
-            print(f"[INFO] Customers JSON file not found at {json_path}, creating empty list")
-            # Create empty customers file if it doesn't exist
-            os.makedirs(os.path.dirname(json_path), exist_ok=True)
-            with open(json_path, 'w') as f:
-                json.dump([], f)
-            return []
-            
-        with open(json_path, 'r') as f:
-            customers = json.load(f)
-            if not isinstance(customers, list):
-                print("[WARNING] Customers JSON is not a list, initializing empty list")
-                return []
-            return customers
-            
-    except json.JSONDecodeError as e:
-        print(f"[ERROR] Error parsing customers JSON: {str(e)}")
-        return []
-    except Exception as e:
-        print(f"[ERROR] Error reading customers from JSON: {str(e)}")
-        return []
-
-def save_customer(customer_data, customer_id=None):
-    """Save a customer to the database."""
-    customer_data['updated_at'] = datetime.now().isoformat()
-    
-    if MONGO_AVAILABLE and USE_MONGO:
-        try:
-            from bson import ObjectId
-            if customer_id:
-                # Update existing customer
-                result = mongo_db.customers.update_one(
-                    {'_id': ObjectId(customer_id)},
-                    {'$set': customer_data},
-                    upsert=False
-                )
-                return result.modified_count > 0
-            else:
-                # Create new customer
-                customer_data['created_at'] = customer_data['updated_at']
-                result = mongo_db.customers.insert_one(customer_data)
-                return str(result.inserted_id)
-        except Exception as e:
-            app.logger.error(f"Error saving customer to MongoDB: {str(e)}")
-            return False
-    else:
-        # Fallback to JSON storage
-        try:
-            customers = get_all_customers()
-            if customer_id:
-                # Update existing customer
-                for i, cust in enumerate(customers):
-                    if str(cust.get('id')) == str(customer_id):
-                        customer_data['id'] = customer_id
-                        customers[i] = customer_data
-                        break
-            else:
-                # Create new customer
-                customer_data['id'] = str(uuid.uuid4())
-                customer_data['created_at'] = customer_data['updated_at']
-                customers.append(customer_data)
-            
-            with open(os.path.join('static', 'data', 'customers.json'), 'w') as f:
-                json.dump(customers, f, indent=2)
-            
-            return customer_data['id']
-        except Exception as e:
-            app.logger.error(f"Error saving customer to JSON: {str(e)}")
-            return False
-
-# Customer Management Endpoints
-@app.route('/api/customers', methods=['GET', 'POST'])
-@login_required
-def manage_customers():
-    """Get all customers or create a new one."""
-    if request.method == 'GET':
-        customers = get_all_customers()
-        return jsonify({'success': True, 'customers': customers})
-    
-    # Handle POST - Create new customer
-    try:
-        data = request.get_json()
-        required_fields = ['name', 'email']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
-        
-        # Prepare customer data
-        customer_data = {
-            'name': data['name'].strip(),
-            'email': data['email'].lower().strip(),
-            'phone': data.get('phone', '').strip(),
-            'address': data.get('address', '').strip(),
-            'created_by': current_user.id,
-            'assigned_to': []
-        }
-        
-        # If admin is assigning to a specific user
-        if current_user.is_admin() and 'assigned_to' in data and data['assigned_to']:
-            customer_data['assigned_to'] = [data['assigned_to']]
-        else:
-            # Auto-assign to current user if not admin
-            customer_data['assigned_to'] = [current_user.id]
-        
-        # Save customer
-        customer_id = save_customer(customer_data)
-        if not customer_id:
-            return jsonify({'success': False, 'error': 'Failed to save customer'}), 500
-        
-        return jsonify({
-            'success': True,
-            'message': 'Customer created successfully',
-            'customer_id': customer_id
-        }), 201
-        
-    except Exception as e:
-        app.logger.error(f"Error creating customer: {str(e)}")
-        return jsonify({'success': False, 'error': 'Failed to create customer'}), 500
-
-@app.route('/api/customers/<customer_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
-def manage_customer(customer_id):
-    """Get, update, or delete a specific customer."""
-    if request.method == 'GET':
-        customers = get_all_customers()
-        customer = next((c for c in customers if str(c.get('id')) == str(customer_id)), None)
-        if not customer:
-            return jsonify({'success': False, 'error': 'Customer not found'}), 404
-        return jsonify({'success': True, 'customer': customer})
-    
-    elif request.method == 'PUT':
-        try:
-            data = request.get_json()
-            customer_data = {
-                'name': data.get('name', '').strip(),
-                'email': data.get('email', '').lower().strip(),
-                'phone': data.get('phone', '').strip(),
-                'address': data.get('address', '').strip()
-            }
-            
-            # Only allow updating assignments if admin
-            if current_user.is_admin() and 'assigned_to' in data:
-                customer_data['assigned_to'] = data['assigned_to'] if isinstance(data['assigned_to'], list) else [data['assigned_to']]
-            
-            success = save_customer(customer_data, customer_id)
-            if not success:
-                return jsonify({'success': False, 'error': 'Failed to update customer'}), 500
-                
-            return jsonify({'success': True, 'message': 'Customer updated successfully'})
-            
-        except Exception as e:
-            app.logger.error(f"Error updating customer: {str(e)}")
-            return jsonify({'success': False, 'error': 'Failed to update customer'}), 500
-    
-    elif request.method == 'DELETE':
-        if MONGO_AVAILABLE and USE_MONGO:
-            try:
-                from bson import ObjectId
-                result = mongo_db.customers.delete_one({'_id': ObjectId(customer_id)})
-                if result.deleted_count == 0:
-                    return jsonify({'success': False, 'error': 'Customer not found'}), 404
-            except Exception as e:
-                app.logger.error(f"Error deleting customer from MongoDB: {str(e)}")
-                return jsonify({'success': False, 'error': 'Failed to delete customer'}), 500
-        else:
-            try:
-                customers = get_all_customers()
-                initial_count = len(customers)
-                customers = [c for c in customers if str(c.get('id')) != str(customer_id)]
-                
-                if len(customers) == initial_count:
-                    return jsonify({'success': False, 'error': 'Customer not found'}), 404
-                
-                with open(os.path.join('static', 'data', 'customers.json'), 'w') as f:
-                    json.dump(customers, f, indent=2)
-            except Exception as e:
-                app.logger.error(f"Error deleting customer from JSON: {str(e)}")
-                return jsonify({'success': False, 'error': 'Failed to delete customer'}), 500
-        
-        return jsonify({'success': True, 'message': 'Customer deleted successfully'})
-
-# ---------------------------------------------------------------------------
-# Customer Assignment Helpers
-# ---------------------------------------------------------------------------
-
-def assign_customer_to_user(user_id, customer_id):
-    """Assign a customer to a user."""
-    customer_id = str(customer_id)
-    if MONGO_AVAILABLE and USE_MONGO:
-        if not ensure_mongo_users_initialized():
-            app.logger.error("[assign_customer_to_user] users_col not initialized")
-            return False
-        try:
-            from bson import ObjectId
-            result = users_col.update_one(
-                {'_id': ObjectId(user_id)},
-                {'$addToSet': {'customers': customer_id}},
-                upsert=False
-            )
-            return result.modified_count > 0
-        except Exception as e:
-            app.logger.error(f"Error assigning customer to user: {str(e)}")
-            return False
-    else:
-        users = {}
-        updated = False
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-        
-        for user in users:
-            if str(user['id']) == str(user_id):
-                if 'customers' not in user:
-                    user['customers'] = []
-                if customer_id not in user['customers']:
-                    user['customers'].append(customer_id)
-                    updated = True
-        
-        if updated:
-            with open(USERS_FILE, 'w') as f:
-                json.dump(users, f, indent=2)
-        return updated
-
-def remove_customer_from_user(user_id, customer_id):
-    """Remove a customer assignment from a user."""
-    customer_id = str(customer_id)
-    if MONGO_AVAILABLE and USE_MONGO:
-        if not ensure_mongo_users_initialized():
-            app.logger.error("[remove_customer_from_user] users_col not initialized")
-            return False
-        try:
-            from bson import ObjectId
-            result = users_col.update_one(
-                {'_id': ObjectId(user_id)},
-                {'$pull': {'customers': customer_id}}
-            )
-            return result.modified_count > 0
-        except Exception as e:
-            app.logger.error(f"Error removing customer from user: {str(e)}")
-            return False
-    else:
-        users = []
-        updated = False
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-        
-        for user in users:
-            if str(user['id']) == str(user_id):
-                if 'customers' in user and customer_id in user.get('customers', []):
-                    user['customers'].remove(customer_id)
-                    updated = True
-        
-        if updated:
-            with open(USERS_FILE, 'w') as f:
-                json.dump(users, f, indent=2)
-        return updated
-
-def get_users_for_customer(customer_id):
-    """Get all users who have access to a specific customer."""
-    customer_id = str(customer_id)
-    user_ids = []
-    
-    if MONGO_AVAILABLE and USE_MONGO:
-        if not ensure_mongo_users_initialized():
-            app.logger.error("[get_users_for_customer] users_col not initialized")
-            return []
-        try:
-            users = users_col.find({'customers': customer_id}, {'_id': 1})
-            user_ids = [str(user['_id']) for user in users]
-        except Exception as e:
-            app.logger.error(f"Error getting users for customer: {str(e)}")
-    else:
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r') as f:
-                users = json.load(f)
-            user_ids = [
-                str(user['id']) 
-                for user in users 
-                if 'customers' in user and customer_id in user['customers']
-            ]
-    
-    return user_ids
 
 # ---------------------------------------------------------------------------
 # JSON persistence helpers
@@ -1087,79 +462,47 @@ def _load_users_json():
 
 # ... (rest of the code remains the same)
 
-@login_manager.user_loader
 def load_user(user_id):
     """Load user by ID from either MongoDB or JSON."""
-    if not user_id:
-        return None
-        
-    if USE_MONGO and MONGO_AVAILABLE:
+    if MONGO_AVAILABLE and USE_MONGO:
+        # Try MongoDB first
         try:
-            # First try to use the users_col from app context
-            if hasattr(app, 'users_col') and app.users_col is not None:
-                from bson import ObjectId
-                try:
-                    user_data = app.users_col.find_one({"$or": [
-                        {"_id": ObjectId(user_id)},
-                        {"_id": user_id}
-                    ]})
-                    
-                    if user_data:
-                        # Convert MongoDB document to User object
-                        return User(
-                            id=str(user_data['_id']),
-                            email=user_data.get('email'),
-                            username=user_data.get('username'),
-                            password_hash=user_data.get('password_hash'),
-                            is_verified=user_data.get('is_verified', False),
-                            otp_verified=user_data.get('otp_verified', False),
-                            company_id=user_data.get('company_id'),
-                            role=user_data.get('role', 'user'),
-                            customers=user_data.get('customers', [])
-                        )
-                except Exception as e:
-                    print(f"Error loading user {user_id} from MongoDB: {str(e)}")
-            
-            # Fall back to mongo_users module if direct collection access fails
-            try:
-                from mongo_users import find_user_by_id
-                user_data = find_user_by_id(user_id)
+            print(f'Loading user from MongoDB with ID: {user_id}')
+            doc = mu_find_user_by_id(user_id)
+            if not doc:
+                print(f'User not found in MongoDB with ID: {user_id}')
+                return None
                 
-                if user_data:
-                    # Convert MongoDB document to User object
-                    return User(
-                        id=str(user_data['_id']),
-                        email=user_data.get('email'),
-                        username=user_data.get('username'),
-                        password_hash=user_data.get('password_hash'),
-                        is_verified=user_data.get('is_verified', False),
-                        otp_verified=user_data.get('otp_verified', False),
-                        company_id=user_data.get('company_id'),
-                        role=user_data.get('role', 'user'),
-                        customers=user_data.get('customers', [])
-                    )
-            except Exception as e:
-                print(f"Error loading user {user_id} via mongo_users: {str(e)}")
-                
+            user = User(
+                id=str(doc['_id']),  # Convert ObjectId to string
+                email=doc['email'],
+                username=doc['username'],
+                password_hash=doc['password_hash'],
+                is_verified=doc.get('is_verified', False),
+                otp_verified=doc.get('otp_verified', False),
+                company_id=doc.get('company_id')
+            )
+            print(f'Successfully loaded user: {user.email} (ID: {user.id})')
+            return user
         except Exception as e:
-            print(f"Unexpected error in load_user: {str(e)}")
+            print(f"Error loading user {user_id}: {e}")
+            return None
     
-    # Fall back to JSON loading if MongoDB is not available or user not found
-    if not hasattr(app, 'users'):
-        app.users = _load_users_json()
-    
-    user_data = app.users.get(user_id)
+    # Fall back to JSON users
+    users = _load_users_json()
+    user_data = users.get(user_id) if hasattr(users, 'get') else None
     if user_data:
         return User(
             id=user_id,
-            email=user_data.get('email'),
-            username=user_data.get('username'),
-            password_hash=user_data.get('password_hash'),
+            email=user_data['email'],
+            username=user_data.get('username', user_data['email'].split('@')[0]),
+            password_hash=user_data['password_hash'],
             is_verified=user_data.get('is_verified', False),
             otp_verified=user_data.get('otp_verified', False),
-            company_id=user_data.get('company_id'),
-            role=user_data.get('role', 'user'),
-            customers=user_data.get('customers', [])
+            cart=user_data.get('cart', []),
+            reset_token=user_data.get('reset_token'),
+            reset_token_expiry=user_data.get('reset_token_expiry'),
+            company_id=user_data.get('company_id')
         )
     return None
 
@@ -1216,35 +559,19 @@ def _save_users_json(users_dict=None):
         return False
 
 # ----- Mongo wrappers overriding JSON if USE_MONGO -----
-if USE_MONGO and MONGO_AVAILABLE and mongo_users_col is not None:
+if USE_MONGO:
     def load_users():
         users_local = {}
         try:
-            print("Loading users from MongoDB...")
-            for doc in mongo_users_col.find():
-                # Convert ObjectId to string for the user ID
-                user_id = str(doc['_id'])
-                users_local[user_id] = User(
-                    id=user_id,
+            for doc in users_col.find():
+                users_local[doc['_id']] = User(
+                    id=doc['_id'],
                     email=doc.get('email'),
                     username=doc.get('username'),
                     password_hash=doc.get('password_hash'),
                     is_verified=doc.get('is_verified', False),
-                    otp_verified=doc.get('otp_verified', False),
-                    role=doc.get('role', 'user'),
-                    company_id=doc.get('company_id'),
-                    customers=doc.get('customers', []),
-                    assigned_companies=doc.get('assigned_companies', [])
+                    otp_verified=doc.get('otp_verified', False)
                 )
-            print(f"Successfully loaded {len(users_local)} users from MongoDB")
-            return users_local
-        except Exception as e:
-            print(f"Error loading users from MongoDB: {e}")
-            print(traceback.format_exc())
-            if not JSON_FALLBACK:
-                raise
-            # Fall back to JSON if available
-            return _load_users_json()
         except Exception as e:
             print(f"Error loading users from MongoDB: {e}")
         return users_local
@@ -1311,24 +638,21 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 # Create Flask app instance
 app = Flask(__name__)
 
-# Configure secret key and session settings
+# Configure secret key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
+# Configure session
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-123')
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)  # Session expires after 12 hours
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # Only send cookie over HTTPS in production
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Helps with CSRF protection
-
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'  # Route name for the login page
-login_manager.login_message = 'Please log in to access this page.'
-login_manager.login_message_category = 'info'
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Session expires after 1 day
 
 # Add regex_search filter to Jinja2 environment
 @app.template_filter('regex_search')
@@ -1339,165 +663,6 @@ def regex_search_filter(s, pattern):
     return bool(re.search(pattern, str(s)))
 
 app.logger.info("Flask app initialized")
-
-@app.route('/api/health')
-def health_check():
-    """Health check endpoint to verify MongoDB connection."""
-    try:
-        if MONGO_AVAILABLE and mongo_db is not None:
-            # Test the connection by pinging the database
-            mongo_client.server_info()
-            return jsonify({
-                'status': 'success',
-                'message': 'MongoDB connection is healthy',
-                'database': DB_NAME,
-                'mongo_available': MONGO_AVAILABLE
-            })
-        else:
-            return jsonify({
-                'status': 'error',
-                'message': 'MongoDB is not available',
-                'database': DB_NAME,
-                'mongo_available': MONGO_AVAILABLE,
-                'use_mongo': USE_MONGO
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'MongoDB connection failed: {str(e)}',
-            'database': DB_NAME,
-            'mongo_available': MONGO_AVAILABLE,
-            'use_mongo': USE_MONGO
-        }), 500
-
-# Register blueprints
-app.register_blueprint(customers_bp)
-
-# Compatibility routes for legacy frontend calls (expects /api/customers)
-@app.route('/api/customers', methods=['GET', 'POST'])
-@login_required
-def legacy_customers_collection():
-    """Proxy to `/api/v1/customers` for backwards compatibility."""
-    if request.method == 'GET':
-        return current_app.view_functions['customers.get_customers']()
-    return current_app.view_functions['customers.create_customer']()
-
-
-@app.route('/api/customers/<customer_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
-def legacy_customers_item(customer_id):
-    """Proxy to `/api/v1/customers/<id>` for backwards compatibility."""
-    if request.method == 'GET':
-        return current_app.view_functions['customers.get_customer'](customer_id)
-    if request.method == 'PUT':
-        return current_app.view_functions['customers.update_customer'](customer_id)
-    return current_app.view_functions['customers.delete_customer'](customer_id)
-app.register_blueprint(companies_bp)
-
-@app.route('/api/test-mongodb')
-def test_mongodb():
-    """Test MongoDB connection and authentication."""
-    try:
-        if not MONGO_AVAILABLE or not USE_MONGO or mongo_db is None:
-            return jsonify({
-                'status': 'error',
-                'message': 'MongoDB not available',
-                'MONGO_AVAILABLE': MONGO_AVAILABLE,
-                'USE_MONGO': USE_MONGO,
-                'mongo_db_is_none': mongo_db is None,
-                'environment': {
-                    'MONGODB_URI_set': bool(MONGODB_URI),
-                    'DB_NAME': DB_NAME
-                }
-            }), 500
-            
-        # Test the connection with authentication
-        mongo_client.admin.command('ping')
-        
-        # Try to access the database
-        db = mongo_client[DB_NAME]
-        user_count = db.users.count_documents({}) if 'users' in db.list_collection_names() else 0
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'MongoDB connection successful',
-            'database': DB_NAME,
-            'collections': db.list_collection_names(),
-            'user_count': user_count,
-            'mongo_available': MONGO_AVAILABLE,
-            'use_mongo': USE_MONGO
-        })
-        
-    except Exception as e:
-        error_type = type(e).__name__
-        error_details = str(e)
-        
-        # Add more specific error details for common MongoDB errors
-        if 'Authentication failed' in str(e):
-            error_details = "Authentication failed. Please check your MongoDB username and password."
-        elif 'bad auth : authentication failed' in str(e):
-            error_details = "Authentication failed. The provided credentials are incorrect or the user doesn't have access to the database."
-        elif 'No servers found yet' in str(e):
-            error_details = "Could not connect to MongoDB server. Please check your connection string and network settings."
-            
-        return jsonify({
-            'status': 'error',
-            'message': f'MongoDB connection failed: {error_details}',
-            'error_type': error_type,
-            'database': DB_NAME,
-            'mongo_available': MONGO_AVAILABLE,
-            'use_mongo': USE_MONGO,
-            'environment': {
-                'MONGODB_URI_set': bool(MONGODB_URI),
-                'DB_NAME': DB_NAME
-            },
-            'connection_details': {
-                'authSource': 'admin',
-                'authMechanism': 'SCRAM-SHA-256',
-                'using_srv': 'mongodb+srv://' in (MONGODB_URI or '')
-            }
-        }), 500
-
-@app.route('/api/debug/mongodb')
-def debug_mongodb():
-    """Debug endpoint to check MongoDB connection and collections."""
-    try:
-        if not MONGO_AVAILABLE or not USE_MONGO or mongo_db is None:
-            return jsonify({
-                'status': 'error',
-                'message': 'MongoDB not available',
-                'MONGO_AVAILABLE': MONGO_AVAILABLE,
-                'USE_MONGO': USE_MONGO,
-                'mongo_db_is_none': mongo_db is None
-            })
-            
-        # Test the connection
-        mongo_db.command('ping')
-        
-        # List all collections
-        collections = mongo_db.list_collection_names()
-        
-        # Count documents in customers collection if it exists
-        customer_count = 0
-        if 'customers' in collections:
-            customer_count = mongo_db.customers.count_documents({})
-        
-        return jsonify({
-            'status': 'success',
-            'collections': collections,
-            'customer_count': customer_count,
-            'database': mongo_db.name,
-            'server_info': mongo_db.command('serverStatus')
-        })
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'type': type(e).__name__
-        }), 500
 
 # Initialize cart store
 # -------------------- Cart storage abstractions --------------------
@@ -1729,9 +894,6 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     if MONGO_AVAILABLE and USE_MONGO:
-        if not ensure_mongo_users_initialized():
-            app.logger.error("[AUTH] users_col not initialized; unable to load user")
-            return None
         try:
             print(f'Loading user from MongoDB with ID: {user_id}')
             doc = mu_find_user_by_id(user_id)
@@ -1746,8 +908,7 @@ def load_user(user_id):
                 password_hash=doc['password_hash'],
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id'),
-                role=doc.get('role', 'user')
+                company_id=doc.get('company_id')
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -1768,12 +929,11 @@ def load_user(user_id):
                 cart=user_data.get('cart', []),
                 reset_token=user_data.get('reset_token'),
                 reset_token_expiry=user_data.get('reset_token_expiry'),
-                company_id=user_data.get('company_id'),
-                role=user_data.get('role', 'user')
+                company_id=user_data.get('company_id')
             )
         return None
 
-@app.route('/cart', endpoint='view_cart')
+@app.route('/cart')
 @login_required
 @company_required
 def cart():
@@ -1850,7 +1010,7 @@ def cart():
             
         # Log the company info for debugging
         app.logger.info(f"Cart - Company: {company_name}, Email: {company_email}")
-        return render_template('user/cart.html',
+        return render_template('cart.html',
                            cart=cart_data,
                             products=cart_data.get('products', []),
                             company_name=company_name,
@@ -1873,18 +1033,8 @@ def cart():
         import traceback
         traceback.print_exc()
         app.logger.error(error_msg)
-        # Create email content with quotation ID
-        email_content = create_quotation_email_content(
-            cart_data['products'], 
-            company_name, 
-            0,  # total_pre_gst
-            0,  # gst_amount
-            0,  # total_post_gst
-            "",  # notes
-            ""  # quotation_id
-        )
         # Return empty cart with error message
-        return render_template('user/cart.html', 
+        return render_template('cart.html', 
                            cart={"products": []}, 
                            error=str(e),
                            company_name='',
@@ -2153,7 +1303,7 @@ def add_to_cart():
         }), 500
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
-@app.route('/get_cart', endpoint='api_get_cart')
+@app.route('/get_cart')
 @login_required
 def get_cart():
     """Return the current user's cart as JSON."""
@@ -2315,6 +1465,13 @@ def update_cart_item():
 @login_required
 def update_cart_quantity():
     """Update the quantity of a product in the user's cart."""
+    if not current_user.is_authenticated:
+        return jsonify({
+            'success': False,
+            'error': 'User not authenticated',
+            'redirect': url_for('login')
+        }), 401
+
     try:
         data = request.get_json()
         if not data:
@@ -2409,6 +1566,7 @@ def update_cart_quantity():
             'message': 'An error occurred while updating the cart quantity',
             'error': str(e)
         }), 500
+
 
 @app.route('/update_cart_discount', methods=['POST'])
 @login_required
@@ -2532,7 +1690,8 @@ def update_cart_discount():
             'error': str(e)
         }), 500
 
-@app.route('/get_cart_count', endpoint='api_get_cart_count')
+
+@app.route('/get_cart_count')
 def get_cart_count():
     """Return the number of products currently in the user's cart."""
     try:
@@ -2609,14 +1768,14 @@ def load_companies_data():
                 USE_MONGO = False
                 
         # Fall back to JSON file if MongoDB is not available or there was an error
-        companies_file = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
+        companies_file = os.path.join(app.root_path, 'static', 'data', 'companies.json')
         app.logger.info(f"Falling back to loading companies from: {companies_file}")
         
         if os.path.exists(companies_file):
             try:
                 with open(companies_file, 'r', encoding='utf-8') as f:
-                    companies = json.load(f)
-                    companies = companies.get('companies', [])
+                    companies_data = json.load(f)
+                    companies = companies_data.get('companies', [])
                     app.logger.info(f"Loaded {len(companies)} companies from JSON file")
                     return companies
             except Exception as e:
@@ -2640,12 +1799,12 @@ def index():
         if not isinstance(companies, list):
             companies = []
             
-        return render_template('user/index.html', companies=companies)
+        return render_template('index.html', companies=companies)
         
     except Exception as e:
         app.logger.error(f"Error in index route: {str(e)}")
         # Return empty companies list on error
-        return render_template('user/index.html', companies=[])
+        return render_template('index.html', companies=[])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -3279,14 +2438,14 @@ def update_company():
 @login_required
 def add_company():
     """Render form page to add a new company"""
-    return render_template('user/add_company.html')
+    return render_template('add_company.html')
 
 
 @app.route('/add_machine')
 @login_required
 def add_machine():
     """Render form page to add a new machine"""
-    return render_template('user/add_machine.html')
+    return render_template('add_machine.html')
 
 
 # ----------------------------- API Endpoints ------------------------------
@@ -3723,13 +2882,10 @@ def api_reset_password():
 def quotation_preview():
     app.logger.info("[DEBUG] quotation_preview() called")
     
-    # Get current date and time in IST
-    current_datetime = datetime.utcnow()
-    ist = timezone(timedelta(hours=5, minutes=30))
-    current_datetime_ist = current_datetime.replace(tzinfo=timezone.utc).astimezone(ist)
-    formatted_datetime = current_datetime_ist.strftime('%Y-%m-%d %H:%M:%S')
-    quote_date = current_datetime_ist.strftime('%Y-%m-%d')
-    quote_time = current_datetime_ist.strftime('%H:%M:%S')
+    # Get current date and time
+    current_datetime = datetime.now()
+    quote_date = current_datetime.strftime('%d-%m-%Y')
+    quote_time = current_datetime.strftime('%H:%M:%S')
     
     cart = get_user_cart()
     app.logger.info(f"[DEBUG] Cart contains {len(cart.get('products', []))} products")
@@ -3963,7 +3119,7 @@ def quotation_preview():
         'cart_total': subtotal_after_discount  # cart_total is the subtotal after discount but before taxes
     }
     
-    return render_template('user/quotation.html', **context)
+    return render_template('quotation.html', **context)
 
 # ---------------------------------------------------------------------------
 # Send Quotation Route
@@ -4061,8 +3217,8 @@ def send_quotation():
         user_email = current_user.email if hasattr(current_user, 'email') else None
         recipients = list({email for email in [customer_email, 'operations@chemo.in', user_email] if email})
 
-        # Get current date in India timezone
-        today = get_india_time().strftime('%d/%m/%Y')
+        # Get current date
+        today = datetime.utcnow().strftime('%d/%m/%Y')
 
         # Table rows with header
         rows_html = """
@@ -4199,74 +3355,18 @@ def send_quotation():
             discount_text.append(f"{max(mpack_discounts):.1f}% ")
         discount_text = ", ".join(discount_text)
         
-        # Recalculate all product amounts to ensure consistency
-        for p in products:
-            # Get basic values with proper defaults
-            unit_price = float(p.get('unit_price', 0) or 0)
-            quantity = int(p.get('quantity', 1) or 1)
-            discount_percent = float(p.get('discount_percent', 0) or 0)
-            
-            # Calculate basic values
-            total_price = unit_price * quantity
-            discount_amount = (total_price * discount_percent) / 100
-            taxable_amount = total_price - discount_amount
-            
-            # Determine GST rate based on product type
-            product_type = p.get('type')
-            if product_type == 'blanket':
-                gst_rate = 0.18  # 18% for blankets
-            elif product_type == 'mpack':
-                gst_rate = 0.12  # 12% for mpack
-            else:
-                gst_rate = 0.18  # Default to 18%
-            
-            # Calculate GST and final amount
-            gst_amount = round(taxable_amount * gst_rate, 2)
-            final_total = round(taxable_amount + gst_amount, 2)
-            
-            # Update product calculations
-            p['calculations'] = {
-                'unit_price': unit_price,
-                'quantity': quantity,
-                'discount_percent': discount_percent,
-                'discount_amount': round(discount_amount, 2),
-                'taxable_amount': round(taxable_amount, 2),
-                'gst_rate': int(gst_rate * 100),  # Store as percentage
-                'gst_amount': gst_amount,
-                'total_price': round(total_price, 2),
-                'final_total': final_total
-            }
-        
-        # Calculate totals from recalculated product data
-        subtotal = sum(
-            float(p.get('calculations', {}).get('total_price', 0) or 0)
-            for p in products
-        )
-        
+        # Calculate total discount amount
         total_discount = sum(
-            float(p.get('calculations', {}).get('discount_amount', 0) or 0)
-            for p in products
+            p.get('calculations', {}).get('discount_amount', 0) 
+            for p in products 
+            if p.get('calculations', {}).get('discount_amount', 0) > 0
         )
-        
-        total_gst = sum(
-            float(p.get('calculations', {}).get('gst_amount', 0) or 0)
-            for p in products
-        )
-        
-        # Calculate total amount after GST
-        total_post_gst = round((subtotal - total_discount) + total_gst, 2)
-        
-        # Ensure no negative values
-        subtotal = max(0, subtotal)
-        total_discount = max(0, total_discount)
-        total_gst = max(0, total_gst)
-        total_post_gst = max(0, total_post_gst)
         
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
         
-        # Generate a sequential quote ID
-        quote_id = get_next_quote_id()
+        # Generate a unique quote ID
+        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
 
         # Build email content with improved table layout and consistent white background
         email_content = f"""
@@ -4450,38 +3550,10 @@ def send_quotation():
         else:
             app.logger.warning("Email configuration is incomplete. Email will not be sent.")
 
-        # Prepare quotation data for database
-        quotation_data = {
-            'quote_id': quote_id,
-            'user_id': str(current_user.id) if hasattr(current_user, 'id') else '',
-            'username': current_user.username if hasattr(current_user, 'username') else '',
-            'user_email': current_user.email if hasattr(current_user, 'email') else '',
-            'company_name': customer_name,  # This is the company name, not necessarily the user's name
-            'company_email': customer_email,  # This is the company email
-            'customer_name': customer_name,  # For backward compatibility
-            'customer_email': customer_email,  # For backward compatibility
-            'products': products,
-            'subtotal': round(float(subtotal), 2),
-            'total_discount': round(float(total_discount), 2),
-            'total_gst': round(float(total_gst), 2),
-            'total_amount': round(float(total_post_gst), 2),
-            'total_amount_pre_gst': max(0, round(float(subtotal - total_discount), 2)),  # Ensure non-negative
-            'notes': notes,
-            'date_created': get_india_time(),
-            'email_content': email_content
-        }
-        
-        # Save to database
-        saved_quote_id = save_quotation_to_db(quotation_data)
-        if not saved_quote_id:
-            app.logger.error("Failed to save quotation to database")
-        else:
-            app.logger.info(f"Quotation saved to database with ID: {saved_quote_id}")
-        
-        # Clear cart after saving to database and attempting to send email
+        # Clear cart after attempting to send email
         clear_cart()
         
-        # Keep selected_company in the session
+        # Instead of removing selected_company, keep it in the session
         # This ensures the company selection persists after sending a quotation
         
         return jsonify({
@@ -4605,9 +3677,6 @@ def api_register_complete():
         print(f'Registration attempt - Email: {email}, Username: {username}')
 
         if MONGO_AVAILABLE and USE_MONGO:
-            if not ensure_mongo_users_initialized():
-                app.logger.error("[REGISTER] users_col not initialized")
-                return jsonify({'error': 'Authentication service unavailable'}), 503
             try:
                 # Check for existing user
                 existing_user = mu_find_user_by_email_or_username(email) or mu_find_user_by_email_or_username(username)
@@ -4703,151 +3772,183 @@ def api_login():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
-    
+        
     try:
-        app.logger.info("=== Login Request ===")
-        app.logger.info(f"Method: {request.method}")
-        
-        # Check content type to determine how to parse the request
-        content_type = request.headers.get('Content-Type', '').lower()
-        
-        if 'application/json' in content_type:
+        # Handle both form data and JSON
+        if request.is_json:
             data = request.get_json()
             if not data:
-                app.logger.error("No JSON data received")
-                return jsonify({
-                    'success': False,
-                    'error': 'No JSON data received',
-                    'message': 'Please provide login credentials in JSON format'
-                }), 400
+                return jsonify({'error': 'Invalid JSON data'}), 400, {'Content-Type': 'application/json'}
         else:
-            data = request.form.to_dict()
+            data = request.form
             if not data:
-                app.logger.error("No form data received")
-                return jsonify({
-                    'success': False,
-                    'error': 'No form data received',
-                    'message': 'Please provide login credentials'
-                }), 400
+                return jsonify({'error': 'Invalid form data'}), 400, {'Content-Type': 'application/json'}
 
         identifier = (data.get('identifier') or data.get('email') or data.get('username', '')).strip()
         password = (data.get('password') or '').strip()
         
-        app.logger.info(f'Login attempt - Identifier: {identifier}')
+        print(f'Login attempt - Identifier: {identifier}')
         
         if not identifier or not password:
-            app.logger.error('Login failed: Missing identifier or password')
-            return jsonify({
-                'success': False,
-                'error': 'Email/username and password are required',
-                'message': 'Please provide both email/username and password'
-            }), 400
-
-        # Check if MongoDB is available and should be used
-        if not MONGO_AVAILABLE or not USE_MONGO or not ensure_mongo_users_initialized():
-            error_msg = 'MongoDB authentication is required but not available'
-            app.logger.error(error_msg)
-            return jsonify({
-                'success': False,
-                'error': 'Authentication service unavailable',
-                'message': 'Authentication service is currently unavailable. Please try again later.'
-            }), 503
+            print('Login failed: Missing identifier or password')
+            return jsonify({'error': 'Email/username and password are required'}), 400
             
-        try:
-            from mongo_users import find_user_by_email_or_username, verify_password
-            
-            app.logger.info('=== MongoDB Authentication ===')
-            app.logger.info(f'Database: {users_col.database.name}')
-            app.logger.info(f'Collection: {users_col.name}')
-            app.logger.info(f'Looking up user: {identifier}')
-            
-            # Find user by email or username in Mongo (case-insensitive)
-            doc = find_user_by_email_or_username(identifier)
-            
-            if not doc:
-                app.logger.warning(f'User not found: {identifier}')
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid credentials',
-                    'message': 'Invalid email/username or password. Please try again.'
-                }), 401
-            
-            app.logger.info(f'User found - ID: {doc.get("_id")}, Email: {doc.get("email")}')
-            
-            # Verify password
-            app.logger.info('Verifying password...')
-            if not verify_password(doc, password):
-                app.logger.warning('Password verification failed')
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid credentials',
-                    'message': 'Invalid email/username or password. Please try again.'
-                }), 401
-            
-            # Create user object for Flask-Login
-            user = User(
-                id=str(doc['_id']),
-                email=doc['email'],
-                username=doc['username'],
-                password_hash=doc['password_hash'],
-                is_verified=doc.get('is_verified', False),
-                otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id'),
-                role=doc.get('role', 'user')
-            )
-            
-            # Log in the user
-            login_user(user, remember=True)
-            
-            # Update last login timestamp
+        if MONGO_AVAILABLE and USE_MONGO:
             try:
-                users_col.update_one(
-                    {'_id': doc['_id']},
-                    {'$set': {'last_login': datetime.utcnow()}}
+                print('\n=== Login Debug ===')
+                print(f'MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}')
+                print(f'Users collection: {users_col}')
+                if users_col is not None:
+                    print(f'Collection name: {users_col.name}, DB: {users_col.database.name}')
+                
+                print('Attempting to find user in MongoDB...')
+                # Find user by email or username in Mongo (case-insensitive)
+                doc = mu_find_user_by_email_or_username(identifier)
+                
+                if not doc:
+                    print(f'❌ User not found for identifier: {identifier}')
+                    # Check if the identifier is an email or username
+                    is_email = '@' in identifier
+                    if is_email:
+                        return jsonify({
+                            'error': 'Email not found',
+                            'message': 'No account found with this email address. Please check and try again.'
+                        }), 401
+                    else:
+                        return jsonify({
+                            'error': 'Username not found',
+                            'message': 'No account found with this username. Please check and try again.'
+                        }), 401
+                    
+                print(f'✅ User found in MongoDB:')
+                print(f'   Email: {doc.get("email")} (stored in DB)')
+                print(f'   Username: {doc.get("username")} (stored in DB)')
+                print(f'   ID: {doc.get("_id")}')
+                print(f'   Has password_hash: {"password_hash" in doc}')
+                
+                # Ensure we have the correct case for the username from the DB
+                # This ensures we return the exact case that was used during registration
+                identifier = doc.get('email', identifier) if '@' in identifier else doc.get('username', identifier)
+                
+                # Verify password
+                print('\nVerifying password...')
+                is_password_correct = mu_verify_password(doc, password)
+                print(f'Password verification result: {is_password_correct}')
+                
+                if not is_password_correct:
+                    print('❌ Password verification failed')
+                    return jsonify({
+                        'error': 'Incorrect password',
+                        'message': 'The password you entered is incorrect. Please try again.'
+                    }), 401
+                
+                # Create user object
+                user = User(
+                    id=str(doc['_id']),
+                    email=doc['email'],
+                    username=doc['username'],
+                    password_hash=doc['password_hash'],
+                    is_verified=doc.get('is_verified', False),
+                    otp_verified=doc.get('otp_verified', False)
                 )
+                
+                print(f'Successfully created user object for login: {user.email} (ID: {user.id})')
+                
+                # Log the user in
+                login_user(user)
+                print(f'User {user.username} logged in successfully')
+                
+                if request.is_json:
+                    response = jsonify({
+                        'success': True,
+                        'message': 'Login successful',
+                        'redirectTo': '/index',
+                        'user': {
+                            'id': str(user.id),
+                            'email': user.email,
+                            'username': user.username
+                        }
+                    })
+                else:
+                    # For form submission, redirect directly
+                    return redirect(url_for('index'))
+                
+                # Set session
+                session['user_id'] = str(user.id)
+                session['user_email'] = user.email
+                session['username'] = user.username
+                
+                return response
+                
             except Exception as e:
-                app.logger.error(f'Error updating last login: {str(e)}')
+                print(f'MongoDB login error: {str(e)}')
+                import traceback
+                traceback.print_exc()
+                return jsonify({'error': 'Authentication service unavailable'}), 500
+
+        # ---------------- JSON fallback path -----------------
+        print('Falling back to JSON user storage')
+        global users
+        users = load_users()
+        
+        # Check if user exists in our loaded users
+        user = None
+        for user_id, u in users.items():
+            if u.email == identifier or u.username == identifier:
+                user = u
+                break
+                
+        if not user:
+            # If user not found in loaded users, try to load from file directly
+            try:
+                with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                    all_users = json.load(f)
+                
+                for user_id, user_data in all_users.items():
+                    if user_data.get('email') == identifier or user_data.get('username') == identifier:
+                        # Create User object from file data
+                        user = User(
+                            id=user_id,
+                            email=user_data['email'],
+                            username=user_data['username'],
+                            password_hash=user_data['password_hash'],
+                            is_verified=user_data.get('is_verified', False),
+                            otp_verified=user_data.get('otp_verified', False)
+                        )
+                        # Add to our users dictionary
+                        users[user_id] = user
+                        break
+            except Exception as e:
+                print(f"Error loading user from file: {str(e)}")
+                return jsonify({'error': 'Internal server error'}), 500
+                
+        if not user:
+            print(f'User not found in JSON storage for identifier: {identifier}')
+            return jsonify({'error': 'Invalid email/username or password'}), 401
             
-            # Set session variables
-            session['user_id'] = str(user.id)
-            session['user_email'] = user.email
-            session['username'] = user.username
+        if not user.check_password(password):
+            print('Password verification failed for JSON user')
+            return jsonify({'error': 'Invalid email/username or password'}), 401
             
-            app.logger.info(f'Successfully logged in user: {user.email}')
-            
-            # Return success response
-            return jsonify({
-                'success': True,
-                'message': 'Login successful',
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                    'is_verified': user.is_verified,
-                    'otp_verified': user.otp_verified,
-                    'company_id': user.company_id,
-                    'role': user.role
-                },
-                'redirectTo': '/index'
-            })
-            
-        except Exception as e:
-            app.logger.error(f'Error during login: {str(e)}')
-            app.logger.error(traceback.format_exc())
-            return jsonify({
-                'success': False,
-                'error': 'Authentication error',
-                'message': 'An error occurred during authentication. Please try again.'
-            }), 500
-            
-    except Exception as e:
-        app.logger.error(f'Unexpected error in login endpoint: {str(e)}')
-        app.logger.error(traceback.format_exc())
+        login_user(user)
+        print(f'User {user.username} logged in successfully (JSON storage)')
+        
         return jsonify({
-            'success': False,
-            'error': 'Internal server error',
-            'message': 'An unexpected error occurred. Please try again later.'
-        }), 500
+            'success': True,
+            'message': 'Login successful',
+            'redirectTo': '/index',  # Changed to use index route
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username
+            }
+        })
+        
+    except Exception as e:
+        print(f"Unexpected login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'An unexpected error occurred during login'}), 500
 
 @app.route('/api/auth/logout', methods=['GET', 'POST'])
 @login_required
@@ -4897,8 +3998,6 @@ def api_profile_account():
         'role': user.role if hasattr(user, 'role') else 'user'
     })
 
-
-
 @app.route('/api/profile/update', methods=['POST'])
 @login_required
 def api_profile_update():
@@ -4930,898 +4029,6 @@ def api_profile_update():
     except Exception as e:
         app.logger.error(f"Error updating profile: {str(e)}")
         return jsonify({'error': 'Failed to update profile'}), 500
-
-# Admin Dashboard
-@app.route('/admin/dashboard')
-@login_required
-def admin_dashboard():
-    """Admin dashboard view – accessible only to users with role 'admin'.
-    Adds verbose logging so we can debug any remaining 403 errors in prod.
-    """
-    # Extra diagnostics
-    app.logger.info("[ADMIN_DASH] is_authenticated=%s, role=%s", current_user.is_authenticated, getattr(current_user, 'role', None))
-
-    if not current_user.is_authenticated:
-        app.logger.warning("[ADMIN_DASH] Anonymous access – redirecting to login")
-        return redirect(url_for('login', next=request.path))
-
-    if getattr(current_user, 'role', None) != 'admin':
-        app.logger.warning("[ADMIN_DASH] Forbidden – user %s lacks admin role", current_user.get_id())
-        abort(403)
-
-    return render_template('admin/dashboard.html', title='Admin Dashboard', user=current_user)
-
-# Admin Dashboard API Endpoints
-@app.route('/api/admin/stats')
-@login_required
-def admin_stats():
-    """Get admin dashboard statistics."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        stats = {
-            'total_users': 0,
-            'active_sessions': 0,
-            'total_quotations': 0,
-            'recent_activity': []
-        }
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Get total users count
-            users_count = mongo_db.users.count_documents({})
-            stats['total_users'] = users_count
-            
-            # Get total quotations count
-            if 'quotations' in mongo_db.list_collection_names():
-                stats['total_quotations'] = mongo_db.quotations.count_documents({})
-            
-            # Get active sessions (for now just count logged in users)
-            # In a real app, you'd track active sessions in Redis or similar
-            stats['active_sessions'] = 1  # Placeholder
-            
-            # Get recent activity (last 5 registered users)
-            recent_users = list(mongo_db.users.find(
-                {},
-                {'username': 1, 'email': 1, 'created_at': 1, 'role': 1}
-            ).sort('created_at', -1).limit(5))
-            
-            for user in recent_users:
-                stats['recent_activity'].append({
-                    'message': f"New user registered: {user.get('username', user.get('email', 'Unknown'))}",
-                    'timestamp': user.get('created_at', datetime.utcnow()).strftime('%Y-%m-%d'),
-                    'role': user.get('role', 'user')
-                })
-        else:
-            # Fallback to JSON data
-            users = _load_users_json()
-            stats['total_users'] = len(users) if users else 0
-            stats['active_sessions'] = 1
-            
-        return jsonify(stats)
-    except Exception as e:
-        app.logger.error(f"Error in admin_stats: {str(e)}")
-        return jsonify({
-            'error': 'Failed to load admin statistics',
-            'total_users': 0,
-            'active_sessions': 0,
-            'total_quotations': 0,
-            'recent_activity': []
-        }), 500
-
-# Admin Management Routes
-
-
-def _serialize_admin_user_doc(user_doc):
-    """Convert a user document into a JSON-serializable admin payload."""
-
-    def _convert(value):
-        if isinstance(value, ObjectId):
-            return str(value)
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, list):
-            return [_convert(item) for item in value]
-        if isinstance(value, dict):
-            return {key: _convert(val) for key, val in value.items()}
-        return value
-
-    role = user_doc.get('role', 'user')
-    customers_raw = user_doc.get('customers') or user_doc.get('customers_assigned') or []
-    customers_clean = _convert(customers_raw)
-
-    payload = {
-        'id': _convert(user_doc.get('_id')),
-        'username': user_doc.get('username', ''),
-        'email': user_doc.get('email', ''),
-        'role': role,
-        'company_name': user_doc.get('company_name', ''),
-        'company_id': _convert(user_doc.get('company_id', '')),
-        'company_email': user_doc.get('company_email', ''),
-        'is_verified': bool(user_doc.get('is_verified', False)),
-        'customers': [] if role == 'admin' else customers_clean,
-        'customers_count': 0 if role == 'admin' else len(customers_clean),
-        'created_at': _convert(user_doc.get('created_at')),
-        'updated_at': _convert(user_doc.get('updated_at')),
-        'assigned_companies': _convert(user_doc.get('assigned_companies', [])),
-    }
-
-    for field in ('phone', 'status', 'last_login'):
-        if field in user_doc:
-            payload[field] = _convert(user_doc[field])
-
-    return payload
-
-
-@app.route('/api/admin/users', methods=['GET', 'POST'])
-@login_required
-def admin_manage_users():
-    """Get list of all users or create a new user with customer assignments."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    if request.method == 'POST':
-        # Handle user creation
-        try:
-            data = request.get_json()
-            
-            # Validate required fields
-            required_fields = ['username', 'email', 'password', 'role']
-            for field in required_fields:
-                if not data.get(field):
-                    return jsonify({'error': f'Missing required field: {field}'}), 400
-            
-            # Check if user already exists
-            if MONGO_AVAILABLE and USE_MONGO:
-                if mongo_db.users.find_one({'email': data['email'].lower()}):
-                    return jsonify({'error': 'User with this email already exists'}), 400
-            else:
-                users = _load_users_json()
-                if any(u.get('email', '').lower() == data['email'].lower() for u in users.values()):
-                    return jsonify({'error': 'User with this email already exists'}), 400
-            
-            # Create user data
-            user_data = {
-                'username': data['username'].strip(),
-                'email': data['email'].lower().strip(),
-                'password_hash': generate_password_hash(data['password']),
-                'role': data['role'].lower(),
-                'is_verified': True,
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat(),
-                'customers': []
-            }
-            
-            # Add optional fields if provided
-            if 'company_id' in data:
-                user_data['company_id'] = data['company_id']
-            if 'company_name' in data:
-                user_data['company_name'] = data['company_name']
-            
-            # Save user to database
-            if MONGO_AVAILABLE and USE_MONGO:
-                result = mongo_db.users.insert_one(user_data)
-                user_id = str(result.inserted_id)
-            else:
-                users = _load_users_json()
-                user_id = str(uuid.uuid4())
-                users[user_id] = user_data
-                _save_users_json(users)
-            
-            # Assign customers if provided (and user is not admin)
-            if data['role'].lower() != 'admin' and 'customers' in data and isinstance(data['customers'], list):
-                for customer_id in data['customers']:
-                    assign_customer_to_user(user_id, customer_id)
-            
-            return jsonify({
-                'success': True,
-                'message': 'User created successfully',
-                'user_id': user_id
-            }), 201
-            
-        except Exception as e:
-            app.logger.error(f"Error creating user: {str(e)}")
-            return jsonify({'error': 'Failed to create user'}), 500
-    
-    # Handle GET request (list users)
-    try:
-        users_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            if not ensure_mongo_users_initialized():
-                app.logger.error("[ADMIN] users_col not initialized before listing users")
-                return jsonify({'error': 'Authentication service unavailable'}), 503
-
-            for user_doc in mongo_db.users.find({}):
-                users_list.append(_serialize_admin_user_doc(user_doc))
-        else:
-            for user_id, user in _load_users_json().items():
-                doc = dict(user)
-                doc['_id'] = user_id
-                users_list.append(_serialize_admin_user_doc(doc))
-        
-        return jsonify({'success': True, 'users': users_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting users list: {str(e)}")
-        return jsonify({'error': 'Failed to load users list'}), 500
-
-
-# Remove the old GET /api/admin/users endpoint since we've combined it with POST
-# in the route above
-@login_required
-def admin_get_users():
-    """Get list of all users with their customer assignments."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        users_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            if not ensure_mongo_users_initialized():
-                app.logger.error("[ADMIN] users_col not initialized before listing users")
-                return jsonify({'error': 'Authentication service unavailable'}), 503
-
-            for user_doc in mongo_db.users.find({}):
-                users_list.append(_serialize_admin_user_doc(user_doc))
-        else:
-            for user_id, user in _load_users_json().items():
-                doc = dict(user)
-                doc['_id'] = user_id
-                users_list.append(_serialize_admin_user_doc(doc))
-        
-        return jsonify({'success': True, 'users': users_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting users list: {str(e)}")
-        return jsonify({'error': 'Failed to load users list'}), 500
-
-
-@app.route('/api/admin/users/<user_id>')
-@login_required
-def admin_get_user(user_id):
-    """Get single user details with customer assignments."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            user_doc = mu_find_user_by_id(user_id)
-            if user_doc:
-                # Get customer assignments
-                customer_ids = user_doc.get('customers', [])
-                
-                # If user is admin, they have access to all customers
-                if user_doc.get('role') == 'admin':
-                    customer_ids = []
-                    
-                user_data = {
-                    'id': str(user_doc['_id']),
-                    'username': user_doc.get('username', ''),
-                    'email': user_doc.get('email', ''),
-                    'role': user_doc.get('role', 'user'),
-                    'company_name': user_doc.get('company_name', ''),
-                    'company_id': user_doc.get('company_id', ''),
-                    'is_verified': user_doc.get('is_verified', False),
-                    'customers': customer_ids  # Include customer assignments
-                }
-                return jsonify({'success': True, 'user': user_data})
-        else:
-            # Fallback to JSON file
-            users = _load_users_json()
-            user = users.get(user_id)
-            if user:
-                customer_ids = user.get('customers', [])
-                
-                # If user is admin, they have access to all customers
-                if user.get('role') == 'admin':
-                    customer_ids = []
-                    
-                user_data = {
-                    'id': user_id,
-                    'username': user.get('username', ''),
-                    'email': user.get('email', ''),
-                    'role': user.get('role', 'user'),
-                    'company_name': user.get('company_name', ''),
-                    'company_id': user.get('company_id', ''),
-                    'is_verified': user.get('is_verified', False),
-                    'customers': customer_ids  # Include customer assignments
-                }
-                return jsonify({'success': True, 'user': user_data})
-        
-        return jsonify({'error': 'User not found'}), 404
-        
-    except Exception as e:
-        app.logger.error(f"Error getting user: {str(e)}")
-        return jsonify({'error': 'Failed to load user'}), 500
-
-
-def save_quotation_to_db(quotation_data):
-    """Save quotation to database."""
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            result = mongo_db.quotations.insert_one(quotation_data)
-            return str(result.inserted_id)
-        else:
-            # For JSON fallback, you could save to a quotations.json file
-            app.logger.warning("Quotation not saved - MongoDB not available")
-            return None
-    except Exception as e:
-        app.logger.error(f"Error saving quotation: {str(e)}")
-        return None
-
-
-
-# Admin Management Routes
-@app.route('/admin/manage-users')
-@login_required
-def admin_manage_users_page():
-    """Admin user management page."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    return render_template('admin/manage_users.html', title='Manage Users', user=current_user)
-
-
-@app.route('/admin/manage-customers')
-@login_required
-def admin_manage_customers():
-    """Admin customer management page."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    return render_template('admin/manage_customers.html', title='Manage Customers', user=current_user)
-
-
-@app.route('/admin/company-assignments')
-@login_required
-def manage_company_assignments():
-    """Admin page for managing user-company assignments."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    return render_template('admin/manage_company_assignments.html', title='Manage Company Assignments', user=current_user)
-
-
-@app.route('/api/admin/users/<user_id>', methods=['PUT'])
-@login_required
-def admin_update_user(user_id):
-    """Update user details including customer assignments."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        data = request.get_json()
-        update_data = {}
-        
-        # Basic user info updates
-        if 'username' in data:
-            update_data['username'] = data['username'].strip()
-        if 'email' in data:
-            update_data['email'] = data['email'].strip().lower()
-        if 'role' in data:
-            update_data['role'] = data['role'].lower()
-        if 'password' in data and data['password'].strip():
-            from werkzeug.security import generate_password_hash
-            update_data['password_hash'] = generate_password_hash(data['password'].strip())
-        
-        update_data['updated_at'] = datetime.now()
-        
-        # Handle customer assignments if provided
-        if 'customers' in data and isinstance(data['customers'], list):
-            # First, get current assignments to determine what changed
-            if MONGO_AVAILABLE and USE_MONGO:
-                from bson import ObjectId
-                current_user_data = mongo_db.users.find_one({'_id': ObjectId(user_id)})
-            else:
-                current_user_data = None
-                if os.path.exists(USERS_FILE):
-                    with open(USERS_FILE, 'r') as f:
-                        users = json.load(f)
-                        for u in users:
-                            if str(u['id']) == str(user_id):
-                                current_user_data = u
-                                break
-            
-            if current_user_data:
-                # Get current assignments
-                current_customers = set(current_user_data.get('customers', []))
-                new_customers = set(str(cid) for cid in data['customers'] if cid)
-                
-                # Find added and removed customers
-                added_customers = new_customers - current_customers
-                removed_customers = current_customers - new_customers
-                
-                # Update the user's customer list
-                if MONGO_AVAILABLE and USE_MONGO:
-                    mongo_db.users.update_one(
-                        {'_id': ObjectId(user_id)},
-                        {'$set': {'customers': list(new_customers)}}
-                    )
-                else:
-                    if os.path.exists(USERS_FILE):
-                        with open(USERS_FILE, 'r+') as f:
-                            users = json.load(f)
-                            for u in users:
-                                if str(u['id']) == str(user_id):
-                                    u['customers'] = list(new_customers)
-                                    break
-                            f.seek(0)
-                            json.dump(users, f, indent=2)
-                            f.truncate()
-        
-        # Update other user data
-        if update_data:
-            if MONGO_AVAILABLE and USE_MONGO:
-                from bson import ObjectId
-                result = mongo_db.users.update_one(
-                    {'_id': ObjectId(user_id)},
-                    {'$set': update_data}
-                )
-                
-                if result.modified_count > 0 or 'customers' in data:
-                    return jsonify({
-                        'success': True, 
-                        'message': 'User updated successfully',
-                        'user_id': user_id
-                    })
-                else:
-                    return jsonify({'error': 'User not found or no changes made'}), 404
-            else:
-                # JSON fallback
-                updated = False
-                if os.path.exists(USERS_FILE):
-                    with open(USERS_FILE, 'r+') as f:
-                        users = json.load(f)
-                        for user in users:
-                            if str(user['id']) == str(user_id):
-                                user.update(update_data)
-                                updated = True
-                                break
-                        if updated:
-                            f.seek(0)
-                            json.dump(users, f, indent=2)
-                            f.truncate()
-                
-                if updated or 'customers' in data:
-                    return jsonify({
-                        'success': True, 
-                        'message': 'User updated successfully',
-                        'user_id': user_id
-                    })
-                else:
-                    return jsonify({'error': 'User not found or no changes made'}), 404
-        
-        return jsonify({'error': 'No valid updates provided'}), 400
-        
-    except Exception as e:
-        app.logger.error(f"Error updating user: {str(e)}")
-        return jsonify({'error': 'Failed to update user'}), 500
-
-@app.route('/api/admin/users/<user_id>', methods=['DELETE'])
-@login_required
-def admin_delete_user(user_id):
-    """Delete user."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            from bson import ObjectId
-            result = mongo_db.users.delete_one({'_id': ObjectId(user_id)})
-            
-            if result.deleted_count > 0:
-                return jsonify({'success': True, 'message': 'User deleted successfully'})
-            else:
-                return jsonify({'error': 'User not found'}), 404
-        
-        return jsonify({'error': 'Database not available'}), 500
-        
-    except Exception as e:
-        app.logger.error(f"Error deleting user: {str(e)}")
-        return jsonify({'error': 'Failed to delete user'}), 500
-
-# Company Management APIs
-        app.logger.error(f"Error fetching customers: {str(e)}")
-        return jsonify({'error': 'Failed to fetch customers'}), 500
-
-
-@app.route('/api/admin/companies', methods=['GET'])
-@login_required
-def admin_get_companies():
-    """Get companies with pagination."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        page = int(request.args.get('page', 0))
-        limit = int(request.args.get('limit', 10))
-        skip = page * limit
-        
-        companies_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            companies_cursor = mongo_db.companies.find({}).skip(skip).limit(limit)
-            
-            for company_doc in companies_cursor:
-                company_data = {
-                    'id': str(company_doc['_id']),
-                    'name': company_doc.get('Company Name', ''),
-                    'email': company_doc.get('EmailID', ''),
-                    'address': company_doc.get('Address', ''),
-                    'created_at': company_doc.get('created_at', '')
-                }
-                companies_list.append(company_data)
-        
-        return jsonify({'success': True, 'companies': companies_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting companies: {str(e)}")
-        return jsonify({'error': 'Failed to load companies'}), 500
-
-@app.route('/api/admin/companies/<company_id>')
-@login_required
-def get_company(company_id):
-    """Get a single company by ID."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        if not company_id:
-            return jsonify({'error': 'Company ID is required'}), 400
-            
-        if MONGO_AVAILABLE and USE_MONGO:
-            from bson.objectid import ObjectId
-            
-            # Validate if the ID is a valid ObjectId
-            if not ObjectId.is_valid(company_id):
-                return jsonify({'error': 'Invalid company ID format'}), 400
-                
-            company_doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
-            
-            if not company_doc:
-                return jsonify({'error': 'Company not found'}), 404
-                
-            company_data = {
-                'id': str(company_doc['_id']),
-                'name': company_doc.get('Company Name', ''),
-                'email': company_doc.get('EmailID', ''),
-                'address': company_doc.get('Address', ''),
-                'phone': company_doc.get('Phone', ''),
-                'gst_number': company_doc.get('GST Number', ''),
-                'created_at': company_doc.get('created_at', '')
-            }
-            
-            return jsonify({'success': True, 'company': company_data})
-        else:
-            # Fallback to JSON file
-            companies_file = os.path.join('static', 'data', 'companies.json')
-            if os.path.exists(companies_file):
-                with open(companies_file, 'r') as f:
-                    companies = json.load(f)
-                    
-                company = next((c for c in companies if str(c.get('id')) == company_id), None)
-                if company:
-                    return jsonify({'success': True, 'company': company})
-            
-            return jsonify({'error': 'Company not found'}), 404
-            
-    except Exception as e:
-        app.logger.error(f"Error getting company: {str(e)}")
-        return jsonify({'error': 'Failed to get company details'}), 500
-
-@app.route('/api/admin/companies/search')
-@login_required
-def admin_search_companies():
-    """Search companies."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        query = request.args.get('q', '').strip()
-        companies_list = []
-        
-        if query and MONGO_AVAILABLE and USE_MONGO:
-            import re
-            regex_pattern = f'.*{re.escape(query)}.*'
-            companies_cursor = mongo_db.companies.find({
-                '$or': [
-                    {'Company Name': {'$regex': regex_pattern, '$options': 'i'}},
-                    {'EmailID': {'$regex': regex_pattern, '$options': 'i'}}
-                ]
-            }).limit(20)
-            
-            for company_doc in companies_cursor:
-                company_data = {
-                    'id': str(company_doc['_id']),
-                    'name': company_doc.get('Company Name', ''),
-                    'email': company_doc.get('EmailID', ''),
-                    'address': company_doc.get('Address', '')
-                }
-                companies_list.append(company_data)
-        
-        return jsonify({'success': True, 'companies': companies_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error searching companies: {str(e)}")
-        return jsonify({'error': 'Failed to search companies'}), 500
-
-# Quotation Management
-@app.route('/admin/quotations')
-@login_required
-def admin_quotations():
-    """Admin quotations management page."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    return render_template('admin/quotations.html', title='Quotation Management', user=current_user)
-
-@app.route('/api/admin/quotations')
-@login_required
-def admin_get_quotations():
-    """Get all quotations for admin."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        quotations_list = []
-        
-        if MONGO_AVAILABLE and USE_MONGO:
-            # Check if quotations collection exists
-            if 'quotations' in mongo_db.list_collection_names():
-                # Sort by date_created in descending order (newest first)
-                quotations_cursor = mongo_db.quotations.find({}).sort('date_created', -1)
-                
-                for quot_doc in quotations_cursor:
-                    # Format the date for display in IST (UTC+5:30)
-                    created_at = quot_doc.get('date_created')
-                    if created_at and isinstance(created_at, datetime):
-                        # Convert UTC to IST (UTC+5:30)
-                        ist = timezone(timedelta(hours=5, minutes=30))
-                        created_at_ist = created_at.replace(tzinfo=timezone.utc).astimezone(ist)
-                        formatted_date = created_at_ist.strftime('%Y-%m-%d %H:%M:%S')
-                    else:
-                        formatted_date = str(created_at) if created_at else 'N/A'
-                    
-                    # Calculate total amount pre-GST (subtotal - discount)
-                    subtotal = float(quot_doc.get('subtotal', 0))
-                    discount = float(quot_doc.get('total_discount', 0))
-                    total_pre_gst = max(0, subtotal - discount)
-                    
-                    quotation_data = {
-                        'id': str(quot_doc.get('_id', '')),  # Use MongoDB _id as the primary ID
-                        'quote_id': quot_doc.get('quote_id', ''),  # Human-readable quote ID
-                        'user_id': quot_doc.get('user_id', ''),
-                        'username': '',  # Not stored in quotation_data currently
-                        'user_email': quot_doc.get('user_email', ''),
-                        'company_name': quot_doc.get('customer_name', 'No Company'),
-                        'company_email': quot_doc.get('customer_email', ''),
-                        'total_amount_pre_gst': total_pre_gst,
-                        'total_amount_post_gst': float(quot_doc.get('total_amount', 0)),
-                        'created_at': formatted_date,
-                        'products_count': len(quot_doc.get('products', []))
-                    }
-                    quotations_list.append(quotation_data)
-        
-        return jsonify({'success': True, 'quotations': quotations_list})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting quotations: {str(e)}")
-        return jsonify({'error': 'Failed to load quotations'}), 500
-
-@app.route('/api/admin/quotations/<quotation_id>')
-@login_required
-def admin_get_quotation_details(quotation_id):
-    """Get detailed quotation for admin view."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    quotation = None
-    try:
-        if MONGO_AVAILABLE and USE_MONGO:
-            from bson import ObjectId
-            # Try to find by quote_id first
-            quotation = mongo_db.quotations.find_one({'quote_id': quotation_id})
-            
-            # If not found by quote_id, try by _id if it looks like an ObjectId
-            if not quotation and len(quotation_id) == 24:
-                try:
-                    quotation = mongo_db.quotations.find_one({'_id': ObjectId(quotation_id)})
-                except Exception as e:
-                    app.logger.warning(f"Invalid ObjectId format: {str(e)}")
-                    pass
-            
-            if not quotation:
-                return jsonify({'error': 'Quotation not found'}), 404
-                
-            # Get user details if user_id exists
-            username = ''
-            user_email = ''
-            if 'user_id' in quotation:
-                user = None
-                if MONGO_AVAILABLE and USE_MONGO:
-                    user = mongo_db.users.find_one({'_id': ObjectId(quotation['user_id'])})
-                
-                if not user and os.path.exists(USERS_JSON):
-                    with open(USERS_JSON, 'r') as f:
-                        users = json.load(f)
-                        user = next((u for u in users if u['id'] == quotation['user_id']), None)
-                
-                if user:
-                    username = user.get('username', '')
-                    user_email = user.get('email', '')
-            
-            # Convert ObjectId to string for JSON serialization
-            if '_id' in quotation:
-                quotation['_id'] = str(quotation['_id'])
-            if 'user_id' in quotation:
-                quotation['user_id'] = str(quotation['user_id'])
-            
-            # Calculate amounts from products if available
-            products = quotation.get('products', [])
-            
-            # Recalculate all amounts to ensure consistency
-            for p in products:
-                # Get basic values with proper defaults
-                unit_price = float(p.get('unit_price', 0) or 0)
-                quantity = float(p.get('quantity', 1) or 1)
-                discount_percent = float(p.get('discount_percent', 0) or 0)
-                
-                # Calculate basic values
-                total_price = unit_price * quantity
-                discount_amount = (total_price * discount_percent) / 100
-                taxable_amount = total_price - discount_amount
-                
-                # Determine GST rate based on product type
-                product_type = p.get('type')
-                gst_rate = 0.18  # Default to 18%
-                if product_type == 'mpack':
-                    gst_rate = 0.12  # 12% for mpack
-                
-                # Calculate GST
-                gst_amount = round(taxable_amount * gst_rate, 2)
-                
-                # Update product calculations
-                if 'calculations' not in p:
-                    p['calculations'] = {}
-                
-                p['calculations'].update({
-                    'unit_price': unit_price,
-                    'quantity': quantity,
-                    'discount_percent': discount_percent,
-                    'discount_amount': round(discount_amount, 2),
-                    'taxable_amount': round(taxable_amount, 2),
-                    'gst_rate': int(gst_rate * 100),  # Store as percentage
-                    'gst_amount': gst_amount,
-                    'total_price': round(total_price, 2),
-                    'final_total': round(taxable_amount + gst_amount, 2)
-                })
-            
-            # Calculate totals from recalculated product data
-            subtotal = sum(
-                float(p.get('calculations', {}).get('total_price', 0) or 0)
-                for p in products
-            )
-            
-            total_discount = sum(
-                float(p.get('calculations', {}).get('discount_amount', 0) or 0)
-                for p in products
-            )
-            
-            # Calculate GST for each product based on its type
-            total_gst = 0
-            for p in products:
-                product_type = p.get('type')
-                price = float(p.get('calculations', {}).get('total_price', 0) or 0)
-                discount = float(p.get('calculations', {}).get('discount_amount', 0) or 0)
-                taxable_amount = price - discount
-                
-                if product_type == 'blanket':
-                    gst_rate = 0.18  # 18% GST for blankets
-                elif product_type == 'mpack':
-                    gst_rate = 0.12  # 12% GST for mpack
-                else:
-                    gst_rate = 0.18  # Default to 18% for any other product type
-                
-                product_gst = round(taxable_amount * gst_rate, 2)
-                total_gst += product_gst
-                
-                # Update the product's calculations
-                if 'calculations' not in p:
-                    p['calculations'] = {}
-                p['calculations']['gst_amount'] = product_gst
-                p['calculations']['gst_rate'] = int(gst_rate * 100)  # Store as percentage
-            
-            # Calculate total amount before GST (subtotal - discount)
-            total_amount_pre_gst = max(0, subtotal - total_discount)
-            
-            # Calculate final total (after GST)
-            total_amount = round(total_amount_pre_gst + total_gst, 2)
-            
-            # Prepare the response data
-            formatted_quotation = {
-                'id': quotation.get('quote_id', str(quotation.get('_id', ''))),
-                'quote_id': quotation.get('quote_id', 'N/A'),
-                'mongo_id': str(quotation.get('_id', '')),  # Keep for reference if needed
-                'company_name': quotation.get('company_name', quotation.get('customer_name', 'N/A')),
-                'company_email': quotation.get('company_email', quotation.get('customer_email', 'N/A')),
-                'products': products,
-                'subtotal': round(float(subtotal), 2),
-                'total_discount': round(float(total_discount), 2),
-                'total_gst': round(float(total_gst), 2),
-                'total_amount': round(float(total_amount), 2),
-                'total_amount_pre_gst': round(float(total_amount_pre_gst), 2),
-                'notes': quotation.get('notes', ''),
-                'status': quotation.get('status', 'unknown'),
-                'email_sent': quotation.get('email_sent', False),
-                'created_at': quotation.get('date_created', '').isoformat() if hasattr(quotation.get('date_created'), 'isoformat') else str(quotation.get('date_created', '')),
-                'email_content': quotation.get('email_content', ''),
-                'username': username,
-                'user_email': user_email,
-                # Add raw fields for debugging
-                '_raw_user_id': quotation.get('user_id', ''),
-                '_raw_username': username,
-                '_raw_user_email': user_email,
-                # Add calculation details for debugging
-                '_calculated': {
-                    'subtotal': round(float(subtotal), 2),
-                    'total_discount': round(float(total_discount), 2),
-                    'total_gst': round(float(total_gst), 2),
-                    'total_amount_pre_gst': round(float(total_amount_pre_gst), 2),
-                    'total_amount': round(float(total_amount), 2),
-                    'calculation_method': 'recalculated_on_demand'
-                }
-            }
-            
-            return jsonify({'success': True, 'quotation': formatted_quotation})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting quotation details: {str(e)}")
-        app.logger.error(traceback.format_exc())  # Add full traceback to logs
-        return jsonify({'error': 'Failed to get quotation details', 'details': str(e)}), 500
-
-# Active Sessions API
-@app.route('/api/admin/active-sessions')
-@login_required
-def admin_get_active_sessions():
-    """Get active user sessions with details."""
-    if getattr(current_user, 'role', None) != 'admin':
-        abort(403)
-    
-    try:
-        # For now, we'll show currently logged in users
-        # In a production app, you'd track active sessions in Redis or database
-        active_sessions = []
-        
-        # Add current admin user
-        if current_user.is_authenticated:
-            # Get current user's cart
-            cart = get_user_cart()
-            cart_total = 0
-            
-            for product in cart.get('products', []):
-                cart_total += product.get('total_price', 0)
-            
-            # Get current time in IST
-            from datetime import datetime, timezone
-            ist = timezone.utc.offset(datetime.now(), 19800)  # +5:30 hours = 19800 seconds
-            current_time_ist = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
-            
-            session_data = {
-                'user_id': current_user.id,
-                'username': current_user.username,
-                'email': current_user.email,
-                'role': getattr(current_user, 'role', 'user'),
-                'company_name': session.get('company_name', 'Not selected'),
-                'company_email': session.get('company_email', ''),
-                'cart_amount': cart_total,
-                'cart_items_count': len(cart.get('products', [])),
-                'last_activity': current_time_ist
-            }
-            active_sessions.append(session_data)
-        
-        return jsonify({'success': True, 'sessions': active_sessions})
-        
-    except Exception as e:
-        app.logger.error(f"Error getting active sessions: {str(e)}")
-        return jsonify({'error': 'Failed to load active sessions'}), 500
 
 # Product pages
 @app.route('/mpacks')
@@ -5872,7 +4079,7 @@ def mpacks():
     # Log the company info being sent to template
     app.logger.info(f"Rendering mpacks with company: {company_name}, email: {company_email}")
     
-    response = render_template('user/products/chemicals/mpack.html', 
+    response = render_template('products/chemicals/mpack.html', 
                            current_company={
                                'id': company_id,
                                'name': company_name,
@@ -5936,7 +4143,7 @@ def blankets():
     app.logger.info(f"Rendering blankets with company: {company_name}, email: {company_email}")
     
     # Create response and set company data in the session cookie
-    response = make_response(render_template('user/products/blankets/blankets.html',
+    response = make_response(render_template('products/blankets/blankets.html',
                          company_name=company_name,
                          company_email=company_email,
                          company_id=company_id,
@@ -5956,7 +4163,6 @@ def blankets():
 # Reset password page
 @app.route('/reset-password')
 def reset_password_page():
-    # Ensure we're using the reset_password.html from the root templates directory
     return render_template('reset_password.html')
 
 # Helper functions to get company name and email by ID
@@ -6032,28 +4238,7 @@ def get_company_email_by_id(company_id):
 # Error handling
 @app.errorhandler(404)
 def page_not_found(e):
-    # Default to user template
-    return render_template('user/404.html'), 404
-
-
-
-@app.route('/profile')
-@login_required
-def profile():
-    """Render the profile page for the currently authenticated user."""
-    user = current_user
-    company_name = ''
-    if hasattr(user, 'company_id') and user.company_id:
-        company_name = get_company_name_by_id(user.company_id)
-    return render_template('profile/profile.html',
-                           user=user,
-                           company_name=company_name,
-                           get_company_name_by_id=get_company_name_by_id)
-
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                             'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return render_template('404.html'), 404
 
 # Start app
 if __name__ == '__main__':
