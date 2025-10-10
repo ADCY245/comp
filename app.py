@@ -160,7 +160,7 @@ def send_alert_email(subject: str, body: str):
         
         # Send email
         app.logger.info(f"Attempting to send email to {ADMIN_ALERT_EMAIL}")
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=SMTP_TIMEOUT) as server:
             server.ehlo()
             if smtp_port == 587:
                 server.starttls()
@@ -218,9 +218,9 @@ def init_mongodb():
             print(f"Attempting to connect to MongoDB (Attempt {attempt + 1}/{max_retries})...")
             mongo_client = MongoClient(
                 MONGO_URI,
-                serverSelectionTimeoutMS=10000,  # 10 second timeout
-                connectTimeoutMS=10000,
-                socketTimeoutMS=30000
+                serverSelectionTimeoutMS=3000,  # 3 second timeout
+                connectTimeoutMS=3000,
+                socketTimeoutMS=10000
             )
             
             # Test the connection
@@ -350,6 +350,7 @@ SMTP_USERNAME = os.getenv('SMTP_USER')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
 EMAIL_FROM = os.getenv('EMAIL_FROM')
 EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME')
+SMTP_TIMEOUT = int(os.getenv('SMTP_TIMEOUT', '5'))
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
@@ -2760,7 +2761,7 @@ def api_request_password_reset():
         
         msg.attach(MIMEText(body, 'html'))
         
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
@@ -3557,9 +3558,9 @@ def send_quotation():
             try:
                 # Send the email
                 if str(SMTP_PORT) == '465':
-                    server = smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT))
+                    server = smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT), timeout=SMTP_TIMEOUT)
                 else:
-                    server = smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT))
+                    server = smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=SMTP_TIMEOUT)
                     if str(SMTP_PORT) == '587':  # Explicitly use STARTTLS for port 587
                         server.starttls()
                 
@@ -3625,13 +3626,15 @@ def api_request_otp():
                 body = f"Your OTP is: {otp}\nThis OTP will expire in 5 minutes."
                 msg.attach(MIMEText(body, 'plain'))
                 
-                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
                     server.starttls()
                     server.login(SMTP_USERNAME, SMTP_PASSWORD)
                     server.send_message(msg)
             except Exception as e:
-                print(f"Error sending email: {str(e)}")
+                app.logger.warning(f"Error sending OTP email: {str(e)}")
                 return jsonify({'error': 'Failed to send OTP. Please try again later.'}), 500
+        else:
+            app.logger.info("Email configuration invalid; skipping OTP email send")
                 
         return jsonify({
             'success': True,
@@ -3684,6 +3687,7 @@ def api_register_complete():
         email = data.get('email', '').strip()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
+        new_user = None
         
         print(f"\n🔍 Registration attempt for: {email} ({username})")
         print(f"MongoDB Status - Available: {MONGO_AVAILABLE}, Using: {USE_MONGO}")
@@ -3737,6 +3741,16 @@ def api_register_complete():
                 if not doc:
                     traceback.print_exc()
                     return jsonify({'error': 'Failed to create user in database'}), 500
+
+                new_user = User(
+                    id=str(doc['_id']),
+                    email=doc['email'],
+                    username=doc['username'],
+                    password_hash=doc['password_hash'],
+                    is_verified=doc.get('is_verified', False),
+                    otp_verified=doc.get('otp_verified', False),
+                    company_id=doc.get('company_id')
+                )
                 
             except Exception as e:
                 error_msg = f"❌ MongoDB Error: {str(e)}"
