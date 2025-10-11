@@ -203,7 +203,7 @@ init_mongodb()
 
 def mu_find_user_by_email_or_username(identifier):
     """Find a user by email or username in MongoDB"""
-    if not MONGO_AVAILABLE or not users_col:
+    if not MONGO_AVAILABLE or users_col is None:
         return None
     try:
         return users_col.find_one({
@@ -218,7 +218,7 @@ def mu_find_user_by_email_or_username(identifier):
 
 def mu_create_user(email, username, password):
     """Create a new user in MongoDB"""
-    if not MONGO_AVAILABLE or not users_col:
+    if not MONGO_AVAILABLE or users_col is None:
         return None
     
     try:
@@ -240,7 +240,7 @@ def mu_create_user(email, username, password):
 
 def mu_find_user_by_id(user_id):
     """Find a user by ID in MongoDB"""
-    if not MONGO_AVAILABLE or not users_col:
+    if not MONGO_AVAILABLE or users_col is None:
         return None
     
     try:
