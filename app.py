@@ -615,8 +615,15 @@ def send_email_resend(
         return False
 
     recipients = to if isinstance(to, list) else [to]
+    from_address = from_email or RESEND_FROM_ADDRESS
+
+    if not from_address:
+        app.logger.error("Resend sender address is not configured")
+        return False
+
     payload = {
-        "from": from_email or RESEND_FROM_ADDRESS,
+        "from": from_address,
+        "sender": from_address,
         "to": recipients,
         "subject": subject
     }
