@@ -18,6 +18,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
 import logging
+import traceback
 import resend
 
 # Import MongoDB users module
@@ -369,6 +370,10 @@ def _parse_datetime(value):
             except (ValueError, TypeError):
                 return None
     return None
+
+
+def log_time(message: str):
+    print(f"[{datetime.utcnow().isoformat()}] {message}")
 
 
 class User(UserMixin):
