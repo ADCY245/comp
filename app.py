@@ -10,18 +10,15 @@ from datetime import datetime, timedelta
 import uuid
 import hashlib
 import secrets
-import smtplib
 import re
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from functools import wraps
 from flask_login import current_user
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
-import socket  # Added for socket.timeout and socket.gaierror
 import logging
+import resend
 
 # Import MongoDB users module
 try:
@@ -129,64 +126,20 @@ ADMIN_ALERT_EMAIL = os.getenv('ADMIN_ALERT_EMAIL', 'athulnair3096@gmail.com')
 # Helper to send alert email
 
 def send_alert_email(subject: str, body: str):
-    """Send an alert email to admin; relies on environment variables SMTP_HOST, SMTP_PORT, EMAIL_USER, EMAIL_PASS"""
-    try:
-        # Get email configuration
-        smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
-        smtp_port = int(os.getenv('SMTP_PORT', 587))
-        email_user = os.getenv('EMAIL_USER')
-        email_pass = os.getenv('EMAIL_PASS')
-        
-        # Log configuration for debugging
-        app.logger.info(f"Email config - Host: {smtp_host}, Port: {smtp_port}, User: {email_user}")
-        
-        # Validate configuration
-        if not all([email_user, email_pass]):
-            error_msg = 'Email credentials not fully configured; missing EMAIL_USER or EMAIL_PASS'
-            app.logger.error(error_msg)
-            return False
-            
-        if not ADMIN_ALERT_EMAIL:
-            error_msg = 'No admin email address configured'
-            app.logger.error(error_msg)
-            return False
-        
-        # Create message
-        msg = MIMEMultipart()
-        msg['From'] = email_user
-        msg['To'] = ADMIN_ALERT_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Send email
-        app.logger.info(f"Attempting to send email to {ADMIN_ALERT_EMAIL}")
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=SMTP_TIMEOUT) as server:
-            server.ehlo()
-            if smtp_port == 587:
-                server.starttls()
-                server.ehlo()
-            
-            app.logger.info("Logging into SMTP server...")
-            server.login(email_user, email_pass)
-            
-            app.logger.info("Sending email message...")
-            server.send_message(msg)
-            server.quit()
-            
-        app.logger.info("Email sent successfully")
-        return True
-        
-    except smtplib.SMTPException as e:
-        error_msg = f"SMTP error sending email: {str(e)}"
-    except socket.timeout:
-        error_msg = "SMTP connection timed out"
-    except socket.gaierror:
-        error_msg = "SMTP server address could not be resolved"
-    except Exception as e:
-        error_msg = f"Unexpected error sending email: {str(e)}"
-    
-    app.logger.error(error_msg, exc_info=True)
-    return False
+    """Send an alert email to admin using the Resend API."""
+    if not ADMIN_ALERT_EMAIL:
+        app.logger.error('No admin email address configured')
+        return False
+
+    success = send_email_resend(
+        to=ADMIN_ALERT_EMAIL,
+        subject=subject,
+        text=body
+    )
+
+    if success:
+        app.logger.info("Alert email sent successfully via Resend")
+    return success
 
 # MongoDB Configuration
 from pymongo import MongoClient
@@ -343,14 +296,13 @@ JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION = 3600  # 1 hour
 
-# Email Configuration
-SMTP_SERVER = os.getenv('SMTP_HOST')
-SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USERNAME = os.getenv('SMTP_USER')
-SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+# Email Configuration (Resend)
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
 EMAIL_FROM = os.getenv('EMAIL_FROM')
-EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME')
-SMTP_TIMEOUT = int(os.getenv('SMTP_TIMEOUT', '5'))
+EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'Product Calculator')
+RESEND_FROM_ADDRESS = os.getenv('RESEND_FROM') or (
+    f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>" if EMAIL_FROM else None
+)
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
@@ -621,17 +573,21 @@ else:
 
 # Add logging for debugging
 
-print(f"SMTP Configuration:\n"
-      f"SMTP_HOST: {SMTP_SERVER}\n"
-      f"SMTP_PORT: {SMTP_PORT}\n"
-      f"SMTP_USER: {SMTP_USERNAME}\n"
-      f"EMAIL_FROM: {EMAIL_FROM}")
+print("Resend Configuration:\n"
+      f"RESEND_API_KEY: {'Set' if RESEND_API_KEY else 'Not set'}\n"
+      f"RESEND_FROM_ADDRESS: {RESEND_FROM_ADDRESS}\n"
+      f"EMAIL_FROM: {EMAIL_FROM}\n"
+      f"EMAIL_FROM_NAME: {EMAIL_FROM_NAME}")
 
 def check_email_config():
-    """Check if email configuration is valid."""
-    if not SMTP_SERVER or not SMTP_USERNAME or not SMTP_PASSWORD or not EMAIL_FROM:
-        print("Warning: Email configuration is incomplete")
+    """Check if Resend email configuration is valid."""
+    if not RESEND_API_KEY:
+        print("Warning: Resend API key is not configured")
         return False
+    if not RESEND_FROM_ADDRESS:
+        print("Warning: Resend from address is not configured")
+        return False
+    resend.api_key = RESEND_API_KEY
     return True
 
 # Initialize email configuration
@@ -641,6 +597,52 @@ def refresh_email_config():
     """Periodically refresh email configuration."""
     global email_config_valid
     email_config_valid = check_email_config()
+
+
+def send_email_resend(
+    to,
+    subject: str,
+    html: str | None = None,
+    text: str | None = None,
+    from_email: str | None = None,
+    cc=None,
+    bcc=None,
+    reply_to: str | None = None
+) -> bool:
+    """Send an email via Resend API."""
+    if not email_config_valid:
+        app.logger.error("Resend email configuration is invalid")
+        return False
+
+    recipients = to if isinstance(to, list) else [to]
+    payload = {
+        "from": from_email or RESEND_FROM_ADDRESS,
+        "to": recipients,
+        "subject": subject
+    }
+
+    if html:
+        payload["html"] = html
+    if text:
+        payload["text"] = text
+    if cc:
+        payload["cc"] = cc if isinstance(cc, list) else [cc]
+    if bcc:
+        payload["bcc"] = bcc if isinstance(bcc, list) else [bcc]
+    if reply_to:
+        payload["reply_to"] = reply_to
+
+    # Resend requires at least one of html/text
+    if "html" not in payload and "text" not in payload:
+        app.logger.error("Resend payload missing both html and text content")
+        return False
+
+    try:
+        resend.Emails.send(payload)
+        return True
+    except Exception as exc:
+        app.logger.error(f"Error sending email via Resend: {exc}", exc_info=True)
+        return False
 
 # Initialize Flask app with logging
 import logging
@@ -2745,34 +2747,26 @@ def api_request_password_reset():
         save_users()
 
     # Send email with OTP
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = f'"{EMAIL_FROM_NAME}" <{EMAIL_FROM}>'
-        msg['To'] = email
-        msg['Subject'] = 'Password Reset OTP'
-        
-        body = f"""
-        <h2>Password Reset Request</h2>
-        <p>You have requested to reset your password. Please use the following OTP to proceed:</p>
-        <h3 style="font-size: 24px; letter-spacing: 5px; margin: 20px 0;">{otp}</h3>
-        <p>This OTP will expire in 10 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-        """
-        
-        msg.attach(MIMEText(body, 'html'))
-        
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-            
+    body = (
+        "<h2>Password Reset Request</h2>"
+        "<p>You have requested to reset your password. Please use the following OTP to proceed:</p>"
+        f"<h3 style=\"font-size: 24px; letter-spacing: 5px; margin: 20px 0;\">{otp}</h3>"
+        "<p>This OTP will expire in 10 minutes.</p>"
+        "<p>If you did not request this, please ignore this email.</p>"
+    )
+
+    if send_email_resend(
+        to=email,
+        subject='Password Reset OTP',
+        html=body
+    ):
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'If an account with that email exists, a password reset OTP has been sent.'
         })
-    except Exception as e:
-        app.logger.error(f'Error sending password reset email: {str(e)}')
-        return jsonify({'error': 'Failed to send password reset email. Please try again later.'}), 500
+
+    app.logger.error('Failed to send password reset email via Resend')
+    return jsonify({'error': 'Failed to send password reset email. Please try again later.'}), 500
 
 @app.route('/api/auth/verify-reset-otp', methods=['POST'])
 def api_verify_reset_otp():
@@ -3539,41 +3533,16 @@ def send_quotation():
         
 
         
-        # Create message
-        msg = MIMEMultipart()
-        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-        msg['To'] = ', '.join(recipients)
-        msg['Subject'] = f"Quotation from Chemo INTERNATIONAL - {today}"
-        
-        # Attach HTML version
-        part = MIMEText(email_content, 'html')
-        msg.attach(part)
+        email_sent = send_email_resend(
+            to=recipients,
+            subject=f"Quotation from Chemo INTERNATIONAL - {today}",
+            html=email_content
+        )
 
-
-        # Initialize email_sent flag
-        email_sent = False
-        
-        # Check if email configuration is valid
-        if all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD]):
-            try:
-                # Send the email
-                if str(SMTP_PORT) == '465':
-                    server = smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT), timeout=SMTP_TIMEOUT)
-                else:
-                    server = smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=SMTP_TIMEOUT)
-                    if str(SMTP_PORT) == '587':  # Explicitly use STARTTLS for port 587
-                        server.starttls()
-                
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.send_message(msg)
-                server.quit()
-                app.logger.info("Quotation email sent successfully")
-                email_sent = True
-            except Exception as e:
-                app.logger.error(f"Failed to send email: {str(e)}")
-                email_sent = False
+        if email_sent:
+            app.logger.info("Quotation email sent successfully via Resend")
         else:
-            app.logger.warning("Email configuration is incomplete. Email will not be sent.")
+            app.logger.error("Quotation email failed to send via Resend")
 
         # Clear cart after attempting to send email
         clear_cart()
@@ -3617,21 +3586,12 @@ def api_request_otp():
         
         # Send OTP to email
         if email_config_valid:
-            try:
-                msg = MIMEMultipart()
-                msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-                msg['To'] = email
-                msg['Subject'] = 'Your OTP for Registration'
-                
-                body = f"Your OTP is: {otp}\nThis OTP will expire in 5 minutes."
-                msg.attach(MIMEText(body, 'plain'))
-                
-                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT) as server:
-                    server.starttls()
-                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                    server.send_message(msg)
-            except Exception as e:
-                app.logger.warning(f"Error sending OTP email: {str(e)}")
+            if not send_email_resend(
+                to=email,
+                subject='Your OTP for Registration',
+                text=f"Your OTP is: {otp}\nThis OTP will expire in 5 minutes."
+            ):
+                app.logger.warning("Error sending OTP email via Resend")
                 return jsonify({'error': 'Failed to send OTP. Please try again later.'}), 500
         else:
             app.logger.info("Email configuration invalid; skipping OTP email send")
