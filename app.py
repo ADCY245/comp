@@ -353,8 +353,26 @@ USERS_FILE = os.getenv('USERS_FILE_PATH', os.path.join(DATA_DIR, 'users.json'))
 CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
+def _parse_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value)
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            try:
+                return datetime.fromtimestamp(float(value))
+            except (ValueError, TypeError):
+                return None
+    return None
+
+
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user'):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user', created_at=None):
         self.id = id
         self.email = email
         self.username = username
@@ -366,6 +384,7 @@ class User(UserMixin):
         self.reset_token_expiry = reset_token_expiry
         self.company_id = company_id
         self.role = role or 'user'
+        self.created_at = created_at or datetime.utcnow()
 
     def to_dict(self):
         return {
@@ -378,7 +397,8 @@ class User(UserMixin):
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
             'otp_verified': self.otp_verified,
             'company_id': self.company_id,
-            'role': self.role
+            'role': self.role,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
     def set_password(self, password):
@@ -447,7 +467,8 @@ def _load_users_json():
                     reset_token=user_data.get('reset_token'),
                     reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
                     company_id=user_data.get('company_id'),
-                    role=user_data.get('role', 'user')
+                    role=user_data.get('role', 'user'),
+                    created_at=_parse_datetime(user_data.get('created_at'))
                 )
             except Exception as e:
                 print(f"Error loading user {user_id}: {e}")
@@ -487,7 +508,8 @@ def load_user(user_id):
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id'),
-                role=doc.get('role', 'user')
+                role=doc.get('role', 'user'),
+                created_at=_parse_datetime(doc.get('created_at'))
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -510,7 +532,8 @@ def load_user(user_id):
             reset_token=user_data.get('reset_token'),
             reset_token_expiry=user_data.get('reset_token_expiry'),
             company_id=user_data.get('company_id'),
-            role=user_data.get('role', 'user')
+            role=user_data.get('role', 'user'),
+            created_at=_parse_datetime(user_data.get('created_at'))
         )
     return None
 
