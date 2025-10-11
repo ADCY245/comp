@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -48,7 +48,11 @@ print("===========================\n")
 
 # CORS Configuration
 from flask_cors import CORS
+# Initialize Flask app and login manager
 app = Flask(__name__)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
@@ -230,7 +234,8 @@ def mu_create_user(email, username, password):
             'is_verified': False,
             'otp_verified': False,
             'created_at': time.time(),
-            'updated_at': time.time()
+            'updated_at': time.time(),
+            'role': 'user'
         }
         result = users_col.insert_one(user_data)
         return str(result.inserted_id)
@@ -249,6 +254,20 @@ def mu_find_user_by_id(user_id):
     except Exception as e:
         print(f"Error finding user by ID: {str(e)}")
         return None
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+
+        user_role = getattr(current_user, 'role', 'user')
+        if user_role != 'admin':
+            return abort(403)
+
+        return view_func(*args, **kwargs)
+
+    return wrapped
 
 # Health check endpoint
 @app.route('/health')
@@ -291,6 +310,12 @@ def health_check():
 if not USE_MONGO:
     print("MongoDB not enabled in configuration")
 
+@app.route('/admin/dashboard')
+@login_required
+@admin_required
+def admin_dashboard():
+    return render_template('admin/dashboard.html')
+
 print("==============================\n")
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
@@ -329,7 +354,7 @@ CART_FILE = os.getenv('CART_FILE_PATH', os.path.join(DATA_DIR, 'cart.json'))
 
 # User class
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user'):
         self.id = id
         self.email = email
         self.username = username
@@ -340,6 +365,7 @@ class User(UserMixin):
         self.reset_token = reset_token
         self.reset_token_expiry = reset_token_expiry
         self.company_id = company_id
+        self.role = role or 'user'
 
     def to_dict(self):
         return {
@@ -351,7 +377,8 @@ class User(UserMixin):
             'reset_token': self.reset_token,
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
             'otp_verified': self.otp_verified,
-            'company_id': self.company_id
+            'company_id': self.company_id,
+            'role': self.role
         }
 
     def set_password(self, password):
@@ -419,7 +446,8 @@ def _load_users_json():
                     cart=user_data.get('cart', []),
                     reset_token=user_data.get('reset_token'),
                     reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
-                    company_id=user_data.get('company_id')
+                    company_id=user_data.get('company_id'),
+                    role=user_data.get('role', 'user')
                 )
             except Exception as e:
                 print(f"Error loading user {user_id}: {e}")
@@ -439,6 +467,7 @@ def _load_users_json():
 
 # ... (rest of the code remains the same)
 
+@login_manager.user_loader
 def load_user(user_id):
     """Load user by ID from either MongoDB or JSON."""
     if MONGO_AVAILABLE and USE_MONGO:
@@ -457,7 +486,8 @@ def load_user(user_id):
                 password_hash=doc['password_hash'],
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
+                company_id=doc.get('company_id'),
+                role=doc.get('role', 'user')
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -479,7 +509,8 @@ def load_user(user_id):
             cart=user_data.get('cart', []),
             reset_token=user_data.get('reset_token'),
             reset_token_expiry=user_data.get('reset_token_expiry'),
-            company_id=user_data.get('company_id')
+            company_id=user_data.get('company_id'),
+            role=user_data.get('role', 'user')
         )
     return None
 
@@ -920,10 +951,6 @@ else:
     # Removed this line - it's causing the error
     # users = load_users()
     pass
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
