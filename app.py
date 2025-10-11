@@ -700,10 +700,7 @@ logging.basicConfig(
 # Suppress Flask debug pin console output
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-# Create Flask app instance
-app = Flask(__name__)
-
-# Configure secret key
+# Configure secret key for existing app instance
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
 class LoginForm(FlaskForm):
