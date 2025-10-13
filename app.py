@@ -1007,7 +1007,9 @@ def load_user(user_id):
                 password_hash=doc['password_hash'],
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
-                company_id=doc.get('company_id')
+                company_id=doc.get('company_id'),
+                role=doc.get('role', 'user'),
+                created_at=_parse_datetime(doc.get('created_at'))
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -1028,7 +1030,9 @@ def load_user(user_id):
                 cart=user_data.get('cart', []),
                 reset_token=user_data.get('reset_token'),
                 reset_token_expiry=user_data.get('reset_token_expiry'),
-                company_id=user_data.get('company_id')
+                company_id=user_data.get('company_id'),
+                role=user_data.get('role', 'user'),
+                created_at=_parse_datetime(user_data.get('created_at'))
             )
         return None
 
