@@ -205,30 +205,6 @@
                             </div>
                         </div>
                         
-                        <div id="customerAssignmentSection" class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label mb-0">Assign Customers</label>
-                                <div>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="document.querySelectorAll('.customer-checkbox').forEach(cb => cb.checked = true)">
-                                        Select All
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.customer-checkbox').forEach(cb => cb.checked = false)">
-                                        Clear All
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="customerCheckboxList" class="border p-3 rounded" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
-                                <div id="customerLoading" class="text-center py-3">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                    <p class="mt-2 mb-0">Loading customers...</p>
-                                </div>
-                                <!-- Customer checkboxes will be inserted here -->
-                            </div>
-                            <small class="text-muted">Select which customers this user can access. Admins have access to all customers.</small>
-                        </div>
-
                         <div id="companyAssignmentSection" class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label mb-0">Assign Companies</label>
@@ -317,7 +293,6 @@
         // Global variables
         let allUsers = [];
         // Global variables
-        let allCustomers = [];
         let currentUser = null;
         let currentPage = 0;
         const pageSize = 10;
@@ -328,7 +303,6 @@
         // Table instances
         let usersTable = null;
         let companiesTable = null;
-        let customersTable = null;
         let allCompaniesForAssignment = [];
 
         
@@ -408,24 +382,8 @@
                 });
 
                 // Initialize other tables if they exist
-                if ($('#companiesTable').length) {
-                    companiesTable = $('#companiesTable').DataTable({
-                        responsive: true,
-                        // Add your companies table config
-                    });
-                }
-                
-                if ($('#customersTable').length) {
-                    customersTable = $('#customersTable').DataTable({
-                        responsive: true,
-                        // Add your customers table config
-                    });
-                }
-
-                // Load initial data
                 loadUsers();
                 loadCompanies();
-                loadAllCustomers();
                 loadAllCompaniesForAssignment();
             } catch (error) {
                 console.error('Error initializing page:', error);
@@ -658,219 +616,19 @@
             }
         }
 
-        // Helper functions
-        function getRoleBadgeColor(role) {
-            switch(role) {
-                case 'admin': return 'danger';
-                case 'dealer': return 'warning';
-                default: return 'success';
-            }
-        }
-        
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            return new Date(dateString).toLocaleDateString();
-        }
-
-        // Render customer checkboxes in the user modal
-        function renderCustomerCheckboxes(customers = [], selectedCustomerIds = []) {
-            const container = document.getElementById('customerCheckboxList');
-            if (!container) return;
-            
-            // Clear any existing content except the loading indicator
-            container.innerHTML = '';
-            
-            // If no customers provided, show message
-            if (!customers || customers.length === 0) {
-                container.innerHTML = `
-                    <div class="alert alert-info mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No customers found. Please add customers first.
-                    </div>`;
-                return;
-            }
-            
-            // Create a document fragment for better performance
-            const fragment = document.createDocumentFragment();
-            
-            // Group customers by first letter for better organization
-            const customersByLetter = {};
-            customers.forEach(customer => {
-                const customerName = customer.name || customer.companyName || `Customer ${customer._id || customer.id}`;
-                const firstLetter = customerName.charAt(0).toUpperCase();
-                if (!customersByLetter[firstLetter]) {
-                    customersByLetter[firstLetter] = [];
-                }
-                customersByLetter[firstLetter].push({
-                    ...customer,
-                    displayName: customerName
-                });
-            });
-            
-            // Sort letters
-            const sortedLetters = Object.keys(customersByLetter).sort();
-            
-            // Create search box
-            const searchBox = document.createElement('div');
-            searchBox.className = 'mb-3 sticky-top bg-white py-2';
-            searchBox.style.zIndex = '1';
-            searchBox.innerHTML = `
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" id="customerSearch" class="form-control" 
-                           placeholder="Search customers..." 
-                           onkeyup="filterCustomers(this.value)">
-                    <button class="btn btn-outline-secondary" type="button" 
-                            onclick="document.getElementById('customerSearch').value = ''; filterCustomers('')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>`;
-            fragment.appendChild(searchBox);
-            
-            // Create customer list container
-            const listContainer = document.createElement('div');
-            listContainer.id = 'customerListContainer';
-            listContainer.style.maxHeight = '250px';
-            listContainer.style.overflowY = 'auto';
-            
-            // Add customers grouped by first letter
-            sortedLetters.forEach(letter => {
-                const letterGroup = document.createElement('div');
-                letterGroup.className = 'mb-2';
-                
-                // Add letter header
-                const header = document.createElement('div');
-                header.className = 'fw-bold text-muted small mb-1';
-                header.textContent = letter;
-                letterGroup.appendChild(header);
-                
-                // Add customers for this letter
-                customersByLetter[letter].forEach(customer => {
-                    const customerId = String(customer._id || customer.id);
-                    const isChecked = Array.isArray(selectedCustomerIds) && 
-                                    selectedCustomerIds.includes(customerId);
-                    
-                    const checkboxDiv = document.createElement('div');
-                    checkboxDiv.className = 'form-check ms-2 mb-1';
-                    checkboxDiv.innerHTML = `
-                        <input class="form-check-input customer-checkbox" 
-                               type="checkbox" 
-                               value="${customerId}" 
-                               id="customer-${customerId}" 
-                               ${isChecked ? 'checked' : ''}>
-                        <label class="form-check-label" for="customer-${customerId}">
-                            ${customer.displayName}
-                            ${customer.email ? `<small class="text-muted d-block">${customer.email}</small>` : ''}
-                        </label>
-                    `;
-                    letterGroup.appendChild(checkboxDiv);
-                });
-                
-                listContainer.appendChild(letterGroup);
-            });
-            
-            fragment.appendChild(listContainer);
-            container.appendChild(fragment);
-            
-            // Scroll to first selected customer if any
-            const firstSelected = container.querySelector('.customer-checkbox:checked');
-            if (firstSelected) {
-                firstSelected.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-        
-        // Filter customers in the list
-        function filterCustomers(searchTerm) {
-            const search = searchTerm.toLowerCase().trim();
-            const container = document.getElementById('customerListContainer');
-            if (!container) return;
-            
-            const customerItems = Array.from(container.children);
-            
-            if (!search) {
-                // Show all customers if search is empty
-                customerItems.forEach(item => item.style.display = '');
-                const noResults = document.getElementById('noResultsMessage');
-                if (noResults) noResults.remove();
-                return;
-            }
-            
-            let hasVisibleItems = false;
-            
-            customerItems.forEach(letterGroup => {
-                const checkboxes = letterGroup.querySelectorAll('.form-check');
-                let hasVisibleInGroup = false;
-                
-                checkboxes.forEach(checkbox => {
-                    const label = checkbox.querySelector('label');
-                    if (label) {
-                        const text = label.textContent.toLowerCase();
-                        const isVisible = text.includes(search);
-                        checkbox.style.display = isVisible ? '' : 'none';
-                        if (isVisible) hasVisibleInGroup = true;
-                    }
-                });
-                
-                // Show/hide letter group header based on visibility
-                const header = letterGroup.querySelector('.fw-bold');
-                if (header) {
-                    header.style.display = hasVisibleInGroup ? '' : 'none';
-                }
-                
-                if (hasVisibleInGroup) hasVisibleItems = true;
-            });
-            
-            // Show message if no results
-            const noResults = document.getElementById('noResultsMessage');
-            if (!hasVisibleItems) {
-                if (!noResults) {
-                    const message = document.createElement('div');
-                    message.id = 'noResultsMessage';
-                    message.className = 'alert alert-warning mb-0';
-                    message.innerHTML = '<i class="fas fa-search me-2"></i>No customers match your search.';
-                    container.prepend(message);
-                }
-            } else if (noResults) {
-                noResults.remove();
-            }
-        }
-
         // Toggle assignment sections based on role
         function toggleAssignmentSections() {
             const roleSelect = document.getElementById('role');
-            const customerSection = document.getElementById('customerAssignmentSection');
             const companySection = document.getElementById('companyAssignmentSection');
             
-            if (roleSelect) {
+            if (roleSelect && companySection) {
                 const isAdmin = roleSelect.value === 'admin';
-                if (customerSection) {
-                    customerSection.style.display = isAdmin ? 'none' : 'block';
-                }
-                if (companySection) {
-                    companySection.style.display = isAdmin ? 'none' : 'block';
-                }
-                
-                // If showing the section and customers aren't loaded yet, load them
-                if (!isAdmin && (!window.allCustomers || window.allCustomers.length === 0)) {
-                    loadAllCustomers();
-                }
-                
+                companySection.style.display = isAdmin ? 'none' : 'block';
+
                 if (!isAdmin && allCompaniesForAssignment.length === 0) {
                     loadAllCompaniesForAssignment();
                 }
             }
-        }
-
-        // Get selected customer IDs from checkboxes
-        function getSelectedCustomerIds() {
-            const checkboxes = document.querySelectorAll('#customerCheckboxList .customer-checkbox:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
-        }
-
-        // Get selected company IDs from checkboxes
-        function getSelectedCompanyIds() {
-            const checkboxes = document.querySelectorAll('#companyCheckboxList .company-checkbox:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
         }
 
         // Show add user modal
@@ -882,12 +640,10 @@
             document.getElementById('password').required = true;
             document.getElementById('role').value = 'user';
             
-            // Load customers for assignment
-            loadAllCustomers();
+            // Load companies for assignment
             loadAllCompaniesForAssignment();
             
-            // Show customer assignment section
-            document.getElementById('customerAssignmentSection').classList.remove('d-none');
+            // Show company assignment section
             document.getElementById('companyAssignmentSection').classList.remove('d-none');
             toggleAssignmentSections();
             
@@ -921,7 +677,6 @@
                 username,
                 email,
                 role,
-                customers: getSelectedCustomerIds(),
                 assigned_companies: getSelectedCompanyIds()
             };
             
@@ -1021,8 +776,7 @@
                         // Toggle assignment sections based on role
                         toggleAssignmentSections();
                         
-                        // Load customers and select the assigned ones
-                        loadAllCustomers(user.customers || []);
+                        // Load companies and select the assigned ones
                         loadAllCompaniesForAssignment(user.assigned_companies || []);
 
                         const modal = new bootstrap.Modal(document.getElementById('userModal'));
