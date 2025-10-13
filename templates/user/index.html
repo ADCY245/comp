@@ -5,42 +5,49 @@
 {% block extra_css %}
 {{ super() }}
 <style>
-    .search-container {
+    .company-selector {
         position: relative;
-        margin-bottom: 20px;
     }
-    .search-input {
-        width: 100%;
-        padding: 12px 15px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: all 0.3s ease;
-    }
-    .search-input:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .search-results {
+    .company-dropdown-list {
         position: absolute;
+        top: calc(100% + 0.5rem);
+        left: 0;
         width: 100%;
-        max-height: 300px;
+        max-height: 280px;
         overflow-y: auto;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        z-index: 1050;
-        margin-top: 8px;
+        border-radius: 10px;
         display: none;
+        z-index: 1050;
     }
-    .search-item {
-        padding: 10px;
+    .company-option {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f3f5;
         cursor: pointer;
-        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s ease;
     }
-    .search-item:hover {
-        background-color: #f5f5f5;
+    .company-option:last-child {
+        border-bottom: none;
+    }
+    .company-option:hover,
+    .company-option.active {
+        background-color: #f1f5ff;
+    }
+    .company-option small {
+        display: block;
+        color: #6c757d;
+    }
+    .company-selector .input-group > .form-control:focus {
+        box-shadow: none;
+    }
+    .company-selector.open .company-dropdown-list {
+        display: block;
+    }
+    .company-empty {
+        padding: 1rem;
+        text-align: center;
+        color: #6c757d;
     }
     .product-nav {
         margin: 2rem 0;
@@ -99,21 +106,20 @@
                         <input type="hidden" name="company_name" id="companyName">
                         <input type="hidden" name="company_email" id="companyEmail">
                         <div class="form-group mb-4">
-                            <label for="companyInput" class="form-label fw-medium">Search for your company</label>
-                            <div class="position-relative">
-                                <input type="text" class="form-control form-control-lg" id="companyInput" 
-                                       placeholder="Start typing company name..." autocomplete="off" required>
+                            <label for="companyInput" class="form-label fw-medium">Search or select your company</label>
+                            <div class="company-selector position-relative">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-lg" id="companyInput" 
+                                           placeholder="Start typing company name..." autocomplete="off" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="companyDropdownToggle">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div id="companyDropdownList" class="company-dropdown-list shadow-sm">
+                                    <!-- Options will be rendered dynamically -->
+                                </div>
                             </div>
-                            <div class="form-text">Type at least 2 characters to see matching results</div>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="companyDropdown" class="form-label fw-medium">Available companies</label>
-                            <select class="form-select form-select-lg" id="companyDropdown">
-                                <option value="">Select a company</option>
-                                {% for company in companies %}
-                                <option value="{{ company.id }}">{{ company.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="form-text">Type to filter or scroll and click to select.</div>
                         </div>
                         <div class="d-grid gap-2">
                             <button type="button" id="selectCompanyBtn" class="btn btn-primary btn-lg" disabled>
@@ -186,6 +192,8 @@ const ChemoApp = (function() {
     const state = {
         companies: Array.isArray(companiesData) ? companiesData : [],
         selectedCompany: null,
+        filteredCompanies: [],
+        dropdownActiveIndex: -1,
         products: {
             mpacks: [],
             blankets: []
@@ -196,7 +204,9 @@ const ChemoApp = (function() {
     // DOM Elements
     const elements = {
         companyInput: document.getElementById('companyInput'),
-        companyDropdown: document.getElementById('companyDropdown'),
+        companySelector: document.querySelector('.company-selector'),
+        companyDropdownList: document.getElementById('companyDropdownList'),
+        companyDropdownToggle: document.getElementById('companyDropdownToggle'),
         selectCompanyBtn: document.getElementById('selectCompanyBtn'),
         companyIdInput: document.getElementById('companyId'),
         companyNameInput: document.getElementById('companyName'),
@@ -222,10 +232,12 @@ const ChemoApp = (function() {
         // Set up UI
         setupEventListeners();
         setupProductButtons();
-        
+        renderCompanyDropdown(state.companies);
+        state.filteredCompanies = state.companies.slice();
+
         // Always show company selection on page load
         showCompanySelection();
-        
+
         updateCartCount();
     }
     
@@ -306,10 +318,30 @@ const ChemoApp = (function() {
         
         if (elements.companyInput) {
             elements.companyInput.addEventListener('input', handleCompanySearch);
+            elements.companyInput.addEventListener('focus', () => {
+                state.dropdownActiveIndex = -1;
+                renderCompanyDropdown(state.filteredCompanies.length ? state.filteredCompanies : state.companies);
+                openDropdown();
+            });
+            elements.companyInput.addEventListener('keydown', handleInputKeydown);
         }
 
-        if (elements.companyDropdown) {
-            elements.companyDropdown.addEventListener('change', handleDropdownChange);
+        if (elements.companyDropdownToggle) {
+            elements.companyDropdownToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!elements.companySelector) return;
+                if (elements.companySelector.classList.contains('open')) {
+                    closeDropdown();
+                } else {
+                    state.dropdownActiveIndex = -1;
+                    renderCompanyDropdown(state.companies);
+                    openDropdown();
+                    if (elements.companyInput) {
+                        elements.companyInput.focus();
+                    }
+                }
+            });
         }
 
         if (elements.selectCompanyBtn) {
@@ -354,68 +386,123 @@ const ChemoApp = (function() {
             });
         }
 
-        // Initialize dropdown with full list
-        updateDropdownOptions('');
+        document.addEventListener('click', (e) => {
+            if (!elements.companySelector) return;
+            if (!elements.companySelector.contains(e.target)) {
+                closeDropdown();
+            }
+        });
     }
 
     // Handle company search input
     function handleCompanySearch(e) {
-        const query = e.target.value.toLowerCase();
-        updateDropdownOptions(query);
+        const query = e.target.value;
+        state.dropdownActiveIndex = -1;
+        filterAndRenderCompanies(query);
+        if (!query || !state.selectedCompany || !state.selectedCompany.name || !state.selectedCompany.name.toLowerCase().startsWith(query.toLowerCase())) {
+            if (elements.selectCompanyBtn) {
+                elements.selectCompanyBtn.disabled = true;
+            }
+        }
     }
 
-    function updateDropdownOptions(query) {
-        if (!elements.companyDropdown) return;
-
+    function filterAndRenderCompanies(query) {
         const normalizedQuery = (query || '').toLowerCase();
-        const filteredCompanies = normalizedQuery.length < 2
-            ? state.companies.slice(0, state.companies.length)
-            : state.companies.filter(company => company.name && company.name.toLowerCase().includes(normalizedQuery));
-
-        const currentSelection = state.selectedCompany ? String(state.selectedCompany.id) : elements.companyDropdown.value;
-
-        elements.companyDropdown.innerHTML = '<option value="">Select a company</option>';
-
-        if (filteredCompanies.length === 0) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.disabled = true;
-            option.textContent = 'No companies found';
-            elements.companyDropdown.appendChild(option);
+        if (!normalizedQuery) {
+            state.filteredCompanies = state.companies.slice();
         } else {
-            filteredCompanies.forEach(company => {
-                const option = document.createElement('option');
-                option.value = company.id || '';
-                option.textContent = company.name || 'Unnamed Company';
-                if (String(company.id) === String(currentSelection)) {
-                    option.selected = true;
-                }
-                elements.companyDropdown.appendChild(option);
-            });
+            state.filteredCompanies = state.companies.filter(company => 
+                company.name && company.name.toLowerCase().includes(normalizedQuery)
+            );
         }
-
-        if (state.selectedCompany && !filteredCompanies.some(c => String(c.id) === String(state.selectedCompany.id))) {
-            state.selectedCompany = null;
-            if (elements.selectCompanyBtn) {
-                elements.selectCompanyBtn.disabled = true;
-            }
-        }
+        renderCompanyDropdown(state.filteredCompanies);
+        openDropdown();
     }
 
-    function handleDropdownChange(e) {
-        const companyId = e.target.value;
+    function renderCompanyDropdown(companies = []) {
+        if (!elements.companyDropdownList) return;
 
-        if (!companyId) {
-            state.selectedCompany = null;
-            if (elements.selectCompanyBtn) {
-                elements.selectCompanyBtn.disabled = true;
-            }
+        elements.companyDropdownList.innerHTML = '';
+
+        if (!companies.length) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'company-empty';
+            emptyState.textContent = 'No companies found';
+            elements.companyDropdownList.appendChild(emptyState);
             return;
         }
 
-        const company = state.companies.find(c => String(c.id) === String(companyId));
-        if (company) {
-            selectCompanyFromResults(company);
+        companies.forEach((company, index) => {
+            const option = document.createElement('div');
+            option.className = 'company-option';
+            if (index === state.dropdownActiveIndex) {
+                option.classList.add('active');
+            }
+            option.dataset.companyId = company.id || '';
+            option.innerHTML = `
+                <strong>${company.name || 'Unnamed Company'}</strong>
+                ${company.email ? `<small>${company.email}</small>` : ''}
+            `;
+            option.addEventListener('click', () => selectCompanyFromResults(company));
+            elements.companyDropdownList.appendChild(option);
+        });
+    }
+
+    function openDropdown() {
+        if (elements.companySelector) {
+            elements.companySelector.classList.add('open');
+        }
+    }
+
+    function closeDropdown() {
+        if (elements.companySelector) {
+            elements.companySelector.classList.remove('open');
+        }
+        state.dropdownActiveIndex = -1;
+    }
+
+    function handleInputKeydown(e) {
+        if (!elements.companySelector || !elements.companySelector.classList.contains('open')) {
+            return;
+        }
+
+        if (!state.filteredCompanies.length) {
+            return;
+        }
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                state.dropdownActiveIndex = (state.dropdownActiveIndex + 1) % state.filteredCompanies.length;
+                renderCompanyDropdown(state.filteredCompanies);
+                scrollActiveOptionIntoView();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                state.dropdownActiveIndex = state.dropdownActiveIndex <= 0
+                    ? state.filteredCompanies.length - 1
+                    : state.dropdownActiveIndex - 1;
+                renderCompanyDropdown(state.filteredCompanies);
+                scrollActiveOptionIntoView();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (state.dropdownActiveIndex >= 0 && state.dropdownActiveIndex < state.filteredCompanies.length) {
+                    selectCompanyFromResults(state.filteredCompanies[state.dropdownActiveIndex]);
+                    closeDropdown();
+                }
+                break;
+            case 'Escape':
+                closeDropdown();
+                break;
+        }
+    }
+
+    function scrollActiveOptionIntoView() {
+        if (!elements.companyDropdownList) return;
+        const activeOption = elements.companyDropdownList.querySelector('.company-option.active');
+        if (activeOption && typeof activeOption.scrollIntoView === 'function') {
+            activeOption.scrollIntoView({ block: 'nearest' });
         }
     }
 
@@ -427,10 +514,9 @@ const ChemoApp = (function() {
         elements.companyNameInput.value = company.name || '';
         elements.companyEmailInput.value = company.email || '';
         elements.selectCompanyBtn.disabled = false;
-
-        if (elements.companyDropdown) {
-            elements.companyDropdown.value = company.id || '';
-        }
+        state.filteredCompanies = state.companies.slice();
+        state.dropdownActiveIndex = -1;
+        closeDropdown();
     }
 
     // Select company and save to session
