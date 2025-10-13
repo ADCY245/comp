@@ -11,55 +11,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    
-    <style>
-        .admin-navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 1rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .admin-navbar .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white !important;
-        }
-        .admin-navbar .nav-link {
-            color: rgba(255,255,255,0.9) !important;
-            margin: 0 0.5rem;
-            padding: 0.5rem 1rem !important;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-        }
-        .admin-navbar .nav-link:hover {
-            background: rgba(255,255,255,0.2);
-            color: white !important;
-        }
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .btn-action {
-            padding: 0.25rem 0.5rem;
-            margin: 0 0.1rem;
-            border-radius: 0.25rem;
-        }
-        .role-badge {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-        }
-        .company-item {
-            border: 1px solid #dee2e6;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            transition: all 0.3s ease;
-        }
-        .company-item:hover {
-            background-color: #f8f9fa;
-            border-color: #007bff;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-manage-users.css') }}">
 </head>
 <body>
     <!-- Admin Navigation -->
@@ -143,7 +95,7 @@
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th>Role</th>
-                                        <th>Assigned Customers</th>
+                                        <th>Assigned Companies</th>
                                         <th>Created</th>
                                         <th>Actions</th>
                                     </tr>
@@ -244,7 +196,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="role" required onchange="toggleCustomerAssignment()">
+                                    <select class="form-select" id="role" required onchange="toggleAssignmentSections()">
                                         <option value="">Select Role</option>
                                         <option value="admin">Admin</option>
                                         <option value="user">User</option>
@@ -275,6 +227,30 @@
                                 <!-- Customer checkboxes will be inserted here -->
                             </div>
                             <small class="text-muted">Select which customers this user can access. Admins have access to all customers.</small>
+                        </div>
+
+                        <div id="companyAssignmentSection" class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Assign Companies</label>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="document.querySelectorAll('.company-checkbox').forEach(cb => cb.checked = true)">
+                                        Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.company-checkbox').forEach(cb => cb.checked = false)">
+                                        Clear All
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="companyCheckboxList" class="border p-3 rounded" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+                                <div id="companyLoading" class="text-center py-3">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 mb-0">Loading companies...</p>
+                                </div>
+                                <!-- Company checkboxes will be inserted here -->
+                            </div>
+                            <small class="text-muted">Choose the companies this user should have access to. Admins automatically see all companies.</small>
                         </div>
                     </form>
                 </div>
@@ -353,6 +329,8 @@
         let usersTable = null;
         let companiesTable = null;
         let customersTable = null;
+        let allCompaniesForAssignment = [];
+
         
         // Constants
         const companiesPerPage = 10;
@@ -415,7 +393,7 @@
                         { width: '15%', targets: [0] },      // Username
                         { width: '25%', targets: [1] },      // Email
                         { width: '10%', targets: [2] },      // Role
-                        { width: '15%', targets: [3] },      // Assigned Customers
+                        { width: '15%', targets: [3] },      // Assigned Companies
                         { width: '15%', targets: [4] },      // Created
                         { width: '20%', targets: [5] }       // Actions
                     ],
@@ -448,6 +426,7 @@
                 loadUsers();
                 loadCompanies();
                 loadAllCustomers();
+                loadAllCompaniesForAssignment();
             } catch (error) {
                 console.error('Error initializing page:', error);
             }
@@ -516,11 +495,13 @@
                     </div>
                 `;
                 
+                const assignedCompanyCount = Array.isArray(user.assigned_companies) ? user.assigned_companies.length : 0;
+
                 return [
                     user.username || '-',
                     user.email || '-',
                     `<span class="badge bg-${getRoleBadgeColor(user.role)}">${user.role || 'user'}</span>`,
-                    user.customers ? user.customers.length : 0,
+                    assignedCompanyCount,
                     formattedDate,
                     actions
                 ];
@@ -798,23 +779,28 @@
             }
         }
 
-        // Toggle customer assignment section based on role
-        function toggleCustomerAssignment() {
+        // Toggle assignment sections based on role
+        function toggleAssignmentSections() {
             const roleSelect = document.getElementById('role');
             const customerSection = document.getElementById('customerAssignmentSection');
+            const companySection = document.getElementById('companyAssignmentSection');
             
-            if (roleSelect && customerSection) {
+            if (roleSelect) {
                 const isAdmin = roleSelect.value === 'admin';
-                customerSection.style.display = isAdmin ? 'none' : 'block';
+                if (customerSection) {
+                    customerSection.style.display = isAdmin ? 'none' : 'block';
+                }
+                if (companySection) {
+                    companySection.style.display = isAdmin ? 'none' : 'block';
+                }
                 
                 // If showing the section and customers aren't loaded yet, load them
                 if (!isAdmin && (!window.allCustomers || window.allCustomers.length === 0)) {
                     loadAllCustomers();
                 }
                 
-                // If we're switching to non-admin and haven't loaded customers yet, load them
-                if (!isAdmin && (!window.allCustomers || window.allCustomers.length === 0)) {
-                    loadAllCustomers();
+                if (!isAdmin && allCompaniesForAssignment.length === 0) {
+                    loadAllCompaniesForAssignment();
                 }
             }
         }
@@ -836,9 +822,12 @@
             
             // Load customers for assignment
             loadAllCustomers();
+            loadAllCompaniesForAssignment();
             
             // Show customer assignment section
             document.getElementById('customerAssignmentSection').classList.remove('d-none');
+            document.getElementById('companyAssignmentSection').classList.remove('d-none');
+            toggleAssignmentSections();
             
             modal.show();
         }
@@ -870,7 +859,8 @@
                 username,
                 email,
                 role,
-                customers: getSelectedCustomerIds()
+                customers: getSelectedCustomerIds(),
+                assigned_companies: getSelectedCompanyIds()
             };
             
             // Only include password if it's not empty (for updates)
@@ -966,12 +956,13 @@
                         document.getElementById('role').value = user.role;
                         document.getElementById('password').required = false;
                         
-                        // Toggle customer assignment section based on role
-                        toggleCustomerAssignment();
+                        // Toggle assignment sections based on role
+                        toggleAssignmentSections();
                         
                         // Load customers and select the assigned ones
                         loadAllCustomers(user.customers || []);
-                        
+                        loadAllCompaniesForAssignment(user.assigned_companies || []);
+
                         const modal = new bootstrap.Modal(document.getElementById('userModal'));
                         modal.show();
                     } else {

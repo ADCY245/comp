@@ -1,0 +1,132 @@
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    padding-top: 70px;
+}
+
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #0d6efd !important;
+}
+
+.navbar-brand {
+    color: #000000 !important;
+    font-weight: bold;
+}
+
+.nav-link {
+    color: #ffffff !important;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: 0.5rem 1rem;
+    margin: 0 0.2rem;
+    font-weight: 400;
+}
+
+.nav-link:hover {
+    color: #ffa500 !important;
+    background-color: transparent !important;
+}
+
+.nav-link.active {
+    color: #808080 !important;
+    font-weight: 500;
+    background-color: transparent !important;
+    position: relative;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    background-color: #808080;
+}
+
+.nav-link.active:hover {
+    color: #808080 !important;
+}
+
+.dropdown-menu {
+    z-index: 2000 !important;
+}
+
+.company-info-card {
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #0d6efd;
+}
+
+.company-info-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.company-info-body {
+    padding: 1.25rem;
+}
+
+.search-container {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.search-results {
+    position: absolute;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+.search-results.show {
+    display: block;
+}
+
+.search-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.search-item:hover {
+    background-color: #f8f9fa;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.company-details {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.company-details strong {
+    min-width: 80px;
+    display: inline-block;
+}
+
+.company-info-bar {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    min-width: 80px;
+    display: inline-block;
+}

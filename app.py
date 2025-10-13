@@ -372,6 +372,7 @@ def admin_create_user():
         email = (data.get('email') or '').strip().lower()
         password = data.get('password')
         role = (data.get('role') or 'user').lower()
+        assigned_companies = normalize_assigned_companies(data.get('assigned_companies', []))
 
         if not username or not email or not password:
             return jsonify({'success': False, 'error': 'Missing required fields'}), 400
@@ -391,6 +392,7 @@ def admin_create_user():
                     'password_hash': hashed_password,
                     'role': role,
                     'is_verified': True,
+                    'assigned_companies': assigned_companies,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow()
                 }
@@ -415,6 +417,7 @@ def admin_create_user():
             'password_hash': hashed_password,
             'role': role,
             'is_verified': True,
+            'assigned_companies': assigned_companies,
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat()
         }
@@ -448,6 +451,8 @@ def admin_update_user(user_id):
                     update_fields['role'] = data['role']
                 if 'password' in data and data['password']:
                     update_fields['password_hash'] = generate_password_hash(data['password'])
+                if 'assigned_companies' in data:
+                    update_fields['assigned_companies'] = normalize_assigned_companies(data.get('assigned_companies', []))
 
                 result = mongo_db.users.update_one({'_id': ObjectId(user_id)}, {'$set': update_fields})
                 if result.matched_count == 0:
@@ -473,6 +478,8 @@ def admin_update_user(user_id):
             user['role'] = data['role']
         if 'password' in data and data['password']:
             user['password_hash'] = generate_password_hash(data['password'])
+        if 'assigned_companies' in data:
+            user['assigned_companies'] = normalize_assigned_companies(data.get('assigned_companies', []))
 
         user['updated_at'] = datetime.utcnow().isoformat()
         users[user_id] = user
@@ -1101,7 +1108,8 @@ def serialize_admin_user(user_doc):
         'role': user_doc.get('role', 'user'),
         'is_verified': bool(user_doc.get('is_verified', True)),
         'created_at': str(user_doc.get('created_at') or user_doc.get('Created', '')),
-        'customers': user_doc.get('customers_assigned', user_doc.get('customers', []))
+        'customers': user_doc.get('customers_assigned', user_doc.get('customers', [])),
+        'assigned_companies': [str(cid) for cid in user_doc.get('assigned_companies', []) if cid]
     }
 
 
@@ -1214,7 +1222,8 @@ def _load_users_json():
                     reset_token_expiry=datetime.fromisoformat(user_data.get('reset_token_expiry')) if user_data.get('reset_token_expiry') else None,
                     company_id=user_data.get('company_id'),
                     role=user_data.get('role', 'user'),
-                    created_at=_parse_datetime(user_data.get('created_at'))
+                    created_at=_parse_datetime(user_data.get('created_at')),
+                    assigned_companies=user_data.get('assigned_companies', [])
                 )
             except Exception as e:
                 print(f"Error loading user {user_id}: {e}")
