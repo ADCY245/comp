@@ -1060,6 +1060,101 @@ class User(UserMixin):
 # ---------------------------------------------------------------------------
 # JSON persistence helpers
 # ---------------------------------------------------------------------------
+
+# --- Admin helper utilities (serialization + fallback saves) ---
+
+
+def _parse_float(value, default=0.0):
+    """Safely parse a number from string/decimal/None."""
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def serialize_admin_user(user_doc):
+    """Normalize user document (Mongo or JSON) for admin UI."""
+    if not user_doc:
+        return {}
+    # Mongo docs may have ObjectId; JSON already string id
+    uid = str(user_doc.get('id') or user_doc.get('_id') or user_doc.get('user_id', ''))
+    return {
+        'id': uid,
+        'username': user_doc.get('username') or user_doc.get('email', '')[: user_doc.get('email', '').find('@')],
+        'email': user_doc.get('email') or user_doc.get('Email', ''),
+        'role': user_doc.get('role', 'user'),
+        'is_verified': bool(user_doc.get('is_verified', True)),
+        'created_at': str(user_doc.get('created_at') or user_doc.get('Created', '')),
+        'customers': user_doc.get('customers_assigned', user_doc.get('customers', []))
+    }
+
+
+def serialize_admin_company(company_doc):
+    if not company_doc:
+        return {}
+    cid = str(company_doc.get('id') or company_doc.get('_id') or company_doc.get('Company ID', ''))
+    return {
+        'id': cid,
+        'name': company_doc.get('name') or company_doc.get('Company Name') or 'N/A',
+        'email': company_doc.get('email') or company_doc.get('EmailID') or '',
+        'address': company_doc.get('address') or company_doc.get('Address', '')
+    }
+
+
+def serialize_admin_quotation(q_doc):
+    if not q_doc:
+        return {}
+    qid = str(q_doc.get('id') or q_doc.get('_id') or '')
+    total_pre = _parse_float(q_doc.get('total_amount_pre_gst') or q_doc.get('total_pre_gst'))
+    total_post = _parse_float(q_doc.get('total_amount_post_gst') or q_doc.get('total_post_gst'))
+    return {
+        'id': qid,
+        'username': q_doc.get('username') or q_doc.get('user_name', ''),
+        'user_email': q_doc.get('user_email', ''),
+        'company_name': q_doc.get('company_name') or q_doc.get('Company Name', ''),
+        'company_email': q_doc.get('company_email') or q_doc.get('EmailID', ''),
+        'products_count': q_doc.get('products_count') or len(q_doc.get('products', [])),
+        'total_amount_pre_gst': total_pre,
+        'total_amount_post_gst': total_post,
+        'created_at': str(q_doc.get('created_at') or '')
+    }
+
+
+# ----- Admin data loaders -----
+
+def load_admin_users():
+    """Return list of serialized users from Mongo or JSON fallback."""
+    users_list = []
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            mongo_db.command('ping')
+            cursor = mongo_db.users.find({})
+            for doc in cursor:
+                doc['id'] = str(doc.pop('_id'))
+                users_list.append(serialize_admin_user(doc))
+        else:
+            users_json = _load_users_json()
+            for u in users_json.values():
+                users_list.append(serialize_admin_user(u))
+    except Exception as e:
+        app.logger.error(f"Error in load_admin_users: {e}")
+    return users_list
+
+
+# ----- Company JSON saver for fallback -----
+
+def save_companies_data(companies):
+    """Save companies list to JSON file as fallback when Mongo not used."""
+    try:
+        data_dir = os.path.join(app.root_path, 'static', 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        target = os.path.join(data_dir, 'companies.json')
+        with open(target, 'w', encoding='utf-8') as f:
+            json.dump({'companies': companies}, f, ensure_ascii=False, indent=2, default=str)
+        return True
+    except Exception as e:
+        app.logger.error(f"Error saving companies JSON: {e}")
+        return False
 # Existing private helpers (_load_users_json / _save_users_json) are used by
 # the rest of the code via these thin wrappers so the earlier calls to
 # load_users()/save_users() continue to work without refactor.
