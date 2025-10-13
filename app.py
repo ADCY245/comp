@@ -2620,9 +2620,52 @@ def load_companies_data():
             try:
                 with open(companies_file, 'r', encoding='utf-8') as f:
                     companies_data = json.load(f)
-                    companies = companies_data.get('companies', [])
-                    app.logger.info(f"Loaded {len(companies)} companies from JSON file")
-                    return companies
+                    raw_companies = companies_data.get('companies', companies_data if isinstance(companies_data, list) else [])
+
+                    normalized_companies = []
+                    for company in raw_companies:
+                        try:
+                            if isinstance(company, dict):
+                                # Determine ID
+                                company_id = (
+                                    str(company.get('id'))
+                                    or str(company.get('_id', {}).get('$oid'))
+                                    or str(company.get('_id'))
+                                )
+
+                                if not company_id or company_id.lower() == 'none':
+                                    continue
+
+                                name = (
+                                    company.get('name')
+                                    or company.get('Company Name')
+                                    or company.get('company_name')
+                                )
+                                if not name:
+                                    app.logger.debug(f"Skipping company {company_id} due to missing name")
+                                    continue
+
+                                email = (
+                                    company.get('email')
+                                    or company.get('EmailID')
+                                    or company.get('email_id')
+                                    or ''
+                                )
+
+                                normalized_companies.append({
+                                    'id': company_id,
+                                    'name': name,
+                                    'email': str(email).strip() if email else '',
+                                    'address': company.get('address') or company.get('Address', ''),
+                                    'created_at': company.get('created_at'),
+                                    'created_by': company.get('created_by')
+                                })
+                        except Exception as norm_error:
+                            app.logger.error(f"Failed to normalize company entry: {norm_error}")
+                            continue
+
+                    app.logger.info(f"Loaded {len(normalized_companies)} companies from JSON file")
+                    return normalized_companies
             except Exception as e:
                 app.logger.error(f"Error reading companies JSON file: {str(e)}")
         
