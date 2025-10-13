@@ -334,6 +334,450 @@ def admin_manage_users():
 def admin_quotations():
     return render_template('admin/quotations.html', user=current_user)
 
+
+@app.route('/api/admin/users', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_users():
+    try:
+        users = load_admin_users()
+        return jsonify({'success': True, 'users': users})
+    except Exception as e:
+        app.logger.error(f"Error in admin_list_users: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load users'}), 500
+
+
+@app.route('/api/admin/users/<user_id>', methods=['GET'])
+@login_required
+@admin_required
+def admin_get_user(user_id):
+    try:
+        users = load_admin_users()
+        user = next((u for u in users if str(u.get('id')) == str(user_id)), None)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        return jsonify({'success': True, 'user': user})
+    except Exception as e:
+        app.logger.error(f"Error in admin_get_user: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load user'}), 500
+
+
+@app.route('/api/admin/users', methods=['POST'])
+@login_required
+@admin_required
+def admin_create_user():
+    try:
+        data = request.get_json() or {}
+        username = (data.get('username') or '').strip()
+        email = (data.get('email') or '').strip().lower()
+        password = data.get('password')
+        role = (data.get('role') or 'user').lower()
+
+        if not username or not email or not password:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                existing = mongo_db.users.find_one({'email': email})
+                if existing:
+                    return jsonify({'success': False, 'error': 'Email already registered'}), 409
+
+                hashed_password = generate_password_hash(password)
+                new_user = {
+                    'username': username,
+                    'username_lower': username.lower(),
+                    'email': email,
+                    'password_hash': hashed_password,
+                    'role': role,
+                    'is_verified': True,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                }
+
+                result = mongo_db.users.insert_one(new_user)
+                new_user['id'] = str(result.inserted_id)
+                return jsonify({'success': True, 'user': serialize_admin_user(new_user)})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_create_user: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        users = _load_users_json()
+        if any((user.email if isinstance(user, User) else user.get('email', '')).lower() == email for user in users.values()):
+            return jsonify({'success': False, 'error': 'Email already registered'}), 409
+
+        user_id = str(uuid.uuid4())
+        hashed_password = generate_password_hash(password)
+        new_user = {
+            'id': user_id,
+            'username': username,
+            'email': email,
+            'password_hash': hashed_password,
+            'role': role,
+            'is_verified': True,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+
+        users[user_id] = new_user
+        save_users(users)
+        return jsonify({'success': True, 'user': serialize_admin_user(new_user)})
+    except Exception as e:
+        app.logger.error(f"Error in admin_create_user: {e}")
+        return jsonify({'success': False, 'error': 'Failed to create user'}), 500
+
+
+@app.route('/api/admin/users/<user_id>', methods=['PUT'])
+@login_required
+@admin_required
+def admin_update_user(user_id):
+    try:
+        data = request.get_json() or {}
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                update_fields = {'updated_at': datetime.utcnow()}
+
+                if 'username' in data:
+                    update_fields['username'] = data['username']
+                    update_fields['username_lower'] = data['username'].lower()
+                if 'email' in data:
+                    update_fields['email'] = data['email'].lower()
+                if 'role' in data:
+                    update_fields['role'] = data['role']
+                if 'password' in data and data['password']:
+                    update_fields['password_hash'] = generate_password_hash(data['password'])
+
+                result = mongo_db.users.update_one({'_id': ObjectId(user_id)}, {'$set': update_fields})
+                if result.matched_count == 0:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
+
+                user_doc = mongo_db.users.find_one({'_id': ObjectId(user_id)})
+                user_doc['id'] = str(user_doc.pop('_id'))
+                return jsonify({'success': True, 'user': serialize_admin_user(user_doc)})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_update_user: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        users = _load_users_json()
+        user = users.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        if 'username' in data:
+            user['username'] = data['username']
+        if 'email' in data:
+            user['email'] = data['email'].lower()
+        if 'role' in data:
+            user['role'] = data['role']
+        if 'password' in data and data['password']:
+            user['password_hash'] = generate_password_hash(data['password'])
+
+        user['updated_at'] = datetime.utcnow().isoformat()
+        users[user_id] = user
+        save_users(users)
+        return jsonify({'success': True, 'user': serialize_admin_user(user)})
+    except Exception as e:
+        app.logger.error(f"Error in admin_update_user: {e}")
+        return jsonify({'success': False, 'error': 'Failed to update user'}), 500
+
+
+@app.route('/api/admin/users/<user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                result = mongo_db.users.delete_one({'_id': ObjectId(user_id)})
+                if result.deleted_count == 0:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
+                return jsonify({'success': True})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_delete_user: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        users = _load_users_json()
+        if user_id not in users:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        users.pop(user_id)
+        save_users(users)
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error in admin_delete_user: {e}")
+        return jsonify({'success': False, 'error': 'Failed to delete user'}), 500
+
+
+@app.route('/api/admin/companies', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_companies():
+    try:
+        page = max(int(request.args.get('page', 0)), 0)
+        limit = min(max(int(request.args.get('limit', 10)), 1), 100)
+
+        companies = load_companies_data()
+        serialized = [serialize_admin_company(company) for company in companies]
+
+        start = page * limit
+        end = start + limit
+        return jsonify({'success': True, 'companies': serialized[start:end]})
+    except Exception as e:
+        app.logger.error(f"Error in admin_list_companies: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load companies'}), 500
+
+
+@app.route('/api/admin/companies/<company_id>', methods=['GET'])
+@login_required
+@admin_required
+def admin_get_company(company_id):
+    try:
+        companies = load_companies_data()
+        for company in companies:
+            serialized = serialize_admin_company(company)
+            if serialized.get('id') == str(company_id):
+                return jsonify({'success': True, 'company': serialized})
+        return jsonify({'success': False, 'error': 'Company not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error in admin_get_company: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load company'}), 500
+
+
+@app.route('/api/admin/companies', methods=['POST'])
+@login_required
+@admin_required
+def admin_create_company():
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        email = (data.get('email') or '').strip()
+        address = data.get('address', '')
+
+        if not name or not email:
+            return jsonify({'success': False, 'error': 'Name and email required'}), 400
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                company_data = {
+                    'Company Name': name,
+                    'EmailID': email,
+                    'Address': address,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow(),
+                    'created_by': str(current_user.id)
+                }
+                result = mongo_db.companies.insert_one(company_data)
+                company_data['id'] = str(result.inserted_id)
+                return jsonify({'success': True, 'company': serialize_admin_company(company_data)})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_create_company: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        companies = load_companies_data()
+        new_company = {
+            'id': str(uuid.uuid4()),
+            'name': name,
+            'email': email,
+            'address': address
+        }
+
+        companies.append(new_company)
+        save_companies_data(companies)
+        return jsonify({'success': True, 'company': serialize_admin_company(new_company)})
+    except Exception as e:
+        app.logger.error(f"Error in admin_create_company: {e}")
+        return jsonify({'success': False, 'error': 'Failed to create company'}), 500
+
+
+@app.route('/api/admin/companies/<company_id>', methods=['PUT'])
+@login_required
+@admin_required
+def admin_update_company(company_id):
+    try:
+        data = request.get_json() or {}
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                update_fields = {'updated_at': datetime.utcnow()}
+                if 'name' in data:
+                    update_fields['Company Name'] = data['name']
+                if 'email' in data:
+                    update_fields['EmailID'] = data['email']
+                if 'address' in data:
+                    update_fields['Address'] = data['address']
+
+                result = mongo_db.companies.update_one({'_id': ObjectId(company_id)}, {'$set': update_fields})
+                if result.matched_count == 0:
+                    return jsonify({'success': False, 'error': 'Company not found'}), 404
+
+                company_doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
+                company_doc['id'] = str(company_doc.pop('_id'))
+                return jsonify({'success': True, 'company': serialize_admin_company(company_doc)})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_update_company: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        companies = load_companies_data()
+        updated = None
+        for company in companies:
+            serialized = serialize_admin_company(company)
+            if serialized.get('id') == str(company_id):
+                if 'name' in data:
+                    company['name'] = data['name']
+                if 'email' in data:
+                    company['email'] = data['email']
+                if 'address' in data:
+                    company['address'] = data['address']
+                updated = serialize_admin_company(company)
+                break
+
+        if not updated:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+
+        save_companies_data(companies)
+        return jsonify({'success': True, 'company': updated})
+    except Exception as e:
+        app.logger.error(f"Error in admin_update_company: {e}")
+        return jsonify({'success': False, 'error': 'Failed to update company'}), 500
+
+
+@app.route('/api/admin/companies/<company_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def admin_delete_company(company_id):
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                result = mongo_db.companies.delete_one({'_id': ObjectId(company_id)})
+                if result.deleted_count == 0:
+                    return jsonify({'success': False, 'error': 'Company not found'}), 404
+                return jsonify({'success': True})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_delete_company: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        companies = load_companies_data()
+        new_companies = []
+        deleted = False
+        for company in companies:
+            serialized = serialize_admin_company(company)
+            if serialized.get('id') == str(company_id):
+                deleted = True
+                continue
+            new_companies.append(company)
+
+        if not deleted:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+
+        save_companies_data(new_companies)
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error in admin_delete_company: {e}")
+        return jsonify({'success': False, 'error': 'Failed to delete company'}), 500
+
+
+@app.route('/api/admin/companies/search', methods=['GET'])
+@login_required
+@admin_required
+def admin_search_companies():
+    try:
+        query = (request.args.get('q') or '').strip().lower()
+        if len(query) < 2:
+            return jsonify({'success': True, 'companies': []})
+
+        companies = load_companies_data()
+        filtered = [serialize_admin_company(company) for company in companies if query in serialize_admin_company(company).get('name', '').lower()]
+        return jsonify({'success': True, 'companies': filtered})
+    except Exception as e:
+        app.logger.error(f"Error in admin_search_companies: {e}")
+        return jsonify({'success': False, 'error': 'Failed to search companies'}), 500
+
+
+@app.route('/api/admin/quotations', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_quotations():
+    try:
+        quotations = []
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                cursor = mongo_db.quotations.find({}).sort('created_at', -1)
+                for doc in cursor:
+                    doc['id'] = str(doc.pop('_id'))
+                    quotations.append(serialize_admin_quotation(doc))
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_list_quotations: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+        return jsonify({'success': True, 'quotations': quotations})
+    except Exception as e:
+        app.logger.error(f"Error in admin_list_quotations: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load quotations'}), 500
+
+
+@app.route('/api/admin/quotations/<quotation_id>', methods=['GET'])
+@login_required
+@admin_required
+def admin_get_quotation(quotation_id):
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                doc = mongo_db.quotations.find_one({'_id': ObjectId(quotation_id)})
+                if not doc:
+                    return jsonify({'success': False, 'error': 'Quotation not found'}), 404
+                doc['id'] = str(doc.pop('_id'))
+                return jsonify({'success': True, 'quotation': serialize_admin_quotation(doc)})
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_get_quotation: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+        return jsonify({'success': False, 'error': 'Quotation not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error in admin_get_quotation: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load quotation'}), 500
+
+
+@app.route('/api/customers', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_customers():
+    try:
+        customers = []
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+                cursor = mongo_db.companies.find({}, {'Company Name': 1, 'EmailID': 1})
+                for doc in cursor:
+                    customers.append({
+                        'id': str(doc['_id']),
+                        'name': doc.get('Company Name', ''),
+                        'email': doc.get('EmailID', '')
+                    })
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo error in admin_list_customers: {mongo_error}")
+                return jsonify({'success': False, 'error': 'Database error'}), 500
+
+        if not customers:
+            customers = load_companies_data()
+
+        return jsonify({'success': True, 'customers': [
+            {
+                'id': customer.get('id') or customer.get('_id') or str(uuid.uuid4()),
+                'name': customer.get('name') or customer.get('Company Name') or 'Unknown',
+                'email': customer.get('email') or customer.get('EmailID') or ''
+            }
+            for customer in customers
+        ]})
+    except Exception as e:
+        app.logger.error(f"Error in admin_list_customers: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load customers'}), 500
+
 @app.route('/api/admin/stats')
 @login_required
 @admin_required
