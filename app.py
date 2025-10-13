@@ -319,7 +319,7 @@ if not USE_MONGO:
 @login_required
 @admin_required
 def admin_dashboard():
-    return render_template('admin/dashboard.html')
+    return render_template('admin/dashboard.html', user=current_user)
 
 # User profile page
 @app.route('/profile')
