@@ -391,122 +391,90 @@ def admin_chart_data():
                 app.logger.error(f"MongoDB ping failed in admin_chart_data: {ping_error}")
                 return jsonify({'error': 'Database unavailable'}), 503
 
-            pipeline = [
-                {
-                    '$group': {
-                        '_id': {
-                            'year': {'$year': '$created_at'},
-                            'month': {'$month': '$created_at'}
-                        },
-                        'users': {'$sum': 1}
-                    }
-                },
-                {
-                    '$sort': {
-                        '_id.year': 1,
-                        '_id.month': 1
-                    }
-                }
-            ]
-
+            users_cursor = mongo_db.users.find({}, {'created_at': 1, 'role': 1})
+            quotations_cursor = []
             if 'quotations' in mongo_db.list_collection_names():
-                pipeline_with_quotes = [
-                    {
-                        '$lookup': {
-                            'from': 'quotations',
-                            'let': {
-                                'year': {'$year': '$created_at'},
-                                'month': {'$month': '$created_at'}
-                            },
-                            'pipeline': [
-                                {
-                                    '$match': {
-                                        '$expr': {
-                                            '$and': [
-                                                {'$eq': [{'$year': '$created_at'}, '$$year']},
-                                                {'$eq': [{'$month': '$created_at'}, '$$month']}
-                                            ]
-                                        }
-                                    }
-                                },
-                                {
-                                    '$count': 'quotations'
-                                }
-                            ],
-                            'as': 'quotations_info'
-                        }
-                    },
-                    {
-                        '$addFields': {
-                            'quotations': {
-                                '$ifNull': [
-                                    {'$arrayElemAt': ['$quotations_info.quotations', 0]},
-                                    0
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        '$project': {
-                            '_id': 1,
-                            'users': 1,
-                            'quotations': 1
-                        }
-                    }
-                ]
-            else:
-                pipeline_with_quotes = [
-                    {
-                        '$addFields': {
-                            'quotations': 0
-                        }
-                    }
-                ]
-
-            combined_pipeline = pipeline + pipeline_with_quotes
-            user_month_data = list(mongo_db.users.aggregate(combined_pipeline))
+                quotations_cursor = list(mongo_db.quotations.find({}, {'created_at': 1}))
 
             month_names = [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
             ]
 
-            for item in user_month_data:
-                year = item['_id'].get('year')
-                month = item['_id'].get('month')
+            monthly_totals = {}
+            role_counts = {}
+
+            for doc in users_cursor:
+                dt = _parse_datetime(doc.get('created_at'))
+                if not dt:
+                    continue
+                year, month = dt.year, dt.month
+                if not (1 <= month <= 12):
+                    continue
+                key = (year, month)
+                monthly_entry = monthly_totals.setdefault(key, {'users': 0, 'quotations': 0})
+                monthly_entry['users'] += 1
+
+                role = (doc.get('role') or 'user').lower()
+                role_counts[role] = role_counts.get(role, 0) + 1
+
+            for doc in quotations_cursor:
+                dt = _parse_datetime(doc.get('created_at'))
+                if not dt:
+                    continue
+                year, month = dt.year, dt.month
+                if not (1 <= month <= 12):
+                    continue
+                key = (year, month)
+                monthly_entry = monthly_totals.setdefault(key, {'users': 0, 'quotations': 0})
+                monthly_entry['quotations'] += 1
+
+            for (year, month) in sorted(monthly_totals.keys()):
+                month_label = f"{month_names[month - 1]} {year}"
                 result['users_by_month'].append({
-                    'month': f"{month_names[month - 1]} {year}",
-                    'users': item.get('users', 0),
-                    'quotations': item.get('quotations', 0)
+                    'month': month_label,
+                    'users': monthly_totals[(year, month)]['users'],
+                    'quotations': monthly_totals[(year, month)]['quotations']
                 })
 
-            role_counts = mongo_db.users.aggregate([
-                {
-                    '$group': {
-                        '_id': {'$toLower': {'$ifNull': ['$role', 'user']}},
-                        'count': {'$sum': 1}
-                    }
-                },
-                {
-                    '$sort': {'count': -1}
-                }
-            ])
-
             result['user_roles'] = [
-                {'role': doc['_id'], 'count': doc['count']}
-                for doc in role_counts
+                {'role': role, 'count': count}
+                for role, count in sorted(role_counts.items(), key=lambda item: item[1], reverse=True)
             ]
 
         else:
             users_json = _load_users_json()
+            month_names = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ]
+            monthly_totals = {}
             role_counts = {}
+
             for user in users_json.values():
+                created_at = user.created_at if isinstance(user, User) else user.get('created_at')
+                dt = _parse_datetime(created_at)
+                if dt:
+                    year, month = dt.year, dt.month
+                    if 1 <= month <= 12:
+                        key = (year, month)
+                        monthly_entry = monthly_totals.setdefault(key, {'users': 0, 'quotations': 0})
+                        monthly_entry['users'] += 1
+
                 role = (user.role if isinstance(user, User) else user.get('role')) or 'user'
                 role_counts[role.lower()] = role_counts.get(role.lower(), 0) + 1
 
+            for (year, month) in sorted(monthly_totals.keys()):
+                month_label = f"{month_names[month - 1]} {year}"
+                result['users_by_month'].append({
+                    'month': month_label,
+                    'users': monthly_totals[(year, month)]['users'],
+                    'quotations': monthly_totals[(year, month)]['quotations']
+                })
+
             result['user_roles'] = [
                 {'role': role, 'count': count}
-                for role, count in role_counts.items()
+                for role, count in sorted(role_counts.items(), key=lambda item: item[1], reverse=True)
             ]
 
         return jsonify(result)
