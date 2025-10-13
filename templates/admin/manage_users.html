@@ -602,6 +602,62 @@
             return item;
         }
         
+        async function loadAllCompaniesForAssignment(selectedCompanyIds = []) {
+            const loadingIndicator = document.getElementById('companyLoading');
+            const companyList = document.getElementById('companyCheckboxList');
+
+            if (!companyList) return;
+
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block';
+            }
+
+            try {
+                if (!Array.isArray(allCompaniesForAssignment) || allCompaniesForAssignment.length === 0) {
+                    const response = await fetch('/api/admin/companies?page=0&limit=1000');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        allCompaniesForAssignment = data.companies || [];
+                    } else {
+                        throw new Error(data.error || 'Failed to load companies');
+                    }
+                }
+
+                companyList.innerHTML = '';
+
+                if (!Array.isArray(allCompaniesForAssignment) || allCompaniesForAssignment.length === 0) {
+                    companyList.innerHTML = '<div class="alert alert-info mb-0">No companies available. Please add companies first.</div>';
+                    return;
+                }
+
+                const selectedSet = new Set((selectedCompanyIds || []).map(String));
+
+                allCompaniesForAssignment.forEach(company => {
+                    const companyId = String(company.id || company._id || '');
+                    if (!companyId) return;
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'form-check mb-2';
+                    wrapper.innerHTML = `
+                        <input class="form-check-input company-checkbox" type="checkbox" value="${companyId}" id="assign-company-${companyId}" ${selectedSet.has(companyId) ? 'checked' : ''}>
+                        <label class="form-check-label" for="assign-company-${companyId}">
+                            ${company.name || 'Unnamed Company'}
+                            ${company.email ? `<small class="text-muted d-block">${company.email}</small>` : ''}
+                        </label>
+                    `;
+                    companyList.appendChild(wrapper);
+                });
+            } catch (error) {
+                console.error('Error loading companies for assignment:', error);
+                companyList.innerHTML = `<div class="alert alert-danger">${error.message || 'Failed to load companies.'}</div>`;
+            } finally {
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+        }
+
         // Helper functions
         function getRoleBadgeColor(role) {
             switch(role) {
@@ -1095,7 +1151,9 @@
         async function loadAllCustomers(selectedCustomerIds = []) {
             const loadingIndicator = document.getElementById('customerLoading');
             const customerList = document.getElementById('customerCheckboxList');
-            
+
+            if (!customerList) return;
+
             try {
                 // Show loading state
                 if (loadingIndicator) loadingIndicator.style.display = 'block';
