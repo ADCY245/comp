@@ -87,6 +87,7 @@
 
     <!-- Company Selection -->
     <div class="d-flex align-items-center justify-content-center min-vh-50 py-5" id="companySelectionSection">
+        {% if companies %}
         <div class="col-12 col-md-8 col-lg-6">
             <div class="card shadow-lg">
                 <div class="card-header bg-primary text-white text-center py-3">
@@ -102,9 +103,17 @@
                             <div class="position-relative">
                                 <input type="text" class="form-control form-control-lg" id="companyInput" 
                                        placeholder="Start typing company name..." autocomplete="off" required>
-                                <div id="searchResults" class="search-results mt-1"></div>
                             </div>
                             <div class="form-text">Type at least 2 characters to see matching results</div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="companyDropdown" class="form-label fw-medium">Available companies</label>
+                            <select class="form-select form-select-lg" id="companyDropdown">
+                                <option value="">Select a company</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="d-grid gap-2">
                             <button type="button" id="selectCompanyBtn" class="btn btn-primary btn-lg" disabled>
@@ -121,6 +130,13 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="alert alert-warning text-center" role="alert">
+                No companies available! Contact administrator.
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Product Selection (initially hidden) -->
@@ -180,7 +196,7 @@ const ChemoApp = (function() {
     // DOM Elements
     const elements = {
         companyInput: document.getElementById('companyInput'),
-        searchResults: document.getElementById('searchResults'),
+        companyDropdown: document.getElementById('companyDropdown'),
         selectCompanyBtn: document.getElementById('selectCompanyBtn'),
         companyIdInput: document.getElementById('companyId'),
         companyNameInput: document.getElementById('companyName'),
@@ -291,7 +307,11 @@ const ChemoApp = (function() {
         if (elements.companyInput) {
             elements.companyInput.addEventListener('input', handleCompanySearch);
         }
-        
+
+        if (elements.companyDropdown) {
+            elements.companyDropdown.addEventListener('change', handleDropdownChange);
+        }
+
         if (elements.selectCompanyBtn) {
             elements.selectCompanyBtn.addEventListener('click', async (e) => {
                 console.log('Select company button clicked');
@@ -334,47 +354,69 @@ const ChemoApp = (function() {
             });
         }
 
-        // Close search results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (elements.searchResults && 
-                !elements.searchResults.contains(e.target) && 
-                e.target !== elements.companyInput) {
-                elements.searchResults.style.display = 'none';
-            }
-        });
+        // Initialize dropdown with full list
+        updateDropdownOptions('');
     }
 
     // Handle company search input
     function handleCompanySearch(e) {
         const query = e.target.value.toLowerCase();
-        elements.searchResults.innerHTML = '';
-        elements.searchResults.style.display = 'none';
-        
-        if (query.length < 2) return;
-        
-        const results = state.companies.filter(company => 
-            company.name && company.name.toLowerCase().includes(query)
-        );
-        
-        if (results.length === 0) {
-            const noResults = document.createElement('div');
-            noResults.className = 'search-item';
-            noResults.textContent = 'No companies found';
-            elements.searchResults.appendChild(noResults);
+        updateDropdownOptions(query);
+    }
+
+    function updateDropdownOptions(query) {
+        if (!elements.companyDropdown) return;
+
+        const normalizedQuery = (query || '').toLowerCase();
+        const filteredCompanies = normalizedQuery.length < 2
+            ? state.companies.slice(0, state.companies.length)
+            : state.companies.filter(company => company.name && company.name.toLowerCase().includes(normalizedQuery));
+
+        const currentSelection = state.selectedCompany ? String(state.selectedCompany.id) : elements.companyDropdown.value;
+
+        elements.companyDropdown.innerHTML = '<option value="">Select a company</option>';
+
+        if (filteredCompanies.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.disabled = true;
+            option.textContent = 'No companies found';
+            elements.companyDropdown.appendChild(option);
         } else {
-            results.forEach(company => {
-                const item = document.createElement('div');
-                item.className = 'search-item';
-                item.innerHTML = `
-                    <strong>${company.name || 'Unnamed Company'}</strong><br>
-                    <small class="text-muted">${company.email || ''}</small>
-                `;
-                item.addEventListener('click', () => selectCompanyFromResults(company));
-                elements.searchResults.appendChild(item);
+            filteredCompanies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company.id || '';
+                option.textContent = company.name || 'Unnamed Company';
+                if (String(company.id) === String(currentSelection)) {
+                    option.selected = true;
+                }
+                elements.companyDropdown.appendChild(option);
             });
         }
-        
-        elements.searchResults.style.display = 'block';
+
+        if (state.selectedCompany && !filteredCompanies.some(c => String(c.id) === String(state.selectedCompany.id))) {
+            state.selectedCompany = null;
+            if (elements.selectCompanyBtn) {
+                elements.selectCompanyBtn.disabled = true;
+            }
+        }
+    }
+
+    function handleDropdownChange(e) {
+        const companyId = e.target.value;
+
+        if (!companyId) {
+            state.selectedCompany = null;
+            if (elements.selectCompanyBtn) {
+                elements.selectCompanyBtn.disabled = true;
+            }
+            return;
+        }
+
+        const company = state.companies.find(c => String(c.id) === String(companyId));
+        if (company) {
+            selectCompanyFromResults(company);
+        }
     }
 
     // Select company from search results
@@ -384,8 +426,11 @@ const ChemoApp = (function() {
         elements.companyIdInput.value = company.id || '';
         elements.companyNameInput.value = company.name || '';
         elements.companyEmailInput.value = company.email || '';
-        elements.searchResults.style.display = 'none';
         elements.selectCompanyBtn.disabled = false;
+
+        if (elements.companyDropdown) {
+            elements.companyDropdown.value = company.id || '';
+        }
     }
 
     // Select company and save to session

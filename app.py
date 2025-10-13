@@ -1006,8 +1006,22 @@ def log_time(message: str):
     print(f"[{datetime.utcnow().isoformat()}] {message}")
 
 
+def normalize_assigned_companies(assigned):
+    if not assigned:
+        return []
+    normalized = []
+    for company_id in assigned:
+        if not company_id:
+            continue
+        if isinstance(company_id, ObjectId):
+            normalized.append(str(company_id))
+        else:
+            normalized.append(str(company_id))
+    return normalized
+
+
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user', created_at=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user', created_at=None, assigned_companies=None):
         self.id = id
         self.email = email
         self.username = username
@@ -1020,6 +1034,7 @@ class User(UserMixin):
         self.company_id = company_id
         self.role = role or 'user'
         self.created_at = created_at or datetime.utcnow()
+        self.assigned_companies = normalize_assigned_companies(assigned_companies)
 
     def to_dict(self):
         return {
@@ -1032,6 +1047,7 @@ class User(UserMixin):
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
             'otp_verified': self.otp_verified,
             'company_id': self.company_id,
+            'assigned_companies': [str(cid) for cid in (self.assigned_companies or []) if cid],
             'role': self.role,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
@@ -1239,7 +1255,8 @@ def load_user(user_id):
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id'),
                 role=doc.get('role', 'user'),
-                created_at=_parse_datetime(doc.get('created_at'))
+                created_at=_parse_datetime(doc.get('created_at')),
+                assigned_companies=doc.get('assigned_companies', [])
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -1263,7 +1280,8 @@ def load_user(user_id):
             reset_token_expiry=user_data.get('reset_token_expiry'),
             company_id=user_data.get('company_id'),
             role=user_data.get('role', 'user'),
-            created_at=_parse_datetime(user_data.get('created_at'))
+            created_at=_parse_datetime(user_data.get('created_at')),
+            assigned_companies=user_data.get('assigned_companies', [])
         )
     return None
 
@@ -1744,7 +1762,8 @@ def load_user(user_id):
                 reset_token_expiry=user_data.get('reset_token_expiry'),
                 company_id=user_data.get('company_id'),
                 role=user_data.get('role', 'user'),
-                created_at=_parse_datetime(user_data.get('created_at'))
+                created_at=_parse_datetime(user_data.get('created_at')),
+                assigned_companies=user_data.get('assigned_companies', [])
             )
         return None
 
@@ -2537,6 +2556,8 @@ def load_companies_data():
                     '_id': 1,
                     'Company Name': 1,
                     'EmailID': 1,
+                    'name': 1,
+                    'email': 1,
                     'created_at': 1,
                     'created_by': 1
                 }
@@ -2551,14 +2572,14 @@ def load_companies_data():
                         company_id = str(company.pop('_id'))
                         
                         # Get company data (we only store one set of fields now)
-                        name = company.get('Company Name')
-                        email = company.get('EmailID', '')
+                        name = company.get('Company Name') or company.get('name')
+                        email = company.get('EmailID') or company.get('email', '')
                         
                         # Skip if we don't have a valid name
                         if not name:
                             app.logger.warning(f"Skipping company with missing name: {company_id}")
                             continue
-                            
+                        
                         # Ensure email is a string and properly formatted
                         email = str(email).strip() if email else ''
                         
@@ -2609,6 +2630,17 @@ def load_companies_data():
 def index():
     try:
         companies = load_companies_data()
+        
+        if not current_user.is_authenticated:
+            companies = []
+        else:
+            assigned_ids = []
+            if hasattr(current_user, 'role') and current_user.role != 'admin':
+                assigned_ids = [str(cid) for cid in getattr(current_user, 'assigned_companies', []) if cid]
+                if assigned_ids:
+                    companies = [company for company in companies if company.get('id') in assigned_ids]
+                else:
+                    companies = []
         
         # Ensure companies is a list before passing to template
         if not isinstance(companies, list):
