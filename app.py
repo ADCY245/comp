@@ -321,6 +321,19 @@ if not USE_MONGO:
 def admin_dashboard():
     return render_template('admin/dashboard.html', user=current_user)
 
+@app.route('/admin/manage-users')
+@login_required
+@admin_required
+def admin_manage_users():
+    return render_template('admin/manage_users.html', user=current_user)
+
+
+@app.route('/admin/quotations')
+@login_required
+@admin_required
+def admin_quotations():
+    return render_template('admin/quotations.html', user=current_user)
+
 @app.route('/api/admin/stats')
 @login_required
 @admin_required
