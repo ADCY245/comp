@@ -51,6 +51,10 @@ print("===========================\n")
 from flask_cors import CORS
 # Initialize Flask app and login manager
 app = Flask(__name__)
+# Include 'templates/user' in the Jinja2 search path so that render_template('cart.html')
+# and similar calls find templates stored under that sub-directory without changing
+# every individual render_template path.
+app.jinja_loader.searchpath.append(os.path.join(app.root_path, 'templates', 'user'))
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
