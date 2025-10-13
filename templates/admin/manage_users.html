@@ -748,7 +748,7 @@
             const container = document.getElementById('customerListContainer');
             if (!container) return;
             
-            const customerItems = container.querySelectorAll('> div');
+            const customerItems = Array.from(container.children);
             
             if (!search) {
                 // Show all customers if search is empty
