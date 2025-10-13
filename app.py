@@ -317,6 +317,15 @@ if not USE_MONGO:
 def admin_dashboard():
     return render_template('admin/dashboard.html')
 
+# User profile page
+@app.route('/profile')
+@login_required
+def profile():
+    """Render the user profile page."""
+    user = current_user
+    # Pass helper so template can look up company name by ID
+    return render_template('profile/profile.html', user=user, get_company_name_by_id=get_company_name_by_id)
+
 print("==============================\n")
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key')
 JWT_ALGORITHM = 'HS256'
