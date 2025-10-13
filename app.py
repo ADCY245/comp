@@ -321,6 +321,198 @@ if not USE_MONGO:
 def admin_dashboard():
     return render_template('admin/dashboard.html', user=current_user)
 
+@app.route('/api/admin/stats')
+@login_required
+@admin_required
+def admin_stats():
+    """Return aggregate statistics for the admin dashboard."""
+    try:
+        stats = {
+            'total_users': 0,
+            'active_sessions': 0,
+            'total_quotations': 0,
+            'recent_activity': []
+        }
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+            except Exception as ping_error:
+                app.logger.error(f"MongoDB ping failed in admin_stats: {ping_error}")
+                return jsonify({'error': 'Database unavailable'}), 503
+
+            stats['total_users'] = mongo_db.users.count_documents({})
+            stats['total_quotations'] = mongo_db.quotations.count_documents({}) if 'quotations' in mongo_db.list_collection_names() else 0
+
+            recent_cursor = mongo_db.users.find(
+                {},
+                {
+                    'username': 1,
+                    'role': 1,
+                    'email': 1,
+                    'last_login': 1,
+                    'created_at': 1
+                }
+            ).sort('updated_at', -1).limit(10)
+
+            stats['recent_activity'] = [
+                {
+                    'message': f"{doc.get('username', 'Unknown user')} logged in",
+                    'role': doc.get('role', 'user'),
+                    'timestamp': (doc.get('last_login') or doc.get('updated_at') or doc.get('created_at'))
+                }
+                for doc in recent_cursor
+            ]
+
+        else:
+            stats['total_users'] = len(_load_users_json())
+
+        return jsonify(stats)
+    except Exception as e:
+        app.logger.error(f"Error in admin_stats: {e}")
+        return jsonify({'error': 'Failed to load stats'}), 500
+
+
+@app.route('/api/admin/chart-data')
+@login_required
+@admin_required
+def admin_chart_data():
+    """Return chart data for the admin dashboard."""
+    try:
+        result = {
+            'users_by_month': [],
+            'user_roles': []
+        }
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+            except Exception as ping_error:
+                app.logger.error(f"MongoDB ping failed in admin_chart_data: {ping_error}")
+                return jsonify({'error': 'Database unavailable'}), 503
+
+            pipeline = [
+                {
+                    '$group': {
+                        '_id': {
+                            'year': {'$year': '$created_at'},
+                            'month': {'$month': '$created_at'}
+                        },
+                        'users': {'$sum': 1}
+                    }
+                },
+                {
+                    '$sort': {
+                        '_id.year': 1,
+                        '_id.month': 1
+                    }
+                }
+            ]
+
+            if 'quotations' in mongo_db.list_collection_names():
+                pipeline_with_quotes = [
+                    {
+                        '$lookup': {
+                            'from': 'quotations',
+                            'let': {
+                                'year': {'$year': '$created_at'},
+                                'month': {'$month': '$created_at'}
+                            },
+                            'pipeline': [
+                                {
+                                    '$match': {
+                                        '$expr': {
+                                            '$and': [
+                                                {'$eq': [{'$year': '$created_at'}, '$$year']},
+                                                {'$eq': [{'$month': '$created_at'}, '$$month']}
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    '$count': 'quotations'
+                                }
+                            ],
+                            'as': 'quotations_info'
+                        }
+                    },
+                    {
+                        '$addFields': {
+                            'quotations': {
+                                '$ifNull': [
+                                    {'$arrayElemAt': ['$quotations_info.quotations', 0]},
+                                    0
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        '$project': {
+                            '_id': 1,
+                            'users': 1,
+                            'quotations': 1
+                        }
+                    }
+                ]
+            else:
+                pipeline_with_quotes = [
+                    {
+                        '$addFields': {
+                            'quotations': 0
+                        }
+                    }
+                ]
+
+            combined_pipeline = pipeline + pipeline_with_quotes
+            user_month_data = list(mongo_db.users.aggregate(combined_pipeline))
+
+            month_names = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ]
+
+            for item in user_month_data:
+                year = item['_id'].get('year')
+                month = item['_id'].get('month')
+                result['users_by_month'].append({
+                    'month': f"{month_names[month - 1]} {year}",
+                    'users': item.get('users', 0),
+                    'quotations': item.get('quotations', 0)
+                })
+
+            role_counts = mongo_db.users.aggregate([
+                {
+                    '$group': {
+                        '_id': {'$toLower': {'$ifNull': ['$role', 'user']}},
+                        'count': {'$sum': 1}
+                    }
+                },
+                {
+                    '$sort': {'count': -1}
+                }
+            ])
+
+            result['user_roles'] = [
+                {'role': doc['_id'], 'count': doc['count']}
+                for doc in role_counts
+            ]
+
+        else:
+            users_json = _load_users_json()
+            role_counts = {}
+            for user in users_json.values():
+                role = (user.role if isinstance(user, User) else user.get('role')) or 'user'
+                role_counts[role.lower()] = role_counts.get(role.lower(), 0) + 1
+
+            result['user_roles'] = [
+                {'role': role, 'count': count}
+                for role, count in role_counts.items()
+            ]
+
+        return jsonify(result)
+    except Exception as e:
+        app.logger.error(f"Error in admin_chart_data: {e}")
+        return jsonify({'error': 'Failed to load chart data'}), 500
 # User profile page
 @app.route('/profile')
 @login_required
