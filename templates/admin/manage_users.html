@@ -267,8 +267,8 @@
                         <div class="mb-3">
                             <label for="companyAssignedTo" class="form-label">Customer Assigned To</label>
                             <select class="form-select" id="companyAssignedTo" name="companyAssignedTo" multiple>
-                                <!-- Users will be loaded dynamically -->
                             </select>
+                            <div class="assigned-users-preview mt-2" id="assignedUsersPreview" aria-live="polite"></div>
                             <small class="text-muted">Select one or more users to assign this company's customers.</small>
                         </div>
                     </form>
@@ -307,6 +307,28 @@
         
         // Constants
         const companiesPerPage = 10;
+
+        function updateAssignedUsersPreview() {
+            const preview = document.getElementById('assignedUsersPreview');
+            const select = document.getElementById('companyAssignedTo');
+
+            if (!preview || !select) {
+                return;
+            }
+
+            const selectedOptions = Array.from(select.selectedOptions || []);
+
+            if (selectedOptions.length === 0) {
+                preview.innerHTML = '<span class="text-muted">No users assigned yet.</span>';
+                return;
+            }
+
+            const badges = selectedOptions.map(option => `
+                <span class="badge bg-primary text-wrap assigned-user-badge">${option.textContent.trim()}</span>
+            `);
+
+            preview.innerHTML = badges.join('');
+        }
 
 // Returns Bootstrap badge color class for a given role
 function getRoleBadgeColor(role) {
@@ -363,6 +385,8 @@ function getRoleBadgeColor(role) {
                     }
                     select.appendChild(option);
                 });
+
+                updateAssignedUsersPreview();
             } catch (error) {
                 console.error('Error populating company assignment list:', error);
             }
@@ -648,6 +672,15 @@ function getRoleBadgeColor(role) {
             }
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            const assignedSelect = document.getElementById('companyAssignedTo');
+            if (assignedSelect) {
+                assignedSelect.addEventListener('change', updateAssignedUsersPreview);
+            }
+
+            updateAssignedUsersPreview();
+        });
+
         const companyAssignmentSearch = document.getElementById('companyAssignmentSearch');
         if (companyAssignmentSearch) {
             companyAssignmentSearch.addEventListener('input', () => {
@@ -890,6 +923,7 @@ function getRoleBadgeColor(role) {
                 if (result.success) {
                     bootstrap.Modal.getInstance(document.getElementById('companyModal')).hide();
                     loadCompanies();
+                    updateAssignedUsersPreview();
                     alert('Company saved successfully!');
                 } else {
                     alert('Error saving company: ' + result.error);
@@ -923,6 +957,8 @@ function getRoleBadgeColor(role) {
                             opt.selected = assigned.includes(opt.value);
                         });
                     }
+
+                    updateAssignedUsersPreview();
                     
                     new bootstrap.Modal(document.getElementById('companyModal')).show();
                 }
