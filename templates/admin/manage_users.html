@@ -308,6 +308,21 @@
         
         // Constants
         const companiesPerPage = 10;
+
+// Returns Bootstrap badge color class for a given role
+function getRoleBadgeColor(role) {
+    switch ((role || '').toLowerCase()) {
+        case 'admin':
+            return 'success';   // green
+        case 'dealer':
+            return 'warning';   // yellow
+        case 'superadmin':
+            return 'danger';    // red
+        case 'user':
+        default:
+            return 'secondary'; // gray
+    }
+}
         
         async function populateCompanyAssignedTo(selectedUserIds = []) {
             const select = document.getElementById('companyAssignedTo');
