@@ -2688,9 +2688,25 @@ def index():
         else:
             assigned_ids = []
             if hasattr(current_user, 'role') and current_user.role != 'admin':
-                assigned_ids = [str(cid) for cid in getattr(current_user, 'assigned_companies', []) if cid]
+                refreshed_ids = None
+
+                if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+                    try:
+                        mongo_db.command('ping')
+                        user_doc = mu_find_user_by_id(str(current_user.id))
+                        if user_doc and user_doc.get('assigned_companies'):
+                            refreshed_ids = normalize_assigned_companies(user_doc.get('assigned_companies'))
+                    except Exception as refresh_error:
+                        app.logger.error(f"Failed to refresh assigned companies from MongoDB: {refresh_error}")
+
+                if refreshed_ids is None:
+                    refreshed_ids = normalize_assigned_companies(getattr(current_user, 'assigned_companies', []))
+
+                current_user.assigned_companies = refreshed_ids
+                assigned_ids = [str(cid) for cid in refreshed_ids if cid]
+
                 if assigned_ids:
-                    companies = [company for company in companies if company.get('id') in assigned_ids]
+                    companies = [company for company in companies if str(company.get('id')) in assigned_ids]
                 else:
                     companies = []
         
