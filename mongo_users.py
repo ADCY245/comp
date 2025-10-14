@@ -9,6 +9,39 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+SPECIAL_ROLE_OVERRIDES = {
+    'info@chemo.in': 'superadmin',
+    'operations@chemo.in': 'admin',
+    'accounts@chemo.in': 'admin'
+}
+
+
+def _apply_special_role(user_doc: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not user_doc:
+        return user_doc
+
+    email = (user_doc.get('email') or '').strip().lower()
+    if not email:
+        return user_doc
+
+    desired_role = SPECIAL_ROLE_OVERRIDES.get(email)
+    if not desired_role:
+        return user_doc
+
+    current_role = user_doc.get('role')
+    if current_role == desired_role:
+        return user_doc
+
+    try:
+        if users_col is not None and user_doc.get('_id') is not None:
+            users_col.update_one({'_id': user_doc['_id']}, {'$set': {'role': desired_role}})
+    except Exception as update_error:
+        print(f"⚠️ Failed to enforce special role for {email}: {update_error}")
+
+    user_doc['role'] = desired_role
+    return user_doc
+
 # These will be set by app.py
 users_col = None
 
@@ -62,7 +95,7 @@ def find_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         user = users_col.find_one({"_id": ObjectId(user_id)})
         if user:
             user['_id'] = str(user['_id'])  # Convert ObjectId to string for JSON serialization
-            return user
+            return _apply_special_role(user)
     except:
         pass  # Not a valid ObjectId, try other methods
     
@@ -71,7 +104,7 @@ def find_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         user = users_col.find_one({"_id": user_id})
         if user and '_id' in user:
             user['_id'] = str(user['_id'])
-            return user
+            return _apply_special_role(user)
     except Exception as e:
         print(f"❌ Error finding user by string ID {user_id}: {str(e)}")
     
@@ -80,7 +113,7 @@ def find_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         user = find_user_by_email_or_username(user_id)
         if user and '_id' in user:
             user['_id'] = str(user['_id'])
-            return user
+            return _apply_special_role(user)
     except Exception as e:
         print(f"❌ Error finding user by email/username {user_id}: {str(e)}")
     
@@ -93,12 +126,13 @@ def find_user_by_email_or_username(identifier: str) -> Optional[Dict[str, Any]]:
     ident = identifier.strip()
     # For email, use case-insensitive match with regex
     # For username, use case-insensitive match
-    return users_col.find_one({
+    user = users_col.find_one({
         "$or": [
             {"email": {"$regex": f"^{re.escape(ident)}$", "$options": "i"}},
             {"username": {"$regex": f"^{re.escape(ident)}$", "$options": "i"}}
         ]
     })
+    return _apply_special_role(user)
 
 
 def email_or_username_exists(email: str, username: str) -> bool:
@@ -152,7 +186,11 @@ def create_user(email, username, password, **kwargs):
     
     # Add any additional fields
     user_doc.update(kwargs)
-    
+
+    override_role = SPECIAL_ROLE_OVERRIDES.get(email)
+    if override_role:
+        user_doc['role'] = override_role
+
     print(f"Attempting to insert user into MongoDB collection: {users_col.name}")
     print(f"Database: {users_col.database.name}")
     print(f"User document to insert: {user_doc}")
@@ -189,6 +227,13 @@ def create_user(email, username, password, **kwargs):
 def update_user(user_id: str, changes: Dict[str, Any]):
     changes["updated_at"] = datetime.utcnow()
     users_col.update_one({"_id": user_id}, {"$set": changes})
+
+    try:
+        if users_col is not None:
+            doc = users_col.find_one({"_id": user_id})
+            _apply_special_role(doc)
+    except Exception as enforce_error:
+        print(f"⚠️ Failed to reapply special role during update: {enforce_error}")
 
 # ---------------------------------------------------------------------------
 # Auth helpers
