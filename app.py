@@ -566,6 +566,8 @@ def admin_create_company():
         if not name or not email:
             return jsonify({'success': False, 'error': 'Name and email required'}), 400
 
+        assigned_to = normalize_assigned_companies(data.get('assigned_to', []))
+
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             try:
                 mongo_db.command('ping')
@@ -573,6 +575,7 @@ def admin_create_company():
                     'Company Name': name,
                     'EmailID': email,
                     'Address': address,
+                    'assigned_to': assigned_to,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow(),
                     'created_by': str(current_user.id)
@@ -589,7 +592,8 @@ def admin_create_company():
             'id': str(uuid.uuid4()),
             'name': name,
             'email': email,
-            'address': address
+            'address': address,
+            'assigned_to': assigned_to
         }
 
         companies.append(new_company)
@@ -617,6 +621,8 @@ def admin_update_company(company_id):
                     update_fields['EmailID'] = data['email']
                 if 'address' in data:
                     update_fields['Address'] = data['address']
+                if 'assigned_to' in data:
+                    update_fields['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
 
                 result = mongo_db.companies.update_one({'_id': ObjectId(company_id)}, {'$set': update_fields})
                 if result.matched_count == 0:
@@ -640,6 +646,8 @@ def admin_update_company(company_id):
                     company['email'] = data['email']
                 if 'address' in data:
                     company['address'] = data['address']
+                if 'assigned_to' in data:
+                    company['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
                 updated = serialize_admin_company(company)
                 break
 
@@ -1121,7 +1129,8 @@ def serialize_admin_company(company_doc):
         'id': cid,
         'name': company_doc.get('name') or company_doc.get('Company Name') or 'N/A',
         'email': company_doc.get('email') or company_doc.get('EmailID') or '',
-        'address': company_doc.get('address') or company_doc.get('Address', '')
+        'address': company_doc.get('address') or company_doc.get('Address', ''),
+        'assigned_to': normalize_assigned_companies(company_doc.get('assigned_to', []))
     }
 
 
@@ -2597,7 +2606,8 @@ def load_companies_data():
                             'name': name,
                             'email': email,
                             'created_at': company.get('created_at'),
-                            'created_by': company.get('created_by')
+                            'created_by': company.get('created_by'),
+                            'assigned_to': normalize_assigned_companies(company.get('assigned_to', []))
                         })
                         
                     except Exception as e:
@@ -2658,7 +2668,8 @@ def load_companies_data():
                                     'email': str(email).strip() if email else '',
                                     'address': company.get('address') or company.get('Address', ''),
                                     'created_at': company.get('created_at'),
-                                    'created_by': company.get('created_by')
+                                    'created_by': company.get('created_by'),
+                                    'assigned_to': normalize_assigned_companies(company.get('assigned_to', []))
                                 })
                         except Exception as norm_error:
                             app.logger.error(f"Failed to normalize company entry: {norm_error}")
