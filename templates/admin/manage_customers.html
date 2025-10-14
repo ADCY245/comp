@@ -259,8 +259,9 @@
             dropdown.remove(1);
         }
         
-        // Add users to dropdown
-        allUsers.forEach(user => {
+        // Add users (only role user or admin) to dropdown
+        const eligibleUsers = allUsers.filter(u => ['user','admin'].includes((u.role || '').toLowerCase()));
+        eligibleUsers.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
             option.textContent = `${user.username} (${user.email})`;
