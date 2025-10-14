@@ -683,6 +683,15 @@ function getRoleBadgeColor(role) {
             const modalEl = document.getElementById('companyModal');
             if (modalEl && !companyModalInstance) {
                 companyModalInstance = new bootstrap.Modal(modalEl);
+                modalEl.addEventListener('hide.bs.modal', () => {
+                    const active = document.activeElement;
+                    if (modalEl.contains(active)) {
+                        active.blur();
+                        if (lastCompanyModalTrigger && typeof lastCompanyModalTrigger.focus === 'function') {
+                            lastCompanyModalTrigger.focus();
+                        }
+                    }
+                });
                 modalEl.addEventListener('hidden.bs.modal', () => {
                     updateAssignedUsersPreview();
                     if (lastCompanyModalTrigger && typeof lastCompanyModalTrigger.focus === 'function') {
