@@ -303,6 +303,8 @@
         let usersTable = null;
         let companiesTable = null;
         let allCompaniesForAssignment = [];
+        let companyModalInstance = null;
+        let lastCompanyModalTrigger = null;
 
         
         // Constants
@@ -678,6 +680,18 @@ function getRoleBadgeColor(role) {
                 assignedSelect.addEventListener('change', updateAssignedUsersPreview);
             }
 
+            const modalEl = document.getElementById('companyModal');
+            if (modalEl && !companyModalInstance) {
+                companyModalInstance = new bootstrap.Modal(modalEl);
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    updateAssignedUsersPreview();
+                    if (lastCompanyModalTrigger && typeof lastCompanyModalTrigger.focus === 'function') {
+                        lastCompanyModalTrigger.focus();
+                    }
+                    lastCompanyModalTrigger = null;
+                });
+            }
+
             updateAssignedUsersPreview();
         });
 
@@ -732,13 +746,20 @@ function getRoleBadgeColor(role) {
         }
         
         async function showAddCompanyModal() {
+            lastCompanyModalTrigger = document.activeElement;
             document.getElementById('companyModalTitle').textContent = 'Add New Company';
             document.getElementById('companyForm').reset();
             document.getElementById('companyId').value = '';
             await populateCompanyAssignedTo();
             const select = document.getElementById('companyAssignedTo');
             if (select) Array.from(select.options).forEach(opt => opt.selected = false);
-            new bootstrap.Modal(document.getElementById('companyModal')).show();
+            if (!companyModalInstance) {
+                const modalEl = document.getElementById('companyModal');
+                companyModalInstance = modalEl ? new bootstrap.Modal(modalEl) : null;
+            }
+            if (companyModalInstance) {
+                companyModalInstance.show();
+            }
         }
         
         // CRUD operations
@@ -921,7 +942,11 @@ function getRoleBadgeColor(role) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('companyModal')).hide();
+                    if (companyModalInstance) {
+                        companyModalInstance.hide();
+                    } else {
+                        bootstrap.Modal.getInstance(document.getElementById('companyModal'))?.hide();
+                    }
                     loadCompanies();
                     updateAssignedUsersPreview();
                     alert('Company saved successfully!');
@@ -942,6 +967,7 @@ function getRoleBadgeColor(role) {
                 
                 if (data.success) {
                     const company = data.company;
+                    lastCompanyModalTrigger = document.activeElement;
                     document.getElementById('companyModalTitle').textContent = 'Edit Company';
                     document.getElementById('companyId').value = company.id;
                     document.getElementById('companyName').value = company.name;
@@ -959,8 +985,14 @@ function getRoleBadgeColor(role) {
                     }
 
                     updateAssignedUsersPreview();
-                    
-                    new bootstrap.Modal(document.getElementById('companyModal')).show();
+
+                    if (!companyModalInstance) {
+                        const modalEl = document.getElementById('companyModal');
+                        companyModalInstance = modalEl ? new bootstrap.Modal(modalEl) : null;
+                    }
+                    if (companyModalInstance) {
+                        companyModalInstance.show();
+                    }
                 }
                 
             } catch (error) {
