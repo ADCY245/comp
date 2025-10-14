@@ -23,7 +23,10 @@ const UserCompanyManager = () => {
       const data = await response.json();
       
       if (data.success) {
-        setUsers(data.data);
+        const filteredUsers = Array.isArray(data.data)
+          ? data.data.filter(user => ['user', 'admin'].includes((user.role || '').toLowerCase()))
+          : [];
+        setUsers(filteredUsers);
         setTotalPages(data.pagination.total_pages);
       } else {
         throw new Error(data.error || 'Failed to fetch users');
