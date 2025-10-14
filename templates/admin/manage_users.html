@@ -217,6 +217,9 @@
                                     </button>
                                 </div>
                             </div>
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm" id="companyAssignmentSearch" placeholder="Search companies">
+                            </div>
                             <div id="companyCheckboxList" class="border p-3 rounded" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
                                 <div id="companyLoading" class="text-center py-3">
                                     <div class="spinner-border text-success" role="status">
@@ -578,6 +581,7 @@ function getRoleBadgeColor(role) {
         async function loadAllCompaniesForAssignment(selectedCompanyIds = []) {
             const loadingIndicator = document.getElementById('companyLoading');
             const companyList = document.getElementById('companyCheckboxList');
+            const searchInput = document.getElementById('companyAssignmentSearch');
 
             if (!companyList) return;
 
@@ -591,11 +595,20 @@ function getRoleBadgeColor(role) {
                     const data = await response.json();
 
                     if (data.success) {
-                        allCompaniesForAssignment = data.companies || [];
+                        allCompaniesForAssignment = Array.isArray(data.companies) ? data.companies : [];
                     } else {
                         throw new Error(data.error || 'Failed to load companies');
                     }
                 }
+
+                allCompaniesForAssignment = Array.isArray(allCompaniesForAssignment) ? allCompaniesForAssignment : [];
+                allCompaniesForAssignment.sort((a, b) => {
+                    const nameA = (a.name || '').toLowerCase();
+                    const nameB = (b.name || '').toLowerCase();
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+                    return 0;
+                });
 
                 companyList.innerHTML = '';
 
@@ -604,14 +617,20 @@ function getRoleBadgeColor(role) {
                     return;
                 }
 
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+
                 const selectedSet = new Set((selectedCompanyIds || []).map(String));
 
                 allCompaniesForAssignment.forEach(company => {
                     const companyId = String(company.id || company._id || '');
                     if (!companyId) return;
 
+                    const searchValue = `${(company.name || '').toLowerCase()} ${(company.email || '').toLowerCase()}`.trim();
                     const wrapper = document.createElement('div');
-                    wrapper.className = 'form-check mb-2';
+                    wrapper.className = 'form-check mb-2 company-checkbox-wrapper';
+                    wrapper.dataset.search = searchValue;
                     wrapper.innerHTML = `
                         <input class="form-check-input company-checkbox" type="checkbox" value="${companyId}" id="assign-company-${companyId}" ${selectedSet.has(companyId) ? 'checked' : ''}>
                         <label class="form-check-label" for="assign-company-${companyId}">
@@ -621,6 +640,10 @@ function getRoleBadgeColor(role) {
                     `;
                     companyList.appendChild(wrapper);
                 });
+
+                document.querySelectorAll('.company-checkbox-wrapper').forEach(item => {
+                    item.style.display = '';
+                });
             } catch (error) {
                 console.error('Error loading companies for assignment:', error);
                 companyList.innerHTML = `<div class="alert alert-danger">${error.message || 'Failed to load companies.'}</div>`;
@@ -629,6 +652,17 @@ function getRoleBadgeColor(role) {
                     loadingIndicator.style.display = 'none';
                 }
             }
+        }
+
+        const companyAssignmentSearch = document.getElementById('companyAssignmentSearch');
+        if (companyAssignmentSearch) {
+            companyAssignmentSearch.addEventListener('input', () => {
+                const term = companyAssignmentSearch.value.trim().toLowerCase();
+                document.querySelectorAll('.company-checkbox-wrapper').forEach(item => {
+                    const text = item.dataset.search || '';
+                    item.style.display = term ? (text.includes(term) ? '' : 'none') : '';
+                });
+            });
         }
 
         // Toggle assignment sections based on role
