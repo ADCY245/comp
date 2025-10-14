@@ -399,6 +399,7 @@ def admin_create_user():
 
                 result = mongo_db.users.insert_one(new_user)
                 new_user['id'] = str(result.inserted_id)
+                sync_user_company_links(new_user['id'], assigned_companies)
                 return jsonify({'success': True, 'user': serialize_admin_user(new_user)})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_create_user: {mongo_error}")
@@ -424,6 +425,7 @@ def admin_create_user():
 
         users[user_id] = new_user
         save_users(users)
+        sync_user_company_links(user_id, assigned_companies)
         return jsonify({'success': True, 'user': serialize_admin_user(new_user)})
     except Exception as e:
         app.logger.error(f"Error in admin_create_user: {e}")
@@ -460,6 +462,7 @@ def admin_update_user(user_id):
 
                 user_doc = mongo_db.users.find_one({'_id': ObjectId(user_id)})
                 user_doc['id'] = str(user_doc.pop('_id'))
+                sync_user_company_links(user_doc['id'], user_doc.get('assigned_companies', []))
                 return jsonify({'success': True, 'user': serialize_admin_user(user_doc)})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_update_user: {mongo_error}")
@@ -484,6 +487,7 @@ def admin_update_user(user_id):
         user['updated_at'] = datetime.utcnow().isoformat()
         users[user_id] = user
         save_users(users)
+        sync_user_company_links(user_id, user.get('assigned_companies', []))
         return jsonify({'success': True, 'user': serialize_admin_user(user)})
     except Exception as e:
         app.logger.error(f"Error in admin_update_user: {e}")
@@ -501,6 +505,7 @@ def admin_delete_user(user_id):
                 result = mongo_db.users.delete_one({'_id': ObjectId(user_id)})
                 if result.deleted_count == 0:
                     return jsonify({'success': False, 'error': 'User not found'}), 404
+                sync_user_company_links(user_id, [])
                 return jsonify({'success': True})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_delete_user: {mongo_error}")
@@ -512,6 +517,7 @@ def admin_delete_user(user_id):
 
         users.pop(user_id)
         save_users(users)
+        sync_user_company_links(user_id, [])
         return jsonify({'success': True})
     except Exception as e:
         app.logger.error(f"Error in admin_delete_user: {e}")
@@ -582,6 +588,7 @@ def admin_create_company():
                 }
                 result = mongo_db.companies.insert_one(company_data)
                 company_data['id'] = str(result.inserted_id)
+                sync_company_user_links(company_data['id'], assigned_to)
                 return jsonify({'success': True, 'company': serialize_admin_company(company_data)})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_create_company: {mongo_error}")
@@ -598,6 +605,7 @@ def admin_create_company():
 
         companies.append(new_company)
         save_companies_data(companies)
+        sync_company_user_links(new_company['id'], assigned_to)
         return jsonify({'success': True, 'company': serialize_admin_company(new_company)})
     except Exception as e:
         app.logger.error(f"Error in admin_create_company: {e}")
@@ -610,6 +618,7 @@ def admin_create_company():
 def admin_update_company(company_id):
     try:
         data = request.get_json() or {}
+        assigned_to_payload = data.get('assigned_to') if 'assigned_to' in data else None
 
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             try:
@@ -630,7 +639,9 @@ def admin_update_company(company_id):
 
                 company_doc = mongo_db.companies.find_one({'_id': ObjectId(company_id)})
                 company_doc['id'] = str(company_doc.pop('_id'))
-                return jsonify({'success': True, 'company': serialize_admin_company(company_doc)})
+                serialized_company = serialize_admin_company(company_doc)
+                sync_company_user_links(serialized_company.get('id'), serialized_company.get('assigned_to', []))
+                return jsonify({'success': True, 'company': serialized_company})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_update_company: {mongo_error}")
                 return jsonify({'success': False, 'error': 'Database error'}), 500
@@ -655,6 +666,7 @@ def admin_update_company(company_id):
             return jsonify({'success': False, 'error': 'Company not found'}), 404
 
         save_companies_data(companies)
+        sync_company_user_links(company_id, updated.get('assigned_to', []))
         return jsonify({'success': True, 'company': updated})
     except Exception as e:
         app.logger.error(f"Error in admin_update_company: {e}")
@@ -672,6 +684,7 @@ def admin_delete_company(company_id):
                 result = mongo_db.companies.delete_one({'_id': ObjectId(company_id)})
                 if result.deleted_count == 0:
                     return jsonify({'success': False, 'error': 'Company not found'}), 404
+                sync_company_user_links(company_id, [])
                 return jsonify({'success': True})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_delete_company: {mongo_error}")
@@ -691,6 +704,7 @@ def admin_delete_company(company_id):
             return jsonify({'success': False, 'error': 'Company not found'}), 404
 
         save_companies_data(new_companies)
+        sync_company_user_links(company_id, [])
         return jsonify({'success': True})
     except Exception as e:
         app.logger.error(f"Error in admin_delete_company: {e}")
@@ -1132,6 +1146,152 @@ def serialize_admin_company(company_doc):
         'address': company_doc.get('address') or company_doc.get('Address', ''),
         'assigned_to': normalize_assigned_companies(company_doc.get('assigned_to', []))
     }
+
+
+def _extract_company_id(company_dict):
+    if not company_dict:
+        return ''
+    return str(
+        company_dict.get('id') or
+        company_dict.get('_id') or
+        company_dict.get('Company ID') or ''
+    )
+
+
+def _extract_company_assigned_users(company_dict):
+    existing = company_dict.get('assigned_to', []) if isinstance(company_dict, dict) else []
+    return normalize_assigned_companies(existing)
+
+
+def sync_user_company_links(user_id, assigned_company_ids):
+    user_id = str(user_id or '').strip()
+    assigned_set = set(normalize_assigned_companies(assigned_company_ids))
+
+    if not user_id:
+        return
+
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+            except Exception as ping_error:
+                app.logger.error(f"Mongo ping failed in sync_user_company_links: {ping_error}")
+                return
+
+            # Remove user from companies no longer assigned
+            try:
+                current_cursor = mongo_db.companies.find({'assigned_to': user_id}, {'assigned_to': 1})
+                for company in current_cursor:
+                    cid_str = str(company.get('_id'))
+                    if cid_str not in assigned_set:
+                        mongo_db.companies.update_one({'_id': company['_id']}, {'$pull': {'assigned_to': user_id}})
+            except Exception as remove_error:
+                app.logger.error(f"Error removing user-company links: {remove_error}")
+
+            # Ensure user is added to newly assigned companies
+            for cid in assigned_set:
+                try:
+                    if ObjectId.is_valid(cid):
+                        mongo_db.companies.update_one({'_id': ObjectId(cid)}, {'$addToSet': {'assigned_to': user_id}})
+                    else:
+                        app.logger.warning(f"Cannot sync company assignment for user {user_id} due to invalid company id: {cid}")
+                except Exception as add_error:
+                    app.logger.error(f"Error adding user {user_id} to company {cid}: {add_error}")
+        else:
+            companies = load_companies_data()
+            updated = False
+            for company in companies:
+                cid = _extract_company_id(company)
+                if not cid:
+                    continue
+                current_users = _extract_company_assigned_users(company)
+                if cid in assigned_set:
+                    if user_id not in current_users:
+                        current_users.append(user_id)
+                        updated = True
+                else:
+                    if user_id in current_users:
+                        current_users = [uid for uid in current_users if uid != user_id]
+                        updated = True
+                company['assigned_to'] = current_users
+
+            if updated:
+                save_companies_data(companies)
+    except Exception as e:
+        app.logger.error(f"Unexpected error in sync_user_company_links: {e}", exc_info=True)
+
+
+def _extract_user_assigned_companies(user_record):
+    if isinstance(user_record, User):
+        return normalize_assigned_companies(getattr(user_record, 'assigned_companies', []))
+    if isinstance(user_record, dict):
+        return normalize_assigned_companies(user_record.get('assigned_companies', []))
+    return []
+
+
+def _set_user_assigned_companies(user_record, assignments):
+    normalized = normalize_assigned_companies(assignments)
+    if isinstance(user_record, User):
+        user_record.assigned_companies = normalized
+    elif isinstance(user_record, dict):
+        user_record['assigned_companies'] = normalized
+
+
+def sync_company_user_links(company_id, assigned_user_ids):
+    company_id = str(company_id or '').strip()
+    assigned_set = set(normalize_assigned_companies(assigned_user_ids))
+
+    if not company_id:
+        return
+
+    try:
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+            except Exception as ping_error:
+                app.logger.error(f"Mongo ping failed in sync_company_user_links: {ping_error}")
+                return
+
+            try:
+                current_cursor = mongo_db.users.find({'assigned_companies': company_id}, {'assigned_companies': 1})
+                processed = set()
+                for user in current_cursor:
+                    uid_str = str(user.get('_id'))
+                    processed.add(uid_str)
+                    if uid_str not in assigned_set:
+                        mongo_db.users.update_one({'_id': user['_id']}, {'$pull': {'assigned_companies': company_id}})
+
+                for uid in assigned_set:
+                    try:
+                        if ObjectId.is_valid(uid):
+                            mongo_db.users.update_one({'_id': ObjectId(uid)}, {'$addToSet': {'assigned_companies': company_id}})
+                        else:
+                            mongo_db.users.update_one({'_id': uid}, {'$addToSet': {'assigned_companies': company_id}})
+                    except Exception as add_error:
+                        app.logger.error(f"Error syncing company {company_id} to user {uid}: {add_error}")
+            except Exception as mongo_error:
+                app.logger.error(f"Error syncing company-user links (mongo): {mongo_error}")
+        else:
+            users_dict = load_users()
+            updated = False
+            for uid, record in users_dict.items():
+                uid_str = str(getattr(record, 'id', uid))
+                current = _extract_user_assigned_companies(record)
+                if uid_str in assigned_set:
+                    if company_id not in current:
+                        current.append(company_id)
+                        updated = True
+                        _set_user_assigned_companies(record, current)
+                else:
+                    if company_id in current:
+                        current = [cid for cid in current if cid != company_id]
+                        _set_user_assigned_companies(record, current)
+                        updated = True
+
+            if updated:
+                save_users(users_dict)
+    except Exception as e:
+        app.logger.error(f"Unexpected error in sync_company_user_links: {e}", exc_info=True)
 
 
 def serialize_admin_quotation(q_doc):
@@ -2576,6 +2736,7 @@ def load_companies_data():
                     'EmailID': 1,
                     'name': 1,
                     'email': 1,
+                    'assigned_to': 1,
                     'created_at': 1,
                     'created_by': 1
                 }
