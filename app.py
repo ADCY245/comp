@@ -524,7 +524,7 @@ def admin_delete_user(user_id):
 def admin_list_companies():
     try:
         page = max(int(request.args.get('page', 0)), 0)
-        limit = min(max(int(request.args.get('limit', 10)), 1), 100)
+        limit = max(min(int(request.args.get('limit', 10)), 1000), 1)
 
         companies = load_companies_data()
         serialized = [serialize_admin_company(company) for company in companies]

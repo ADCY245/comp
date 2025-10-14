@@ -646,6 +646,11 @@ function getRoleBadgeColor(role) {
             }
         }
 
+        function getSelectedCompanyIds() {
+            const checkboxes = document.querySelectorAll('.company-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
         // Show add user modal
         function showAddUserModal() {
             const modal = new bootstrap.Modal(document.getElementById('userModal'));
