@@ -1139,12 +1139,14 @@ def serialize_admin_company(company_doc):
     if not company_doc:
         return {}
     cid = str(company_doc.get('id') or company_doc.get('_id') or company_doc.get('Company ID', ''))
+    assigned = normalize_assigned_companies(company_doc.get('assigned_to', []))
     return {
         'id': cid,
         'name': company_doc.get('name') or company_doc.get('Company Name') or 'N/A',
         'email': company_doc.get('email') or company_doc.get('EmailID') or '',
         'address': company_doc.get('address') or company_doc.get('Address', ''),
-        'assigned_to': normalize_assigned_companies(company_doc.get('assigned_to', []))
+        'assigned_to': assigned,
+        'assigned_to_count': len(assigned)
     }
 
 

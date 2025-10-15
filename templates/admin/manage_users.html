@@ -581,7 +581,7 @@ function getRoleBadgeColor(role) {
             item.innerHTML = `
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${company.name}</h6>
+                        <h6 class="mb-1">${company.name} <span class="badge bg-info">${company.assigned_to_count}</span></h6>
                         <p class="mb-1 text-muted">${company.email}</p>
                         <small class="text-muted">${company.address || 'No address provided'}</small>
                     </div>
