@@ -436,22 +436,17 @@
             
             modalBody.innerHTML = `
                 <div class="row mb-4">
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <h6>Quotation Information</h6>
                         <p><strong>From:</strong> ${quotation.from_company || quotation.username || 'Chemo Graphic International'}<br>
-                           <small class="text-muted">${quotation.from_email || quotation.prepared_by_email || ''}</small></p>
+                           <small class="text-muted">${quotation.from_email || quotation.prepared_by_email || quotation.user_email || ''}</small></p>
                         <p><strong>Prepared By:</strong> ${quotation.prepared_by_name || quotation.username || 'N/A'}<br>
                            <small class="text-muted">${quotation.prepared_by_email || quotation.user_email || ''}</small></p>
-                        <p><strong>To:</strong> ${quotation.company_name || 'N/A'}<br>
-                           <small class="text-muted">${quotation.company_email || ''}</small></p>
+                        <p><strong>To:</strong> ${(quotation.company_name && quotation.company_name !== 'Not specified') ? quotation.company_name : (quotation.company_email || 'Customer')}<br>
+                           ${quotation.company_email ? `<small class="text-muted">${quotation.company_email}</small>` : ''}</p>
                         <p><strong>Date:</strong> ${createdDate} at ${createdTime}</p>
                         <p><strong>Quotation ID:</strong> ${quotation.id}</p>
                         <p><strong>Products:</strong> ${quotation.products_count || (quotation.products ? quotation.products.length : 0)}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>User Information</h6>
-                        <p><strong>User:</strong> ${quotation.username || 'N/A'}</p>
-                        <p><strong>Email:</strong> ${quotation.user_email || 'N/A'}</p>
                     </div>
                 </div>
                 

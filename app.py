@@ -51,6 +51,10 @@ print("===========================\n")
 # Timezone for sequential IDs
 IST = timezone(timedelta(hours=5, minutes=30))
 
+def get_india_time():
+    """Return current IST-aware datetime."""
+    return datetime.now(IST)
+
 def get_next_quote_id():
     """Return next sequential quotation id like CGI_Q1, CGI_Q2 ... (fallback timestamp)"""
     if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
@@ -4327,7 +4331,10 @@ def send_quotation():
         
         if not customer_email:
             return jsonify({'error': 'Customer email is required'}), 400
-            
+
+        if not customer_name or customer_name == 'Not specified':
+            customer_name = customer_email or 'Customer'
+
         # Update session with the latest values
         if customer_name and customer_name != 'Not specified':
             # Update user's company info in database if using MongoDB
@@ -4358,8 +4365,9 @@ def send_quotation():
         user_email = current_user.email if hasattr(current_user, 'email') else None
         recipients = list({email for email in [customer_email, 'operations@chemo.in', user_email] if email})
 
-        # Get current date
-        today = datetime.utcnow().strftime('%d/%m/%Y')
+        quote_generated_at = get_india_time()
+        quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
+        quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
         # Table rows with header
         rows_html = """
@@ -4516,12 +4524,17 @@ def send_quotation():
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
 
-        # Compute quotation subtotal/discount totals before persistence to avoid undefined variables
         subtotal_before_discount = sum(p.get("calculations", {}).get("subtotal", 0) for p in products)
         total_discount = sum(p.get("calculations", {}).get("discount_amount", 0) for p in products)
         subtotal_after_discount = sum(p.get("calculations", {}).get("taxable_amount", 0) for p in products)
         total_gst = sum(p.get("calculations", {}).get("gst_amount", 0) for p in products)
         total = subtotal_after_discount + total_gst
+
+        subtotal_before_discount = round(subtotal_before_discount, 2)
+        total_discount = round(total_discount, 2)
+        subtotal_after_discount = round(subtotal_after_discount, 2)
+        total_gst = round(total_gst, 2)
+        total = round(total, 2)
 
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
@@ -4533,7 +4546,7 @@ def send_quotation():
             <div style='text-align: center; margin-bottom: 2rem;'>
               <img src='https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
               <h2 style='margin: 0 0 0.5rem 0; color: #2c3e50;'>QUOTATION</h2>
-              <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{today}</p>
+              <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
             </div>
             
             <div style='display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;'>
@@ -4581,7 +4594,7 @@ def send_quotation():
                   </div>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation Date</div>
-                    <div>{today}</div>
+                    <div>{quote_date_display} | {quote_time_display}</div>
                   </div>
                   <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation #</div>
@@ -4703,6 +4716,7 @@ def send_quotation():
                 mongo_db.quotations.insert_one({
                     'quote_id': quote_id,
                     'created_at': datetime.utcnow(),
+                    'created_at_ist': quote_generated_at.isoformat(),
                     'from_company': 'CGI - Chemo Graphics INTERNATIONAL',
                     'from_email': 'info@chemo.in',
                     'prepared_by_name': current_user.username,
@@ -4722,14 +4736,16 @@ def send_quotation():
                     'total_amount_post_gst': total,
                     'total_gst': total_gst,
                     'discount_text': discount_text,
-                    'notes': notes
+                    'notes': notes,
+                    'generated_at_time_display': quote_time_display,
+                    'generated_at_date_display': quote_date_display
                 })
             except Exception as db_err:
                 app.logger.error(f"Failed to save quotation: {db_err}")
 
         email_sent = send_email_resend(
             to=recipients,
-            subject=f"Quotation from Chemo INTERNATIONAL - {today}",
+            subject=f"Quotation from Chemo INTERNATIONAL - {quote_date_display}",
             html=email_content
         )
 
@@ -4749,6 +4765,9 @@ def send_quotation():
             'message': 'Quotation processed successfully',
             'email_sent': email_sent,
             'quote_id': quote_id,
+            'generated_at': quote_generated_at.isoformat(),
+            'generated_at_date': quote_date_display,
+            'generated_at_time': quote_time_display,
             'company': {
                 'id': session.get('selected_company', {}).get('id'),
                 'name': session.get('selected_company', {}).get('name'),
