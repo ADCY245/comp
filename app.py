@@ -4408,7 +4408,7 @@ def send_quotation():
         quote_generated_at = get_india_time()
         quote_generated_at_utc = quote_generated_at.astimezone(timezone.utc)
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
-        quote_time_display = quote_generated_at.strftime('%I:%M %p')
+        quote_time_display = quote_generated_at.strftime('%I:%M %p IST')
 
         # Table rows with header
         rows_html = """
