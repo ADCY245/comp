@@ -574,14 +574,22 @@ function getRoleBadgeColor(role) {
             });
         }
         
-        // Create company item element
-        function createCompanyItem(company) {
-            const item = document.createElement('div');
-            item.className = 'company-item';
-            item.innerHTML = `
+        function getCompanyAssignedCount(company) {
+            if (typeof company.assigned_to_count === 'number') {
+                return company.assigned_to_count;
+            }
+            if (Array.isArray(company.assigned_to)) {
+                return company.assigned_to.length;
+            }
+            return 0;
+        }
+
+        function buildCompanyItemContent(company) {
+            const assignedCount = getCompanyAssignedCount(company);
+            return `
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${company.name} <span class="badge bg-info">${company.assigned_to_count}</span></h6>
+                        <h6 class="mb-1">${company.name} <span class="badge bg-info">${assignedCount}</span></h6>
                         <p class="mb-1 text-muted">${company.email}</p>
                         <small class="text-muted">${company.address || 'No address provided'}</small>
                     </div>
@@ -595,7 +603,40 @@ function getRoleBadgeColor(role) {
                     </div>
                 </div>
             `;
+        }
+
+        // Create company item element
+        function createCompanyItem(company) {
+            const item = document.createElement('div');
+            item.className = 'company-item';
+            item.dataset.companyId = company.id || '';
+            item.innerHTML = buildCompanyItemContent(company);
             return item;
+        }
+
+        function updateCompanyItem(company) {
+            const container = document.getElementById('companiesList');
+            if (!container || !company || !company.id) {
+                return;
+            }
+            const existing = container.querySelector(`.company-item[data-company-id="${company.id}"]`);
+            if (existing) {
+                existing.innerHTML = buildCompanyItemContent(company);
+            } else {
+                const item = createCompanyItem(company);
+                container.prepend(item);
+            }
+        }
+
+        function removeCompanyItem(companyId) {
+            const container = document.getElementById('companiesList');
+            if (!container) {
+                return;
+            }
+            const target = container.querySelector(`.company-item[data-company-id="${companyId}"]`);
+            if (target) {
+                target.remove();
+            }
         }
         
         async function loadAllCompaniesForAssignment(selectedCompanyIds = []) {
@@ -816,14 +857,12 @@ function getRoleBadgeColor(role) {
             .then(data => {
                 if (data.success) {
                     showToast(userId ? 'User updated successfully' : 'User created successfully', 'success');
-                    loadUsers();
                     const modalInstance = bootstrap.Modal.getInstance(document.getElementById('userModal'));
                     if (modalInstance) {
                         modalInstance.hide();
                     }
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 300);
+                    loadUsers();
+                    loadCompanies();
                 } else {
                     throw new Error(data.error || 'Failed to save user');
                 }
@@ -962,7 +1001,19 @@ function getRoleBadgeColor(role) {
                     } else {
                         bootstrap.Modal.getInstance(document.getElementById('companyModal'))?.hide();
                     }
-                    loadCompanies();
+
+                    if (result.company) {
+                        updateCompanyItem(result.company);
+                    } else {
+                        loadCompanies();
+                    }
+
+                    if (Array.isArray(result.users)) {
+                        result.users.forEach(user => updateUserRow(user));
+                    } else {
+                        loadUsers();
+                    }
+
                     updateAssignedUsersPreview();
                     alert('Company saved successfully!');
                 } else {
@@ -1025,7 +1076,12 @@ function getRoleBadgeColor(role) {
                     const result = await response.json();
                     
                     if (result.success) {
-                        loadCompanies();
+                        removeCompanyItem(companyId);
+                        if (Array.isArray(result.users)) {
+                            result.users.forEach(user => updateUserRow(user));
+                        } else {
+                            loadUsers();
+                        }
                         alert('Company deleted successfully!');
                     } else {
                         alert('Error deleting company: ' + result.error);
