@@ -4325,10 +4325,49 @@ def send_quotation():
                     'Not specified'
                 )
         
+        if (customer_name == 'Not specified' or not customer_name) and customer_email:
+            # Try Mongo lookup by email
+            if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+                try:
+                    company_doc = mongo_db.companies.find_one({'EmailID': customer_email})
+                    if company_doc:
+                        customer_name = (
+                            company_doc.get('Company Name') or
+                            company_doc.get('name') or
+                            customer_name
+                        )
+                except Exception as lookup_error:
+                    app.logger.error(f"Error looking up company by email: {lookup_error}")
+
+            # JSON fallback lookup
+            if (customer_name == 'Not specified' or not customer_name):
+                try:
+                    file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
+                    if os.path.exists(file_path):
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            companies = json.load(f)
+                        if isinstance(companies, dict):
+                            companies = companies.get('companies', [])
+                        match = next(
+                            (
+                                c for c in companies
+                                if (c.get('EmailID') or c.get('email') or '').lower() == customer_email.lower()
+                            ),
+                            None
+                        )
+                        if match:
+                            customer_name = (
+                                match.get('Company Name') or
+                                match.get('name') or
+                                customer_name
+                            )
+                except Exception as file_error:
+                    app.logger.error(f"Error loading company email mappings: {file_error}")
+
         # Final fallback to user's email if still no email
         if not customer_email and hasattr(current_user, 'email'):
             customer_email = current_user.email
-        
+
         if not customer_email:
             return jsonify({'error': 'Customer email is required'}), 400
 
@@ -4366,6 +4405,7 @@ def send_quotation():
         recipients = list({email for email in [customer_email, 'operations@chemo.in', user_email] if email})
 
         quote_generated_at = get_india_time()
+        quote_generated_at_utc = quote_generated_at.astimezone(timezone.utc)
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
         quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
@@ -4715,7 +4755,8 @@ def send_quotation():
             try:
                 mongo_db.quotations.insert_one({
                     'quote_id': quote_id,
-                    'created_at': datetime.utcnow(),
+                    'created_at': quote_generated_at_utc,
+                    'created_at_iso': quote_generated_at_utc.isoformat(),
                     'created_at_ist': quote_generated_at.isoformat(),
                     'from_company': 'CGI - Chemo Graphics INTERNATIONAL',
                     'from_email': 'info@chemo.in',
