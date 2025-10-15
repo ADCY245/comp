@@ -56,21 +56,22 @@ def get_india_time():
     return datetime.now(IST)
 
 def get_next_quote_id():
-    """Return next sequential quotation id like CGI_Q1, CGI_Q2 ... (fallback timestamp)"""
+    """Return next sequential quotation id like CGI_Q0001, CGI_Q0002 ..."""
     if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
         try:
-            last = mongo_db.quotations.find_one(
-                {'quote_id': {'$regex': r'^CGI_Q\\d+$'}},
-                sort=[('quote_id', -1)]
+            counter = mongo_db.counters.find_one_and_update(
+                {'_id': 'quotation_sequence'},
+                {'$inc': {'seq': 1}},
+                upsert=True,
+                return_document=True
             )
-            if last and 'quote_id' in last:
-                num = int(last['quote_id'].split('Q')[-1]) + 1
-            else:
-                num = 1
-            return f"CGI_Q{num}"
+            seq = counter.get('seq', 1)
+            if seq <= 0:
+                seq = mongo_db.quotations.count_documents({'quote_id': {'$regex': r'^CGI_Q\d+$'}}) + 1
+                mongo_db.counters.update_one({'_id': 'quotation_sequence'}, {'$set': {'seq': seq}}, upsert=True)
+            return f"CGI_Q{seq:04d}"
         except Exception as e:
             app.logger.error(f"Failed to generate sequential quotation id: {e}")
-    # Fallback timestamp-based
     return f"CGI_Q{int(datetime.now(IST).timestamp())}"
 
 # CORS Configuration
