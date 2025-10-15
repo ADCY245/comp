@@ -1345,8 +1345,12 @@ def serialize_admin_quotation(q_doc):
     if not q_doc:
         return {}
     qid = str(q_doc.get('quote_id') or q_doc.get('id') or q_doc.get('_id') or '')
-    total_pre = _parse_float(q_doc.get('total_amount_pre_gst') or q_doc.get('total_pre_gst'))
+    total_pre = _parse_float(q_doc.get('total_amount_pre_gst') or q_doc.get('subtotal_pre_gst') or q_doc.get('total_pre_gst'))
     total_post = _parse_float(q_doc.get('total_amount_post_gst') or q_doc.get('total_post_gst'))
+    total_gst = _parse_float(q_doc.get('total_gst') or q_doc.get('gst_amount'))
+    subtotal_before_discount = _parse_float(q_doc.get('subtotal_before_discount'))
+    subtotal_after_discount = _parse_float(q_doc.get('subtotal_after_discount') or q_doc.get('total_amount_pre_gst'))
+    total_discount = _parse_float(q_doc.get('total_discount'))
     return {
         'id': qid,
         'username': q_doc.get('username') or q_doc.get('user_name', ''),
@@ -1356,6 +1360,17 @@ def serialize_admin_quotation(q_doc):
         'products_count': q_doc.get('products_count') or len(q_doc.get('products', [])),
         'total_amount_pre_gst': total_pre,
         'total_amount_post_gst': total_post,
+        'total_gst': total_gst,
+        'subtotal_before_discount': subtotal_before_discount,
+        'subtotal_after_discount': subtotal_after_discount,
+        'total_discount': total_discount,
+        'discount_text': q_doc.get('discount_text', ''),
+        'from_company': q_doc.get('from_company', ''),
+        'from_email': q_doc.get('from_email', ''),
+        'prepared_by_name': q_doc.get('prepared_by_name', q_doc.get('username', '')),
+        'prepared_by_email': q_doc.get('prepared_by_email', q_doc.get('user_email', '')),
+        'notes': q_doc.get('notes', ''),
+        'products': q_doc.get('products', []),
         'created_at': str(q_doc.get('created_at') or '')
     }
 
@@ -4676,15 +4691,25 @@ def send_quotation():
                 mongo_db.quotations.insert_one({
                     'quote_id': quote_id,
                     'created_at': datetime.utcnow(),
+                    'from_company': 'CGI - Chemo Graphics INTERNATIONAL',
+                    'from_email': 'info@chemo.in',
+                    'prepared_by_name': current_user.username,
+                    'prepared_by_email': current_user.email,
                     'user_id': str(current_user.id),
                     'username': current_user.username,
                     'user_email': current_user.email,
                     'company_name': customer_name,
                     'company_email': customer_email,
                     'products': products,
+                    'products_count': len(products),
+                    'subtotal_before_discount': subtotal_before_discount,
+                    'total_discount': total_discount,
+                    'subtotal_after_discount': subtotal_after_discount,
                     'total_amount_pre_gst': subtotal_after_discount,
+                    'gst_amount': total_gst,
                     'total_amount_post_gst': total,
                     'total_gst': total_gst,
+                    'discount_text': discount_text,
                     'notes': notes
                 })
             except Exception as db_err:

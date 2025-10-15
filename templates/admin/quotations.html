@@ -438,11 +438,15 @@
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6>Quotation Information</h6>
-                        <p><strong>From:</strong> Chemo Graphic International</p>
-                        <p><strong>To:</strong> ${quotation.company_name || 'N/A'}</p>
+                        <p><strong>From:</strong> ${quotation.from_company || quotation.username || 'Chemo Graphic International'}<br>
+                           <small class="text-muted">${quotation.from_email || quotation.prepared_by_email || ''}</small></p>
+                        <p><strong>Prepared By:</strong> ${quotation.prepared_by_name || quotation.username || 'N/A'}<br>
+                           <small class="text-muted">${quotation.prepared_by_email || quotation.user_email || ''}</small></p>
+                        <p><strong>To:</strong> ${quotation.company_name || 'N/A'}<br>
+                           <small class="text-muted">${quotation.company_email || ''}</small></p>
                         <p><strong>Date:</strong> ${createdDate} at ${createdTime}</p>
                         <p><strong>Quotation ID:</strong> ${quotation.id}</p>
-                        <p><strong>Products:</strong> ${quotation.products ? quotation.products.length : 0}</p>
+                        <p><strong>Products:</strong> ${quotation.products_count || (quotation.products ? quotation.products.length : 0)}</p>
                     </div>
                     <div class="col-md-6">
                         <h6>User Information</h6>
@@ -462,10 +466,13 @@
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h6>Amount Summary</h6>
-                                <p class="mb-1">Pre-GST: ₹${(quotation.total_amount_pre_gst || 0).toLocaleString('en-IN')}</p>
-                                <p class="mb-1">GST: ₹${(quotation.gst_amount || 0).toLocaleString('en-IN')}</p>
+                                <p class="mb-1">Subtotal (Pre-Discount): ₹${(quotation.subtotal_before_discount || quotation.total_amount_pre_gst || 0).toLocaleString('en-IN')}</p>
+                                <p class="mb-1">Discount: -₹${(quotation.total_discount || 0).toLocaleString('en-IN')}</p>
+                                <p class="mb-1">Subtotal (After Discount): ₹${(quotation.subtotal_after_discount || quotation.total_amount_pre_gst || 0).toLocaleString('en-IN')}</p>
+                                <p class="mb-1">GST: ₹${(quotation.total_gst || quotation.gst_amount || 0).toLocaleString('en-IN')}</p>
                                 <hr>
-                                <h5 class="text-success">Total: ₹${(quotation.total_amount_post_gst || 0).toLocaleString('en-IN')}</h5>
+                                <h5 class="text-success">Total (After GST): ₹${(quotation.total_amount_post_gst || 0).toLocaleString('en-IN')}</h5>
+                                ${quotation.discount_text ? `<small class="text-muted">Discounts Applied: ${quotation.discount_text}</small>` : ''}
                             </div>
                         </div>
                     </div>
