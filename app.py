@@ -761,7 +761,10 @@ def admin_list_quotations():
                 mongo_db.command('ping')
                 cursor = mongo_db.quotations.find({}).sort('created_at', -1)
                 for doc in cursor:
-                    doc['id'] = str(doc.pop('_id'))
+                    mongo_id = str(doc.get('_id'))
+                    doc['mongo_id'] = mongo_id
+                    doc['id'] = doc.get('quote_id') or mongo_id
+                    doc.pop('_id', None)
                     quotations.append(serialize_admin_quotation(doc))
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_list_quotations: {mongo_error}")
@@ -780,10 +783,25 @@ def admin_get_quotation(quotation_id):
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             try:
                 mongo_db.command('ping')
-                doc = mongo_db.quotations.find_one({'_id': ObjectId(quotation_id)})
+                query = {}
+                if ObjectId.is_valid(quotation_id):
+                    query['_id'] = ObjectId(quotation_id)
+                else:
+                    query['quote_id'] = quotation_id
+
+                doc = mongo_db.quotations.find_one(query)
+
+                if not doc and '_id' in query:
+                    # If lookup by ObjectId failed or quotation_id was formatted, try quote_id as fallback
+                    doc = mongo_db.quotations.find_one({'quote_id': quotation_id})
+
                 if not doc:
                     return jsonify({'success': False, 'error': 'Quotation not found'}), 404
-                doc['id'] = str(doc.pop('_id'))
+
+                mongo_id = str(doc.get('_id'))
+                doc['mongo_id'] = mongo_id
+                doc['id'] = doc.get('quote_id') or mongo_id
+                doc.pop('_id', None)
                 return jsonify({'success': True, 'quotation': serialize_admin_quotation(doc)})
             except Exception as mongo_error:
                 app.logger.error(f"Mongo error in admin_get_quotation: {mongo_error}")
@@ -4458,9 +4476,9 @@ def send_quotation():
         # Generate discount text for email
         discount_text = []
         if blanket_discounts:
-            discount_text.append(f"{max(blanket_discounts):.1f}% ")
+            discount_text.append(f"{max(blanket_discounts):.1f}% Blanket")
         if mpack_discounts:
-            discount_text.append(f"{max(mpack_discounts):.1f}% ")
+            discount_text.append(f"{max(mpack_discounts):.1f}% Underpacking")
         discount_text = ", ".join(discount_text)
         
         # Calculate total discount amount
@@ -4473,7 +4491,7 @@ def send_quotation():
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
         
-                                # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
+        # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
         # Build email content with improved table layout and consistent white background
@@ -4487,60 +4505,90 @@ def send_quotation():
             </div>
             
             <div style='display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;'>
-              <!-- Company Information -->
-              <div style='flex: 1; min-width: 300px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
+              <!-- From Information -->
+              <div style='flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
                 <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125); display: flex; justify-content: space-between; align-items: center;'>
-                  <h5 style='margin: 0; font-size: 1rem;'>Company Information</h5>
-                  <span style='background-color: #198754; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>Verified</span>
+                  <h5 style='margin: 0; font-size: 1rem;'>From</h5>
+                  <span style='background-color: #0d6efd; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>CGI</span>
                 </div>
-                <div style='padding: 1.25rem; height: 100%; display: flex; flex-direction: column;'>
-                  <div style='flex: 1;'>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Company Name</div>
-                      <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
-                    </div>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Address</div>
-                      <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
-                    </div>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Email</div>
-                      <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none;'>info@chemo.in</a></div>
-                    </div>
+                <div style='padding: 1.25rem; height: 100%; display: flex; flex-direction: column; gap: 0.75rem;'>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
+                    <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
                   </div>
-                  <div style='padding-top: 1rem; margin-top: auto; border-top: 1px solid #e9ecef;'>
-                    <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Prepared by:</div>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
+                    <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
+                  </div>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
+                    <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none;'>info@chemo.in</a></div>
+                  </div>
+                  <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Prepared By</div>
                     <div style='font-weight: 600;'>{current_user.username}</div>
                     <div><a href='mailto:{current_user.email}' style='color: #0d6efd; text-decoration: none;'>{current_user.email}</a></div>
                   </div>
                 </div>
               </div>
-              
-              <!-- Customer Information -->
-              <div style='flex: 1; min-width: 300px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
+
+              <!-- To Information -->
+              <div style='flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
                 <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125); display: flex; justify-content: space-between; align-items: center;'>
-                  <h5 style='margin: 0; font-size: 1rem;'>Customer Information</h5>
-                  <span style='background-color: #198754; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>Verified</span>
+                  <h5 style='margin: 0; font-size: 1rem;'>To</h5>
+                  <span style='background-color: #198754; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>Client</span>
                 </div>
-                <div style='padding: 1.25rem; height: 100%; display: flex; flex-direction: column;'>
-                  <div style='flex: 1;'>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Company Name</div>
-                      <div style='font-weight: 600;'>{customer_name}</div>
-                    </div>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Email</div>
-                      <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none;'>{customer_email}</a></div>
-                    </div>
-                    <div style='margin-bottom: 1rem;'>
-                      <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Date</div>
-                      <div>{today}</div>
-                    </div>
+                <div style='padding: 1.25rem; height: 100%; display: flex; flex-direction: column; gap: 0.75rem;'>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
+                    <div style='font-weight: 600;'>{customer_name}</div>
                   </div>
-                  <div style='padding-top: 1rem; margin-top: auto; border-top: 1px solid #e9ecef;'>
-                    <div style='color: #6c757d; font-size: 0.8rem; margin-bottom: 0.25rem;'>Quotation #</div>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
+                    <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none;'>{customer_email}</a></div>
+                  </div>
+                  <div>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation Date</div>
+                    <div>{today}</div>
+                  </div>
+                  <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
+                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation #</div>
                     <div style='font-weight: 600;'>{quote_id}</div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Summary Information -->
+              <div style='flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
+                <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125);'>
+                  <h5 style='margin: 0; font-size: 1rem;'>Quotation Summary</h5>
+                </div>
+                <div style='padding: 1.25rem;'>
+                  <table style='width: 100%; border-collapse: collapse; line-height: 1.6;'>
+                    <tbody>
+                      <tr>
+                        <td style='padding: 6px 0; color: #6c757d;'>Subtotal (Pre-Discount)</td>
+                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{subtotal_before_discount:,.2f}</td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 6px 0; color: #6c757d;'>Discount Applied</td>
+                        <td style='padding: 6px 0; text-align: right; font-weight: 600; color: #dc3545;'>-₹{total_discount:,.2f}</td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 6px 0; color: #6c757d;'>Subtotal (After Discount)</td>
+                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{subtotal_after_discount:,.2f}</td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 6px 0; color: #6c757d;'>Total GST</td>
+                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{total_gst:,.2f}</td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 6px 0; color: #6c757d;'>Total Amount (After GST)</td>
+                        <td style='padding: 6px 0; text-align: right; font-size: 1.1rem; font-weight: 700;'>₹{total:,.2f}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  {f"<div style='margin-top: 0.75rem; font-size: 0.8rem; color: #6c757d;'>Discounts Applied: {discount_text}</div>" if discount_text else ''}
                 </div>
               </div>
             </div>
@@ -4595,7 +4643,7 @@ def send_quotation():
                                     ''' if any(p.get("type") == "mpack" for p in products) else ''}
                                     
                                     <tr style='border-top: 1px solid #dee2e6;'>
-                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>Total:</td>
+                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (After GST):</td>
                                         <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("final_total", 0) for p in products):,.2f}</td>
                                     </tr>
                                 </tbody>
