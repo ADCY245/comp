@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, Email
 from waitress import serve
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import hashlib
 import secrets
@@ -14,6 +14,7 @@ import re
 from functools import wraps
 from flask_login import current_user
 import random
+import time
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
@@ -46,6 +47,27 @@ print(f"MONGO_URI: {'Set' if os.getenv('MONGO_URI') else 'Not set'}")
 print(f"DB_NAME: {os.getenv('DB_NAME', 'moneda_db')}")
 print(f"USE_MONGO: {os.getenv('USE_MONGO', 'Not set')}")
 print("===========================\n")
+
+# Timezone for sequential IDs
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_next_quote_id():
+    """Return next sequential quotation id like CGI_Q1, CGI_Q2 ... (fallback timestamp)"""
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        try:
+            last = mongo_db.quotations.find_one(
+                {'quote_id': {'$regex': r'^CGI_Q\\d+$'}},
+                sort=[('quote_id', -1)]
+            )
+            if last and 'quote_id' in last:
+                num = int(last['quote_id'].split('Q')[-1]) + 1
+            else:
+                num = 1
+            return f"CGI_Q{num}"
+        except Exception as e:
+            app.logger.error(f"Failed to generate sequential quotation id: {e}")
+    # Fallback timestamp-based
+    return f"CGI_Q{int(datetime.now(IST).timestamp())}"
 
 # CORS Configuration
 from flask_cors import CORS
@@ -1304,7 +1326,7 @@ def sync_company_user_links(company_id, assigned_user_ids):
 def serialize_admin_quotation(q_doc):
     if not q_doc:
         return {}
-    qid = str(q_doc.get('id') or q_doc.get('_id') or '')
+    qid = str(q_doc.get('quote_id') or q_doc.get('id') or q_doc.get('_id') or '')
     total_pre = _parse_float(q_doc.get('total_amount_pre_gst') or q_doc.get('total_pre_gst'))
     total_post = _parse_float(q_doc.get('total_amount_post_gst') or q_doc.get('total_post_gst'))
     return {
@@ -4451,8 +4473,8 @@ def send_quotation():
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
         
-        # Generate a unique quote ID
-        quote_id = f"CGI-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+                                # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
+        quote_id = get_next_quote_id()
 
         # Build email content with improved table layout and consistent white background
         email_content = f"""
@@ -4600,6 +4622,26 @@ def send_quotation():
         
 
         
+        # Persist quotation in DB
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.quotations.insert_one({
+                    'quote_id': quote_id,
+                    'created_at': datetime.utcnow(),
+                    'user_id': str(current_user.id),
+                    'username': current_user.username,
+                    'user_email': current_user.email,
+                    'company_name': customer_name,
+                    'company_email': customer_email,
+                    'products': products,
+                    'total_amount_pre_gst': subtotal_after_discount,
+                    'total_amount_post_gst': total,
+                    'total_gst': total_gst,
+                    'notes': notes
+                })
+            except Exception as db_err:
+                app.logger.error(f"Failed to save quotation: {db_err}")
+
         email_sent = send_email_resend(
             to=recipients,
             subject=f"Quotation from Chemo INTERNATIONAL - {today}",
