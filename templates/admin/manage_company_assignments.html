@@ -3,35 +3,7 @@
 {% block title %}Manage Company Assignments - Admin Panel{% endblock %}
 
 {% block extra_css %}
-<style>
-    .company-badge {
-        max-width: 150px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: inline-block;
-        vertical-align: middle;
-    }
-    .badge-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-    }
-    .table-responsive {
-        min-height: 300px;
-    }
-    .pagination {
-        margin-bottom: 0;
-    }
-    /* Modal styles */
-    .modal-backdrop {
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-    .modal.show {
-        display: block;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-manage-company-assignments.css') }}">
 {% endblock %}
 
 {% block content %}

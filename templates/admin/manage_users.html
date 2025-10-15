@@ -817,7 +817,13 @@ function getRoleBadgeColor(role) {
                 if (data.success) {
                     showToast(userId ? 'User updated successfully' : 'User created successfully', 'success');
                     loadUsers();
-                    bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 300);
                 } else {
                     throw new Error(data.error || 'Failed to save user');
                 }
