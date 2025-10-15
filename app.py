@@ -4382,6 +4382,10 @@ def send_quotation():
         """
         
         subtotal = 0
+        subtotal_before_discount = 0.0
+        subtotal_after_discount = 0.0
+        total_discount = 0.0
+        total_gst = 0.0
         for idx, p in enumerate(products, start=1):
             machine = p.get('machine', '')
             prod_type = p.get('type', '')
@@ -4456,6 +4460,19 @@ def send_quotation():
                 }
             
             subtotal += total_val
+
+            calc = p.get('calculations', {})
+            line_unit_price = float(calc.get('unit_price', p.get('unit_price', p.get('base_price', 0) or 0)))
+            line_quantity = float(calc.get('quantity', p.get('quantity', 1) or 0))
+            line_pre_discount = line_unit_price * line_quantity
+            line_discount = float(calc.get('discount_amount', 0) or 0)
+            line_taxable = float(calc.get('taxable_amount', calc.get('subtotal', line_pre_discount - line_discount) or 0))
+            line_gst = float(calc.get('gst_amount', 0) or 0)
+
+            subtotal_before_discount += line_pre_discount
+            total_discount += line_discount
+            subtotal_after_discount += line_taxable
+            total_gst += line_gst
             
             rows_html += f"""
                 <tr>
@@ -4496,16 +4513,16 @@ def send_quotation():
             discount_text.append(f"{max(mpack_discounts):.1f}% Underpacking")
         discount_text = ", ".join(discount_text)
         
-        # Calculate total discount amount
-        total_discount = sum(
-            p.get('calculations', {}).get('discount_amount', 0) 
-            for p in products 
-            if p.get('calculations', {}).get('discount_amount', 0) > 0
-        )
-        
         # Determine if we should show the discount row
         show_discount = bool(blanket_discounts or mpack_discounts)
-        
+
+        # Compute quotation subtotal/discount totals before persistence to avoid undefined variables
+        subtotal_before_discount = sum(p.get("calculations", {}).get("subtotal", 0) for p in products)
+        total_discount = sum(p.get("calculations", {}).get("discount_amount", 0) for p in products)
+        subtotal_after_discount = sum(p.get("calculations", {}).get("taxable_amount", 0) for p in products)
+        total_gst = sum(p.get("calculations", {}).get("gst_amount", 0) for p in products)
+        total = subtotal_after_discount + total_gst
+
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
@@ -4680,11 +4697,6 @@ def send_quotation():
         </div>
         """
 
-        # Total is same as subtotal since amounts already include any taxes
-        total = subtotal
-        
-
-        
         # Persist quotation in DB
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             try:
