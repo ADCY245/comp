@@ -1180,25 +1180,30 @@ def sync_user_company_links(user_id, assigned_company_ids):
                 app.logger.error(f"Mongo ping failed in sync_user_company_links: {ping_error}")
                 return
 
-            # Remove user from companies no longer assigned
+            object_ids = []
+            invalid_ids = []
+            for cid in assigned_set:
+                if ObjectId.is_valid(cid):
+                    object_ids.append(ObjectId(cid))
+                else:
+                    invalid_ids.append(cid)
+
             try:
-                current_cursor = mongo_db.companies.find({'assigned_to': user_id}, {'assigned_to': 1})
-                for company in current_cursor:
-                    cid_str = str(company.get('_id'))
-                    if cid_str not in assigned_set:
-                        mongo_db.companies.update_one({'_id': company['_id']}, {'$pull': {'assigned_to': user_id}})
+                remove_filter = {'assigned_to': user_id}
+                if object_ids:
+                    remove_filter['_id'] = {'$nin': object_ids}
+                mongo_db.companies.update_many(remove_filter, {'$pull': {'assigned_to': user_id}})
             except Exception as remove_error:
                 app.logger.error(f"Error removing user-company links: {remove_error}")
 
-            # Ensure user is added to newly assigned companies
-            for cid in assigned_set:
+            if object_ids:
                 try:
-                    if ObjectId.is_valid(cid):
-                        mongo_db.companies.update_one({'_id': ObjectId(cid)}, {'$addToSet': {'assigned_to': user_id}})
-                    else:
-                        app.logger.warning(f"Cannot sync company assignment for user {user_id} due to invalid company id: {cid}")
+                    mongo_db.companies.update_many({'_id': {'$in': object_ids}}, {'$addToSet': {'assigned_to': user_id}})
                 except Exception as add_error:
-                    app.logger.error(f"Error adding user {user_id} to company {cid}: {add_error}")
+                    app.logger.error(f"Error bulk-adding user {user_id} to companies {assigned_set}: {add_error}")
+
+            if invalid_ids:
+                app.logger.warning(f"Cannot sync company assignment for user {user_id} due to invalid company ids: {invalid_ids}")
         else:
             companies = load_companies_data()
             updated = False
