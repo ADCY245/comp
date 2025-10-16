@@ -1906,7 +1906,7 @@ def get_user_cart():
                         price = float(product.get('unit_price', 0))
                         quantity = int(product.get('quantity', 1))
                         discount_percent = float(product.get('discount_percent', 0))
-                        gst_percent = float(product.get('gst_percent', 12))
+                        gst_percent = float(product.get('gst_percent', 18))
                         
                         discount_amount = (price * discount_percent / 100)
                         price_after_discount = price - discount_amount
@@ -2096,7 +2096,7 @@ def cart():
                             company_email=company_email,
                             # Calculate GST rates for each product
                             products_with_gst=[
-                                {**p, 'gst_percent': 18.0 if p.get('type') == 'blanket' else 12.0}
+                                {**p, 'gst_percent': 18.0}
                                 for p in cart_data.get('products', [])
                             ],
                             calculations=cart_data.get('calculations', {
@@ -2246,7 +2246,7 @@ def add_to_cart():
                 'unit_price': float(data.get('unit_price', 0)),
                 'quantity': int(data.get('quantity', 1)),
                 'discount_percent': float(data.get('discount_percent', 0)),
-                'gst_percent': float(data.get('gst_percent', 12)),  # 12% GST for MPack
+                'gst_percent': float(data.get('gst_percent', 18)),  # 18% GST for MPack
                 # Include MPack specific details
                 'machine': data.get('machine', ''),
                 'thickness': data.get('thickness', ''),
@@ -4164,7 +4164,7 @@ def quotation_preview():
             price = float(item.get('unit_price', 0))
             quantity = int(item.get('quantity', 1))
             discount_percent = float(item.get('discount_percent', 0))
-            gst_percent = float(item.get('gst_percent', 12))
+            gst_percent = float(item.get('gst_percent', 18))
             
             subtotal = price * quantity
             discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
@@ -4210,7 +4210,7 @@ def quotation_preview():
     
     # Calculate GST for each category (on discounted amount)
     gst_blankets = subtotal_after_discount_blankets * 0.18  # 18% GST for blankets
-    gst_mpacks = subtotal_after_discount_mpacks * 0.12      # 12% GST for mpacks
+    gst_mpacks = subtotal_after_discount_mpacks * 0.18      # 18% GST for mpacks
     
     # Calculate final totals
     subtotal_before_discount = subtotal_blankets + subtotal_mpacks
@@ -4257,7 +4257,7 @@ def quotation_preview():
                     'discount': round(discount_mpacks, 2),
                     'subtotal_after_discount': round(subtotal_after_discount_mpacks, 2),
                     'gst': round(gst_mpacks, 2),
-                    'rate': 12
+                    'rate': 18
                 },
                 'total_gst': round(total_gst, 2)
             }
@@ -4455,7 +4455,7 @@ def send_quotation():
                 # Always recalculate MPack totals to ensure fresh values after quantity changes
                 unit_price = float(p.get('unit_price', 0))
                 discount_percent = float(p.get('discount_percent', 0))
-                gst_percent = float(p.get('gst_percent', 12))  # 12% GST for MPack
+                gst_percent = float(p.get('gst_percent', 18))  # 18% GST for MPack
 
                 subtotal_val = unit_price * qty
                 discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
@@ -4720,7 +4720,7 @@ def send_quotation():
                                     
                                     {f'''
                                     <tr>
-                                        <td style='padding: 8px; text-align: right;'>GST (12.0%):</td>
+                                        <td style='padding: 8px; text-align: right;'>GST (18.0%):</td>
                                         <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "mpack"):,.2f}</td>
                                     </tr>
                                     ''' if any(p.get("type") == "mpack" for p in products) else ''}
