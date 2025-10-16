@@ -3,6 +3,78 @@ let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
 let currentDiscount = 0;
 let currentBarRate = 0;
 
+function getBlanketSections() {
+  return {
+    categorySection: document.getElementById("categorySection"),
+    blanketSection: document.getElementById("blanketSection"),
+    measurementSection: document.getElementById("measurementSection"),
+    pricingSection: document.getElementById("pricingSection"),
+    blanketTypeSection: document.getElementById("blanketTypeSection")
+  };
+}
+
+function resetMeasurements() {
+  const lengthInput = document.getElementById('lengthInput');
+  const widthInput = document.getElementById('widthInput');
+  const thicknessSelect = document.getElementById('thicknessSelect');
+  if (lengthInput) lengthInput.value = '';
+  if (widthInput) widthInput.value = '';
+  if (thicknessSelect) thicknessSelect.value = '';
+}
+
+function resetPricing() {
+  const barSelect = document.getElementById('barSelect');
+  const quantityInput = document.getElementById('quantityInput');
+  const finalPriceElement = document.getElementById('finalPrice');
+  const basePriceEl = document.getElementById('basePrice');
+  const netUnitPriceEl = document.getElementById('netUnitPrice');
+  const areaElement = document.getElementById('calculatedArea');
+  const discountValue = document.getElementById('discountedValue');
+  if (barSelect) barSelect.value = '';
+  if (quantityInput) quantityInput.value = 1;
+  if (areaElement) areaElement.innerText = '';
+  if (basePriceEl) basePriceEl.innerText = '';
+  if (netUnitPriceEl) netUnitPriceEl.innerText = '';
+  if (discountValue) discountValue.style.display = 'none';
+  if (finalPriceElement) {
+    finalPriceElement.innerHTML = '<p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>';
+  }
+}
+
+function updateMeasurementVisibility() {
+  const { measurementSection, pricingSection } = getBlanketSections();
+  const categorySelect = document.getElementById("categorySelect");
+  const blanketSelect = document.getElementById("blanketSelect");
+  const hasCategory = categorySelect && !!categorySelect.value;
+  const hasBlanket = blanketSelect && !!blanketSelect.value;
+  if (measurementSection) {
+    measurementSection.style.display = hasCategory && hasBlanket ? 'block' : 'none';
+  }
+  if (!hasCategory) {
+    if (blanketSelect) blanketSelect.value = '';
+    if (measurementSection) measurementSection.style.display = 'none';
+    if (pricingSection) pricingSection.style.display = 'none';
+    resetMeasurements();
+    resetPricing();
+  } else if (!hasBlanket) {
+    if (pricingSection) pricingSection.style.display = 'none';
+    resetMeasurements();
+    resetPricing();
+  }
+}
+
+function updatePricingVisibility() {
+  const { pricingSection } = getBlanketSections();
+  const thickness = document.getElementById('thicknessSelect')?.value;
+  const shouldShowPricing = !!thickness;
+  if (pricingSection) {
+    pricingSection.style.display = shouldShowPricing ? 'block' : 'none';
+  }
+  if (!shouldShowPricing) {
+    resetPricing();
+  }
+}
+
 // Function to update an existing cart item
 async function updateCartItem(button, itemId) {
     button.disabled = true;
@@ -416,74 +488,6 @@ window.onload = () => {
     });
     
   // Load blanket categories
-  const categorySection = document.getElementById("categorySection");
-  const blanketSection = document.getElementById("blanketSection");
-  const measurementSection = document.getElementById("measurementSection");
-  const pricingSection = document.getElementById("pricingSection");
-  const blanketTypeSection = document.getElementById("blanketTypeSection");
-
-  const updateMeasurementVisibility = () => {
-    const categorySelect = document.getElementById("categorySelect");
-    const blanketSelect = document.getElementById("blanketSelect");
-    const hasCategory = categorySelect && !!categorySelect.value;
-    const hasBlanket = blanketSelect && !!blanketSelect.value;
-    if (measurementSection) {
-      measurementSection.style.display = hasCategory && hasBlanket ? 'block' : 'none';
-    }
-    if (!hasCategory) {
-      if (blanketSelect) blanketSelect.value = '';
-      if (measurementSection) measurementSection.style.display = 'none';
-      if (pricingSection) pricingSection.style.display = 'none';
-      resetMeasurements();
-      resetPricing();
-    } else if (!hasBlanket) {
-      if (pricingSection) pricingSection.style.display = 'none';
-      resetMeasurements();
-      resetPricing();
-    }
-  };
-
-  const updatePricingVisibility = () => {
-    const length = parseFloat(document.getElementById('lengthInput')?.value);
-    const width = parseFloat(document.getElementById('widthInput')?.value);
-    const thickness = document.getElementById('thicknessSelect')?.value;
-    const shouldShowPricing = !isNaN(length) && length > 0 && !isNaN(width) && width > 0 && thickness;
-    if (pricingSection) {
-      pricingSection.style.display = shouldShowPricing ? 'block' : 'none';
-    }
-    if (!shouldShowPricing) {
-      resetPricing();
-    }
-  };
-
-  const resetMeasurements = () => {
-    const lengthInput = document.getElementById('lengthInput');
-    const widthInput = document.getElementById('widthInput');
-    const thicknessSelect = document.getElementById('thicknessSelect');
-    if (lengthInput) lengthInput.value = '';
-    if (widthInput) widthInput.value = '';
-    if (thicknessSelect) thicknessSelect.value = '';
-  };
-
-  const resetPricing = () => {
-    const barSelect = document.getElementById('barSelect');
-    const quantityInput = document.getElementById('quantityInput');
-    const finalPriceElement = document.getElementById('finalPrice');
-    const basePriceEl = document.getElementById('basePrice');
-    const netUnitPriceEl = document.getElementById('netUnitPrice');
-    const areaElement = document.getElementById('calculatedArea');
-    const discountValue = document.getElementById('discountedValue');
-    if (barSelect) barSelect.value = '';
-    if (quantityInput) quantityInput.value = 1;
-    if (areaElement) areaElement.innerText = '';
-    if (basePriceEl) basePriceEl.innerText = '';
-    if (netUnitPriceEl) netUnitPriceEl.innerText = '';
-    if (discountValue) discountValue.style.display = 'none';
-    if (finalPriceElement) {
-      finalPriceElement.innerHTML = '<p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>';
-    }
-  };
-
   fetch("/static/data/blanket_categories.json")
     .then(res => {
       if (!res.ok) {
@@ -513,6 +517,7 @@ window.onload = () => {
       categorySelect.addEventListener("change", () => {
         const selectedCategory = categorySelect.value || 'All';
         filterBlanketsByCategory(selectedCategory, blanketCategoriesData);
+        const { blanketSection } = getBlanketSections();
         if (blanketSection) blanketSection.style.display = 'block';
         updateMeasurementVisibility();
       });
