@@ -84,9 +84,10 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="mb-0">Select Product Category</h3>
         </div>
-        <div>
-            <a class="btn btn-primary btn-lg me-3" href="#" id="mpacksBtn" data-route="{{ url_for('mpacks') }}" role="button">View Undepacking Materials</a>
-            <a class="btn btn-outline-primary btn-lg" href="#" id="blanketsBtn" data-route="{{ url_for('blankets') }}" role="button">View Blankets</a>
+        <div class="d-flex flex-column flex-md-row justify-content-center">
+            <a class="btn btn-primary btn-lg" href="#" id="mpacksBtn" data-route="{{ url_for('mpacks') }}" role="button">View Undepacking Materials</a>
+            <a class="btn btn-outline-primary btn-lg mt-3 mt-md-0 ms-md-3" href="#" id="blanketsBtn" data-route="{{ url_for('blankets') }}" role="button">View Blankets</a>
+            <a class="btn btn-outline-warning btn-lg mt-3 mt-md-0 ms-md-3" href="#" id="chemMaintBtn" data-route="{{ url_for('chemicals_maintenance') }}" role="button">View Chemicals &amp; Maintenance Products</a>
         </div>
     </div>
 
@@ -193,6 +194,7 @@ const ChemoApp = (function() {
     function setupProductButtons() {
         const mpacksBtn = document.getElementById('mpacksBtn');
         const blanketsBtn = document.getElementById('blanketsBtn');
+        const chemMaintBtn = document.getElementById('chemMaintBtn');
         
         if (mpacksBtn) {
             mpacksBtn.addEventListener('click', handleProductButtonClick);
@@ -200,6 +202,10 @@ const ChemoApp = (function() {
         
         if (blanketsBtn) {
             blanketsBtn.addEventListener('click', handleProductButtonClick);
+        }
+
+        if (chemMaintBtn) {
+            chemMaintBtn.addEventListener('click', handleProductButtonClick);
         }
     }
 

@@ -1,0 +1,150 @@
+.category-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.category-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.category-page__title h2 {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.category-page__cart-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-page__cart-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.category-page__cart-count {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+}
+
+.category-page__content {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.category-section__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.category-section__title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.category-section__subtitle {
+  font-size: 0.95rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+.product-card {
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+}
+
+.product-card__body {
+  display: flex;
+  gap: 1rem;
+}
+
+.product-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e7f1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #0d6efd;
+}
+
+.product-card__icon.product-card__icon--maintenance {
+  background: #fff1d6;
+  color: #fd7e14;
+}
+
+.product-card__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.product-card__description {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+.product-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.product-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.product-card__price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #198754;
+}
+
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 2rem;
+}

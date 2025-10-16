@@ -1,0 +1,23 @@
+[
+  {
+    "id": "chem-101",
+    "name": "Anilox Roller Cleaner",
+    "description": "High-performance cleaner for removing dried ink and contaminants.",
+    "unit": "Ltr",
+    "price": 1450.0
+  },
+  {
+    "id": "chem-102",
+    "name": "Plate Cleaning Solution",
+    "description": "Ready-to-use solution for manual and automatic plate cleaning.",
+    "unit": "Ltr",
+    "price": 980.0
+  },
+  {
+    "id": "chem-103",
+    "name": "Fountain Solution Additive",
+    "description": "Balances pH levels for consistent print quality.",
+    "unit": "Ltr",
+    "price": 1250.0
+  }
+]
