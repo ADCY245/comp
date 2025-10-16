@@ -20,10 +20,11 @@
   <div class="mb-3">
     <div class="d-flex align-items-end gap-2">
       <div class="flex-grow-1">
-        <label for="machineSelect" class="form-label">Select Machine/Model:</label>
+        <label for="machineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
         <select id="machineSelect" class="form-select">
           <option value="">-- Select Machine --</option>
         </select>
+        <div class="form-text text-muted">Leave blank if the machine is unknown. The quotation will display `--`.</div>
       </div>
       <div>
         <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-primary">

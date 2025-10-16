@@ -264,7 +264,7 @@ function getFormData() {
     id: 'mpack_' + Date.now(),
     type: 'mpack',
     name: underpackingTypeDisplay,
-    machine: machineSelect.options[machineSelect.selectedIndex].text,
+    machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: selectedSize,
     width: width,
@@ -410,25 +410,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Safely add event listener to machine select
   const machineSelect = document.getElementById("machineSelect");
+  const underpackingTypeSelect = document.getElementById("underpackingType");
   const mpackSection = document.getElementById("mpackSection");
 
   if (!machineSelect) {
     console.error("machineSelect element not found!");
   }
-  
+
   if (!mpackSection) {
     console.error("mpackSection element not found!");
   }
   
-  if (machineSelect && mpackSection) {
-    console.log("Setting up machine select change handler...");
-    machineSelect.addEventListener("change", () => {
-      console.log("Machine select changed, showing mpack section...");
-      try {
-        mpackSection.style.display = "block";
-        console.log("mpackSection should now be visible");
-      } catch (error) {
-        console.error("Error showing mpack section:", error);
+  if (underpackingTypeSelect && mpackSection) {
+    console.log("Setting up underpacking type change handler...");
+    underpackingTypeSelect.addEventListener("change", () => {
+      const hasSelection = !!underpackingTypeSelect.value;
+      mpackSection.style.display = hasSelection ? "block" : "none";
+      if (!hasSelection) {
+        if (machineSelect) machineSelect.value = "";
+        resetCalculations();
       }
     });
   }
@@ -938,8 +938,6 @@ function applyDiscount() {
   }
 }
 
-
-
 async function addMpackToCart() {
   // Check if we're in edit mode
   const urlParams = new URLSearchParams(window.location.search);
@@ -962,8 +960,17 @@ async function addMpackToCart() {
   }
   
   // Check that a size is selected in the dropdown (like thickness)
-  if (!machineSelect.value || !thicknessSelect.value || !sizeSelect.value || !sheetInput.value || !underpackingType) {
-    showToast('Error', 'Please fill in all required fields including underpacking type', 'error');
+  if (!underpackingType) {
+    showToast('Error', 'Please select an underpacking type before continuing.', 'error');
+    if (underpackingTypeSelect) {
+      underpackingTypeSelect.classList.add('is-invalid');
+      setTimeout(() => underpackingTypeSelect.classList.remove('is-invalid'), 1500);
+    }
+    return;
+  }
+
+  if (!thicknessSelect.value || !sizeSelect.value || !sheetInput.value) {
+    showToast('Error', 'Please fill in all required fields to calculate pricing.', 'error');
     return;
   }
 
@@ -997,7 +1004,7 @@ async function addMpackToCart() {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
     name: underpackingTypeDisplay,
-    machine: machineSelect.options[machineSelect.selectedIndex].text,
+    machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: selectedSize,
     width: width,
@@ -1052,7 +1059,7 @@ async function addMpackToCart() {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
     name: underpackingTypeDisplay,
-    machine: machineSelect.options[machineSelect.selectedIndex].text,
+    machine: machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: selectedSize,
     underpacking_type: underpackingType,
