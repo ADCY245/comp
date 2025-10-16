@@ -121,11 +121,11 @@
                                     <div class="filter-dropdown" id="salespersonFilterDropdown">
                                         <button type="button" class="btn btn-light btn-sm filter-dropdown-btn" id="salespersonFilterButton">
                                             <span><i class="fas fa-filter me-1"></i> Filter by</span>
-                                            <span id="salespersonFilterLabel">All Salespersons</span>
+                                            <span id="salespersonFilterLabel">All Users</span>
                                         </button>
                                         <div class="filter-dropdown-menu" id="salespersonFilterMenu">
-                                            <button type="button" class="filter-option" data-user-id="" data-user-name="All Salespersons">
-                                                <span>All Salespersons</span>
+                                            <button type="button" class="filter-option" data-user-id="" data-user-name="All Users">
+                                                <span>All Users</span>
                                                 <span class="badge bg-light text-dark">0</span>
                                             </button>
                                         </div>
@@ -137,7 +137,7 @@
                                         <i class="fas fa-list me-1"></i> View All
                                     </button>
                                 </div>
-                                <span class="filter-dropdown-label text-md-end">Hover to choose a salesperson and filter assigned companies</span>
+                                <span class="filter-dropdown-label text-md-end">Hover to choose a user and filter assigned companies</span>
                             </div>
                         </div>
                     </div>
@@ -319,7 +319,7 @@
             const options = [
                 {
                     id: '',
-                    name: 'All Salespersons',
+                    name: 'All Users',
                     companyCount: getCompanyCountForUser('', users)
                 },
                 ...users.map(user => ({
