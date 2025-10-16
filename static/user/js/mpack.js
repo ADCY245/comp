@@ -273,7 +273,7 @@ function getFormData() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 12,
+    gst_percent: 18,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
@@ -282,7 +282,7 @@ function getFormData() {
       discounted_subtotal: parseFloat(priceAfterDiscount.toFixed(2)),
       discount_percent: discount,
       discount_amount: parseFloat(discountAmount.toFixed(2)),
-      gst_percent: 12,
+      gst_percent: 18,
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
     }
@@ -1006,7 +1006,7 @@ async function addMpackToCart() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 12,
+    gst_percent: 18,
     image: 'images/mpack-placeholder.jpg',
     added_at: isEditMode ? new Date().toISOString() : new Date().toISOString(),
     calculations: {
@@ -1015,7 +1015,7 @@ async function addMpackToCart() {
       discounted_subtotal: parseFloat(priceAfterDiscount.toFixed(2)),
       discount_percent: discount,
       discount_amount: parseFloat(discountAmount.toFixed(2)),
-      gst_percent: 12,
+      gst_percent: 18,
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
     }
@@ -1059,7 +1059,7 @@ async function addMpackToCart() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 12,
+    gst_percent: 18,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: product.calculations
