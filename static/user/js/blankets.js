@@ -1,4 +1,4 @@
-let machineData = [], blanketData = [], barData = [], discountData = [], thicknessData = [];
+let machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
 let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
 let currentDiscount = 0;
 let currentBarRate = 0;
@@ -133,12 +133,16 @@ function getFormData() {
     const quantity = parseInt(quantityInput.value) || 1;
     const finalTotalPrice = finalUnitPrice * quantity;
     
+    const machineName = (machineSelect && machineSelect.value)
+        ? (machineSelect.options[machineSelect.selectedIndex]?.text || '--')
+        : '--';
+
     return {
         type: 'blanket',
         id: 'blanket_' + Date.now(),
         name: selectedBlanket.name || 'Custom Blanket',
         blanket_name: selectedBlanket.name || 'Custom Blanket',
-        machine: machineSelect.options[machineSelect.selectedIndex]?.text || '',
+        machine: machineName,
         thickness: thicknessSelect ? thicknessSelect.value : '',
         length: length,
         width: width,
@@ -245,7 +249,7 @@ function prefillFormWithItem(item) {
         }
         
         // Set machine if available
-        if (item.machine) {
+        if (item.machine && item.machine !== '--') {
             const machineSelect = document.getElementById('machineSelect');
             if (machineSelect) {
                 // Find the option that matches the machine name
@@ -398,15 +402,12 @@ window.onload = () => {
     .then(data => {
       machineData = Array.isArray(data) ? data : data.machines;
       const select = document.getElementById("machineSelect");
-      select.innerHTML = '<option value="">--Select Machine--</option>';
+      select.innerHTML = '<option value="">-- Select Machine --</option>';
       machineData.forEach(machine => {
         const option = document.createElement("option");
         option.value = machine.id;
         option.text = machine.name;
         select.appendChild(option);
-      });
-      select.addEventListener("change", () => {
-        document.getElementById("categorySection").style.display = 'block';
       });
     })
     .catch(error => {
@@ -425,12 +426,12 @@ window.onload = () => {
     .then(data => {
       const categorySelect = document.getElementById("categorySelect");
       categorySelect.innerHTML = `
-        <option value="" selected disabled>-- Select Category --</option>
         <option value="All">All Categories</option>
       `;
+      blanketCategoriesData = data.categories || {};
       
       // Add each category to the dropdown
-      Object.keys(data.categories).forEach(category => {
+      Object.keys(blanketCategoriesData).forEach(category => {
         if (category !== "All") {  // Skip the "All" category as it's already added
           const option = document.createElement("option");
           option.value = category;
@@ -441,9 +442,18 @@ window.onload = () => {
       
       // When category changes, filter the blankets
       categorySelect.addEventListener("change", () => {
-        const selectedCategory = categorySelect.value;
-        filterBlanketsByCategory(selectedCategory, data.categories);
+        const selectedCategory = categorySelect.value || 'All';
+        filterBlanketsByCategory(selectedCategory, blanketCategoriesData);
       });
+
+      const categorySection = document.getElementById("categorySection");
+      if (categorySection) {
+        categorySection.style.display = 'block';
+      }
+
+      const initialCategory = categorySelect.value || 'All';
+      categorySelect.value = initialCategory;
+      filterBlanketsByCategory(initialCategory, blanketCategoriesData);
     })
     .catch(error => {
       console.error('Error loading blanket categories:', error);
@@ -462,6 +472,10 @@ window.onload = () => {
       blanketData = data.products || [];
       // Initial load - show all blankets
       populateBlanketSelect(blanketData);
+
+      const categorySelect = document.getElementById("categorySelect");
+      const activeCategory = categorySelect && categorySelect.value ? categorySelect.value : 'All';
+      filterBlanketsByCategory(activeCategory, blanketCategoriesData);
     })
     .catch(error => {
       console.error('Error loading blanket data:', error);
@@ -643,17 +657,21 @@ window.onload = () => {
     
     let filteredBlankets = [];
     
-    if (category === "All") {
+    if (category === "All" || !category) {
       filteredBlankets = [...blanketData];
     } else {
-      const categoryBlanketIds = categories[category] || [];
-      filteredBlankets = blanketData.filter(blanket => 
+      const sourceCategories = categories || {};
+      const categoryBlanketIds = sourceCategories[category] || [];
+      filteredBlankets = blanketData.filter(blanket =>
         categoryBlanketIds.includes(blanket.id)
       );
     }
     
     populateBlanketSelect(filteredBlankets);
-    document.getElementById("blanketSection").style.display = 'block';
+    const blanketSection = document.getElementById("blanketSection");
+    if (blanketSection) {
+      blanketSection.style.display = filteredBlankets.length ? 'block' : 'none';
+    }
   }
   
   // Function to populate blanket select dropdown
@@ -676,6 +694,11 @@ window.onload = () => {
       displayRates();
       calculatePrice();
     });
+
+    const blanketSection = document.getElementById("blanketSection");
+    if (blanketSection) {
+      blanketSection.style.display = blankets.length ? 'block' : 'none';
+    }
   }
 
   // Debug: Log when script loads
@@ -1130,12 +1153,16 @@ async function addBlanketToCart() {
   const finalTotalPrice = finalUnitPrice * quantity;
 
   // Create product object with all calculated values
+  const machineName = (machineSelect && machineSelect.value)
+    ? (machineSelect.options[machineSelect.selectedIndex]?.text || '--')
+    : '--';
+
   const product = {
     id: isEditMode ? itemId : 'blanket_' + Date.now(),
     type: 'blanket',
     name: selectedBlanket.name || 'Custom Blanket',
     blanket_name: selectedBlanket.name || 'Custom Blanket',
-    machine: machineSelect.options[machineSelect.selectedIndex].text,
+    machine: machineName,
     thickness: thicknessSelect ? thicknessSelect.value : '',
     length: length,
     width: width,
@@ -1211,7 +1238,7 @@ async function addBlanketToCart() {
     const payload = {
       type: 'blanket',
       name: product.name,
-      machine: product.machine,
+      machine: machineName,
       thickness: product.thickness,
       length: product.length,
       width: product.width,
