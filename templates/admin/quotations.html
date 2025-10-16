@@ -487,7 +487,6 @@
                                 <p class="mb-1">GST: ₹${(quotation.total_gst || quotation.gst_amount || 0).toLocaleString('en-IN')}</p>
                                 <hr>
                                 <h5 class="text-success">Total (After GST): ₹${(quotation.total_amount_post_gst || 0).toLocaleString('en-IN')}</h5>
-                                ${quotation.discount_text ? `<small class="text-muted">Discounts Applied: ${quotation.discount_text}</small>` : ''}
                             </div>
                         </div>
                     </div>

@@ -4593,7 +4593,7 @@ def send_quotation():
                   <h5 style='margin: 0; font-size: 1rem;'>From</h5>
                   <span style='background-color: #0d6efd; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>CGI</span>
                 </div>
-                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;'>
+                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; word-break: break-word; white-space: normal;'>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
                     <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
@@ -4604,7 +4604,7 @@ def send_quotation():
                   </div>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                    <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none;'>info@chemo.in</a></div>
+                    <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a></div>
                   </div>
                   <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Prepared By</div>
@@ -4620,14 +4620,14 @@ def send_quotation():
                   <h5 style='margin: 0; font-size: 1rem;'>To</h5>
                   <span style='background-color: #198754; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>Client</span>
                 </div>
-                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;'>
+                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; word-break: break-word; white-space: normal;'>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
                     <div style='font-weight: 600;'>{customer_name}</div>
                   </div>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                    <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none;'>{customer_email}</a></div>
+                    <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>{customer_email}</a></div>
                   </div>
                   <div>
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation Date</div>
@@ -4637,41 +4637,6 @@ def send_quotation():
                     <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation #</div>
                     <div style='font-weight: 600;'>{quote_id}</div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div style='margin-bottom: 2rem;'>
-              <div style='max-width: 360px; margin-left: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
-                <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125);'>
-                  <h5 style='margin: 0; font-size: 1rem;'>Quotation Summary</h5>
-                </div>
-                <div style='padding: 1.25rem;'>
-                  <table style='width: 100%; border-collapse: collapse; line-height: 1.6;'>
-                    <tbody>
-                      <tr>
-                        <td style='padding: 6px 0; color: #6c757d;'>Subtotal (Pre-Discount)</td>
-                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{subtotal_before_discount:,.2f}</td>
-                      </tr>
-                      <tr>
-                        <td style='padding: 6px 0; color: #6c757d;'>Discount Applied</td>
-                        <td style='padding: 6px 0; text-align: right; font-weight: 600; color: #dc3545;'>-₹{total_discount:,.2f}</td>
-                      </tr>
-                      <tr>
-                        <td style='padding: 6px 0; color: #6c757d;'>Subtotal (After Discount)</td>
-                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{subtotal_after_discount:,.2f}</td>
-                      </tr>
-                      <tr>
-                        <td style='padding: 6px 0; color: #6c757d;'>Total GST</td>
-                        <td style='padding: 6px 0; text-align: right; font-weight: 600;'>₹{total_gst:,.2f}</td>
-                      </tr>
-                      <tr>
-                        <td style='padding: 6px 0; color: #6c757d;'>Total Amount (After GST)</td>
-                        <td style='padding: 6px 0; text-align: right; font-size: 1.1rem; font-weight: 700;'>₹{total:,.2f}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {f"<div style='margin-top: 0.75rem; font-size: 0.8rem; color: #6c757d;'>Discounts Applied: {discount_text}</div>" if discount_text else ''}
                 </div>
               </div>
             </div>
@@ -4694,43 +4659,45 @@ def send_quotation():
                 <div style='margin: 2rem 0;'>
                     <div style='display: flex; justify-content: flex-end;'>
                         <div style='width: 100%; max-width: 360px; margin-left: auto;'>
-                            <table style='width: 100%; border-collapse: collapse;'>
-                                <tbody>
-                                    <tr>
-                                        <td style='padding: 8px; text-align: right; width: 70%;'>Subtotal (Pre-Discount):</td>
-                                        <td style='padding: 8px; text-align: right; width: 30%;'>₹{sum((p.get('unit_price', p.get('base_price', 0))) * p.get('quantity', 1) for p in products):,.2f}</td>
-                                    </tr>
-                                    {f'''
-                                    <tr style="display: {'table-row' if show_discount else 'none'};">
-                                        <td style="padding: 8px; text-align: right;">Discount :</td>
-                                        <td style="padding: 8px; text-align: right; color: #dc3545;">-₹{total_discount:,.2f}</td>
-                                    </tr>
-                                    ''' if True else ''}
-                                    <tr style='border-top: 1px solid #dee2e6;'>
-                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (Pre-GST):</td>
-                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("taxable_amount", p.get("calculations", {}).get("subtotal", 0)) for p in products):,.2f}</td>
-                                    </tr>
-                                
-                                    {f'''
-                                    <tr>
-                                        <td style='padding: 8px; text-align: right;'>GST (9.0% CGST + 9.0% SGST):</td>
-                                        <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "blanket"):,.2f}</td>
-                                    </tr>
-                                    ''' if any(p.get("type") == "blanket" for p in products) else ''}
+                            <div style='overflow-x: auto; margin: 1.5rem 0;'>
+                                <table style='width: 100%; border-collapse: collapse;'>
+                                    <tbody>
+                                        <tr>
+                                            <td style='padding: 8px; text-align: right; width: 70%;'>Subtotal (Pre-Discount):</td>
+                                            <td style='padding: 8px; text-align: right; width: 30%;'>₹{sum((p.get('unit_price', p.get('base_price', 0))) * p.get('quantity', 1) for p in products):,.2f}</td>
+                                        </tr>
+                                        {f'''
+                                        <tr style="display: {'table-row' if show_discount else 'none'};">
+                                            <td style="padding: 8px; text-align: right;">Discount :</td>
+                                            <td style="padding: 8px; text-align: right; color: #dc3545;">-₹{total_discount:,.2f}</td>
+                                        </tr>
+                                        ''' if True else ''}
+                                        <tr style='border-top: 1px solid #dee2e6;'>
+                                            <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (Pre-GST):</td>
+                                            <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("taxable_amount", p.get("calculations", {}).get("subtotal", 0)) for p in products):,.2f}</td>
+                                        </tr>
                                     
-                                    {f'''
-                                    <tr>
-                                        <td style='padding: 8px; text-align: right;'>GST (18.0% - Underpacking):</td>
-                                        <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "mpack"):,.2f}</td>
-                                    </tr>
-                                    ''' if any(p.get("type") == "mpack" for p in products) else ''}
-                                    
-                                    <tr style='border-top: 1px solid #dee2e6;'>
-                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (After GST):</td>
-                                        <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("final_total", 0) for p in products):,.2f}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        {f'''
+                                        <tr>
+                                            <td style='padding: 8px; text-align: right;'>GST (9.0% CGST + 9.0% SGST):</td>
+                                            <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "blanket"):,.2f}</td>
+                                        </tr>
+                                        ''' if any(p.get("type") == "blanket" for p in products) else ''}
+                                        
+                                        {f'''
+                                        <tr>
+                                            <td style='padding: 8px; text-align: right;'>GST (18.0% - Underpacking):</td>
+                                            <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "mpack"):,.2f}</td>
+                                        </tr>
+                                        ''' if any(p.get("type") == "mpack" for p in products) else ''}
+                                        
+                                        <tr style='border-top: 1px solid #dee2e6;'>
+                                            <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (After GST):</td>
+                                            <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("final_total", 0) for p in products):,.2f}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
