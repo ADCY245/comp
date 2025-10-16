@@ -308,6 +308,7 @@
             activeUserId: '',
             users: []
         };
+        let currentCompanies = [];
 
         function buildSalespersonMenu(users) {
             const menu = document.getElementById('salespersonFilterMenu');
@@ -551,6 +552,7 @@ function getRoleBadgeColor(role) {
                         populateUsersTable(data.users);
                         // Refresh company assignment select if modal is open
                         populateCompanyAssignedTo();
+                        refreshSalespersonFilter(allUsers, currentCompanies);
                     } else {
                         console.error('Failed to load users:', data.error);
                         alert('Failed to load users. Please try again.');
@@ -642,20 +644,24 @@ function getRoleBadgeColor(role) {
                 const response = await fetch(`/api/admin/companies?page=${page}&limit=${companiesPerPage}`);
                 const data = await response.json();
                 
-                if (data.error) {
-                    console.error('Error loading companies:', data.error);
+                if (data.error || data.success === false) {
+                    console.error('Error loading companies:', data.error || 'Unknown error');
                     return;
                 }
+                const companies = Array.isArray(data.companies) ? data.companies : [];
                 
                 if (page === 0) {
-                    populateCompaniesList(data.companies);
+                    currentCompanies = companies;
+                    populateCompaniesList(companies);
                 } else {
-                    appendCompaniesList(data.companies);
+                    currentCompanies = currentCompanies.concat(companies);
+                    appendCompaniesList(companies);
                 }
+                refreshSalespersonFilter(allUsers, currentCompanies);
                 
                 // Show/hide load more button
                 const loadMoreBtn = document.getElementById('loadMoreCompanies');
-                if (data.companies.length < companiesPerPage) {
+                if (companies.length < companiesPerPage) {
                     loadMoreBtn.style.display = 'none';
                 } else {
                     loadMoreBtn.style.display = 'block';
@@ -675,6 +681,7 @@ function getRoleBadgeColor(role) {
                 const item = createCompanyItem(company);
                 container.appendChild(item);
             });
+            applySalespersonFilter();
         }
         
         // Append companies to list
@@ -685,6 +692,7 @@ function getRoleBadgeColor(role) {
                 const item = createCompanyItem(company);
                 container.appendChild(item);
             });
+            applySalespersonFilter();
         }
         
         function getCompanyAssignedCount(company) {
@@ -695,6 +703,12 @@ function getRoleBadgeColor(role) {
                 return company.assigned_to.length;
             }
             return 0;
+        }
+
+        function extractAssignedUsers(company) {
+            if (!company) return [];
+            const assigned = Array.isArray(company.assigned_to) ? company.assigned_to : [];
+            return assigned.map(id => String(id)).filter(Boolean);
         }
 
         function buildCompanyItemContent(company) {
@@ -718,12 +732,19 @@ function getRoleBadgeColor(role) {
             `;
         }
 
+        function setCompanyItemData(item, company) {
+            if (!item || !company) return;
+            const assignedUsers = extractAssignedUsers(company);
+            item.dataset.companyId = company.id || '';
+            item.dataset.assignedUsers = assignedUsers.join(',');
+        }
+
         // Create company item element
         function createCompanyItem(company) {
             const item = document.createElement('div');
             item.className = 'company-item';
-            item.dataset.companyId = company.id || '';
             item.innerHTML = buildCompanyItemContent(company);
+            setCompanyItemData(item, company);
             return item;
         }
 
@@ -735,10 +756,12 @@ function getRoleBadgeColor(role) {
             const existing = container.querySelector(`.company-item[data-company-id="${company.id}"]`);
             if (existing) {
                 existing.innerHTML = buildCompanyItemContent(company);
+                setCompanyItemData(existing, company);
             } else {
                 const item = createCompanyItem(company);
                 container.prepend(item);
             }
+            applySalespersonFilter();
         }
 
         function removeCompanyItem(companyId) {
@@ -1283,7 +1306,10 @@ function getRoleBadgeColor(role) {
                 const data = await response.json();
                 
                 if (data.success) {
-                    populateCompaniesList(data.companies);
+                    const companies = Array.isArray(data.companies) ? data.companies : [];
+                    currentCompanies = companies;
+                    populateCompaniesList(companies);
+                    refreshSalespersonFilter(allUsers, currentCompanies);
                     document.getElementById('loadMoreCompanies').style.display = 'none';
                 }
                 
