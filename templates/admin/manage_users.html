@@ -111,18 +111,33 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-success text-white">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                             <h5 class="mb-0">
                                 <i class="fas fa-building me-2"></i>
                                 Company Management
                             </h5>
-                            <div>
-                                <button class="btn btn-light btn-sm me-2" onclick="showAddCompanyModal()">
-                                    <i class="fas fa-plus me-1"></i> Add Company
-                                </button>
-                                <button class="btn btn-outline-light btn-sm" onclick="showAllCompanies()">
-                                    <i class="fas fa-list me-1"></i> View All
-                                </button>
+                            <div class="d-flex flex-column align-items-md-end gap-2 w-100 w-md-auto">
+                                <div class="d-flex align-items-center flex-wrap justify-content-md-end gap-2">
+                                    <div class="filter-dropdown" id="salespersonFilterDropdown">
+                                        <button type="button" class="btn btn-light btn-sm filter-dropdown-btn" id="salespersonFilterButton">
+                                            <span><i class="fas fa-filter me-1"></i> Filter by</span>
+                                            <span id="salespersonFilterLabel">All Salespersons</span>
+                                        </button>
+                                        <div class="filter-dropdown-menu" id="salespersonFilterMenu">
+                                            <button type="button" class="filter-option" data-user-id="" data-user-name="All Salespersons">
+                                                <span>All Salespersons</span>
+                                                <span class="badge bg-light text-dark">0</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-light btn-sm" onclick="showAddCompanyModal()">
+                                        <i class="fas fa-plus me-1"></i> Add Company
+                                    </button>
+                                    <button class="btn btn-outline-light btn-sm" onclick="showAllCompanies()">
+                                        <i class="fas fa-list me-1"></i> View All
+                                    </button>
+                                </div>
+                                <span class="filter-dropdown-label text-md-end">Hover to choose a salesperson and filter assigned companies</span>
                             </div>
                         </div>
                     </div>
@@ -289,6 +304,104 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let salespersonFilterState = {
+            activeUserId: '',
+            users: []
+        };
+
+        function buildSalespersonMenu(users) {
+            const menu = document.getElementById('salespersonFilterMenu');
+            const label = document.getElementById('salespersonFilterLabel');
+            if (!menu || !label) return;
+
+            menu.innerHTML = '';
+
+            const options = [
+                {
+                    id: '',
+                    name: 'All Salespersons',
+                    companyCount: getCompanyCountForUser('', users)
+                },
+                ...users.map(user => ({
+                    id: user.id,
+                    name: user.username || user.email || user.id,
+                    companyCount: getCompanyCountForUser(user.id, users)
+                }))
+            ];
+
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'filter-option';
+                btn.dataset.userId = option.id;
+                btn.dataset.userName = option.name;
+                btn.innerHTML = `
+                    <span>${option.name}</span>
+                    <span class="badge bg-light text-dark">${option.companyCount}</span>
+                `;
+
+                btn.addEventListener('click', () => {
+                    salespersonFilterState.activeUserId = option.id;
+                    label.textContent = option.name;
+                    applySalespersonFilter();
+                });
+
+                menu.appendChild(btn);
+            });
+        }
+
+        function getCompanyCountForUser(userId, users) {
+            if (!userId) {
+                return salesCompanyMap.totalCompanies || 0;
+            }
+            const companies = salesCompanyMap.byUser[userId] || [];
+            return companies.length;
+        }
+
+        const salesCompanyMap = {
+            totalCompanies: 0,
+            byUser: {}
+        };
+
+        function updateSalesCompanyMap(companies) {
+            salesCompanyMap.totalCompanies = Array.isArray(companies) ? companies.length : 0;
+            salesCompanyMap.byUser = {};
+
+            if (!Array.isArray(companies)) return;
+
+            companies.forEach(company => {
+                const assigned = Array.isArray(company.assigned_to) ? company.assigned_to : [];
+                assigned.forEach(userId => {
+                    const normalized = String(userId);
+                    if (!salesCompanyMap.byUser[normalized]) {
+                        salesCompanyMap.byUser[normalized] = [];
+                    }
+                    salesCompanyMap.byUser[normalized].push(company.id);
+                });
+            });
+        }
+
+        function applySalespersonFilter() {
+            const container = document.getElementById('companiesList');
+            if (!container) return;
+            const filterId = salespersonFilterState.activeUserId;
+
+            Array.from(container.getElementsByClassName('company-item')).forEach(item => {
+                const assigned = item.dataset.assignedUsers ? item.dataset.assignedUsers.split(',') : [];
+                if (!filterId) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = assigned.includes(filterId) ? '' : 'none';
+                }
+            });
+        }
+
+        function refreshSalespersonFilter(users, companies) {
+            salespersonFilterState.users = users || [];
+            updateSalesCompanyMap(companies || []);
+            buildSalespersonMenu(salespersonFilterState.users);
+            applySalespersonFilter();
+        }
         // Global variables
         let allUsers = [];
         // Global variables
