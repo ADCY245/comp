@@ -4405,10 +4405,10 @@ def send_quotation():
         user_email = current_user.email if hasattr(current_user, 'email') else None
         recipients = list({email for email in [customer_email, 'operations@chemo.in', user_email] if email})
 
-        quote_generated_at = get_india_time()
-        quote_generated_at_utc = quote_generated_at.astimezone(timezone.utc)
+        quote_generated_at_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
+        quote_generated_at = quote_generated_at_utc.astimezone(IST)
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
-        quote_time_display = quote_generated_at.strftime('%I:%M %p IST')
+        quote_time_display = (quote_generated_at_utc + timedelta(hours=5, minutes=30)).strftime('%I:%M %p')
 
         # Table rows with header
         rows_html = """
