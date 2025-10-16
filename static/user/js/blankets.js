@@ -878,16 +878,22 @@ function convertToMeters(value, unit) {
 
 function displayRates() {
   const selected = blanketData.find(p => p.id == document.getElementById("blanketSelect").value);
+  const ratePerSqMeterEl = document.getElementById("rateSqMeter");
+  const ratePerSqYardEl = document.getElementById("rateSqYard");
   if (selected) {
     const ratePerSqMeter = parseFloat(selected.ratePerSqMt || selected.base_rate || 0);
-    document.getElementById("rateSqMeter").innerText = `₹${ratePerSqMeter}`;
+    if (ratePerSqMeterEl) {
+      ratePerSqMeterEl.innerText = `₹${ratePerSqMeter}`;
+    }
     // 1 sq.m = 1.19599 sq.yd, derive yard rate on the fly if not provided
     const ratePerSqYard = parseFloat(selected.ratePerSqYard || (ratePerSqMeter ? (ratePerSqMeter / 1.19599).toFixed(2) : 0));
-    document.getElementById("rateSqYard").innerText = `₹${ratePerSqYard}`;
+    if (ratePerSqYardEl) {
+      ratePerSqYardEl.innerText = `₹${ratePerSqYard}`;
+    }
     
   } else {
-    document.getElementById("rateSqMeter").innerText = '-';
-    document.getElementById("rateSqYard").innerText = '-';
+    if (ratePerSqMeterEl) ratePerSqMeterEl.innerText = '-';
+    if (ratePerSqYardEl) ratePerSqYardEl.innerText = '-';
   }
 }
 
