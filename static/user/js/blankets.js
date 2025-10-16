@@ -416,6 +416,74 @@ window.onload = () => {
     });
     
   // Load blanket categories
+  const categorySection = document.getElementById("categorySection");
+  const blanketSection = document.getElementById("blanketSection");
+  const measurementSection = document.getElementById("measurementSection");
+  const pricingSection = document.getElementById("pricingSection");
+  const blanketTypeSection = document.getElementById("blanketTypeSection");
+
+  const updateMeasurementVisibility = () => {
+    const categorySelect = document.getElementById("categorySelect");
+    const blanketSelect = document.getElementById("blanketSelect");
+    const hasCategory = categorySelect && !!categorySelect.value;
+    const hasBlanket = blanketSelect && !!blanketSelect.value;
+    if (measurementSection) {
+      measurementSection.style.display = hasCategory && hasBlanket ? 'block' : 'none';
+    }
+    if (!hasCategory) {
+      if (blanketSelect) blanketSelect.value = '';
+      if (measurementSection) measurementSection.style.display = 'none';
+      if (pricingSection) pricingSection.style.display = 'none';
+      resetMeasurements();
+      resetPricing();
+    } else if (!hasBlanket) {
+      if (pricingSection) pricingSection.style.display = 'none';
+      resetMeasurements();
+      resetPricing();
+    }
+  };
+
+  const updatePricingVisibility = () => {
+    const length = parseFloat(document.getElementById('lengthInput')?.value);
+    const width = parseFloat(document.getElementById('widthInput')?.value);
+    const thickness = document.getElementById('thicknessSelect')?.value;
+    const shouldShowPricing = !isNaN(length) && length > 0 && !isNaN(width) && width > 0 && thickness;
+    if (pricingSection) {
+      pricingSection.style.display = shouldShowPricing ? 'block' : 'none';
+    }
+    if (!shouldShowPricing) {
+      resetPricing();
+    }
+  };
+
+  const resetMeasurements = () => {
+    const lengthInput = document.getElementById('lengthInput');
+    const widthInput = document.getElementById('widthInput');
+    const thicknessSelect = document.getElementById('thicknessSelect');
+    if (lengthInput) lengthInput.value = '';
+    if (widthInput) widthInput.value = '';
+    if (thicknessSelect) thicknessSelect.value = '';
+  };
+
+  const resetPricing = () => {
+    const barSelect = document.getElementById('barSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const finalPriceElement = document.getElementById('finalPrice');
+    const basePriceEl = document.getElementById('basePrice');
+    const netUnitPriceEl = document.getElementById('netUnitPrice');
+    const areaElement = document.getElementById('calculatedArea');
+    const discountValue = document.getElementById('discountedValue');
+    if (barSelect) barSelect.value = '';
+    if (quantityInput) quantityInput.value = 1;
+    if (areaElement) areaElement.innerText = '';
+    if (basePriceEl) basePriceEl.innerText = '';
+    if (netUnitPriceEl) netUnitPriceEl.innerText = '';
+    if (discountValue) discountValue.style.display = 'none';
+    if (finalPriceElement) {
+      finalPriceElement.innerHTML = '<p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>';
+    }
+  };
+
   fetch("/static/data/blanket_categories.json")
     .then(res => {
       if (!res.ok) {
@@ -426,6 +494,7 @@ window.onload = () => {
     .then(data => {
       const categorySelect = document.getElementById("categorySelect");
       categorySelect.innerHTML = `
+        <option value="" selected disabled>-- Select Category --</option>
         <option value="All">All Categories</option>
       `;
       blanketCategoriesData = data.categories || {};
@@ -444,16 +513,14 @@ window.onload = () => {
       categorySelect.addEventListener("change", () => {
         const selectedCategory = categorySelect.value || 'All';
         filterBlanketsByCategory(selectedCategory, blanketCategoriesData);
+        if (blanketSection) blanketSection.style.display = 'block';
+        updateMeasurementVisibility();
       });
 
-      const categorySection = document.getElementById("categorySection");
-      if (categorySection) {
-        categorySection.style.display = 'block';
+      const initialCategory = categorySelect.value || '';
+      if (initialCategory) {
+        filterBlanketsByCategory(initialCategory, blanketCategoriesData);
       }
-
-      const initialCategory = categorySelect.value || 'All';
-      categorySelect.value = initialCategory;
-      filterBlanketsByCategory(initialCategory, blanketCategoriesData);
     })
     .catch(error => {
       console.error('Error loading blanket categories:', error);
@@ -472,10 +539,7 @@ window.onload = () => {
       blanketData = data.products || [];
       // Initial load - show all blankets
       populateBlanketSelect(blanketData);
-
-      const categorySelect = document.getElementById("categorySelect");
-      const activeCategory = categorySelect && categorySelect.value ? categorySelect.value : 'All';
-      filterBlanketsByCategory(activeCategory, blanketCategoriesData);
+      updateMeasurementVisibility();
     })
     .catch(error => {
       console.error('Error loading blanket data:', error);
@@ -668,7 +732,9 @@ window.onload = () => {
     }
     
     populateBlanketSelect(filteredBlankets);
-    const blanketSection = document.getElementById("blanketSection");
+    if (blanketTypeSection) {
+      blanketTypeSection.style.display = filteredBlankets.length ? 'block' : 'none';
+    }
     if (blanketSection) {
       blanketSection.style.display = filteredBlankets.length ? 'block' : 'none';
     }
@@ -693,12 +759,11 @@ window.onload = () => {
     newSelect.addEventListener("change", () => {
       displayRates();
       calculatePrice();
+      updateMeasurementVisibility();
+      updatePricingVisibility();
     });
 
-    const blanketSection = document.getElementById("blanketSection");
-    if (blanketSection) {
-      blanketSection.style.display = blankets.length ? 'block' : 'none';
-    }
+    updateMeasurementVisibility();
   }
 
   // Debug: Log when script loads
@@ -974,8 +1039,6 @@ function calculatePrice() {
   }
 }
 
-
-
 function applyDiscount() {
   const discountSelect = document.getElementById("discountSelect");
   const discountVal = discountSelect.value;
@@ -1049,15 +1112,25 @@ function applyGST() {
   const quantityInput = document.getElementById('quantityInput');
   const unitSelect = document.getElementById('unitSelect');
   const gstSelect = document.getElementById('gstSelect');
+  const thicknessSelect = document.getElementById('thicknessSelect');
 
-  [lengthInput, widthInput, quantityInput].forEach(el => {
+  [lengthInput, widthInput].forEach(el => {
     if (el) {
       el.addEventListener('input', () => {
         calculatePrice();
+        updatePricingVisibility();
       });
     }
   });
-  if (unitSelect) unitSelect.addEventListener('change', calculatePrice);
+  if (quantityInput) quantityInput.addEventListener('input', calculatePrice);
+  if (unitSelect) unitSelect.addEventListener('change', () => {
+    calculatePrice();
+    updatePricingVisibility();
+  });
+  if (thicknessSelect) thicknessSelect.addEventListener('change', () => {
+    calculatePrice();
+    updatePricingVisibility();
+  });
   if (gstSelect) gstSelect.addEventListener('change', () => {
     applyGST();
     calculatePrice();
