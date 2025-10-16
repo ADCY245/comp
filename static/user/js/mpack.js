@@ -630,7 +630,7 @@ function handleSizeSelection() {
   
   // Show price section when a size is selected
   const priceSection = document.getElementById("priceSection");
-  if (priceSection) priceSection.style.display = "block";
+  if (priceSection) priceSection.style.display = selectedId ? "block" : "none";
   
   // Update net price display safely
   currentNetPrice = parseFloat(priceMap[selectedId] || 0);
@@ -863,7 +863,7 @@ function calculateFinalPrice() {
   }
   
   if (priceSection) {
-    priceSection.style.display = "block";
+    priceSection.style.display = selectedSizeId ? "block" : "none";
   }
 }
 
