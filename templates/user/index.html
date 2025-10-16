@@ -80,14 +80,37 @@
     </div>
 
     <!-- Product Selection (initially hidden) -->
-    <div class="text-center mt-4" id="productSelectionSection" style="display: none;">
+    <div class="mt-4" id="productSelectionSection" style="display: none;">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="mb-0">Select Product Category</h3>
+            <h3 class="mb-0 text-uppercase text-muted">Select Product Category</h3>
         </div>
-        <div class="d-flex flex-column flex-md-row justify-content-center">
-            <a class="btn btn-primary btn-lg" href="#" id="mpacksBtn" data-route="{{ url_for('mpacks') }}" role="button">View Undepacking Materials</a>
-            <a class="btn btn-outline-primary btn-lg mt-3 mt-md-0 ms-md-3" href="#" id="blanketsBtn" data-route="{{ url_for('blankets') }}" role="button">View Blankets</a>
-            <a class="btn btn-outline-warning btn-lg mt-3 mt-md-0 ms-md-3" href="#" id="chemMaintBtn" data-route="{{ url_for('chemicals_maintenance') }}" role="button">View Chemicals &amp; Maintenance Products</a>
+        <div class="product-options">
+            <button type="button" class="product-option-card" id="mpacksBtn" data-route="{{ url_for('mpacks') }}">
+                <span class="product-option-card__icon"><i class="bi bi-box-seam"></i></span>
+                <div class="product-option-card__content">
+                    <h4>Underpacking Materials</h4>
+                    <p>Configure M-Packs sized for your press and add them directly to the quotation cart.</p>
+                </div>
+                <span class="product-option-card__cta"><i class="bi bi-arrow-right"></i></span>
+            </button>
+
+            <button type="button" class="product-option-card" id="blanketsBtn" data-route="{{ url_for('blankets') }}">
+                <span class="product-option-card__icon"><i class="bi bi-brightness-high"></i></span>
+                <div class="product-option-card__content">
+                    <h4>Blankets</h4>
+                    <p>Build blanket configurations with dynamic sizing, barring, and pricing in one place.</p>
+                </div>
+                <span class="product-option-card__cta"><i class="bi bi-arrow-right"></i></span>
+            </button>
+
+            <button type="button" class="product-option-card" id="chemMaintBtn" data-route="{{ url_for('chemicals_maintenance') }}">
+                <span class="product-option-card__icon"><i class="bi bi-beaker"></i></span>
+                <div class="product-option-card__content">
+                    <h4>Chemicals &amp; Maintenance</h4>
+                    <p>Browse the monochrome catalogue of press chemicals and daily maintenance essentials.</p>
+                </div>
+                <span class="product-option-card__cta"><i class="bi bi-arrow-right"></i></span>
+            </button>
         </div>
     </div>
 
