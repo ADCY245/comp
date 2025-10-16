@@ -395,8 +395,8 @@
             document.getElementById('quotationModalTitle').textContent = `Quotation #${quotation.id} Details`;
             
             const modalBody = document.getElementById('quotationModalBody');
-            const createdDate = quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-IN') : 'N/A';
-            const createdTime = quotation.created_at ? new Date(quotation.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+            const createdDate = quotation.generated_at_date_display || (quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-IN') : 'N/A');
+            const createdTime = quotation.generated_at_time_display || (quotation.created_at ? new Date(quotation.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A');
             
             let productsHtml = '';
             if (quotation.products && quotation.products.length > 0) {
@@ -406,21 +406,41 @@
                             <thead>
                                 <tr>
                                     <th>Product</th>
+                                    <th>Size</th>
                                     <th>Quantity</th>
                                     <th>Unit Price</th>
-                                    <th>Total</th>
+                                    <th>Discount</th>
                                 </tr>
                             </thead>
                             <tbody>
                 `;
                 
                 quotation.products.forEach(product => {
+                    const baseSize = product.size || (
+                        product.length && product.width
+                            ? `${product.length} x ${product.width} ${product.unit || ''}`.trim()
+                            : 'N/A'
+                    );
+                    const thicknessRaw = product.thickness ?? (product.calculations && product.calculations.thickness);
+                    let size = baseSize || 'N/A';
+                    if (thicknessRaw) {
+                        const thicknessStr = thicknessRaw.toString();
+                        const hasUnit = /[a-zA-Z]/.test(thicknessStr);
+                        size = `${size}${size !== 'N/A' ? ' | ' : ''}${thicknessStr}${hasUnit ? '' : ' mm'}`;
+                    }
+                    const unitPrice = product.unit_price || product.base_price || 0;
+                    const discountPercent = (
+                        product.discount_percent ??
+                        (product.calculations && (product.calculations.discount_percent ?? product.calculations.discountPercent)) ??
+                        0
+                    );
                     productsHtml += `
                         <tr>
                             <td>${product.name || 'N/A'}</td>
+                            <td>${size || 'N/A'}</td>
                             <td>${product.quantity || 0}</td>
-                            <td>₹${(product.unit_price || 0).toLocaleString('en-IN')}</td>
-                            <td>₹${(product.total_price || 0).toLocaleString('en-IN')}</td>
+                            <td>₹${Number(unitPrice || 0).toLocaleString('en-IN')}</td>
+                            <td>${Number(discountPercent || 0).toFixed(1)}%</td>
                         </tr>
                     `;
                 });
