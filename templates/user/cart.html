@@ -449,7 +449,7 @@
                          data-gst-percent="{{ item.gst_percent or 18 }}"
                          {% else %}
                          data-unit-price="{{ item.unit_price }}"
-                         data-gst-percent="{{ item.gst_percent or 12 }}"
+                         data-gst-percent="{{ item.gst_percent or 18 }}"
                          {% endif %}
                          data-discount-percent="{{ item.discount_percent or 0 }}"
                          {% if item.type == 'blanket' %}
@@ -465,7 +465,7 @@
                              data-unit-price="{{ item.unit_price|default(0) }}" 
                              data-quantity="{{ item.quantity|default(1) }}" 
                              data-discount-percent="{{ item.discount_percent|default(0) }}" 
-                             data-gst-percent="{{ item.gst_percent|default(12) }}"
+                             data-gst-percent="{{ item.gst_percent|default(18) }}"
                          {% endif %}>
                     <div class="card h-100">
                         <div class="card-body">

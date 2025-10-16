@@ -244,8 +244,8 @@ function getFormData() {
   let discountAmount = (totalPriceBeforeDiscount * discount) / 100;
   let priceAfterDiscount = totalPriceBeforeDiscount - discountAmount;
   
-  // Add GST (12% as per the form)
-  const gstRate = 0.12;
+  // Add GST (18% as per the form)
+  const gstRate = 0.18;
   const gstAmount = priceAfterDiscount * gstRate;
   const finalPrice = priceAfterDiscount + gstAmount;
   
@@ -977,8 +977,8 @@ async function addMpackToCart() {
   let discountAmount = (totalPriceBeforeDiscount * discount) / 100;
   let priceAfterDiscount = totalPriceBeforeDiscount - discountAmount;
   
-  // Add GST (12% as per the form)
-  const gstRate = 0.12;
+  // Add GST (18% as per the form)
+  const gstRate = 0.18;
   const gstAmount = priceAfterDiscount * gstRate;
   const finalPrice = priceAfterDiscount + gstAmount;
 

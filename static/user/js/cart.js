@@ -2051,7 +2051,7 @@ function updateItemDisplay(item, data) {
         item.dataset.unitPrice = data.unit_price || 0;
         item.dataset.quantity = data.quantity || 1;
         item.dataset.discountPercent = data.discount_percent || 0;
-        item.dataset.gstPercent = data.gst_percent || 12;
+        item.dataset.gstPercent = data.gst_percent || 18;
     }
     
     // Update the quantity input
