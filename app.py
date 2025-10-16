@@ -4720,7 +4720,7 @@ def send_quotation():
                                     
                                     {f'''
                                     <tr>
-                                        <td style='padding: 8px; text-align: right;'>GST (18.0%):</td>
+                                        <td style='padding: 8px; text-align: right;'>GST (18.0% - Underpacking):</td>
                                         <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "mpack"):,.2f}</td>
                                     </tr>
                                     ''' if any(p.get("type") == "mpack" for p in products) else ''}

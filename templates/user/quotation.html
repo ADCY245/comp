@@ -255,7 +255,7 @@
                 
                 {% if calculations.gst_breakdown.mpacks.subtotal_after_discount > 0 %}
                 <tr>
-                    <td class="text-end">GST (12.0%):</td>
+                    <td class="text-end">GST (18.0% - Underpacking):</td>
                     <td class="text-end">₹{{ '%.2f'|format(calculations.gst_breakdown.mpacks.gst) }}</td>
                 </tr>
                 {% endif %}
