@@ -309,6 +309,7 @@
             users: []
         };
         let currentCompanies = [];
+        let currentCompanyPage = 0;
 
         function buildSalespersonMenu(users) {
             const menu = document.getElementById('salespersonFilterMenu');
@@ -317,13 +318,21 @@
 
             menu.innerHTML = '';
 
+            const filteredUsers = Array.isArray(users)
+                ? users.filter(user => (user.role || '').toLowerCase() !== 'admin')
+                : [];
+
+            if (salespersonFilterState.activeUserId && !filteredUsers.some(u => String(u.id) === salespersonFilterState.activeUserId)) {
+                salespersonFilterState.activeUserId = '';
+            }
+
             const options = [
                 {
                     id: '',
                     name: 'All Users',
                     companyCount: getCompanyCountForUser('', users)
                 },
-                ...users.map(user => ({
+                ...filteredUsers.map(user => ({
                     id: user.id,
                     name: user.username || user.email || user.id,
                     companyCount: getCompanyCountForUser(user.id, users)
