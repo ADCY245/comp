@@ -152,6 +152,9 @@
                                     </button>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="alphabet-filter" id="alphabetFilter"></div>
+                            </div>
                         </div>
                         
                         <!-- Companies List -->
@@ -310,6 +313,7 @@
         };
         let currentCompanies = [];
         let currentCompanyPage = 0;
+        let currentAlphabetFilter = 'ALL';
 
         function buildSalespersonMenu(users) {
             const menu = document.getElementById('salespersonFilterMenu');
@@ -353,7 +357,7 @@
                 btn.addEventListener('click', () => {
                     salespersonFilterState.activeUserId = option.id;
                     label.textContent = option.name;
-                    applySalespersonFilter();
+                    applyCompanyFilters();
                 });
 
                 menu.appendChild(btn);
@@ -391,18 +395,21 @@
             });
         }
 
-        function applySalespersonFilter() {
+        function applyCompanyFilters() {
             const container = document.getElementById('companiesList');
             if (!container) return;
             const filterId = salespersonFilterState.activeUserId;
 
+            const alphabetLetter = currentAlphabetFilter;
+
             Array.from(container.getElementsByClassName('company-item')).forEach(item => {
                 const assigned = item.dataset.assignedUsers ? item.dataset.assignedUsers.split(',') : [];
-                if (!filterId) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = assigned.includes(filterId) ? '' : 'none';
-                }
+                const name = (item.dataset.companyName || '').toLowerCase();
+
+                const passesSalesperson = !filterId || assigned.includes(filterId);
+                const passesAlphabet = alphabetLetter === 'ALL' || name.startsWith(alphabetLetter.toLowerCase());
+
+                item.style.display = passesSalesperson && passesAlphabet ? '' : 'none';
             });
         }
 
@@ -410,7 +417,32 @@
             salespersonFilterState.users = users || [];
             updateSalesCompanyMap(companies || []);
             buildSalespersonMenu(salespersonFilterState.users);
-            applySalespersonFilter();
+            applyCompanyFilters();
+        }
+
+        const alphabetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+        function renderAlphabetFilter() {
+            const container = document.getElementById('alphabetFilter');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const letters = ['ALL', ...alphabetLetters];
+            letters.forEach(letter => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'alphabet-filter-btn';
+                btn.textContent = letter === 'ALL' ? 'All' : letter;
+                if (letter === currentAlphabetFilter) {
+                    btn.classList.add('active');
+                }
+                btn.addEventListener('click', () => {
+                    currentAlphabetFilter = letter;
+                    renderAlphabetFilter();
+                    applyCompanyFilters();
+                });
+                container.appendChild(btn);
+            });
         }
         // Global variables
         let allUsers = [];
@@ -546,6 +578,7 @@ function getRoleBadgeColor(role) {
                 loadUsers();
                 loadCompanies();
                 loadAllCompaniesForAssignment();
+                renderAlphabetFilter();
             } catch (error) {
                 console.error('Error initializing page:', error);
             }
@@ -690,7 +723,7 @@ function getRoleBadgeColor(role) {
                 const item = createCompanyItem(company);
                 container.appendChild(item);
             });
-            applySalespersonFilter();
+            applyCompanyFilters();
         }
         
         // Append companies to list
@@ -701,7 +734,7 @@ function getRoleBadgeColor(role) {
                 const item = createCompanyItem(company);
                 container.appendChild(item);
             });
-            applySalespersonFilter();
+            applyCompanyFilters();
         }
         
         function getCompanyAssignedCount(company) {
@@ -746,6 +779,7 @@ function getRoleBadgeColor(role) {
             const assignedUsers = extractAssignedUsers(company);
             item.dataset.companyId = company.id || '';
             item.dataset.assignedUsers = assignedUsers.join(',');
+            item.dataset.companyName = (company.name || '').toLowerCase();
         }
 
         // Create company item element
@@ -770,7 +804,7 @@ function getRoleBadgeColor(role) {
                 const item = createCompanyItem(company);
                 container.prepend(item);
             }
-            applySalespersonFilter();
+            applyCompanyFilters();
         }
 
         function removeCompanyItem(companyId) {
