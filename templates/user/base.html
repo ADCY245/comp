@@ -220,6 +220,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
+                            <i class="bi bi-beaker"></i> Chemicals &amp; Maintenance
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" id="cartLink" href="{{ url_for('cart') }}" data-route="{{ url_for('cart') }}">
                             <i class="bi bi-cart"></i> Cart <span id="cartCount" class="badge bg-danger">0</span>
                         </a>
@@ -367,7 +372,8 @@
                 <div class="modal-body text-center">
                     <div class="mb-3">
                         <a href="{{ url_for('mpacks') }}" class="btn btn-primary btn-lg d-block mb-3">M-Packs</a>
-                        <a href="{{ url_for('blankets') }}" class="btn btn-success btn-lg d-block">Blankets</a>
+                        <a href="{{ url_for('blankets') }}" class="btn btn-success btn-lg d-block mb-3">Blankets</a>
+                        <a href="{{ url_for('chemicals_maintenance') }}" class="btn btn-warning btn-lg d-block">Chemicals &amp; Maintenance</a>
                     </div>
                 </div>
             </div>
