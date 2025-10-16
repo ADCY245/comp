@@ -4591,59 +4591,84 @@ def send_quotation():
               <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
             </div>
             
-            <div style='display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;'>
-              <!-- From Information -->
-              <div style='flex: 1 1 320px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
-                <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125); display: flex; justify-content: space-between; align-items: center;'>
-                  <h5 style='margin: 0; font-size: 1rem;'>From</h5>
-                  <span style='background-color: #0d6efd; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>CGI</span>
-                </div>
-                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; word-break: break-word; white-space: normal;'>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
-                    <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
-                  </div>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
-                    <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
-                  </div>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                    <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a></div>
-                  </div>
-                  <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Prepared By</div>
-                    <div style='font-weight: 600;'>{current_user.username}</div>
-                    <div><a href='mailto:{current_user.email}' style='color: #0d6efd; text-decoration: none;'>{current_user.email}</a></div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- To Information -->
-              <div style='flex: 1 1 320px; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background-color: white;'>
-                <div style='background-color: #f8f9fa; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.125); display: flex; justify-content: space-between; align-items: center;'>
-                  <h5 style='margin: 0; font-size: 1rem;'>To</h5>
-                  <span style='background-color: #198754; color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px;'>Client</span>
-                </div>
-                <div style='padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; word-break: break-word; white-space: normal;'>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Company</div>
-                    <div style='font-weight: 600;'>{customer_name}</div>
-                  </div>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                    <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>{customer_email}</a></div>
-                  </div>
-                  <div>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation Date</div>
-                    <div>{quote_date_display} | {quote_time_display}</div>
-                  </div>
-                  <div style='border-top: 1px solid #e9ecef; padding-top: 0.75rem;'>
-                    <div style='color: #6c757d; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation #</div>
-                    <div style='font-weight: 600;'>{quote_id}</div>
-                  </div>
-                </div>
-              </div>
+            <div style='margin-bottom: 2rem;'>
+              <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-collapse: separate; border-spacing: 24px 0;'>
+                <tr>
+                  <td style='vertical-align: top; width: 50%; padding: 0;'>
+                    <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
+                      <tr>
+                        <td style='background-color: #f8f9fa; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;'>
+                          <h5 style='margin: 0; font-size: 16px; font-weight: 600;'>Company Information</h5>
+                          <span style='display: inline-block; background-color: #198754; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 999px;'>Verified</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 20px; background-color: #ffffff;'>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-building' style='color: #0d6efd; margin-right: 10px; font-size: 18px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Company Name</div>
+                              <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex;'>
+                            <i class='fas fa-map-marker-alt' style='color: #6c757d; margin-right: 10px; font-size: 16px; margin-top: 4px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
+                              <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-envelope' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
+                              <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a></div>
+                            </div>
+                          </div>
+                          <div style='margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6;'>
+                            <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Prepared by</div>
+                            <div style='font-weight: 600;'>{current_user.username}</div>
+                            <div><a href='mailto:{current_user.email}' style='color: #0d6efd; text-decoration: none;'>{current_user.email}</a></div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style='vertical-align: top; width: 50%; padding: 0;'>
+                    <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
+                      <tr>
+                        <td style='background-color: #f8f9fa; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;'>
+                          <h5 style='margin: 0; font-size: 16px; font-weight: 600;'>Customer Information</h5>
+                          <span style='display: inline-block; background-color: #198754; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 999px;'>Verified</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style='padding: 20px; background-color: #ffffff;'>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-building' style='color: #0d6efd; margin-right: 10px; font-size: 18px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Company Name</div>
+                              <div style='font-weight: 600;'>{customer_name}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-envelope' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
+                              <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>{customer_email}</a></div>
+                            </div>
+                          </div>
+                          <div style='margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6;'>
+                            <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Quotation Details</div>
+                            <div style='font-weight: 600;'>Quotation #{quote_id}</div>
+                            <div>{quote_date_display} | {quote_time_display}</div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </div>
             
             <div style='margin: 1.5rem 0; border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden;'>
