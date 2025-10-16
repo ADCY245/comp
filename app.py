@@ -1376,7 +1376,12 @@ def serialize_admin_quotation(q_doc):
         'prepared_by_email': q_doc.get('prepared_by_email', q_doc.get('user_email', '')),
         'notes': q_doc.get('notes', ''),
         'products': q_doc.get('products', []),
-        'created_at': str(q_doc.get('created_at') or '')
+        'created_at': str(q_doc.get('created_at') or ''),
+        'created_at_iso': q_doc.get('created_at_iso', ''),
+        'created_at_ist': q_doc.get('created_at_ist', ''),
+        'created_at_utc': q_doc.get('created_at_utc', ''),
+        'generated_at_date_display': q_doc.get('generated_at_date_display', ''),
+        'generated_at_time_display': q_doc.get('generated_at_time_display', '')
     }
 
 
@@ -4408,7 +4413,7 @@ def send_quotation():
         quote_generated_at_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
         quote_generated_at = quote_generated_at_utc.astimezone(IST)
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
-        quote_time_display = (quote_generated_at_utc + timedelta(hours=5, minutes=30)).strftime('%I:%M %p')
+        quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
         # Table rows with header
         rows_html = """
@@ -4720,9 +4725,10 @@ def send_quotation():
             try:
                 mongo_db.quotations.insert_one({
                     'quote_id': quote_id,
-                    'created_at': quote_generated_at_utc,
-                    'created_at_iso': quote_generated_at_utc.isoformat(),
+                    'created_at': quote_generated_at,
+                    'created_at_iso': quote_generated_at.isoformat(),
                     'created_at_ist': quote_generated_at.isoformat(),
+                    'created_at_utc': quote_generated_at_utc.isoformat(),
                     'from_company': 'CGI - Chemo Graphics INTERNATIONAL',
                     'from_email': 'info@chemo.in',
                     'prepared_by_name': current_user.username,

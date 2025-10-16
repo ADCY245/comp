@@ -306,9 +306,18 @@
             card.className = 'quotation-card';
             
             // Format date and time in IST (en-IN locale already uses IST)
-            let createdDate = 'N/A';
-            let createdTime = '';
-            if (quotation.created_at) {
+            let createdDate = quotation.generated_at_date_display || 'N/A';
+            let createdTime = quotation.generated_at_time_display || '';
+            if ((!createdDate || createdDate === 'N/A') && quotation.created_at_ist) {
+                const date = new Date(quotation.created_at_ist);
+                createdDate = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                createdTime = date.toLocaleTimeString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else if ((!createdDate || createdDate === 'N/A') && quotation.created_at) {
                 const date = new Date(quotation.created_at);
                 createdDate = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
                 createdTime = date.toLocaleTimeString('en-IN', { 
@@ -395,8 +404,29 @@
             document.getElementById('quotationModalTitle').textContent = `Quotation #${quotation.id} Details`;
             
             const modalBody = document.getElementById('quotationModalBody');
-            const createdDate = quotation.generated_at_date_display || (quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-IN') : 'N/A');
-            const createdTime = quotation.generated_at_time_display || (quotation.created_at ? new Date(quotation.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A');
+            let createdDate = quotation.generated_at_date_display || 'N/A';
+            let createdTime = quotation.generated_at_time_display || '';
+            if ((!createdDate || createdDate === 'N/A') && quotation.created_at_ist) {
+                const date = new Date(quotation.created_at_ist);
+                createdDate = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                createdTime = date.toLocaleTimeString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else if ((!createdDate || createdDate === 'N/A') && quotation.created_at) {
+                const date = new Date(quotation.created_at);
+                createdDate = date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                createdTime = date.toLocaleTimeString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else if (!createdTime) {
+                createdTime = 'N/A';
+            }
             
             let productsHtml = '';
             if (quotation.products && quotation.products.length > 0) {
