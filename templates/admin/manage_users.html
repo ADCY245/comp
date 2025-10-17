@@ -460,10 +460,11 @@
         let allCompaniesForAssignment = [];
         let companyModalInstance = null;
         let lastCompanyModalTrigger = null;
+        let totalCompanyCount = 0;
 
         
         // Constants
-        const companiesPerPage = 10;
+        const companiesPerPage = 1000;
 
         function updateAssignedUsersPreview() {
             const preview = document.getElementById('assignedUsersPreview');
@@ -693,6 +694,9 @@ function getRoleBadgeColor(role) {
                     return;
                 }
                 const companies = Array.isArray(data.companies) ? data.companies : [];
+                if (typeof data.total === 'number') {
+                    totalCompanyCount = data.total;
+                }
                 
                 if (page === 0) {
                     currentCompanies = companies;
@@ -705,10 +709,14 @@ function getRoleBadgeColor(role) {
                 
                 // Show/hide load more button
                 const loadMoreBtn = document.getElementById('loadMoreCompanies');
-                if (companies.length < companiesPerPage) {
-                    loadMoreBtn.style.display = 'none';
-                } else {
-                    loadMoreBtn.style.display = 'block';
+                if (loadMoreBtn) {
+                    if (totalCompanyCount && currentCompanies.length >= totalCompanyCount) {
+                        loadMoreBtn.style.display = 'none';
+                    } else if (companies.length < companiesPerPage) {
+                        loadMoreBtn.style.display = 'none';
+                    } else {
+                        loadMoreBtn.style.display = 'block';
+                    }
                 }
                 
             } catch (error) {

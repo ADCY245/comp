@@ -558,13 +558,62 @@ def admin_list_companies():
     try:
         page = max(int(request.args.get('page', 0)), 0)
         limit = max(min(int(request.args.get('limit', 10)), 1000), 1)
-
-        companies = load_companies_data()
-        serialized = [serialize_admin_company(company) for company in companies]
-
         start = page * limit
-        end = start + limit
-        return jsonify({'success': True, 'companies': serialized[start:end]})
+
+        companies_payload = []
+        total_count = 0
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+            try:
+                mongo_db.command('ping')
+
+                projection = {
+                    '_id': 1,
+                    'Company Name': 1,
+                    'EmailID': 1,
+                    'name': 1,
+                    'email': 1,
+                    'Address': 1,
+                    'address': 1,
+                    'assigned_to': 1
+                }
+
+                total_count = mongo_db.companies.count_documents({})
+                cursor = (
+                    mongo_db.companies
+                    .find({}, projection)
+                    .sort('Company Name', 1)
+                    .skip(start)
+                    .limit(limit)
+                )
+
+                for doc in cursor:
+                    company_doc = {
+                        'id': str(doc.get('_id')),
+                        'name': doc.get('Company Name') or doc.get('name'),
+                        'email': doc.get('EmailID') or doc.get('email'),
+                        'address': doc.get('Address') or doc.get('address', ''),
+                        'assigned_to': doc.get('assigned_to', [])
+                    }
+                    companies_payload.append(serialize_admin_company(company_doc))
+            except Exception as mongo_error:
+                app.logger.error(f"Mongo pagination error in admin_list_companies: {mongo_error}")
+                USE_MONGO = False
+
+        if not companies_payload:
+            companies = load_companies_data()
+            total_count = len(companies)
+            slice_end = start + limit
+            companies_slice = companies[start:slice_end]
+            companies_payload = [serialize_admin_company(company) for company in companies_slice]
+
+        return jsonify({
+            'success': True,
+            'companies': companies_payload,
+            'page': page,
+            'limit': limit,
+            'total': total_count
+        })
     except Exception as e:
         app.logger.error(f"Error in admin_list_companies: {e}")
         return jsonify({'success': False, 'error': 'Failed to load companies'}), 500
