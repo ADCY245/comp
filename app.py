@@ -182,7 +182,7 @@ def send_alert_email(subject: str, body: str):
     return success
 
 # MongoDB Configuration
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import time
 
@@ -935,7 +935,12 @@ def admin_import_companies():
                 use_mongo = False
 
         for row_index, row in enumerate(rows[1:], start=2):
-            record = _extract_row_data(headers_normalized, row)
+            try:
+                record = _extract_row_data(headers_normalized, row)
+            except Exception as extract_error:
+                app.logger.error(f"Row {row_index} parsing error: {extract_error}", exc_info=True)
+                errors.append(f"Row {row_index}: Failed to parse row data")
+                continue
             if not any(str(value).strip() for value in record.values()):
                 continue
 
@@ -944,19 +949,24 @@ def admin_import_companies():
                 errors.append(f"Row {row_index}: Missing company name/email")
                 continue
 
-            payload, created_at, assigned_to = _convert_record_to_storage(record)
+            try:
+                payload, created_at, assigned_to = _convert_record_to_storage(record)
+            except Exception as convert_error:
+                app.logger.error(f"Row {row_index} conversion error: {convert_error}", exc_info=True)
+                errors.append(f"Row {row_index}: Failed to normalize data")
+                continue
 
             try:
                 if use_mongo:
-                    company_id, was_inserted = _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to, created_at)
+                    company_id, was_inserted, previous_assigned = _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to, created_at)
                 else:
-                    company_id, was_inserted = _upsert_company_json(identifier_key, identifier_value, payload, assigned_to, created_at)
+                    company_id, was_inserted, previous_assigned = _upsert_company_json(identifier_key, identifier_value, payload, assigned_to, created_at)
 
                 if not company_id:
                     errors.append(f"Row {row_index}: Failed to upsert company")
                     continue
 
-                _sync_assigned_users(company_id, assigned_to)
+                _sync_assigned_users(company_id, assigned_to, previous_assigned)
 
                 if was_inserted:
                     insert_count += 1
@@ -1669,15 +1679,16 @@ def _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to
     elif identifier_key == 'name':
         query['Company Name'] = {'$regex': f'^{re.escape(identifier_value)}$', '$options': 'i'}
     else:
-        return None, False
+        return None, False, []
 
-    assigned_normalized = normalize_assigned_companies(assigned_to)
+    existing_doc = mongo_db.companies.find_one(query, {'_id': 1, 'assigned_to': 1})
+    previous_assigned = normalize_assigned_companies(existing_doc.get('assigned_to', [])) if existing_doc else []
     created_at_value = created_at or datetime.utcnow()
 
     update_doc = {
         '$set': {
             **payload,
-            'assigned_to': assigned_normalized,
+            'assigned_to': assigned_to,
             'updated_at': datetime.utcnow()
         },
         '$setOnInsert': {
@@ -1686,16 +1697,18 @@ def _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to
         }
     }
 
-    result = mongo_db.companies.update_one(query, update_doc, upsert=True)
-    if result.upserted_id:
-        company_id = str(result.upserted_id)
-        was_inserted = True
-    else:
-        doc = mongo_db.companies.find_one(query, {'_id': 1})
-        company_id = str(doc['_id']) if doc else None
-        was_inserted = False
+    updated_doc = mongo_db.companies.find_one_and_update(
+        query,
+        update_doc,
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+        projection={'_id': 1}
+    )
 
-    return company_id, was_inserted
+    company_id = str(updated_doc['_id']) if updated_doc else None
+    was_inserted = existing_doc is None and company_id is not None
+
+    return company_id, was_inserted, previous_assigned
 
 
 def _upsert_company_json(identifier_key, identifier_value, payload, assigned_to, created_at):
@@ -1711,13 +1724,14 @@ def _upsert_company_json(identifier_key, identifier_value, payload, assigned_to,
             compare_value = (company.get('Company Name') or company.get('name') or '').lower()
 
         if compare_value and compare_value == identifier_value_lower:
+            previous_assigned = normalize_assigned_companies(company.get('assigned_to', []))
             company.update(payload)
             company['assigned_to'] = assigned_normalized
             company['updated_at'] = datetime.utcnow().isoformat()
             if created_at:
                 company['created_at'] = created_at_iso
             save_companies_data(companies)
-            return company.get('id') or company.get('_id'), False
+            return company.get('id') or company.get('_id'), False, previous_assigned
 
     new_company = payload.copy()
     new_company['id'] = str(uuid.uuid4())
@@ -1726,13 +1740,20 @@ def _upsert_company_json(identifier_key, identifier_value, payload, assigned_to,
     new_company['created_by'] = str(current_user.id)
     companies.append(new_company)
     save_companies_data(companies)
-    return new_company['id'], True
+    return new_company['id'], True, []
 
 
-def _sync_assigned_users(company_id, assigned_to):
+def _sync_assigned_users(company_id, assigned_to, previous_assigned=None):
     if not company_id:
         return
-    sync_company_user_links(str(company_id), assigned_to)
+
+    normalized_current = normalize_assigned_companies(assigned_to)
+    normalized_previous = normalize_assigned_companies(previous_assigned or [])
+
+    if set(normalized_current) == set(normalized_previous):
+        return
+
+    sync_company_user_links(str(company_id), normalized_current)
 
 
 def serialize_admin_user(user_doc):
