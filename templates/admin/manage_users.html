@@ -133,6 +133,10 @@
                                     <button class="btn btn-light btn-sm" onclick="showAddCompanyModal()">
                                         <i class="fas fa-plus me-1"></i> Add Company
                                     </button>
+                                    <input type="file" id="companyImportInput" accept=".xlsx,.xlsm" class="d-none" aria-hidden="true">
+                                    <button class="btn btn-outline-light btn-sm" onclick="triggerCompanyImport()">
+                                        <i class="fas fa-upload me-1"></i> Import
+                                    </button>
                                     <button class="btn btn-outline-light btn-sm" onclick="exportCompanies()">
                                         <i class="fas fa-download me-1"></i> Export
                                     </button>
@@ -1450,6 +1454,57 @@ function getRoleBadgeColor(role) {
                     alert('Failed to export companies. Please try again later.');
                 });
         }
+
+        function triggerCompanyImport() {
+            const input = document.getElementById('companyImportInput');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        async function handleCompanyImport(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/admin/companies/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    let message = `Inserted: ${result.inserted}\nUpdated: ${result.updated}`;
+                    if (Array.isArray(result.errors) && result.errors.length) {
+                        message += `\nErrors:\n${result.errors.join('\n')}`;
+                    }
+                    alert(message);
+                    currentCompanyPage = 0;
+                    await loadCompanies(0);
+                } else {
+                    alert(`Import failed: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Import failed:', error);
+                alert('Failed to import companies. Please try again later.');
+            } finally {
+                event.target.value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const importInput = document.getElementById('companyImportInput');
+            if (importInput) {
+                importInput.addEventListener('change', handleCompanyImport);
+            }
+        });
     </script>
 </body>
 </html>

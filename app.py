@@ -22,7 +22,8 @@ from bson.objectid import ObjectId
 import logging
 import traceback
 import resend
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
+from werkzeug.utils import secure_filename
 
 # Import MongoDB users module
 try:
@@ -676,14 +677,14 @@ def admin_create_company():
                 company_data = {
                     'Company Name': name,
                     'EmailID': email,
-                    'phone': phone,
-                    'billing_attention': billing_attention,
-                    'billing_address': billing_address,
-                    'billing_street': billing_street,
-                    'billing_city': billing_city,
-                    'billing_state': billing_state,
-                    'billing_postal_code': billing_postal_code,
-                    'billing_phone': billing_phone,
+                    'Phone': phone,
+                    'Billing Attention': billing_attention,
+                    'Billing Address': billing_address,
+                    'Billing Street': billing_street,
+                    'Billing City': billing_city,
+                    'Billing State': billing_state,
+                    'Billing Postal Code': billing_postal_code,
+                    'Billing Phone': billing_phone,
                     'Address': billing_address,
                     'assigned_to': assigned_to,
                     'created_at': datetime.utcnow(),
@@ -701,17 +702,17 @@ def admin_create_company():
         companies = load_companies_data()
         new_company = {
             'id': str(uuid.uuid4()),
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'billing_attention': billing_attention,
-            'billing_address': billing_address,
-            'billing_street': billing_street,
-            'billing_city': billing_city,
-            'billing_state': billing_state,
-            'billing_postal_code': billing_postal_code,
-            'billing_phone': billing_phone,
-            'address': billing_address,
+            'Company Name': name,
+            'EmailID': email,
+            'Phone': phone,
+            'Billing Attention': billing_attention,
+            'Billing Address': billing_address,
+            'Billing Street': billing_street,
+            'Billing City': billing_city,
+            'Billing State': billing_state,
+            'Billing Postal Code': billing_postal_code,
+            'Billing Phone': billing_phone,
+            'Address': billing_address,
             'assigned_to': assigned_to,
             'created_at': datetime.utcnow().isoformat()
         }
@@ -742,22 +743,22 @@ def admin_update_company(company_id):
                 if 'email' in data:
                     update_fields['EmailID'] = data['email']
                 if 'phone' in data:
-                    update_fields['phone'] = data['phone']
+                    update_fields['Phone'] = data['phone']
                 if 'billing_attention' in data:
-                    update_fields['billing_attention'] = data['billing_attention']
+                    update_fields['Billing Attention'] = data['billing_attention']
                 if 'billing_address' in data:
-                    update_fields['billing_address'] = data['billing_address']
+                    update_fields['Billing Address'] = data['billing_address']
                     update_fields['Address'] = data['billing_address']
                 if 'billing_street' in data:
-                    update_fields['billing_street'] = data['billing_street']
+                    update_fields['Billing Street'] = data['billing_street']
                 if 'billing_city' in data:
-                    update_fields['billing_city'] = data['billing_city']
+                    update_fields['Billing City'] = data['billing_city']
                 if 'billing_state' in data:
-                    update_fields['billing_state'] = data['billing_state']
+                    update_fields['Billing State'] = data['billing_state']
                 if 'billing_postal_code' in data:
-                    update_fields['billing_postal_code'] = data['billing_postal_code']
+                    update_fields['Billing Postal Code'] = data['billing_postal_code']
                 if 'billing_phone' in data:
-                    update_fields['billing_phone'] = data['billing_phone']
+                    update_fields['Billing Phone'] = data['billing_phone']
                 if 'assigned_to' in data:
                     update_fields['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
 
@@ -780,26 +781,26 @@ def admin_update_company(company_id):
             serialized = serialize_admin_company(company)
             if serialized.get('id') == str(company_id):
                 if 'name' in data:
-                    company['name'] = data['name']
+                    company['Company Name'] = data['name']
                 if 'email' in data:
-                    company['email'] = data['email']
+                    company['EmailID'] = data['email']
                 if 'phone' in data:
-                    company['phone'] = data['phone']
+                    company['Phone'] = data['phone']
                 if 'billing_attention' in data:
-                    company['billing_attention'] = data['billing_attention']
+                    company['Billing Attention'] = data['billing_attention']
                 if 'billing_address' in data:
-                    company['billing_address'] = data['billing_address']
-                    company['address'] = data['billing_address']
+                    company['Billing Address'] = data['billing_address']
+                    company['Address'] = data['billing_address']
                 if 'billing_street' in data:
-                    company['billing_street'] = data['billing_street']
+                    company['Billing Street'] = data['billing_street']
                 if 'billing_city' in data:
-                    company['billing_city'] = data['billing_city']
+                    company['Billing City'] = data['billing_city']
                 if 'billing_state' in data:
-                    company['billing_state'] = data['billing_state']
+                    company['Billing State'] = data['billing_state']
                 if 'billing_postal_code' in data:
-                    company['billing_postal_code'] = data['billing_postal_code']
+                    company['Billing Postal Code'] = data['billing_postal_code']
                 if 'billing_phone' in data:
-                    company['billing_phone'] = data['billing_phone']
+                    company['Billing Phone'] = data['billing_phone']
                 if 'assigned_to' in data:
                     company['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
                 updated = serialize_admin_company(company)
@@ -873,6 +874,92 @@ def admin_search_companies():
     except Exception as e:
         app.logger.error(f"Error in admin_search_companies: {e}")
         return jsonify({'success': False, 'error': 'Failed to search companies'}), 500
+
+
+@app.route('/api/admin/companies/import', methods=['POST'])
+@login_required
+@admin_required
+def admin_import_companies():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+
+        upload = request.files['file']
+        if not upload or upload.filename.strip() == '':
+            return jsonify({'success': False, 'error': 'Empty filename'}), 400
+
+        filename = secure_filename(upload.filename)
+        if not filename.lower().endswith(('.xlsx', '.xlsm')):
+            return jsonify({'success': False, 'error': 'Unsupported file type'}), 400
+
+        upload.stream.seek(0)
+        workbook = load_workbook(upload.stream, data_only=True)
+        sheet = workbook.active
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            return jsonify({'success': False, 'error': 'Workbook is empty'}), 400
+
+        headers_normalized, missing_headers = _validate_company_import_headers(rows[0])
+        if missing_headers:
+            return jsonify({'success': False, 'error': f"Missing required columns: {', '.join(missing_headers)}"}), 400
+
+        insert_count = 0
+        update_count = 0
+        errors = []
+        processed = []
+
+        use_mongo = MONGO_AVAILABLE and USE_MONGO and mongo_db is not None
+        if use_mongo:
+            try:
+                mongo_db.command('ping')
+            except Exception as ping_error:
+                app.logger.error(f"Mongo ping failed in admin_import_companies: {ping_error}")
+                use_mongo = False
+
+        for row_index, row in enumerate(rows[1:], start=2):
+            record = _extract_row_data(headers_normalized, row)
+            if not any(str(value).strip() for value in record.values()):
+                continue
+
+            identifier_key, identifier_value = _resolve_company_identifier(record)
+            if not identifier_value:
+                errors.append(f"Row {row_index}: Missing company name/email")
+                continue
+
+            payload, created_at, assigned_to = _convert_record_to_storage(record)
+
+            try:
+                if use_mongo:
+                    company_id, was_inserted = _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to, created_at)
+                else:
+                    company_id, was_inserted = _upsert_company_json(identifier_key, identifier_value, payload, assigned_to, created_at)
+
+                if not company_id:
+                    errors.append(f"Row {row_index}: Failed to upsert company")
+                    continue
+
+                _sync_assigned_users(company_id, assigned_to)
+
+                if was_inserted:
+                    insert_count += 1
+                    processed.append({'row': row_index, 'company_id': company_id, 'status': 'inserted'})
+                else:
+                    update_count += 1
+                    processed.append({'row': row_index, 'company_id': company_id, 'status': 'updated'})
+            except Exception as row_error:
+                app.logger.error(f"Error importing row {row_index}: {row_error}")
+                errors.append(f"Row {row_index}: {row_error}")
+
+        return jsonify({
+            'success': True,
+            'inserted': insert_count,
+            'updated': update_count,
+            'errors': errors,
+            'processed': processed
+        })
+    except Exception as e:
+        app.logger.error(f"Error in admin_import_companies: {e}")
+        return jsonify({'success': False, 'error': 'Failed to import companies'}), 500
 
 
 @app.route('/api/admin/companies/export', methods=['GET'])
@@ -1428,6 +1515,206 @@ def normalize_company_record(company_doc):
         'address': _normalize_company_text(billing_address)
     }
     return normalized
+
+
+COMPANY_IMPORT_REQUIRED_HEADERS = [
+    'Company Name',
+    'EmailID',
+    'Phone',
+    'Billing Attention',
+    'Billing Address',
+    'Billing City',
+    'Billing State',
+    'Postal Code',
+    'Billing Phone',
+    'Users Assigned To'
+]
+
+COMPANY_IMPORT_OPTIONAL_HEADERS = [
+    'Sr No',
+    'Billing Street',
+    'Created Time'
+]
+
+
+def _clean_import_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if cleaned == '-' or cleaned.lower() == 'none':
+            return ''
+        return cleaned
+    if isinstance(value, (int, float)):
+        text = str(value).strip()
+        return text
+    if isinstance(value, datetime):
+        return value
+    return str(value).strip()
+
+
+def _parse_import_datetime(value):
+    if isinstance(value, datetime):
+        return value
+    cleaned = _clean_import_value(value)
+    if not cleaned:
+        return None
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d-%m-%Y %H:%M:%S'):
+        try:
+            return datetime.strptime(cleaned, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(cleaned)
+    except Exception:
+        return None
+
+
+def _parse_import_assigned_to(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    cleaned = _clean_import_value(value)
+    if not cleaned:
+        return []
+    parts = [part.strip() for part in cleaned.split(',')]
+    return [part for part in parts if part]
+
+
+def _build_company_store_payload(record):
+    payload = {
+        'Company Name': record.get('Company Name', ''),
+        'EmailID': record.get('EmailID', ''),
+        'Phone': record.get('Phone', ''),
+        'Billing Attention': record.get('Billing Attention', ''),
+        'Billing Address': record.get('Billing Address', ''),
+        'Billing Street': record.get('Billing Street', ''),
+        'Billing City': record.get('Billing City', ''),
+        'Billing State': record.get('Billing State', ''),
+        'Billing Postal Code': record.get('Billing Postal Code', ''),
+        'Billing Phone': record.get('Billing Phone', ''),
+        'Address': record.get('Billing Address', '')
+    }
+    return payload
+
+
+def _validate_company_import_headers(headers):
+    normalized = [str(header).strip() if header else '' for header in headers]
+    missing = [required for required in COMPANY_IMPORT_REQUIRED_HEADERS if required not in normalized]
+    return normalized, missing
+
+
+def _extract_row_data(headers, row):
+    record = {}
+    for header, value in zip(headers, row):
+        if not header:
+            continue
+        record[header] = _clean_import_value(value)
+    return record
+
+
+def _resolve_company_identifier(record):
+    email = _clean_import_value(record.get('EmailID'))
+    if email:
+        return 'email', email
+    name = _clean_import_value(record.get('Company Name'))
+    if name:
+        return 'name', name
+    return None, None
+
+
+def _convert_record_to_storage(record):
+    payload = {
+        'Company Name': _clean_import_value(record.get('Company Name')),
+        'EmailID': _clean_import_value(record.get('EmailID')),
+        'Phone': _clean_import_value(record.get('Phone')),
+        'Billing Attention': _clean_import_value(record.get('Billing Attention')),
+        'Billing Address': _clean_import_value(record.get('Billing Address')),
+        'Billing Street': _clean_import_value(record.get('Billing Street')),
+        'Billing City': _clean_import_value(record.get('Billing City')),
+        'Billing State': _clean_import_value(record.get('Billing State')),
+        'Billing Postal Code': _clean_import_value(record.get('Postal Code') or record.get('Billing Postal Code')),
+        'Billing Phone': _clean_import_value(record.get('Billing Phone')),
+        'Address': _clean_import_value(record.get('Billing Address'))
+    }
+
+    created_at = _parse_import_datetime(record.get('Created Time'))
+    assigned_to = _parse_import_assigned_to(record.get('Users Assigned To'))
+    return payload, created_at, assigned_to
+
+
+def _upsert_company_mongo(identifier_key, identifier_value, payload, assigned_to, created_at):
+    query = {}
+    if identifier_key == 'email':
+        query['EmailID'] = {'$regex': f'^{re.escape(identifier_value)}$', '$options': 'i'}
+    elif identifier_key == 'name':
+        query['Company Name'] = {'$regex': f'^{re.escape(identifier_value)}$', '$options': 'i'}
+    else:
+        return None, False
+
+    assigned_normalized = normalize_assigned_companies(assigned_to)
+    created_at_value = created_at or datetime.utcnow()
+
+    update_doc = {
+        '$set': {
+            **payload,
+            'assigned_to': assigned_normalized,
+            'updated_at': datetime.utcnow()
+        },
+        '$setOnInsert': {
+            'created_at': created_at_value,
+            'created_by': str(current_user.id)
+        }
+    }
+
+    result = mongo_db.companies.update_one(query, update_doc, upsert=True)
+    if result.upserted_id:
+        company_id = str(result.upserted_id)
+        was_inserted = True
+    else:
+        doc = mongo_db.companies.find_one(query, {'_id': 1})
+        company_id = str(doc['_id']) if doc else None
+        was_inserted = False
+
+    return company_id, was_inserted
+
+
+def _upsert_company_json(identifier_key, identifier_value, payload, assigned_to, created_at):
+    companies = load_companies_data()
+    identifier_value_lower = (identifier_value or '').lower()
+    assigned_normalized = normalize_assigned_companies(assigned_to)
+    created_at_iso = created_at.isoformat() if isinstance(created_at, datetime) else (created_at or datetime.utcnow().isoformat())
+
+    for company in companies:
+        if identifier_key == 'email':
+            compare_value = (company.get('EmailID') or company.get('email') or '').lower()
+        else:
+            compare_value = (company.get('Company Name') or company.get('name') or '').lower()
+
+        if compare_value and compare_value == identifier_value_lower:
+            company.update(payload)
+            company['assigned_to'] = assigned_normalized
+            company['updated_at'] = datetime.utcnow().isoformat()
+            if created_at:
+                company['created_at'] = created_at_iso
+            save_companies_data(companies)
+            return company.get('id') or company.get('_id'), False
+
+    new_company = payload.copy()
+    new_company['id'] = str(uuid.uuid4())
+    new_company['assigned_to'] = assigned_normalized
+    new_company['created_at'] = created_at_iso
+    new_company['created_by'] = str(current_user.id)
+    companies.append(new_company)
+    save_companies_data(companies)
+    return new_company['id'], True
+
+
+def _sync_assigned_users(company_id, assigned_to):
+    if not company_id:
+        return
+    sync_company_user_links(str(company_id), assigned_to)
 
 
 def serialize_admin_user(user_doc):
@@ -3063,10 +3350,21 @@ def load_companies_data():
                     '_id': 1,
                     'Company Name': 1,
                     'EmailID': 1,
+                    'Phone': 1,
+                    'Billing Attention': 1,
+                    'Billing Address': 1,
+                    'Billing Street': 1,
+                    'Billing City': 1,
+                    'Billing State': 1,
+                    'Billing Postal Code': 1,
+                    'Billing Phone': 1,
+                    'created_at': 1,
+                    'Created At': 1,
                     'name': 1,
                     'email': 1,
+                    'address': 1,
+                    'Address': 1,
                     'assigned_to': 1,
-                    'created_at': 1,
                     'created_by': 1
                 }
                 
@@ -3093,11 +3391,31 @@ def load_companies_data():
                         
                         mapped_companies.append({
                             'id': company_id,
+                            'Company Name': name,
+                            'EmailID': email,
                             'name': name,
                             'email': email,
-                            'created_at': company.get('created_at'),
-                            'created_by': company.get('created_by'),
-                            'assigned_to': normalize_assigned_companies(company.get('assigned_to', []))
+                            'Phone': company.get('Phone'),
+                            'phone': company.get('Phone'),
+                            'Billing Attention': company.get('Billing Attention'),
+                            'billing_attention': company.get('Billing Attention'),
+                            'Billing Address': company.get('Billing Address'),
+                            'billing_address': company.get('Billing Address'),
+                            'Billing Street': company.get('Billing Street'),
+                            'billing_street': company.get('Billing Street'),
+                            'Billing City': company.get('Billing City'),
+                            'billing_city': company.get('Billing City'),
+                            'Billing State': company.get('Billing State'),
+                            'billing_state': company.get('Billing State'),
+                            'Billing Postal Code': company.get('Billing Postal Code'),
+                            'billing_postal_code': company.get('Billing Postal Code'),
+                            'Billing Phone': company.get('Billing Phone'),
+                            'billing_phone': company.get('Billing Phone'),
+                            'Address': company.get('Address') or company.get('address', ''),
+                            'address': company.get('Address') or company.get('address', ''),
+                            'assigned_to': normalize_assigned_companies(company.get('assigned_to', [])),
+                            'created_at': company.get('created_at') or company.get('Created At'),
+                            'created_by': company.get('created_by')
                         })
                         
                     except Exception as e:
@@ -3154,9 +3472,28 @@ def load_companies_data():
 
                                 normalized_companies.append({
                                     'id': company_id,
+                                    'Company Name': name,
+                                    'EmailID': str(email).strip() if email else '',
                                     'name': name,
                                     'email': str(email).strip() if email else '',
-                                    'address': company.get('address') or company.get('Address', ''),
+                                    'Phone': company.get('Phone') or company.get('phone'),
+                                    'phone': company.get('Phone') or company.get('phone'),
+                                    'Billing Attention': company.get('Billing Attention') or company.get('billing_attention'),
+                                    'billing_attention': company.get('Billing Attention') or company.get('billing_attention'),
+                                    'Billing Address': company.get('Billing Address') or company.get('billing_address') or company.get('address') or company.get('Address', ''),
+                                    'billing_address': company.get('Billing Address') or company.get('billing_address') or company.get('address') or company.get('Address', ''),
+                                    'Billing Street': company.get('Billing Street') or company.get('billing_street'),
+                                    'billing_street': company.get('Billing Street') or company.get('billing_street'),
+                                    'Billing City': company.get('Billing City') or company.get('billing_city'),
+                                    'billing_city': company.get('Billing City') or company.get('billing_city'),
+                                    'Billing State': company.get('Billing State') or company.get('billing_state'),
+                                    'billing_state': company.get('Billing State') or company.get('billing_state'),
+                                    'Billing Postal Code': company.get('Billing Postal Code') or company.get('billing_postal_code'),
+                                    'billing_postal_code': company.get('Billing Postal Code') or company.get('billing_postal_code'),
+                                    'Billing Phone': company.get('Billing Phone') or company.get('billing_phone'),
+                                    'billing_phone': company.get('Billing Phone') or company.get('billing_phone'),
+                                    'Address': company.get('Billing Address') or company.get('billing_address') or company.get('address') or company.get('Address', ''),
+                                    'address': company.get('Billing Address') or company.get('billing_address') or company.get('address') or company.get('Address', ''),
                                     'created_at': company.get('created_at'),
                                     'created_by': company.get('created_by'),
                                     'assigned_to': normalize_assigned_companies(company.get('assigned_to', []))
