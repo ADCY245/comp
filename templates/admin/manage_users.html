@@ -133,8 +133,8 @@
                                     <button class="btn btn-light btn-sm" onclick="showAddCompanyModal()">
                                         <i class="fas fa-plus me-1"></i> Add Company
                                     </button>
-                                    <button class="btn btn-outline-light btn-sm" onclick="showAllCompanies()">
-                                        <i class="fas fa-list me-1"></i> View All
+                                    <button class="btn btn-outline-light btn-sm" onclick="exportCompanies()">
+                                        <i class="fas fa-download me-1"></i> Export
                                     </button>
                                 </div>
                                 <span class="filter-dropdown-label text-md-end">Hover to choose a user and filter assigned companies</span>
@@ -270,20 +270,50 @@
                 <div class="modal-body">
                     <form id="companyForm">
                         <input type="hidden" id="companyId" name="companyId">
-                        <div class="mb-3">
-                            <label for="companyName" class="form-label">Company Name</label>
-                            <input type="text" class="form-control" id="companyName" name="companyName" required>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="companyName" class="form-label">Company Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyName" name="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="companyEmail" name="email" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyPhone" class="form-label">Company Phone <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyPhone" name="phone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyBillingPhone" class="form-label">Billing Phone <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyBillingPhone" name="billing_phone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyBillingAttention" class="form-label">Billing Attention <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyBillingAttention" name="billing_attention" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyPostalCode" class="form-label">Postal Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyPostalCode" name="billing_postal_code" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="companyBillingAddress" class="form-label">Billing Address <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="companyBillingAddress" name="billing_address" rows="2" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyBillingStreet" class="form-label">Billing Street <small class="text-muted">(optional)</small></label>
+                                <input type="text" class="form-control" id="companyBillingStreet" name="billing_street">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="companyBillingCity" class="form-label">Billing City <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyBillingCity" name="billing_city" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="companyBillingState" class="form-label">Billing State <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="companyBillingState" name="billing_state" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="companyEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="companyEmail" name="companyEmail" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="companyAddress" class="form-label">Address</label>
-                            <textarea class="form-control" id="companyAddress" name="companyAddress" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="companyAssignedTo" class="form-label">Customer Assigned To</label>
+                        <div class="mb-3 mt-3">
+                            <label for="companyAssignedTo" class="form-label">Users Assigned To</label>
                             <select class="form-select" id="companyAssignedTo" name="companyAssignedTo" multiple>
                             </select>
                             <div class="assigned-users-preview mt-2" id="assignedUsersPreview" aria-live="polite"></div>
@@ -770,7 +800,7 @@ function getRoleBadgeColor(role) {
                     <div>
                         <h6 class="mb-1">${company.name} <span class="badge bg-info">${assignedCount}</span></h6>
                         <p class="mb-1 text-muted">${company.email}</p>
-                        <small class="text-muted">${company.address || 'No address provided'}</small>
+                        <small class="text-muted">${company.billing_address || company.address || '-'}</small>
                     </div>
                     <div>
                         <button class="btn btn-sm btn-outline-primary btn-action" onclick="editCompany('${company.id}')">
@@ -1171,6 +1201,13 @@ function getRoleBadgeColor(role) {
             const form = document.getElementById('companyForm');
             const formData = new FormData(form);
             const companyData = Object.fromEntries(formData);
+            const requiredFields = ['name', 'email', 'phone', 'billing_phone', 'billing_attention', 'billing_address', 'billing_city', 'billing_state', 'billing_postal_code'];
+            for (const field of requiredFields) {
+                if (!companyData[field] || !companyData[field].trim()) {
+                    alert('Please fill out all required company fields.');
+                    return;
+                }
+            }
             // Collect assigned users from multi-select
             const assignedSelect = document.getElementById('companyAssignedTo');
             if (assignedSelect) {
@@ -1232,9 +1269,16 @@ function getRoleBadgeColor(role) {
                     lastCompanyModalTrigger = document.activeElement;
                     document.getElementById('companyModalTitle').textContent = 'Edit Company';
                     document.getElementById('companyId').value = company.id;
-                    document.getElementById('companyName').value = company.name;
-                    document.getElementById('companyEmail').value = company.email;
-                    document.getElementById('companyAddress').value = company.address || '';
+                    document.getElementById('companyName').value = company.name || '';
+                    document.getElementById('companyEmail').value = company.email || '';
+                    document.getElementById('companyPhone').value = company.phone || '';
+                    document.getElementById('companyBillingAttention').value = company.billing_attention || '';
+                    document.getElementById('companyBillingAddress').value = company.billing_address || '';
+                    document.getElementById('companyBillingStreet').value = company.billing_street || '';
+                    document.getElementById('companyBillingCity').value = company.billing_city || '';
+                    document.getElementById('companyBillingState').value = company.billing_state || '';
+                    document.getElementById('companyPostalCode').value = company.billing_postal_code || '';
+                    document.getElementById('companyBillingPhone').value = company.billing_phone || '';
 
                     // Populate and preselect assigned users if provided
                     await populateCompanyAssignedTo(company.assigned_to || []);
@@ -1383,8 +1427,28 @@ function getRoleBadgeColor(role) {
             loadCompanies(currentCompanyPage);
         }
         
-        function showAllCompanies() {
-            window.open('/admin/companies/all', '_blank');
+        function exportCompanies() {
+            fetch('/api/admin/companies/export')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Export failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'companies_export.csv';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error exporting companies:', error);
+                    alert('Failed to export companies. Please try again later.');
+                });
         }
     </script>
 </body>

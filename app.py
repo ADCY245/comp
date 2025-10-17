@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response, abort
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response, abort, send_file
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -7,6 +7,7 @@ from waitress import serve
 import os
 import json
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 import uuid
 import hashlib
 import secrets
@@ -21,6 +22,7 @@ from bson.objectid import ObjectId
 import logging
 import traceback
 import resend
+from openpyxl import Workbook
 
 # Import MongoDB users module
 try:
@@ -572,10 +574,19 @@ def admin_list_companies():
                     '_id': 1,
                     'Company Name': 1,
                     'EmailID': 1,
+                    'Phone': 1,
+                    'Billing Attention': 1,
+                    'Billing Address': 1,
+                    'Billing Street': 1,
+                    'Billing City': 1,
+                    'Billing State': 1,
+                    'Billing Postal Code': 1,
+                    'Billing Phone': 1,
+                    'created_at': 1,
+                    'Created At': 1,
                     'name': 1,
                     'email': 1,
                     'Address': 1,
-                    'address': 1,
                     'assigned_to': 1
                 }
 
@@ -589,13 +600,8 @@ def admin_list_companies():
                 )
 
                 for doc in cursor:
-                    company_doc = {
-                        'id': str(doc.get('_id')),
-                        'name': doc.get('Company Name') or doc.get('name'),
-                        'email': doc.get('EmailID') or doc.get('email'),
-                        'address': doc.get('Address') or doc.get('address', ''),
-                        'assigned_to': doc.get('assigned_to', [])
-                    }
+                    company_doc = dict(doc)
+                    company_doc['id'] = str(company_doc.pop('_id'))
                     companies_payload.append(serialize_admin_company(company_doc))
             except Exception as mongo_error:
                 app.logger.error(f"Mongo pagination error in admin_list_companies: {mongo_error}")
@@ -642,13 +648,26 @@ def admin_get_company(company_id):
 def admin_create_company():
     try:
         data = request.get_json() or {}
-        name = (data.get('name') or '').strip()
-        email = (data.get('email') or '').strip()
-        address = data.get('address', '')
+        def _required(field):
+            value = (data.get(field) or '').strip()
+            if not value:
+                raise ValueError(field)
+            return value
 
-        if not name or not email:
-            return jsonify({'success': False, 'error': 'Name and email required'}), 400
+        try:
+            name = _required('name')
+            email = _required('email')
+            phone = _required('phone')
+            billing_attention = _required('billing_attention')
+            billing_address = _required('billing_address')
+            billing_city = _required('billing_city')
+            billing_state = _required('billing_state')
+            billing_postal_code = _required('billing_postal_code')
+            billing_phone = _required('billing_phone')
+        except ValueError as missing_field:
+            return jsonify({'success': False, 'error': f"Missing required field: {missing_field}"}), 400
 
+        billing_street = (data.get('billing_street') or '').strip()
         assigned_to = normalize_assigned_companies(data.get('assigned_to', []))
 
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
@@ -657,7 +676,15 @@ def admin_create_company():
                 company_data = {
                     'Company Name': name,
                     'EmailID': email,
-                    'Address': address,
+                    'phone': phone,
+                    'billing_attention': billing_attention,
+                    'billing_address': billing_address,
+                    'billing_street': billing_street,
+                    'billing_city': billing_city,
+                    'billing_state': billing_state,
+                    'billing_postal_code': billing_postal_code,
+                    'billing_phone': billing_phone,
+                    'Address': billing_address,
                     'assigned_to': assigned_to,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow(),
@@ -676,8 +703,17 @@ def admin_create_company():
             'id': str(uuid.uuid4()),
             'name': name,
             'email': email,
-            'address': address,
-            'assigned_to': assigned_to
+            'phone': phone,
+            'billing_attention': billing_attention,
+            'billing_address': billing_address,
+            'billing_street': billing_street,
+            'billing_city': billing_city,
+            'billing_state': billing_state,
+            'billing_postal_code': billing_postal_code,
+            'billing_phone': billing_phone,
+            'address': billing_address,
+            'assigned_to': assigned_to,
+            'created_at': datetime.utcnow().isoformat()
         }
 
         companies.append(new_company)
@@ -705,8 +741,23 @@ def admin_update_company(company_id):
                     update_fields['Company Name'] = data['name']
                 if 'email' in data:
                     update_fields['EmailID'] = data['email']
-                if 'address' in data:
-                    update_fields['Address'] = data['address']
+                if 'phone' in data:
+                    update_fields['phone'] = data['phone']
+                if 'billing_attention' in data:
+                    update_fields['billing_attention'] = data['billing_attention']
+                if 'billing_address' in data:
+                    update_fields['billing_address'] = data['billing_address']
+                    update_fields['Address'] = data['billing_address']
+                if 'billing_street' in data:
+                    update_fields['billing_street'] = data['billing_street']
+                if 'billing_city' in data:
+                    update_fields['billing_city'] = data['billing_city']
+                if 'billing_state' in data:
+                    update_fields['billing_state'] = data['billing_state']
+                if 'billing_postal_code' in data:
+                    update_fields['billing_postal_code'] = data['billing_postal_code']
+                if 'billing_phone' in data:
+                    update_fields['billing_phone'] = data['billing_phone']
                 if 'assigned_to' in data:
                     update_fields['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
 
@@ -732,8 +783,23 @@ def admin_update_company(company_id):
                     company['name'] = data['name']
                 if 'email' in data:
                     company['email'] = data['email']
-                if 'address' in data:
-                    company['address'] = data['address']
+                if 'phone' in data:
+                    company['phone'] = data['phone']
+                if 'billing_attention' in data:
+                    company['billing_attention'] = data['billing_attention']
+                if 'billing_address' in data:
+                    company['billing_address'] = data['billing_address']
+                    company['address'] = data['billing_address']
+                if 'billing_street' in data:
+                    company['billing_street'] = data['billing_street']
+                if 'billing_city' in data:
+                    company['billing_city'] = data['billing_city']
+                if 'billing_state' in data:
+                    company['billing_state'] = data['billing_state']
+                if 'billing_postal_code' in data:
+                    company['billing_postal_code'] = data['billing_postal_code']
+                if 'billing_phone' in data:
+                    company['billing_phone'] = data['billing_phone']
                 if 'assigned_to' in data:
                     company['assigned_to'] = normalize_assigned_companies(data.get('assigned_to', []))
                 updated = serialize_admin_company(company)
@@ -798,11 +864,75 @@ def admin_search_companies():
             return jsonify({'success': True, 'companies': []})
 
         companies = load_companies_data()
-        filtered = [serialize_admin_company(company) for company in companies if query in serialize_admin_company(company).get('name', '').lower()]
+        filtered = []
+        for company in companies:
+            serialized = serialize_admin_company(company)
+            if query in serialized.get('name', '').lower():
+                filtered.append(serialized)
         return jsonify({'success': True, 'companies': filtered})
     except Exception as e:
         app.logger.error(f"Error in admin_search_companies: {e}")
         return jsonify({'success': False, 'error': 'Failed to search companies'}), 500
+
+
+@app.route('/api/admin/companies/export', methods=['GET'])
+@login_required
+@admin_required
+def admin_export_companies():
+    try:
+        companies = [serialize_admin_company(company) for company in load_companies_data()]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Companies'
+
+        headers = [
+            'Sr No',
+            'Company Name',
+            'Phone',
+            'Billing Attention',
+            'Billing Address',
+            'Billing Street',
+            'Billing City',
+            'Billing State',
+            'Postal Code',
+            'Billing Phone',
+            'EmailID',
+            'Users Assigned To',
+            'Created Time'
+        ]
+        ws.append(headers)
+
+        for idx, company in enumerate(companies, start=1):
+            ws.append([
+                idx,
+                company.get('name', COMPANY_PLACEHOLDER),
+                company.get('phone', COMPANY_PLACEHOLDER),
+                company.get('billing_attention', COMPANY_PLACEHOLDER),
+                company.get('billing_address', COMPANY_PLACEHOLDER),
+                company.get('billing_street', COMPANY_PLACEHOLDER),
+                company.get('billing_city', COMPANY_PLACEHOLDER),
+                company.get('billing_state', COMPANY_PLACEHOLDER),
+                company.get('billing_postal_code', COMPANY_PLACEHOLDER),
+                company.get('billing_phone', COMPANY_PLACEHOLDER),
+                company.get('email', COMPANY_PLACEHOLDER),
+                ','.join(company.get('assigned_to', [])) or COMPANY_PLACEHOLDER,
+                company.get('created_at', COMPANY_PLACEHOLDER)
+            ])
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        filename = f'companies_export_{timestamp}.xlsx'
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        app.logger.error(f"Error exporting companies: {e}")
+        return jsonify({'success': False, 'error': 'Failed to export companies'}), 500
 
 
 @app.route('/api/admin/quotations', methods=['GET'])
@@ -1212,6 +1342,94 @@ def _parse_float(value, default=0.0):
         return default
 
 
+COMPANY_PLACEHOLDER = '-'
+
+
+def _normalize_company_text(value, placeholder=COMPANY_PLACEHOLDER):
+    if value is None:
+        return placeholder
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned if cleaned else placeholder
+    if value == '' or value == []:
+        return placeholder
+    return str(value)
+
+
+def _normalize_company_datetime(value, placeholder=COMPANY_PLACEHOLDER):
+    if isinstance(value, datetime):
+        return value.astimezone(IST).strftime('%Y-%m-%d %H:%M:%S')
+    if isinstance(value, dict) and '$date' in value:
+        raw = value.get('$date')
+        if isinstance(raw, str):
+            try:
+                parsed = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+                return parsed.astimezone(IST).strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                return raw
+        return str(raw)
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned if cleaned else placeholder
+    return placeholder
+
+
+def _get_company_field(company_doc, *keys):
+    for key in keys:
+        if key in company_doc:
+            value = company_doc.get(key)
+            if isinstance(value, str):
+                value = value.strip()
+            if value not in (None, '', []):
+                return value
+    return None
+
+
+def normalize_company_record(company_doc):
+    if not company_doc:
+        return {}
+    cid = str(company_doc.get('id') or company_doc.get('_id') or company_doc.get('Company ID', '') or '')
+    name = _get_company_field(company_doc, 'name', 'Company Name')
+    email = _get_company_field(company_doc, 'email', 'EmailID')
+    phone = _get_company_field(company_doc, 'phone', 'Phone')
+    billing_attention = _get_company_field(company_doc, 'billing_attention', 'Billing Attention')
+    billing_address = _get_company_field(
+        company_doc,
+        'billing_address',
+        'Billing Address',
+        'address',
+        'Address'
+    )
+    billing_street = _get_company_field(company_doc, 'billing_street', 'Billing Street')
+    billing_city = _get_company_field(company_doc, 'billing_city', 'Billing City')
+    billing_state = _get_company_field(company_doc, 'billing_state', 'Billing State')
+    billing_postal_code = _get_company_field(company_doc, 'billing_postal_code', 'Billing Postal Code')
+    billing_phone = _get_company_field(company_doc, 'billing_phone', 'Billing Phone')
+    created_at = company_doc.get('created_at') or company_doc.get('Created At')
+    assigned = normalize_assigned_companies(company_doc.get('assigned_to', []))
+
+    normalized = {
+        'id': cid,
+        'name': _normalize_company_text(name),
+        'email': _normalize_company_text(email),
+        'phone': _normalize_company_text(phone),
+        'billing_attention': _normalize_company_text(billing_attention),
+        'billing_address': _normalize_company_text(billing_address),
+        'billing_street': _normalize_company_text(billing_street),
+        'billing_city': _normalize_company_text(billing_city),
+        'billing_state': _normalize_company_text(billing_state),
+        'billing_postal_code': _normalize_company_text(billing_postal_code),
+        'billing_phone': _normalize_company_text(billing_phone),
+        'assigned_to': assigned,
+        'assigned_to_count': len(assigned),
+        'created_at': _normalize_company_datetime(created_at),
+        'address': _normalize_company_text(billing_address)
+    }
+    return normalized
+
+
 def serialize_admin_user(user_doc):
     """Normalize user document (Mongo or JSON) for admin UI."""
     if not user_doc:
@@ -1231,18 +1449,7 @@ def serialize_admin_user(user_doc):
 
 
 def serialize_admin_company(company_doc):
-    if not company_doc:
-        return {}
-    cid = str(company_doc.get('id') or company_doc.get('_id') or company_doc.get('Company ID', ''))
-    assigned = normalize_assigned_companies(company_doc.get('assigned_to', []))
-    return {
-        'id': cid,
-        'name': company_doc.get('name') or company_doc.get('Company Name') or 'N/A',
-        'email': company_doc.get('email') or company_doc.get('EmailID') or '',
-        'address': company_doc.get('address') or company_doc.get('Address', ''),
-        'assigned_to': assigned,
-        'assigned_to_count': len(assigned)
-    }
+    return normalize_company_record(company_doc)
 
 
 def _extract_company_id(company_dict):
