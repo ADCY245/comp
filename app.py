@@ -2426,7 +2426,8 @@ class CartStore:
             print(f"Error saving cart: {e}")
             return False
     
-    def get_cart(self):
+    def get_cart(self, *_args, **_kwargs):
+        """Return stored cart; ignores user since json cart is global."""
         return self.cart
     
     def save_cart(self, cart):
