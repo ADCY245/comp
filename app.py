@@ -16,6 +16,7 @@ from functools import wraps
 from flask_login import current_user
 import random
 import time
+import threading
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from bson.objectid import ObjectId
@@ -194,6 +195,8 @@ USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'
 mongo_client = None
 mongo_db = None
 users_col = None
+mongo_init_lock = threading.Lock()
+mongo_initialized = False
 
 def init_mongodb():
     global mongo_client, mongo_db, users_col, MONGO_AVAILABLE
@@ -237,8 +240,23 @@ def init_mongodb():
                 print("Could not connect to MongoDB after multiple attempts. Falling back to JSON storage.")
                 MONGO_AVAILABLE = False
 
-# Initialize MongoDB connection
-init_mongodb()
+def ensure_mongo_connection_initialized():
+    global mongo_initialized
+
+    if mongo_initialized or not USE_MONGO:
+        return
+
+    with mongo_init_lock:
+        if mongo_initialized or not USE_MONGO:
+            return
+
+        init_mongodb()
+        mongo_initialized = True
+
+
+@app.before_request
+def _ensure_mongo_connection():
+    ensure_mongo_connection_initialized()
 
 def mu_find_user_by_email_or_username(identifier):
     """Find a user by email or username in MongoDB"""
