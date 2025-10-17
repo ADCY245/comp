@@ -549,7 +549,7 @@ function getRoleBadgeColor(role) {
             }
         }
 
-        $(document).ready(function() {
+        $(document).ready(async function() {
             try {
                 // Initialize DataTables with error handling
                 usersTable = $('#usersTable').DataTable({
@@ -575,10 +575,12 @@ function getRoleBadgeColor(role) {
                 });
 
                 // Initialize other tables if they exist
-                loadUsers();
-                loadCompanies();
-                loadAllCompaniesForAssignment();
                 renderAlphabetFilter();
+
+                await Promise.all([
+                    loadUsers(),
+                    loadCompanies()
+                ]);
             } catch (error) {
                 console.error('Error initializing page:', error);
             }
@@ -831,14 +833,8 @@ function getRoleBadgeColor(role) {
 
             try {
                 if (!Array.isArray(allCompaniesForAssignment) || allCompaniesForAssignment.length === 0) {
-                    const response = await fetch('/api/admin/companies?page=0&limit=1000');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        allCompaniesForAssignment = Array.isArray(data.companies) ? data.companies : [];
-                    } else {
-                        throw new Error(data.error || 'Failed to load companies');
-                    }
+                    const companiesToUse = currentCompanies.length ? currentCompanies : await preloadCompaniesForAssignment();
+                    allCompaniesForAssignment = Array.isArray(companiesToUse) ? companiesToUse : [];
                 }
 
                 allCompaniesForAssignment = Array.isArray(allCompaniesForAssignment) ? allCompaniesForAssignment : [];
@@ -892,6 +888,19 @@ function getRoleBadgeColor(role) {
                     loadingIndicator.style.display = 'none';
                 }
             }
+        }
+
+        async function preloadCompaniesForAssignment() {
+            try {
+                const response = await fetch('/api/admin/companies?page=0&limit=1000');
+                const data = await response.json();
+                if (data.success) {
+                    return Array.isArray(data.companies) ? data.companies : [];
+                }
+            } catch (error) {
+                console.error('Error preloading companies for assignment:', error);
+            }
+            return [];
         }
 
         document.addEventListener('DOMContentLoaded', () => {
