@@ -293,9 +293,14 @@
             activeUserId: '',
             users: []
         };
+        let allUsers = [];
         let currentCompanies = [];
         let currentCompanyPage = 0;
         let currentAlphabetFilter = 'ALL';
+        let companyModalInstance = null;
+        let lastCompanyModalTrigger = null;
+        let totalCompanyCount = 0;
+        const companiesPerPage = 1000;
 
         function buildSalespersonMenu(users) {
             const menu = document.getElementById('salespersonFilterMenu');
