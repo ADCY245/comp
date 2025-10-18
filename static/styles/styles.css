@@ -83,12 +83,13 @@ html, body {
 }
 
 body {
-  background: linear-gradient(135deg, #fff8e1 0%, #e0caa9 100%);
+  background: linear-gradient(135deg, #050A30 0%, #231F20 55%, #BE793E 100%);
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
   padding: 2rem 0;
   min-height: 100vh;
+  color: #EAEAEA;
 }
 
 select,
@@ -109,11 +110,12 @@ h1 {
 #companySearchResults {
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid #dee2e6;
+  border: 1px solid rgba(234, 234, 234, 0.2);
   border-radius: 0.25rem;
   margin-top: 0.5rem;
-  background: white;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  background: rgba(234, 234, 234, 0.92);
+  box-shadow: 0 0.5rem 1rem rgba(5, 10, 48, 0.35);
+  color: #050A30;
 }
 
 .search-item {
@@ -122,7 +124,7 @@ h1 {
 }
 
 .search-item:hover {
-  background-color: #f8f9fa;
+  background-color: rgba(234, 234, 234, 0.35);
 }
 
 .select-company-btn {
@@ -132,7 +134,7 @@ h1 {
 
 .select-company-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(5, 10, 48, 0.25);
 }
 
 /* Company info display */

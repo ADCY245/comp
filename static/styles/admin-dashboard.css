@@ -1,6 +1,6 @@
 .admin-dashboard {
     min-height: 100vh;
-    background: linear-gradient(160deg, #050A30 0%, #231F20 55%, #8E793E 120%);
+    background: linear-gradient(160deg, #050A30 0%, #231F20 55%, #BE793E 120%);
     background-attachment: fixed;
     font-family: 'Poppins', sans-serif;
     color: #EAEAEA;
@@ -121,7 +121,7 @@
 }
 
 .gradient-royal {
-    background: linear-gradient(135deg, #AD974F 0%, #8E793E 100%);
+    background: linear-gradient(135deg, #AD974F 0%, #BE793E 100%);
     color: #231F20;
 }
 
@@ -196,7 +196,7 @@
 }
 
 .activity-item.user {
-    border-left-color: #8E793E;
+    border-left-color: #BE793E;
 }
 
 .activity-item .badge {
@@ -264,30 +264,33 @@
 }
 
 .badge.bg-danger {
-    background-color: #AD974F !important;
+    background-color: #BE793E !important;
+    color: #050A30;
 }
 
 .badge.bg-success {
-    background-color: #8E793E !important;
-    color: #EAEAEA;
+    background-color: #AD974F !important;
+    color: #050A30;
 }
 
 .badge.bg-info {
-    background-color: #AD974F !important;
-}
-
-.badge.bg-warning {
-    background-color: #8E793E !important;
-}
-
-.badge.bg-primary {
     background-color: #050A30 !important;
     color: #EAEAEA;
 }
 
-.badge.bg-secondary {
+.badge.bg-warning {
     background-color: #8B8383 !important;
     color: #050A30;
+}
+
+.badge.bg-primary {
+    background-color: #231F20 !important;
+    color: #EAEAEA;
+}
+
+.badge.bg-secondary {
+    background-color: #EAEAEA !important;
+    color: #231F20;
 }
 
 .text-primary {
