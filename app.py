@@ -1161,11 +1161,16 @@ def admin_stats():
     """Return aggregate statistics for the admin dashboard."""
     try:
         stats = {
+            'total_accounts': 0,
             'total_users': 0,
             'active_sessions': 0,
             'total_quotations': 0,
+            'quotations_on_hold': 0,
             'recent_activity': []
         }
+
+        sessions_snapshot = get_active_sessions_snapshot()
+        stats['active_sessions'] = len(sessions_snapshot)
 
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
             try:
@@ -1174,8 +1179,15 @@ def admin_stats():
                 app.logger.error(f"MongoDB ping failed in admin_stats: {ping_error}")
                 return jsonify({'error': 'Database unavailable'}), 503
 
+            collection_names = set(mongo_db.list_collection_names())
+
+            if 'companies' in collection_names:
+                stats['total_accounts'] = mongo_db.companies.count_documents({})
+
             stats['total_users'] = mongo_db.users.count_documents({})
-            stats['total_quotations'] = mongo_db.quotations.count_documents({}) if 'quotations' in mongo_db.list_collection_names() else 0
+
+            if 'quotations' in collection_names:
+                stats['total_quotations'] = mongo_db.quotations.count_documents({})
 
             recent_cursor = mongo_db.users.find(
                 {},
@@ -1184,26 +1196,60 @@ def admin_stats():
                     'role': 1,
                     'email': 1,
                     'last_login': 1,
+                    'updated_at': 1,
                     'created_at': 1
                 }
             ).sort('updated_at', -1).limit(10)
 
-            stats['recent_activity'] = [
-                {
-                    'message': f"{doc.get('username', 'Unknown user')} logged in",
+            for doc in recent_cursor:
+                ts = doc.get('last_login') or doc.get('updated_at') or doc.get('created_at')
+                if ts and hasattr(ts, 'isoformat'):
+                    timestamp = ts.isoformat()
+                else:
+                    timestamp = str(ts) if ts else ''
+
+                stats['recent_activity'].append({
+                    'message': f"{doc.get('username', doc.get('email', 'Unknown user'))} activity",
                     'role': doc.get('role', 'user'),
-                    'timestamp': (doc.get('last_login') or doc.get('updated_at') or doc.get('created_at'))
-                }
-                for doc in recent_cursor
-            ]
+                    'timestamp': timestamp
+                })
 
         else:
-            stats['total_users'] = len(_load_users_json())
+            users_json = _load_users_json()
+            if isinstance(users_json, dict):
+                stats['total_users'] = len(users_json)
+            statistics_companies = 0
+            try:
+                file_path = os.path.join(app.root_path, 'static', 'data', 'company_emails.json')
+                if os.path.exists(file_path):
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        companies_payload = json.load(f)
+                    if isinstance(companies_payload, dict):
+                        companies_list = companies_payload.get('companies', [])
+                    else:
+                        companies_list = companies_payload
+                    statistics_companies = len(companies_list) if isinstance(companies_list, list) else 0
+            except Exception as company_error:
+                app.logger.warning(f"Failed to load fallback company data: {company_error}")
+            stats['total_accounts'] = statistics_companies
 
         return jsonify(stats)
     except Exception as e:
         app.logger.error(f"Error in admin_stats: {e}")
         return jsonify({'error': 'Failed to load stats'}), 500
+
+
+@app.route('/api/admin/active-sessions')
+@login_required
+@admin_required
+def admin_get_active_sessions():
+    """Return current active session snapshot for admins."""
+    try:
+        sessions = get_active_sessions_snapshot()
+        return jsonify({'success': True, 'sessions': sessions})
+    except Exception as e:
+        app.logger.error(f"Error getting active sessions: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load active sessions'}), 500
 
 
 @app.route('/api/admin/chart-data')
@@ -2560,6 +2606,51 @@ def get_user_cart():
         import traceback
         traceback.print_exc()
         return {"products": []}
+
+
+def get_active_sessions_snapshot():
+    """Return a lightweight snapshot of active sessions for dashboard use."""
+    sessions = []
+
+    try:
+        if not current_user.is_authenticated:
+            return sessions
+
+        cart_data = get_user_cart() or {}
+        products = cart_data.get('products', []) if isinstance(cart_data, dict) else []
+
+        cart_total = 0.0
+        for product in products:
+            calculations = product.get('calculations', {}) if isinstance(product, dict) else {}
+            if 'final_total' in calculations:
+                cart_total += float(calculations.get('final_total', 0) or 0)
+            elif 'total_price' in product:
+                cart_total += float(product.get('total_price', 0) or 0)
+
+        cart_items_count = len(products)
+
+        selected_company = session.get('selected_company') if isinstance(session.get('selected_company'), dict) else {}
+        company_name = session.get('company_name') or selected_company.get('name') or 'Not selected'
+        company_email = session.get('company_email') or selected_company.get('email') or ''
+
+        last_activity = datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')
+
+        sessions.append({
+            'user_id': getattr(current_user, 'id', None),
+            'username': getattr(current_user, 'username', 'Unknown'),
+            'email': getattr(current_user, 'email', ''),
+            'role': getattr(current_user, 'role', 'user'),
+            'company_name': company_name,
+            'company_email': company_email,
+            'cart_amount': round(cart_total, 2),
+            'cart_items_count': cart_items_count,
+            'last_activity': last_activity
+        })
+
+    except Exception as session_error:
+        app.logger.error(f"Error building active sessions snapshot: {session_error}")
+
+    return sessions
 
 def save_user_cart(cart_dict):
     """Persist cart for current user using MongoDB."""
