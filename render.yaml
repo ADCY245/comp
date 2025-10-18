@@ -3,6 +3,7 @@ services:
   - type: web
     name: wqa-app
     env: python
+    timeoutSeconds: 1000
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
@@ -22,6 +23,7 @@ services:
   - type: web
     name: php-auth
     env: php
+    timeoutSeconds: 600
     buildCommand: cd php && composer install
     startCommand: cd php && php -S 0.0.0.0:$PORT -t .
     envVars:

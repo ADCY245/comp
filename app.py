@@ -2441,13 +2441,23 @@ class CartStore:
         self.cart = cart
         return self._save_cart(cart)
 
-# Choose the appropriate cart store implementation
-if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-    print("Using MongoCartStore for cart persistence")
-    cart_store = MongoCartStore(mongo_db)
-else:
-    print("Using local JSON CartStore for cart persistence")
-    cart_store = CartStore()
+# Choose the appropriate cart store implementation dynamically
+cart_store = None
+
+
+def get_cart_store():
+    global cart_store
+
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        if not isinstance(cart_store, MongoCartStore):
+            print("Using MongoCartStore for cart persistence")
+            cart_store = MongoCartStore(mongo_db)
+    else:
+        if not isinstance(cart_store, CartStore):
+            print("Using local JSON CartStore for cart persistence")
+            cart_store = CartStore()
+
+    return cart_store
 
 # -------------------- Cart helper wrappers --------------------
 
@@ -2460,12 +2470,14 @@ def get_user_cart():
             app.logger.warning("[DEBUG] No current_user.id, returning empty cart")
             return {"products": []}
             
-        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        store = get_cart_store()
+
+        if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and isinstance(store, MongoCartStore):
             app.logger.info("[DEBUG] Using MongoDB for cart storage")
             app.logger.info(f"[DEBUG] MongoDB status - MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if mongo_db is not None else 'None'}")
             
             try:
-                products = cart_store.get_cart(current_user.id)
+                products = store.get_cart(current_user.id)
                 app.logger.info(f"[DEBUG] Retrieved {len(products) if products else 0} products from MongoDB")
                 if products:
                     app.logger.debug(f"[DEBUG] Sample product from MongoDB: {str(products[0])[:200]}...")
@@ -2532,12 +2544,14 @@ def get_user_cart():
                         }
             
             products = sanitized_products
+            return {"products": products}
 
-        else:
-            # Fallback to JSON cart store
-            products = cart_store.get_cart()
+        # Fallback to JSON cart store when Mongo is unavailable
         app.logger.warning("[DEBUG] MongoDB is not available for cart storage")
         app.logger.warning(f"[DEBUG] MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if 'mongo_db' in globals() and mongo_db is not None else 'None'}")
+        products = store.get_cart()
+        if not isinstance(products, list):
+            products = []
         return {"products": products}
         
     except Exception as e:
