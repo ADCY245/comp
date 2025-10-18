@@ -8,6 +8,32 @@
     --color-warmgray: #8B8383;
 }
 
+body {
+    font-size: 16px;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    color: rgba(234, 234, 234, 0.9);
+}
+
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6 {
+    color: var(--color-ivory);
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+}
+
+body p,
+body li,
+body span,
+body label,
+body small {
+    color: rgba(234, 234, 234, 0.82);
+}
+
 .jumbotron {
     background: linear-gradient(135deg, rgba(5, 10, 48, 0.85), rgba(35, 31, 32, 0.8));
     color: var(--color-ivory);
@@ -39,6 +65,7 @@
 
 .user-card__body {
     padding: clamp(1.75rem, 2vw, 2.5rem);
+    color: rgba(234, 234, 234, 0.9);
 }
 
 .user-input-group {
@@ -79,7 +106,7 @@
 }
 
 .user-form-text {
-    color: rgba(234, 234, 234, 0.65);
+    color: rgba(234, 234, 234, 0.72);
 }
 
 .company-dropdown-list {
@@ -192,7 +219,7 @@
     background: rgba(5, 10, 48, 0.65);
     border-radius: 18px;
     border: 1px solid rgba(173, 151, 79, 0.25);
-    color: var(--color-ivory);
+    color: rgba(234, 234, 234, 0.9);
     box-shadow: 0 18px 36px rgba(5, 10, 48, 0.45);
 }
 

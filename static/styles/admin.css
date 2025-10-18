@@ -14,6 +14,28 @@ body.admin-base {
   background-attachment: fixed;
   font-family: 'Poppins', sans-serif;
   color: var(--color-ivory);
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
+.admin-base h1,
+.admin-base h2,
+.admin-base h3,
+.admin-base h4,
+.admin-base h5,
+.admin-base h6 {
+  color: var(--color-ivory);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.admin-base p,
+.admin-base li,
+.admin-base span,
+.admin-base label,
+.admin-base .text-muted {
+  color: rgba(234, 234, 234, 0.82);
 }
 
 .admin-navbar {
@@ -30,7 +52,7 @@ body.admin-base {
 }
 
 .admin-navbar .nav-link {
-  color: rgba(234, 234, 234, 0.75) !important;
+  color: rgba(234, 234, 234, 0.85) !important;
   margin: 0 0.4rem;
   padding: 0.5rem 1rem !important;
   border-radius: 999px;
@@ -80,6 +102,14 @@ main.admin-content {
   padding: clamp(1.5rem, 2vw, 2.5rem) !important;
 }
 
+main.admin-content p,
+main.admin-content li,
+main.admin-content td,
+main.admin-content th,
+main.admin-content small {
+  color: rgba(234, 234, 234, 0.86);
+}
+
 .admin-surface {
   background: rgba(5, 10, 48, 0.65);
   border: 1px solid rgba(173, 151, 79, 0.25);
@@ -116,6 +146,7 @@ main.admin-content .card-footer {
 
 .admin-table tbody tr {
   border-color: rgba(173, 151, 79, 0.2);
+  color: rgba(234, 234, 234, 0.86);
 }
 
 .admin-table tbody tr:hover {

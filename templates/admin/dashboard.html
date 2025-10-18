@@ -19,7 +19,39 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardStats();
             loadChartData();
+            initializeActionButtons();
         });
+
+        function initializeActionButtons() {
+            const actionHandlers = {
+                addUser: () => addNewUser(),
+                viewUsers: () => viewAllUsers(),
+                viewQuotations: () => viewQuotationHistory(),
+                viewSessions: () => showActiveSessionsModal()
+            };
+
+            document.querySelectorAll('.admin-action-btn').forEach(button => {
+                const action = button.dataset.action;
+                if (!action || !actionHandlers[action]) return;
+
+                button.addEventListener('click', async () => {
+                    if (button.classList.contains('btn-loading')) return;
+                    const persist = button.dataset.persistLoading === 'true';
+                    button.classList.add('btn-loading');
+
+                    try {
+                        const result = actionHandlers[action]();
+                        if (result instanceof Promise) {
+                            await result;
+                        }
+                    } finally {
+                        if (!persist) {
+                            button.classList.remove('btn-loading');
+                        }
+                    }
+                });
+            });
+        }
         
         // Load dashboard statistics
         async function loadDashboardStats() {
@@ -468,21 +500,25 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <button class="btn btn-premium btn-primary" onclick="addNewUser()">
-                                <i class="fas fa-user-plus me-2"></i>
-                                Add New User
+                            <button class="btn btn-premium btn-primary admin-action-btn" data-action="addUser" data-persist-loading="true">
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <i class="fas fa-user-plus"></i>
+                                <span class="btn-label">Add New User</span>
                             </button>
-                            <button class="btn btn-premium btn-info" onclick="viewAllUsers()">
-                                <i class="fas fa-users me-2"></i>
-                                Manage Users
+                            <button class="btn btn-premium btn-info admin-action-btn" data-action="viewUsers" data-persist-loading="true">
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <i class="fas fa-users"></i>
+                                <span class="btn-label">Manage Users</span>
                             </button>
-                            <button class="btn btn-premium btn-success" onclick="viewQuotationHistory()">
-                                <i class="fas fa-file-invoice me-2"></i>
-                                View Quotation History
+                            <button class="btn btn-premium btn-success admin-action-btn" data-action="viewQuotations" data-persist-loading="true">
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <i class="fas fa-file-invoice"></i>
+                                <span class="btn-label">View Quotation History</span>
                             </button>
-                            <button class="btn btn-premium btn-warning" onclick="viewActiveSessions()">
-                                <i class="fas fa-users-cog me-2"></i>
-                                Active Sessions
+                            <button class="btn btn-premium btn-warning admin-action-btn" data-action="viewSessions">
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <i class="fas fa-users-cog"></i>
+                                <span class="btn-label">Active Sessions</span>
                             </button>
                         </div>
                     </div>
