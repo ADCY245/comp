@@ -1,6 +1,6 @@
 .admin-dashboard {
     min-height: 100vh;
-    background: linear-gradient(160deg, #231F20 0%, #8E793E 130%);
+    background: linear-gradient(160deg, #050A30 0%, #231F20 55%, #8E793E 120%);
     background-attachment: fixed;
     font-family: 'Poppins', sans-serif;
     color: #EAEAEA;
@@ -8,11 +8,11 @@
 }
 
 .dashboard-wrapper {
-    background: rgba(35, 31, 32, 0.9);
+    background: rgba(5, 10, 48, 0.82);
     border-radius: 28px;
-    border: 1px solid rgba(141, 121, 62, 0.35);
+    border: 1px solid rgba(173, 151, 79, 0.35);
     backdrop-filter: blur(22px);
-    box-shadow: 0 25px 60px rgba(35, 31, 32, 0.55);
+    box-shadow: 0 25px 60px rgba(5, 10, 48, 0.45);
     padding: clamp(1.75rem, 2.5vw, 3.5rem);
 }
 
@@ -32,15 +32,14 @@
 }
 
 .page-subtitle {
-    color: #EAEAEA;
-    opacity: 0.75;
+    color: #8B8383;
 }
 
 .admin-navbar {
-    background: linear-gradient(135deg, #231F20 0%, #8E793E 100%);
+    background: linear-gradient(135deg, #050A30 0%, #231F20 60%, #8E793E 100%);
     padding: 1rem 0;
     border-bottom: 1px solid rgba(173, 151, 79, 0.35);
-    box-shadow: 0 20px 45px rgba(35, 31, 32, 0.55);
+    box-shadow: 0 20px 45px rgba(5, 10, 48, 0.45);
 }
 
 .admin-navbar .navbar-brand {
@@ -61,9 +60,9 @@
 .admin-navbar .nav-link:hover,
 .admin-navbar .nav-link:focus,
 .admin-navbar .nav-link.active {
-    color: #231F20 !important;
-    background: rgba(173, 151, 79, 0.75);
-    box-shadow: 0 10px 20px rgba(35, 31, 32, 0.35);
+    color: #050A30 !important;
+    background: rgba(173, 151, 79, 0.85);
+    box-shadow: 0 10px 20px rgba(5, 10, 48, 0.35);
 }
 
 .admin-navbar .navbar-toggler {
@@ -76,13 +75,13 @@
 
 
 .stats-card {
-    border: 1px solid rgba(141, 121, 62, 0.35);
+    border: 1px solid rgba(173, 151, 79, 0.35);
     border-radius: 20px;
     padding: 1.75rem;
     position: relative;
     overflow: hidden;
-    background: rgba(35, 31, 32, 0.85);
-    box-shadow: 0 25px 35px rgba(35, 31, 32, 0.45);
+    background: rgba(5, 10, 48, 0.72);
+    box-shadow: 0 25px 35px rgba(5, 10, 48, 0.45);
     backdrop-filter: blur(14px);
     transition: transform 0.35s ease, box-shadow 0.35s ease;
     color: #EAEAEA;
@@ -92,14 +91,14 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(234, 234, 234, 0.12), transparent);
+    background: linear-gradient(135deg, rgba(173, 151, 79, 0.18), transparent);
     opacity: 0;
     transition: opacity 0.35s ease;
 }
 
 .stats-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 35px 55px rgba(35, 31, 32, 0.55);
+    box-shadow: 0 35px 55px rgba(5, 10, 48, 0.55);
 }
 
 .stats-card:hover::after {
@@ -109,7 +108,7 @@
 .stats-card .card-title {
     letter-spacing: 0.08em;
     font-size: 0.75rem;
-    color: rgba(234, 234, 234, 0.85);
+    color: #8B8383;
 }
 
 .stats-card h3 {
@@ -127,22 +126,23 @@
 }
 
 .gradient-emerald {
-    background: linear-gradient(135deg, #231F20 0%, #8E793E 100%);
+    background: linear-gradient(135deg, #050A30 0%, #231F20 100%);
+    color: #EAEAEA;
 }
 
 .gradient-azure {
-    background: linear-gradient(135deg, #231F20 0%, #AD974F 100%);
+    background: linear-gradient(135deg, #050A30 0%, #AD974F 100%);
 }
 
 .gradient-amber {
-    background: linear-gradient(135deg, #8E793E 0%, #AD974F 100%);
-    color: #231F20;
+    background: linear-gradient(135deg, #8B8383 0%, #AD974F 100%);
+    color: #050A30;
 }
 
 
 .glass-card {
-    background: linear-gradient(155deg, rgba(35, 31, 32, 0.92), rgba(35, 31, 32, 0.78));
-    border: 1px solid rgba(141, 121, 62, 0.35);
+    background: linear-gradient(155deg, rgba(5, 10, 48, 0.88), rgba(35, 31, 32, 0.78));
+    border: 1px solid rgba(139, 131, 131, 0.35);
     color: #EAEAEA;
 }
 
@@ -170,7 +170,7 @@
 
 .chart-container canvas {
     border-radius: 18px;
-    background: rgba(35, 31, 32, 0.85);
+    background: rgba(5, 10, 48, 0.85);
     padding: 1rem;
 }
 
@@ -179,15 +179,15 @@
     padding: 1rem;
     border-left: 4px solid transparent;
     border-radius: 16px;
-    background: rgba(35, 31, 32, 0.75);
-    border: 1px solid rgba(141, 121, 62, 0.3);
+    background: rgba(5, 10, 48, 0.65);
+    border: 1px solid rgba(139, 131, 131, 0.45);
     margin-bottom: 0.85rem;
     transition: transform 0.3s ease, border 0.3s ease, background 0.3s ease;
 }
 
 .activity-item:hover {
     transform: translateY(-4px);
-    background: rgba(173, 151, 79, 0.18);
+    background: rgba(139, 131, 131, 0.22);
     border-color: rgba(173, 151, 79, 0.35);
 }
 
@@ -206,12 +206,12 @@
 
 
 .btn-premium {
-    border: 1px solid rgba(141, 121, 62, 0.35);
+    border: 1px solid rgba(139, 131, 131, 0.45);
     border-radius: 16px;
     padding: 0.85rem 1.2rem;
     font-weight: 500;
     letter-spacing: 0.03em;
-    box-shadow: 0 15px 30px rgba(35, 31, 32, 0.45);
+    box-shadow: 0 15px 30px rgba(5, 10, 48, 0.45);
     transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
     color: #EAEAEA;
 }
@@ -228,7 +228,7 @@
 }
 
 .btn-premium.btn-primary {
-    background: linear-gradient(135deg, #231F20, #8E793E);
+    background: linear-gradient(135deg, #050A30, #231F20);
 }
 
 .btn-premium.btn-info {
@@ -237,13 +237,13 @@
 }
 
 .btn-premium.btn-success {
-    background: linear-gradient(135deg, #8E793E, #AD974F);
-    color: #231F20;
+    background: linear-gradient(135deg, #8B8383, #EAEAEA);
+    color: #050A30;
 }
 
 .btn-premium.btn-warning {
-    background: #AD974F;
-    color: #231F20;
+    background: linear-gradient(135deg, #AD974F, #8E793E);
+    color: #050A30;
 }
 
 .btn-premium .fas {
@@ -252,8 +252,7 @@
 }
 
 .glass-card .text-muted {
-    color: #EAEAEA !important;
-    opacity: 0.7;
+    color: #8B8383 !important;
 }
 
 .badge {
@@ -261,7 +260,7 @@
     padding: 0.45rem 0.85rem;
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: #231F20;
+    color: #050A30;
 }
 
 .badge.bg-danger {
@@ -282,12 +281,13 @@
 }
 
 .badge.bg-primary {
-    background-color: #231F20 !important;
+    background-color: #050A30 !important;
     color: #EAEAEA;
 }
 
 .badge.bg-secondary {
-    background-color: #EAEAEA !important;
+    background-color: #8B8383 !important;
+    color: #050A30;
 }
 
 .text-primary {
@@ -299,7 +299,7 @@
 }
 
 .text-info {
-    color: #AD974F !important;
+    color: #8B8383 !important;
 }
 
 .text-warning {
@@ -307,6 +307,5 @@
 }
 
 #recentActivity .text-muted {
-    color: #EAEAEA !important;
-    opacity: 0.7;
+    color: #8B8383 !important;
 }
