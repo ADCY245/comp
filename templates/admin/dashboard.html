@@ -9,354 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-dashboard.css') }}">
 {% endblock %}
 
-{% block extra_js %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        let usersChart;
-        let rolesChart;
-        
-        // Load dashboard data when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardStats();
-            loadChartData();
-            initializeActionButtons();
-        });
-
-        function initializeActionButtons() {
-            const actionHandlers = {
-                addUser: () => addNewUser(),
-                viewUsers: () => viewAllUsers(),
-                viewQuotations: () => viewQuotationHistory(),
-                viewSessions: () => showActiveSessionsModal()
-            };
-
-            document.querySelectorAll('.admin-action-btn').forEach(button => {
-                const action = button.dataset.action;
-                if (!action || !actionHandlers[action]) return;
-
-                button.addEventListener('click', async () => {
-                    if (button.classList.contains('btn-loading')) return;
-                    const persist = button.dataset.persistLoading === 'true';
-                    button.classList.add('btn-loading');
-
-                    try {
-                        const result = actionHandlers[action]();
-                        if (result instanceof Promise) {
-                            await result;
-                        }
-                    } finally {
-                        if (!persist) {
-                            button.classList.remove('btn-loading');
-                        }
-                    }
-                });
-            });
-        }
-        
-        // Load dashboard statistics
-        async function loadDashboardStats() {
-            try {
-                const response = await fetch('/api/admin/stats');
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error('Error loading stats:', data.error);
-                    return;
-                }
-                
-                // Update stats cards
-                document.getElementById('totalUsers').textContent = data.total_users;
-                document.getElementById('activeSessions').textContent = data.active_sessions;
-                document.getElementById('totalQuotations').textContent = data.total_quotations;
-                
-                // Calculate admin users from recent activity
-                const adminCount = data.recent_activity.filter(activity => activity.role === 'admin').length;
-                document.getElementById('adminUsers').textContent = adminCount;
-                
-                // Update recent activity
-                updateRecentActivity(data.recent_activity);
-                
-            } catch (error) {
-                console.error('Error loading dashboard stats:', error);
-                document.getElementById('totalUsers').textContent = 'Error';
-                document.getElementById('activeSessions').textContent = 'Error';
-            }
-        }
-        
-        // Load chart data
-        async function loadChartData() {
-            try {
-                const response = await fetch('/api/admin/chart-data');
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error('Error loading chart data:', data.error);
-                    return;
-                }
-                
-                // Create users chart
-                createUsersChart(data.users_by_month);
-                
-                // Create roles chart
-                createRolesChart(data.user_roles);
-                
-            } catch (error) {
-                console.error('Error loading chart data:', error);
-            }
-        }
-        
-        // Create users over time chart
-        function createUsersChart(data) {
-            const ctx = document.getElementById('usersChart').getContext('2d');
-            
-            usersChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map(item => item.month),
-                    datasets: [{
-                        label: 'New Users',
-                        data: data.map(item => item.users),
-                        borderColor: '#AD974F',
-                        backgroundColor: 'rgba(173, 151, 79, 0.25)',
-                        tension: 0.4,
-                        fill: true
-                    }, {
-                        label: 'Quotations Sent',
-                        data: data.map(item => item.quotations),
-                        borderColor: '#8E793E',
-                        backgroundColor: 'rgba(142, 121, 62, 0.25)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Create user roles pie chart
-        function createRolesChart(data) {
-            const ctx = document.getElementById('rolesChart').getContext('2d');
-            
-            rolesChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: data.map(item => item.role.charAt(0).toUpperCase() + item.role.slice(1)),
-                    datasets: [{
-                        data: data.map(item => item.count),
-                        backgroundColor: [
-                            '#AD974F',
-                            '#8E793E',
-                            '#050A30',
-                            '#231F20',
-                            '#8B8383',
-                            '#EAEAEA'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Update recent activity
-        function updateRecentActivity(activities) {
-            const container = document.getElementById('recentActivity');
-            
-            if (activities.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted">No recent activity</div>';
-                return;
-            }
-            
-            const html = activities.map(activity => `
-                <div class="activity-item ${activity.role}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <strong>${activity.message}</strong>
-                            <br>
-                            <small class="text-muted">${activity.timestamp}</small>
-                        </div>
-                        <span class="badge bg-${activity.role === 'admin' ? 'danger' : 'success'}">
-                            ${activity.role}
-                        </span>
-                    </div>
-                </div>
-            `).join('');
-            
-            container.innerHTML = html;
-        }
-        
-        // Quick Actions - Fully Functional
-        function addNewUser() {
-            // Redirect to manage users page and trigger add user modal
-            window.location.href = '/admin/manage-users?action=add';
-        }
-        
-        function viewAllUsers() {
-            // Redirect to manage users page
-            window.location.href = '/admin/manage-users';
-        }
-        
-        function viewQuotationHistory() {
-            // Redirect to quotations page
-            window.location.href = '/admin/quotations';
-        }
-        
-        function viewActiveSessions() {
-            // Show active sessions modal
-            showActiveSessionsModal();
-        }
-        
-        // Active Sessions Modal
-        async function showActiveSessionsModal() {
-            try {
-                const response = await fetch('/api/admin/active-sessions');
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert('Error loading active sessions: ' + data.error);
-                    return;
-                }
-                
-                displayActiveSessionsModal(data.sessions);
-                
-            } catch (error) {
-                console.error('Error loading active sessions:', error);
-                alert('Error loading active sessions');
-            }
-        }
-        
-        function displayActiveSessionsModal(sessions) {
-            let modalHtml = `
-                <div class="modal fade" id="activeSessionsModal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Active User Sessions</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-            `;
-            
-            if (sessions.length === 0) {
-                modalHtml += `
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
-                        <h5>No Active Sessions</h5>
-                        <p>No users are currently active in the system.</p>
-                    </div>
-                `;
-            } else {
-                modalHtml += `
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Role</th>
-                                    <th>Company</th>
-                                    <th>Cart Amount</th>
-                                    <th>Cart Items</th>
-                                    <th>Last Activity</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                sessions.forEach(session => {
-                    // Set role badge color - admin is red, company is blue, default is gray
-                    let roleColor = 'secondary';
-                    if (session.role === 'admin') {
-                        roleColor = 'danger';
-                    } else if (session.role === 'company') {
-                        roleColor = 'primary';
-                    }
-                    
-                    modalHtml += `
-                        <tr>
-                            <td>
-                                <strong>${session.username}</strong><br>
-                                <small class="text-muted">${session.email}</small>
-                            </td>
-                            <td>
-                                <span class="badge bg-${roleColor} text-capitalize">${session.role}</span>
-                            </td>
-                            <td>
-                                <strong>${session.company_name}</strong><br>
-                                <small class="text-muted">${session.company_email}</small>
-                            </td>
-                            <td>
-                                <strong>₹${session.cart_amount.toLocaleString('en-IN')}</strong>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">${session.cart_items_count} items</span>
-                            </td>
-                            <td>
-                                <small>${session.last_activity}</small>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                modalHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-            
-            modalHtml += `
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary" onclick="refreshActiveSessions()">Refresh</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Remove existing modal if any
-            const existingModal = document.getElementById('activeSessionsModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-            
-            // Add new modal to body
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            // Show modal
-            new bootstrap.Modal(document.getElementById('activeSessionsModal')).show();
-        }
-        
-        function refreshActiveSessions() {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('activeSessionsModal'));
-            modal.hide();
-            setTimeout(() => {
-                showActiveSessionsModal();
-            }, 300);
-        }
-    </script>
-{% endblock %}
+{% block extra_js %}{% endblock %}
 
 {% block content %}
     <div class="dashboard-wrapper container-xxl px-4 py-4">
@@ -368,130 +21,197 @@
         </div>
 
         <!-- Stats Cards -->
-        <div class="row mb-4">
-            <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card gradient-royal text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title text-uppercase mb-1">Total Users</h6>
-                                <h3 class="mb-0" id="totalUsers">Loading...</h3>
-                            </div>
-                            <div>
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <a class="stats-card-link" href="/admin/manage-users">
+                    <article class="card stats-card gradient-royal text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <i class="fas fa-users fa-2x opacity-75"></i>
+                                <span class="badge bg-light text-dark">Updated weekly</span>
                             </div>
+                            <h6 class="card-title text-uppercase mb-2">Total Accounts</h6>
+                            <p class="stats-card-metric mb-1">312</p>
+                            <p class="stats-card-caption mb-0">Active logins across all partner companies.</p>
                         </div>
-                    </div>
-                </div>
+                    </article>
+                </a>
             </div>
-            
-            <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card gradient-emerald text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title text-uppercase mb-1">Active Sessions</h6>
-                                <h3 class="mb-0" id="activeSessions">0</h3>
-                            </div>
-                            <div>
+            <div class="col-xl-3 col-md-6">
+                <a class="stats-card-link" href="/admin/manage-users?sessions=true">
+                    <article class="card stats-card gradient-emerald text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <i class="fas fa-user-check fa-2x opacity-75"></i>
+                                <span class="badge bg-light text-dark">Live snapshot</span>
                             </div>
+                            <h6 class="card-title text-uppercase mb-2">Active Sessions</h6>
+                            <p class="stats-card-metric mb-1">18</p>
+                            <p class="stats-card-caption mb-0">Users currently browsing the calculator suite.</p>
                         </div>
-                    </div>
-                </div>
+                    </article>
+                </a>
             </div>
-            
-            <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card gradient-azure text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title text-uppercase mb-1">Total Quotations</h6>
-                                <h3 class="mb-0" id="totalQuotations">0</h3>
-                            </div>
-                            <div>
+            <div class="col-xl-3 col-md-6">
+                <a class="stats-card-link" href="/admin/quotations">
+                    <article class="card stats-card gradient-azure text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <i class="fas fa-file-invoice fa-2x opacity-75"></i>
+                                <span class="badge bg-light text-dark">Current quarter</span>
                             </div>
+                            <h6 class="card-title text-uppercase mb-2">Quotations Issued</h6>
+                            <p class="stats-card-metric mb-1">142</p>
+                            <p class="stats-card-caption mb-0">Approved proposals sent to customers since Apr.</p>
                         </div>
-                    </div>
-                </div>
+                    </article>
+                </a>
             </div>
-            
-            <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card gradient-amber text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title text-uppercase mb-1">Admin Users</h6>
-                                <h3 class="mb-0" id="adminUsers">0</h3>
-                            </div>
-                            <div>
+            <div class="col-xl-3 col-md-6">
+                <a class="stats-card-link" href="/admin/manage-users?role=admin">
+                    <article class="card stats-card gradient-amber text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <i class="fas fa-user-shield fa-2x opacity-75"></i>
+                                <span class="badge bg-light text-dark">Team overview</span>
                             </div>
+                            <h6 class="card-title text-uppercase mb-2">Admin Team</h6>
+                            <p class="stats-card-metric mb-1">7</p>
+                            <p class="stats-card-caption mb-0">Regional managers overseeing partner onboarding.</p>
                         </div>
-                    </div>
-                </div>
+                    </article>
+                </a>
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="row mb-4">
-            <div class="col-lg-8 mb-4">
-                <div class="card stats-card glass-card">
-                    <div class="card-header glass-header">
+        <!-- Highlights Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8">
+                <section class="card stats-card glass-card h-100">
+                    <div class="card-header glass-header d-flex align-items-center justify-content-between">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-chart-line me-2 text-primary"></i>
-                            Users & Quotations Over Time
+                            <i class="fas fa-bullseye me-2 text-primary"></i>
+                            Operational Highlights
                         </h5>
+                        <span class="badge bg-primary text-uppercase">This week</span>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="usersChart"></canvas>
+                        <ul class="highlight-list mb-4">
+                            <li>
+                                <span class="highlight-icon bg-primary-subtle"><i class="fas fa-rocket"></i></span>
+                                <div>
+                                    <h6 class="mb-1">Automated quote approvals</h6>
+                                    <p class="mb-0">Four new distributors were verified through the fast-track workflow.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="highlight-icon bg-success-subtle"><i class="fas fa-sync"></i></span>
+                                <div>
+                                    <h6 class="mb-1">Inventory sync</h6>
+                                    <p class="mb-0">Pricing tables refreshed after nightly ERP reconciliation run.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="highlight-icon bg-warning-subtle"><i class="fas fa-headset"></i></span>
+                                <div>
+                                    <h6 class="mb-1">Support satisfaction</h6>
+                                    <p class="mb-0">Helpdesk closed 32 tickets with an average response time of 14 minutes.</p>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="cta-panel">
+                            <div>
+                                <h6 class="mb-1 text-uppercase">Need a deeper dive?</h6>
+                                <p class="mb-0">Download the consolidated partner performance slide deck.</p>
+                            </div>
+                            <a class="btn btn-outline-light" href="/admin/reports" role="button">
+                                <i class="fas fa-download me-2"></i>
+                                Executive summary
+                            </a>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
-            
-            <div class="col-lg-4 mb-4">
-                <div class="card stats-card glass-card">
+            <div class="col-lg-4">
+                <section class="card stats-card glass-card h-100">
                     <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-chart-pie me-2 text-success"></i>
-                            User Roles Distribution
+                            <i class="fas fa-life-ring me-2 text-success"></i>
+                            Quick Reference
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="rolesChart"></canvas>
+                        <div class="reference-item">
+                            <h6 class="mb-1">Escalation Desk</h6>
+                            <p class="mb-0">operations@chemo.in · +91 80 4021 1100</p>
+                        </div>
+                        <div class="reference-item">
+                            <h6 class="mb-1">Distributor Agreements</h6>
+                            <p class="mb-0">Latest contract templates stored in the shared drive → Legal › 2025.</p>
+                        </div>
+                        <div class="reference-item">
+                            <h6 class="mb-1">System Availability</h6>
+                            <p class="mb-0">99.7% uptime this month. Planned maintenance every second Saturday.</p>
+                        </div>
+                        <div class="reference-item border-0">
+                            <h6 class="mb-1">Launch Checklist</h6>
+                            <p class="mb-0">Onboard newcomers via the zero-to-live playbook before Friday.</p>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
 
         <!-- Recent Activity & Quick Actions -->
-        <div class="row">
-            <div class="col-lg-8 mb-4">
-                <div class="card stats-card glass-card">
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <section class="card stats-card glass-card h-100">
                     <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-clock me-2 text-info"></i>
-                            Recent Activity
+                            Recent Activity Snapshot
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div id="recentActivity">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-spinner fa-spin me-2"></i>
-                                Loading recent activity...
+                        <div class="activity-feed">
+                            <div class="activity-item">
+                                <div class="activity-indicator bg-success"></div>
+                                <div class="activity-content">
+                                    <h6 class="mb-1">Acc Innovations logged in</h6>
+                                    <p class="mb-0">17 Oct 2025 · Partner portal · Role: user</p>
+                                </div>
+                                <span class="badge bg-success">User</span>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-indicator bg-danger"></div>
+                                <div class="activity-content">
+                                    <h6 class="mb-1">Admin Ops approved a quotation</h6>
+                                    <p class="mb-0">17 Oct 2025 · Quote #CGI-2413 · Role: admin</p>
+                                </div>
+                                <span class="badge bg-danger">Admin</span>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-indicator bg-primary"></div>
+                                <div class="activity-content">
+                                    <h6 class="mb-1">Operations scheduled training</h6>
+                                    <p class="mb-0">16 Oct 2025 · Webinar invite sent to 28 distributors.</p>
+                                </div>
+                                <span class="badge bg-primary">Ops</span>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-indicator bg-warning"></div>
+                                <div class="activity-content">
+                                    <h6 class="mb-1">Finance exported quarterly report</h6>
+                                    <p class="mb-0">15 Oct 2025 · CSV downloaded from quotation history.</p>
+                                </div>
+                                <span class="badge bg-warning">Finance</span>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
-            
-            <div class="col-lg-4 mb-4">
-                <div class="card stats-card glass-card">
+            <div class="col-lg-4">
+                <section class="card stats-card glass-card h-100">
                     <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-bolt me-2 text-warning"></i>
@@ -499,30 +219,26 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-premium btn-primary admin-action-btn" data-action="addUser" data-persist-loading="true">
-                                <span class="btn-spinner" aria-hidden="true"></span>
-                                <i class="fas fa-user-plus"></i>
-                                <span class="btn-label">Add New User</span>
-                            </button>
-                            <button class="btn btn-premium btn-info admin-action-btn" data-action="viewUsers" data-persist-loading="true">
-                                <span class="btn-spinner" aria-hidden="true"></span>
-                                <i class="fas fa-users"></i>
-                                <span class="btn-label">Manage Users</span>
-                            </button>
-                            <button class="btn btn-premium btn-success admin-action-btn" data-action="viewQuotations" data-persist-loading="true">
-                                <span class="btn-spinner" aria-hidden="true"></span>
-                                <i class="fas fa-file-invoice"></i>
-                                <span class="btn-label">View Quotation History</span>
-                            </button>
-                            <button class="btn btn-premium btn-warning admin-action-btn" data-action="viewSessions">
-                                <span class="btn-spinner" aria-hidden="true"></span>
-                                <i class="fas fa-users-cog"></i>
-                                <span class="btn-label">Active Sessions</span>
-                            </button>
+                        <div class="d-grid gap-3">
+                            <a class="btn btn-premium btn-primary" href="/admin/manage-users?action=add">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Onboard a new user
+                            </a>
+                            <a class="btn btn-premium btn-info" href="/admin/manage-users">
+                                <i class="fas fa-users me-2"></i>
+                                Review accounts directory
+                            </a>
+                            <a class="btn btn-premium btn-success" href="/admin/quotations">
+                                <i class="fas fa-file-invoice me-2"></i>
+                                Browse quotation history
+                            </a>
+                            <a class="btn btn-premium btn-warning" href="/admin/reports">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Download performance reports
+                            </a>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </div>

@@ -138,25 +138,53 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
         margin-bottom: 30px;
         padding: 15px 25px;
         background-color: #f8f9fa;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    
+
     .cart-header h2 {
         margin: 0;
         font-size: 1.8rem;
         color: #2c3e50;
         font-weight: 600;
     }
-    
+
+    .cart-company-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .cart-company-details h6 {
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    .cart-company-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .cart-company-contact {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
     .cart-actions {
         display: flex;
         gap: 15px;
         align-items: center;
     }
+
     
     .cart-actions .btn {
         padding: 8px 20px;
@@ -411,6 +439,13 @@
     <div class="cart-container">
         <div class="cart-header">
             <h2>Your Cart</h2>
+            <div class="cart-company-details" aria-live="polite">
+                <h6>Quotation For</h6>
+                <p class="cart-company-name mb-0" id="companyName">Your Company</p>
+                <div class="cart-company-contact" id="companyInfo">
+                    <span id="companyEmail">No email provided</span>
+                </div>
+            </div>
             <div class="cart-actions">
                 <button id="continueShoppingBtn" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-2"></i>Continue Shopping
