@@ -2206,6 +2206,7 @@ if USE_MONGO:
             print(f"Error saving users to MongoDB: {e}")
             return False
 
+    ensure_mongo_connection_initialized()
     users = load_users() # Initialize users from MongoDB
 else:
     # Fallback to JSON versions defined above
