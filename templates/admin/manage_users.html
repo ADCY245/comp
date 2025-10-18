@@ -426,28 +426,6 @@
                 container.appendChild(btn);
             });
         }
-        // Global variables
-        let allUsers = [];
-        // Global variables
-        let currentUser = null;
-        let currentPage = 0;
-        const pageSize = 10;
-        let hasMoreCompanies = true;
-        let isSearching = false;
-        let currentSearchTerm = '';
-        
-        // Table instances
-        let usersTable = null;
-        let companiesTable = null;
-        let allCompaniesForAssignment = [];
-        let companyModalInstance = null;
-        let lastCompanyModalTrigger = null;
-        let totalCompanyCount = 0;
-
-        
-        // Constants
-        const companiesPerPage = 1000;
-
         function updateAssignedUsersPreview() {
             const preview = document.getElementById('assignedUsersPreview');
             const select = document.getElementById('companyAssignedTo');
