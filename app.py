@@ -226,6 +226,13 @@ def init_mongodb():
             # Create indexes if they don't exist
             users_col.create_index('email', unique=True)
             users_col.create_index('username', unique=True)
+            # Ensure efficient lookups during company import
+            companies_col = mongo_db.get_collection('companies')
+            try:
+                companies_col.create_index('EmailID', name='email_ci', unique=False, collation={'locale': 'en', 'strength': 2})
+                companies_col.create_index('Company Name', name='company_name_ci', unique=False, collation={'locale': 'en', 'strength': 2})
+            except Exception as idx_err:
+                app.logger.warning(f"Index creation on companies failed: {idx_err}")
             
             MONGO_AVAILABLE = True
             print("Successfully connected to MongoDB")
@@ -2465,8 +2472,19 @@ def get_user_cart():
             except Exception as e:
                 app.logger.error(f"[DEBUG] Error fetching cart from MongoDB: {str(e)}")
                 products = []
-            # Ensure all products have the correct structure
+            # Ensure products is a list; fallback if malformed
+            if not isinstance(products, list):
+                app.logger.warning("[DEBUG] Expected list from cart, got %s. Resetting to empty list.", type(products).__name__)
+                products = []
+
+            # Ensure all items in products are dicts with calculations
+            sanitized_products = []
             for product in products:
+                if not isinstance(product, dict):
+                    app.logger.warning("[DEBUG] Skipping malformed product entry: %s", str(product)[:100])
+                    continue
+                sanitized_products.append(product)
+
                 if 'calculations' not in product:
                     # If calculations are missing, recalculate them
                     if product.get('type') == 'blanket':
@@ -2508,16 +2526,19 @@ def get_user_cart():
                             'discount_amount': round(discount_amount, 2),
                             'price_after_discount': round(price_after_discount, 2),
                             'gst_amount': round(gst_amount, 2),
+                            'gst_percent': round(gst_percent, 2),
                             'final_unit_price': round(final_unit_price, 2),
                             'final_total': round(final_total, 2)
                         }
             
-            return {"products": products or []}
-            
-        # If we get here, MongoDB is not available
+            products = sanitized_products
+
+        else:
+            # Fallback to JSON cart store
+            products = cart_store.get_cart()
         app.logger.warning("[DEBUG] MongoDB is not available for cart storage")
         app.logger.warning(f"[DEBUG] MONGO_AVAILABLE: {MONGO_AVAILABLE}, USE_MONGO: {USE_MONGO}, mongo_db: {'available' if 'mongo_db' in globals() and mongo_db is not None else 'None'}")
-        return {"products": []}
+        return {"products": products}
         
     except Exception as e:
         print(f"Error in get_user_cart: {e}")
