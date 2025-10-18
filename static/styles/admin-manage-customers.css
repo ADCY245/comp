@@ -1,26 +1,40 @@
 .card {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(173, 151, 79, 0.2);
+    border-radius: 18px;
+    box-shadow: 0 24px 48px rgba(5, 10, 48, 0.45);
+    background: rgba(5, 10, 48, 0.65);
+    color: #EAEAEA;
 }
 
 .btn-action {
-    padding: 0.25rem 0.5rem;
+    padding: 0.35rem 0.6rem;
     margin: 0 0.1rem;
-    border-radius: 0.25rem;
+    border-radius: 0.35rem;
+    border: 1px solid rgba(173, 151, 79, 0.35);
+    background: linear-gradient(135deg, #050A30, #8E793E);
+    color: #EAEAEA;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(173, 151, 79, 0.35);
+    color: #EAEAEA;
 }
 
 .customer-item {
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
+    border: 1px solid rgba(173, 151, 79, 0.25);
+    border-radius: 0.75rem;
     padding: 1rem;
     margin-bottom: 1rem;
     transition: all 0.3s ease;
+    background: rgba(5, 10, 48, 0.55);
+    color: #EAEAEA;
 }
 
 .customer-item:hover {
-    background-color: #f8f9fa;
-    border-color: #007bff;
+    background-color: rgba(190, 121, 62, 0.18);
+    border-color: rgba(190, 121, 62, 0.35);
 }
 
 .toast-container {

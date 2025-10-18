@@ -13,9 +13,9 @@
     <link href="{{ url_for('static', filename='styles/admin.css') }}" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="admin-base">
     <!-- Admin Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg admin-navbar">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
                 <i class="fas fa-tachometer-alt me-2"></i>Admin Panel
@@ -62,11 +62,11 @@
         </div>
     </nav>
 
-    <div class="container-fluid py-4">
+    <main class="admin-content container-fluid py-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ category }} admin-alert alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -75,7 +75,7 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
     <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100"></div>
 

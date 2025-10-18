@@ -1,56 +1,50 @@
-.admin-navbar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1rem 0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.admin-navbar .navbar-brand {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: white !important;
-}
-
-.admin-navbar .nav-link {
-    color: rgba(255,255,255,0.9) !important;
-    margin: 0 0.5rem;
-    padding: 0.5rem 1rem !important;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.admin-navbar .nav-link:hover {
-    background: rgba(255,255,255,0.2);
-    color: white !important;
-}
 
 .card {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border: 1px solid rgba(173, 151, 79, 0.2);
+    border-radius: 18px;
+    box-shadow: 0 24px 48px rgba(5, 10, 48, 0.45);
+    background: rgba(5, 10, 48, 0.65);
+    color: #EAEAEA;
 }
 
 .btn-action {
-    padding: 0.25rem 0.5rem;
+    padding: 0.35rem 0.6rem;
     margin: 0 0.1rem;
-    border-radius: 0.25rem;
+    border-radius: 0.35rem;
+    border: 1px solid rgba(173, 151, 79, 0.35);
+    background: linear-gradient(135deg, #050A30, #8E793E);
+    color: #EAEAEA;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(173, 151, 79, 0.35);
+    color: #EAEAEA;
 }
 
 .role-badge {
     font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(173, 151, 79, 0.35);
+    background: rgba(173, 151, 79, 0.2);
+    color: #AD974F;
 }
 
 .company-item {
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
+    border: 1px solid rgba(173, 151, 79, 0.25);
+    border-radius: 0.75rem;
     padding: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     transition: all 0.3s ease;
+    background: rgba(5, 10, 48, 0.55);
+    color: #EAEAEA;
 }
 
 .company-item:hover {
-    background-color: #f8f9fa;
-    border-color: #007bff;
+    background-color: rgba(190, 121, 62, 0.18);
+    border-color: rgba(190, 121, 62, 0.35);
 }
 
 .filter-dropdown {
@@ -64,8 +58,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0.4rem 0.85rem;
     font-size: 0.85rem;
+    border: 1px solid rgba(173, 151, 79, 0.35);
+    border-radius: 12px;
+    background: rgba(5, 10, 48, 0.65);
+    color: #EAEAEA;
 }
 
 .filter-dropdown-menu {
@@ -74,10 +72,10 @@
     left: 0;
     width: 100%;
     min-width: 220px;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    background-color: #ffffff;
-    box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.15);
+    border: 1px solid rgba(173, 151, 79, 0.25);
+    border-radius: 0.75rem;
+    background: rgba(5, 10, 48, 0.92);
+    box-shadow: 0 18px 36px rgba(5, 10, 48, 0.45);
     padding: 0.5rem 0;
     display: none;
     z-index: 1050;
@@ -88,28 +86,29 @@
     display: block;
 }
 
+
 .filter-option {
     width: 100%;
     border: none;
     background: transparent;
     text-align: left;
-    padding: 0.35rem 0.85rem;
+    padding: 0.45rem 0.95rem;
     font-size: 0.85rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #212529;
+    color: #EAEAEA;
 }
 
 .filter-option:hover,
 .filter-option:focus {
-    background-color: #f1f3f5;
-    color: #212529;
+    background-color: rgba(173, 151, 79, 0.2);
+    color: #EAEAEA;
 }
 
 .filter-dropdown-label {
     font-size: 0.75rem;
-    color: #6c757d;
+    color: rgba(234, 234, 234, 0.65);
     margin-top: 0.25rem;
     display: block;
 }
@@ -120,21 +119,22 @@
     gap: 0.35rem;
 }
 
+
 .alphabet-filter-btn {
-    border: 1px solid #ced4da;
-    background-color: #ffffff;
-    color: #495057;
-    padding: 0.25rem 0.6rem;
+    border: 1px solid rgba(173, 151, 79, 0.25);
+    background-color: rgba(5, 10, 48, 0.65);
+    color: #EAEAEA;
+    padding: 0.35rem 0.75rem;
     font-size: 0.75rem;
-    border-radius: 0.35rem;
-    min-width: 2rem;
+    border-radius: 0.45rem;
+    min-width: 2.1rem;
     text-align: center;
     transition: all 0.2s ease;
 }
 
 .alphabet-filter-btn:hover,
 .alphabet-filter-btn.active {
-    background-color: #198754;
-    border-color: #198754;
-    color: #ffffff;
+    background: rgba(173, 151, 79, 0.3);
+    border-color: rgba(173, 151, 79, 0.45);
+    color: #EAEAEA;
 }

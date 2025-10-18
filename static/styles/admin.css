@@ -1,0 +1,260 @@
+:root {
+  --color-navy: #050A30;
+  --color-charcoal: #231F20;
+  --color-bronze: #8E793E;
+  --color-copper: #BE793E;
+  --color-gold: #AD974F;
+  --color-ivory: #EAEAEA;
+  --color-warmgray: #8B8383;
+}
+
+body.admin-base {
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-charcoal) 55%, var(--color-copper) 120%);
+  background-attachment: fixed;
+  font-family: 'Poppins', sans-serif;
+  color: var(--color-ivory);
+}
+
+.admin-navbar {
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-charcoal) 60%, var(--color-bronze) 100%);
+  border-bottom: 1px solid rgba(173, 151, 79, 0.35);
+  box-shadow: 0 18px 40px rgba(5, 10, 48, 0.45);
+}
+
+.admin-navbar .navbar-brand {
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--color-ivory) !important;
+  letter-spacing: 0.04em;
+}
+
+.admin-navbar .nav-link {
+  color: rgba(234, 234, 234, 0.75) !important;
+  margin: 0 0.4rem;
+  padding: 0.5rem 1rem !important;
+  border-radius: 999px;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar .nav-link:hover,
+.admin-navbar .nav-link:focus,
+.admin-navbar .nav-link.active {
+  color: var(--color-navy) !important;
+  background: rgba(173, 151, 79, 0.85);
+  box-shadow: 0 14px 30px rgba(5, 10, 48, 0.35);
+}
+
+.admin-navbar .navbar-toggler {
+  border-color: rgba(234, 234, 234, 0.45);
+}
+
+.admin-navbar .navbar-toggler-icon {
+  filter: invert(1);
+}
+
+.dropdown-menu {
+  background: rgba(5, 10, 48, 0.92);
+  border: 1px solid rgba(173, 151, 79, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 18px 36px rgba(5, 10, 48, 0.45);
+}
+
+.dropdown-item {
+  color: var(--color-ivory);
+  transition: background 0.25s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: rgba(190, 121, 62, 0.35);
+  color: var(--color-ivory);
+}
+
+main.admin-content {
+  background: rgba(5, 10, 48, 0.75);
+  border-radius: 26px;
+  border: 1px solid rgba(173, 151, 79, 0.25);
+  box-shadow: 0 28px 60px rgba(5, 10, 48, 0.55);
+  margin-top: 2rem;
+  padding: clamp(1.5rem, 2vw, 2.5rem) !important;
+}
+
+.admin-surface {
+  background: rgba(5, 10, 48, 0.65);
+  border: 1px solid rgba(173, 151, 79, 0.25);
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(5, 10, 48, 0.45);
+  color: var(--color-ivory);
+}
+
+.admin-card,
+.card.admin-card,
+main.admin-content .card {
+  background: rgba(5, 10, 48, 0.65);
+  border: 1px solid rgba(173, 151, 79, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 24px 48px rgba(5, 10, 48, 0.45);
+  color: var(--color-ivory);
+}
+
+main.admin-content .card-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(173, 151, 79, 0.25);
+  color: var(--color-gold);
+}
+
+main.admin-content .card-footer {
+  background: transparent;
+  border-top: 1px solid rgba(173, 151, 79, 0.25);
+}
+
+.admin-table thead {
+  background: rgba(5, 10, 48, 0.8);
+  color: var(--color-ivory);
+}
+
+.admin-table tbody tr {
+  border-color: rgba(173, 151, 79, 0.2);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(190, 121, 62, 0.12);
+}
+
+.admin-btn,
+button.admin-btn,
+.btn.admin-btn {
+  border-radius: 16px;
+  border: 1px solid rgba(173, 151, 79, 0.35);
+  background: linear-gradient(135deg, var(--color-navy), var(--color-bronze));
+  color: var(--color-ivory);
+  letter-spacing: 0.02em;
+  padding: 0.65rem 1.25rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.admin-btn:hover,
+.admin-btn:focus {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px rgba(173, 151, 79, 0.35);
+  color: var(--color-ivory);
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.admin-badge.gold {
+  background: rgba(173, 151, 79, 0.25);
+  color: var(--color-gold);
+}
+
+.admin-badge.copper {
+  background: rgba(190, 121, 62, 0.25);
+  color: var(--color-copper);
+}
+
+.admin-badge.warmgray {
+  background: rgba(139, 131, 131, 0.25);
+  color: var(--color-warmgray);
+}
+
+.admin-alert {
+  border-radius: 16px;
+  border: 1px solid rgba(173, 151, 79, 0.25);
+  background: rgba(5, 10, 48, 0.65);
+  color: var(--color-ivory);
+}
+
+.admin-alert.alert-success {
+  border-color: rgba(173, 151, 79, 0.45);
+  background: rgba(173, 151, 79, 0.18);
+  color: var(--color-gold);
+}
+
+.admin-alert.alert-info {
+  border-color: rgba(190, 121, 62, 0.35);
+  background: rgba(190, 121, 62, 0.18);
+  color: var(--color-copper);
+}
+
+.admin-alert.alert-warning {
+  border-color: rgba(139, 131, 131, 0.4);
+  background: rgba(139, 131, 131, 0.2);
+  color: var(--color-warmgray);
+}
+
+.admin-alert.alert-danger {
+  border-color: rgba(190, 121, 62, 0.4);
+  background: rgba(190, 121, 62, 0.2);
+  color: var(--color-copper);
+}
+
+.admin-form-control,
+main.admin-content .form-control,
+main.admin-content .form-select {
+  background: rgba(5, 10, 48, 0.65);
+  border: 1px solid rgba(173, 151, 79, 0.25);
+  color: var(--color-ivory);
+}
+
+.admin-form-control:focus,
+main.admin-content .form-control:focus,
+main.admin-content .form-select:focus {
+  border-color: rgba(173, 151, 79, 0.55);
+  box-shadow: 0 0 0 0.15rem rgba(173, 151, 79, 0.25);
+  background: rgba(5, 10, 48, 0.78);
+}
+
+.table-hover tbody tr {
+  transition: background 0.2s ease;
+}
+
+.table-hover tbody tr:hover {
+  background: rgba(173, 151, 79, 0.12);
+}
+
+.badge.status-active {
+  background: rgba(173, 151, 79, 0.22);
+  color: var(--color-gold);
+}
+
+.badge.status-pending {
+  background: rgba(139, 131, 131, 0.22);
+  color: var(--color-warmgray);
+}
+
+.badge.status-inactive {
+  background: rgba(190, 121, 62, 0.22);
+  color: var(--color-copper);
+}
+
+.table thead th {
+  border-bottom: 1px solid rgba(173, 151, 79, 0.25);
+}
+
+.table tbody td {
+  border-color: rgba(173, 151, 79, 0.15);
+}
+
+.modal-content {
+  background: rgba(5, 10, 48, 0.88);
+  border: 1px solid rgba(173, 151, 79, 0.35);
+  color: var(--color-ivory);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: rgba(173, 151, 79, 0.25);
+}
+
+.modal-backdrop.show {
+  background-color: rgba(5, 10, 48, 0.65);
+}
