@@ -9,12 +9,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-dashboard.css') }}">
 </head>
-<body>
+<body class="admin-dashboard">
     <!-- Admin Navigation -->
     <nav class="navbar navbar-expand-lg admin-navbar">
         <div class="container-fluid">
@@ -55,18 +59,18 @@
     </nav>
 
     <!-- Dashboard Content -->
-    <div class="container-fluid mt-4">
+    <div class="dashboard-wrapper container-xxl px-4 py-4">
         <div class="row mb-4">
             <div class="col-12">
-                <h2 class="text-dark mb-0">Admin Dashboard</h2>
-                <p class="text-muted">Welcome back, {{ user.username }}!</p>
+                <h2 class="page-title">Admin Dashboard</h2>
+                <p class="page-subtitle">Welcome back, {{ user.username }}!</p>
             </div>
         </div>
 
         <!-- Stats Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card bg-primary text-white">
+                <div class="card stats-card gradient-royal text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
@@ -82,7 +86,7 @@
             </div>
             
             <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card bg-success text-white">
+                <div class="card stats-card gradient-emerald text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
@@ -98,7 +102,7 @@
             </div>
             
             <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card bg-info text-white">
+                <div class="card stats-card gradient-azure text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
@@ -114,7 +118,7 @@
             </div>
             
             <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card stats-card bg-warning text-white">
+                <div class="card stats-card gradient-amber text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
@@ -133,8 +137,8 @@
         <!-- Charts Row -->
         <div class="row mb-4">
             <div class="col-lg-8 mb-4">
-                <div class="card stats-card">
-                    <div class="card-header bg-white">
+                <div class="card stats-card glass-card">
+                    <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-chart-line me-2 text-primary"></i>
                             Users & Quotations Over Time
@@ -149,8 +153,8 @@
             </div>
             
             <div class="col-lg-4 mb-4">
-                <div class="card stats-card">
-                    <div class="card-header bg-white">
+                <div class="card stats-card glass-card">
+                    <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-chart-pie me-2 text-success"></i>
                             User Roles Distribution
@@ -168,8 +172,8 @@
         <!-- Recent Activity & Quick Actions -->
         <div class="row">
             <div class="col-lg-8 mb-4">
-                <div class="card stats-card">
-                    <div class="card-header bg-white">
+                <div class="card stats-card glass-card">
+                    <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-clock me-2 text-info"></i>
                             Recent Activity
@@ -187,8 +191,8 @@
             </div>
             
             <div class="col-lg-4 mb-4">
-                <div class="card stats-card">
-                    <div class="card-header bg-white">
+                <div class="card stats-card glass-card">
+                    <div class="card-header glass-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-bolt me-2 text-warning"></i>
                             Quick Actions
@@ -196,19 +200,19 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="addNewUser()">
+                            <button class="btn btn-premium btn-primary" onclick="addNewUser()">
                                 <i class="fas fa-user-plus me-2"></i>
                                 Add New User
                             </button>
-                            <button class="btn btn-info" onclick="viewAllUsers()">
+                            <button class="btn btn-premium btn-info" onclick="viewAllUsers()">
                                 <i class="fas fa-users me-2"></i>
                                 Manage Users
                             </button>
-                            <button class="btn btn-success" onclick="viewQuotationHistory()">
+                            <button class="btn btn-premium btn-success" onclick="viewQuotationHistory()">
                                 <i class="fas fa-file-invoice me-2"></i>
                                 View Quotation History
                             </button>
-                            <button class="btn btn-warning" onclick="viewActiveSessions()">
+                            <button class="btn btn-premium btn-warning" onclick="viewActiveSessions()">
                                 <i class="fas fa-users-cog me-2"></i>
                                 Active Sessions
                             </button>
