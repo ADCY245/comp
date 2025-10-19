@@ -1,6 +1,6 @@
 .admin-dashboard {
     min-height: 100vh;
-    background: linear-gradient(160deg, #050A30 0%, #231F20 55%, #BE793E 120%);
+    background: linear-gradient(160deg, #d9d9d9 0%, #231F20 55%, #BE793E 120%);
     background-attachment: fixed;
     font-family: 'Poppins', sans-serif;
     color: rgba(234, 234, 234, 0.9);
