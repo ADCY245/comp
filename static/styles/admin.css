@@ -17,6 +17,7 @@ body.admin-base {
   font-size: 16px;
   line-height: 1.65;
   letter-spacing: 0.01em;
+  padding-top: clamp(4.5rem, 10vh, 6rem);
 }
 
 .admin-base h1,
