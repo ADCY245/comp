@@ -18,7 +18,7 @@
             <a href="#companySelectionSection" class="landing-link">Company</a>
             <a href="#productSelectionSection" class="landing-link">Products</a>
             <a href="{{ url_for('login') }}" class="landing-link">Login</a>
-            <a href="{{ url_for('register') }}" class="landing-link highlight">Create Account</a>
+            <a href="{{ url_for('signup') }}" class="landing-link highlight">Create Account</a>
         </nav>
     </div>
 </header>
@@ -104,6 +104,9 @@
                         </div>
                         <!-- New Company button -->
                         <div class="d-grid gap-2 mt-2">
+                            <a href="{{ url_for('signup') }}" class="btn user-secondary-btn btn-lg">
+                                <i class="fas fa-user-plus me-2"></i> Need an account?
+                            </a>
                             <a href="{{ url_for('add_company') }}" class="btn user-secondary-btn btn-lg">
                                 <i class="fas fa-plus me-2"></i> New Company
                             </a>
