@@ -235,17 +235,26 @@ function showToast(title, message, type = 'info') {
 function updateCompanyDisplay(name, email) {
     const companyNameEl = document.getElementById('companyName');
     const companyInfoEl = document.getElementById('companyInfo');
-    
-    if (name && name !== 'undefined' && name !== 'Your Company') {
-        companyNameEl.textContent = name;
-    } else {
-        companyNameEl.textContent = 'Your Company';
+
+    if (!companyNameEl && !companyInfoEl) {
+        console.warn('Company display elements not found in DOM; skipping update.');
+        return;
     }
-    
-    if (email && email !== 'undefined' && email !== 'email@example.com') {
-        companyInfoEl.innerHTML = `<a href="mailto:${email}" id="companyEmail" class="text-muted mb-0" style="text-decoration: none;">${email}</a>`;
-    } else {
-        companyInfoEl.innerHTML = '<p class="text-muted mb-0" id="companyEmail">No email provided</p>';
+
+    const normalizedName = name && name !== 'undefined' && name !== 'Your Company'
+        ? name
+        : 'Your Company';
+
+    if (companyNameEl) {
+        companyNameEl.textContent = normalizedName;
+    }
+
+    if (companyInfoEl) {
+        if (email && email !== 'undefined' && email !== 'email@example.com') {
+            companyInfoEl.innerHTML = `<a href="mailto:${email}" id="companyEmail" class="text-muted mb-0" style="text-decoration: none;">${email}</a>`;
+        } else {
+            companyInfoEl.innerHTML = '<p class="text-muted mb-0" id="companyEmail">No email provided</p>';
+        }
     }
 }
 
