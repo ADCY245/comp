@@ -237,7 +237,6 @@ function updateCompanyDisplay(name, email) {
     const companyInfoEl = document.getElementById('companyInfo');
 
     if (!companyNameEl && !companyInfoEl) {
-        console.warn('Company display elements not found in DOM; skipping update.');
         return;
     }
 
