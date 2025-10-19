@@ -179,7 +179,7 @@
                 <img src="https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png" alt="Logo" height="40" class="d-inline-block align-text-top me-2">
                 Product Calculator
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler collapsed" type="button" aria-controls="navbarNav" aria-expanded="false">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -436,6 +436,7 @@
         setupNavigation();
         updateCartCount();
         updateActiveNavItem();
+        setupNavbarToggler();
         
         // Update active nav item when navigating back/forward
         window.addEventListener('popstate', updateActiveNavItem);
@@ -563,6 +564,33 @@
             instance = new bootstrap.Collapse(nav, { toggle: false });
         }
         instance.hide();
+        const toggler = document.querySelector('.navbar-toggler');
+        if (toggler) {
+            toggler.classList.add('collapsed');
+            toggler.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function setupNavbarToggler() {
+        const nav = document.getElementById('navbarNav');
+        const toggler = document.querySelector('.navbar-toggler');
+        if (!nav || !toggler || toggler.dataset.toggleBound === 'true') return;
+
+        const collapseInstance = bootstrap.Collapse.getOrCreateInstance(nav, { toggle: false });
+        toggler.dataset.toggleBound = 'true';
+
+        toggler.addEventListener('click', function() {
+            const isExpanded = nav.classList.contains('show');
+            collapseInstance.toggle();
+
+            if (isExpanded) {
+                toggler.classList.add('collapsed');
+                toggler.setAttribute('aria-expanded', 'false');
+            } else {
+                toggler.classList.remove('collapsed');
+                toggler.setAttribute('aria-expanded', 'true');
+            }
+        });
     }
     
     // Function to check if company is selected before navigation
