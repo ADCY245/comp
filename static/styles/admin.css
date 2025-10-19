@@ -10,10 +10,9 @@
 
 body.admin-base {
   min-height: 100vh;
-  background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-charcoal) 55%, var(--color-copper) 120%);
-  background-attachment: fixed;
+  background-color: #EAEAEA;
   font-family: 'Poppins', sans-serif;
-  color: var(--color-ivory);
+  color: #231F20;
   font-size: 16px;
   line-height: 1.65;
   letter-spacing: 0.01em;
@@ -26,7 +25,7 @@ body.admin-base {
 .admin-base h4,
 .admin-base h5,
 .admin-base h6 {
-  color: var(--color-ivory);
+  color: #231F20;
   line-height: 1.25;
   letter-spacing: 0.02em;
 }
@@ -36,24 +35,24 @@ body.admin-base {
 .admin-base span,
 .admin-base label,
 .admin-base .text-muted {
-  color: rgba(234, 234, 234, 0.82);
+  color: rgba(35, 31, 32, 0.65);
 }
 
 .admin-navbar {
-  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-charcoal) 60%, var(--color-bronze) 100%);
+  background-color: #231F20;
   border-bottom: 1px solid rgba(173, 151, 79, 0.35);
-  box-shadow: 0 18px 40px rgba(5, 10, 48, 0.45);
+  box-shadow: 0 14px 32px rgba(35, 31, 32, 0.35);
 }
 
 .admin-navbar .navbar-brand {
   font-size: 1.45rem;
   font-weight: 600;
-  color: var(--color-ivory) !important;
+  color: #000000 !important;
   letter-spacing: 0.04em;
 }
 
 .admin-navbar .nav-link {
-  color: rgba(234, 234, 234, 0.85) !important;
+  color: #000000 !important;
   margin: 0 0.4rem;
   padding: 0.5rem 1rem !important;
   border-radius: 999px;
@@ -63,42 +62,42 @@ body.admin-base {
 .admin-navbar .nav-link:hover,
 .admin-navbar .nav-link:focus,
 .admin-navbar .nav-link.active {
-  color: var(--color-navy) !important;
-  background: rgba(173, 151, 79, 0.85);
-  box-shadow: 0 14px 30px rgba(5, 10, 48, 0.35);
+  color: #231F20 !important;
+  background: rgba(173, 151, 79, 0.35);
+  box-shadow: 0 10px 22px rgba(173, 151, 79, 0.25);
 }
 
 .admin-navbar .navbar-toggler {
-  border-color: rgba(234, 234, 234, 0.45);
+  border-color: #AD974F;
 }
 
 .admin-navbar .navbar-toggler-icon {
-  filter: invert(1);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23AD974F' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 .dropdown-menu {
-  background: rgba(5, 10, 48, 0.92);
-  border: 1px solid rgba(173, 151, 79, 0.3);
+  background: #FFFFFF;
+  border: 1px solid rgba(173, 151, 79, 0.35);
   border-radius: 14px;
-  box-shadow: 0 18px 36px rgba(5, 10, 48, 0.45);
+  box-shadow: 0 18px 36px rgba(35, 31, 32, 0.18);
 }
 
 .dropdown-item {
-  color: var(--color-ivory);
+  color: #231F20;
   transition: background 0.25s ease;
 }
 
 .dropdown-item:hover,
 .dropdown-item:focus {
-  background: rgba(190, 121, 62, 0.35);
-  color: var(--color-ivory);
+  background: rgba(173, 151, 79, 0.2);
+  color: #231F20;
 }
 
 main.admin-content {
-  background: rgba(5, 10, 48, 0.75);
+  background: #FFFFFF;
   border-radius: 26px;
   border: 1px solid rgba(173, 151, 79, 0.25);
-  box-shadow: 0 28px 60px rgba(5, 10, 48, 0.55);
+  box-shadow: 0 28px 60px rgba(35, 31, 32, 0.12);
   margin-top: 2rem;
   padding: clamp(1.5rem, 2vw, 2.5rem) !important;
 }
@@ -108,50 +107,50 @@ main.admin-content li,
 main.admin-content td,
 main.admin-content th,
 main.admin-content small {
-  color: rgba(234, 234, 234, 0.86);
+  color: #231F20;
 }
 
 .admin-surface {
-  background: rgba(5, 10, 48, 0.65);
-  border: 1px solid rgba(173, 151, 79, 0.25);
+  background: #FFFFFF;
+  border: 1px solid rgba(173, 151, 79, 0.2);
   border-radius: 18px;
-  box-shadow: 0 20px 40px rgba(5, 10, 48, 0.45);
-  color: var(--color-ivory);
+  box-shadow: 0 20px 40px rgba(35, 31, 32, 0.12);
+  color: #231F20;
 }
 
 .admin-card,
 .card.admin-card,
 main.admin-content .card {
-  background: rgba(5, 10, 48, 0.65);
+  background: #FFFFFF;
   border: 1px solid rgba(173, 151, 79, 0.2);
   border-radius: 20px;
-  box-shadow: 0 24px 48px rgba(5, 10, 48, 0.45);
-  color: var(--color-ivory);
+  box-shadow: 0 24px 48px rgba(35, 31, 32, 0.12);
+  color: #231F20;
 }
 
 main.admin-content .card-header {
-  background: transparent;
+  background: rgba(173, 151, 79, 0.15);
   border-bottom: 1px solid rgba(173, 151, 79, 0.25);
-  color: var(--color-gold);
+  color: #231F20;
 }
 
 main.admin-content .card-footer {
-  background: transparent;
+  background: rgba(173, 151, 79, 0.08);
   border-top: 1px solid rgba(173, 151, 79, 0.25);
 }
 
 .admin-table thead {
-  background: rgba(5, 10, 48, 0.8);
-  color: var(--color-ivory);
+  background: rgba(173, 151, 79, 0.15);
+  color: #231F20;
 }
 
 .admin-table tbody tr {
   border-color: rgba(173, 151, 79, 0.2);
-  color: rgba(234, 234, 234, 0.86);
+  color: #231F20;
 }
 
 .admin-table tbody tr:hover {
-  background: rgba(190, 121, 62, 0.12);
+  background: rgba(173, 151, 79, 0.15);
 }
 
 .admin-btn,
@@ -159,8 +158,8 @@ button.admin-btn,
 .btn.admin-btn {
   border-radius: 16px;
   border: 1px solid rgba(173, 151, 79, 0.35);
-  background: linear-gradient(135deg, var(--color-navy), var(--color-bronze));
-  color: var(--color-ivory);
+  background: linear-gradient(135deg, rgba(173, 151, 79, 0.85), rgba(190, 121, 62, 0.85));
+  color: #231F20;
   letter-spacing: 0.02em;
   padding: 0.65rem 1.25rem;
   transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
@@ -170,7 +169,7 @@ button.admin-btn,
 .admin-btn:focus {
   transform: translateY(-3px);
   box-shadow: 0 20px 40px rgba(173, 151, 79, 0.35);
-  color: var(--color-ivory);
+  color: #231F20;
 }
 
 .admin-badge {
@@ -201,40 +200,40 @@ button.admin-btn,
 .admin-alert {
   border-radius: 16px;
   border: 1px solid rgba(173, 151, 79, 0.25);
-  background: rgba(5, 10, 48, 0.65);
-  color: var(--color-ivory);
+  background: rgba(255, 255, 255, 0.9);
+  color: #231F20;
 }
 
 .admin-alert.alert-success {
   border-color: rgba(173, 151, 79, 0.45);
-  background: rgba(173, 151, 79, 0.18);
-  color: var(--color-gold);
+  background: rgba(173, 151, 79, 0.2);
+  color: #231F20;
 }
 
 .admin-alert.alert-info {
   border-color: rgba(190, 121, 62, 0.35);
   background: rgba(190, 121, 62, 0.18);
-  color: var(--color-copper);
+  color: #231F20;
 }
 
 .admin-alert.alert-warning {
   border-color: rgba(139, 131, 131, 0.4);
   background: rgba(139, 131, 131, 0.2);
-  color: var(--color-warmgray);
+  color: #231F20;
 }
 
 .admin-alert.alert-danger {
   border-color: rgba(190, 121, 62, 0.4);
   background: rgba(190, 121, 62, 0.2);
-  color: var(--color-copper);
+  color: #231F20;
 }
 
 .admin-form-control,
 main.admin-content .form-control,
 main.admin-content .form-select {
-  background: rgba(5, 10, 48, 0.65);
+  background: #FFFFFF;
   border: 1px solid rgba(173, 151, 79, 0.25);
-  color: var(--color-ivory);
+  color: #231F20;
 }
 
 .admin-form-control:focus,
@@ -242,7 +241,7 @@ main.admin-content .form-control:focus,
 main.admin-content .form-select:focus {
   border-color: rgba(173, 151, 79, 0.55);
   box-shadow: 0 0 0 0.15rem rgba(173, 151, 79, 0.25);
-  background: rgba(5, 10, 48, 0.78);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .table-hover tbody tr {
@@ -277,9 +276,9 @@ main.admin-content .form-select:focus {
 }
 
 .modal-content {
-  background: rgba(5, 10, 48, 0.88);
+  background: #FFFFFF;
   border: 1px solid rgba(173, 151, 79, 0.35);
-  color: var(--color-ivory);
+  color: #231F20;
 }
 
 .modal-header,
@@ -288,5 +287,5 @@ main.admin-content .form-select:focus {
 }
 
 .modal-backdrop.show {
-  background-color: rgba(5, 10, 48, 0.65);
+  background-color: rgba(35, 31, 32, 0.35);
 }

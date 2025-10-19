@@ -8,57 +8,6 @@
 {% endblock %}
 
 {% block content %}
-<header class="landing-header">
-    <div class="container landing-nav">
-        <div class="landing-logo">
-            <span class="logo-mark">PC</span>
-            <span class="logo-text">Product Calculator</span>
-        </div>
-        <nav class="landing-menu" aria-label="Primary">
-            <a href="#companySelectionSection" class="landing-link">Company</a>
-            <a href="#productSelectionSection" class="landing-link">Products</a>
-            <a href="{{ url_for('login') }}" class="landing-link">Login</a>
-            <a href="{{ url_for('signup') }}" class="landing-link highlight">Create Account</a>
-        </nav>
-    </div>
-</header>
-
-<section class="hero-section">
-    <div class="container hero-wrapper">
-        <div class="hero-badge">Premium Print Logistics</div>
-        <h1 class="hero-title">Confident Quotes In Minutes</h1>
-        <p class="hero-subtitle">Select your company, explore curated product libraries, and deliver polished pricing to customers without leaving the dashboard.</p>
-        <div class="hero-actions">
-            <a href="#companySelectionSection" class="btn hero-btn-outline">How It Works</a>
-            <a href="#productSelectionSection" class="btn hero-btn-solid" id="heroStartBtn">Launch Calculator</a>
-        </div>
-    </div>
-</section>
-
-<section class="palette-section">
-    <div class="container palette-wrapper">
-        <div class="palette-label">Luxurious &amp; Distinctive</div>
-        <div class="palette-swatches" role="list">
-            <div class="palette-swatch" role="listitem">
-                <span class="palette-color" style="--swatch-color: #BE793E;"></span>
-                <span class="palette-code">#BE793E</span>
-            </div>
-            <div class="palette-swatch" role="listitem">
-                <span class="palette-color" style="--swatch-color: #AD974F;"></span>
-                <span class="palette-code">#AD974F</span>
-            </div>
-            <div class="palette-swatch" role="listitem">
-                <span class="palette-color" style="--swatch-color: #231F20;"></span>
-                <span class="palette-code">#231F20</span>
-            </div>
-            <div class="palette-swatch" role="listitem">
-                <span class="palette-color" style="--swatch-color: #EAEAEA;"></span>
-                <span class="palette-code">#EAEAEA</span>
-            </div>
-        </div>
-    </div>
-</section>
-
 <div class="container landing-container mt-5">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

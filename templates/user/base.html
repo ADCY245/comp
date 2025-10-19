@@ -20,8 +20,8 @@
     <style>
         body {
             padding-top: 70px;
-            background: linear-gradient(135deg, #050A30 0%, #231F20 55%, #BE793E 100%);
-            color: #EAEAEA;
+            background-color: #EAEAEA;
+            color: #231F20;
         }
 
         .navbar {
@@ -31,18 +31,18 @@
             right: 0;
             z-index: 1030;
             border-bottom: 1px solid rgba(173, 151, 79, 0.35);
-            background: linear-gradient(135deg, #050A30 0%, #231F20 60%, #8E793E 100%) !important;
-            box-shadow: 0 20px 45px rgba(5, 10, 48, 0.45);
+            background-color: #231F20 !important;
+            box-shadow: 0 14px 32px rgba(35, 31, 32, 0.35);
         }
 
         .navbar-brand {
-            color: #EAEAEA !important;
+            color: #000000 !important;
             font-weight: 600;
             letter-spacing: 0.04em;
         }
 
         .nav-link {
-            color: rgba(234, 234, 234, 0.8) !important;
+            color: #000000 !important;
             transition: all 0.3s ease;
             position: relative;
             padding: 0.5rem 1rem;
@@ -53,13 +53,13 @@
 
         .nav-link:hover,
         .nav-link:focus {
-            color: #050A30 !important;
-            background: rgba(173, 151, 79, 0.85) !important;
-            box-shadow: 0 12px 24px rgba(173, 151, 79, 0.35);
+            color: #231F20 !important;
+            background: rgba(173, 151, 79, 0.35) !important;
+            box-shadow: 0 8px 18px rgba(173, 151, 79, 0.25);
         }
 
         .nav-link.active {
-            color: #EAEAEA !important;
+            color: #231F20 !important;
             font-weight: 600;
             background: rgba(173, 151, 79, 0.3) !important;
         }
@@ -75,36 +75,48 @@
             background-color: #AD974F;
         }
 
+        .nav-link.active:hover {
+            color: #231F20 !important;
+        }
+
+        .navbar .navbar-toggler {
+            border-color: #AD974F;
+        }
+
+        .navbar .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23AD974F' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
         .dropdown-menu {
             z-index: 2000 !important;
-            background: rgba(5, 10, 48, 0.92);
-            border: 1px solid rgba(173, 151, 79, 0.3);
+            background: #FFFFFF;
+            border: 1px solid rgba(173, 151, 79, 0.35);
             border-radius: 14px;
-            box-shadow: 0 18px 36px rgba(5, 10, 48, 0.45);
+            box-shadow: 0 18px 36px rgba(35, 31, 32, 0.18);
         }
 
         .dropdown-item {
-            color: #EAEAEA;
+            color: #231F20;
         }
 
         .dropdown-item:hover,
         .dropdown-item:focus {
-            background: rgba(173, 151, 79, 0.3);
-            color: #EAEAEA;
+            background: rgba(173, 151, 79, 0.2);
+            color: #231F20;
         }
 
         .company-info-card {
             margin-bottom: 1.5rem;
             border-left: 4px solid rgba(173, 151, 79, 0.6);
-            background: rgba(5, 10, 48, 0.75);
+            background: #FFFFFF;
             border-radius: 18px;
             border: 1px solid rgba(173, 151, 79, 0.25);
-            box-shadow: 0 22px 45px rgba(5, 10, 48, 0.45);
-            color: #EAEAEA;
+            box-shadow: 0 22px 45px rgba(35, 31, 32, 0.12);
+            color: #231F20;
         }
 
         .company-info-header {
-            background-color: rgba(5, 10, 48, 0.6);
+            background-color: rgba(173, 151, 79, 0.15);
             border-bottom: 1px solid rgba(173, 151, 79, 0.25);
         }
 
@@ -113,13 +125,13 @@
         }
 
         .company-info-bar {
-            background-color: rgba(5, 10, 48, 0.6);
-            border: 1px solid rgba(173, 151, 79, 0.25);
+            background-color: rgba(173, 151, 79, 0.15);
+            border: 1px solid rgba(173, 151, 79, 0.35);
             border-radius: 10px;
             padding: 0.5rem 0.75rem;
             min-width: 80px;
             display: inline-block;
-            color: #EAEAEA;
+            color: #231F20;
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -133,14 +145,14 @@
     <style>
         /* Custom navbar styles */
         .navbar {
-            background-color: #0d6efd !important; /* Primary blue */
+            background-color: #231F20 !important; /* Primary blue */
         }
         .navbar-brand {
             color: #000000 !important; /* Black text for Product Calculator */
             font-weight: bold;
         }
         .nav-link {
-            color: #ffffff !important; /* White text by default */
+            color: #000000 !important; /* White text by default */
             transition: all 0.3s ease;
             position: relative;
             padding: 0.5rem 1rem;
@@ -148,13 +160,13 @@
             font-weight: 400;
         }
         .nav-link:hover {
-            color: #ffa500 !important; /* Orange on hover */
-            background-color: transparent !important;
+            color: #231F20 !important; /* Orange on hover */
+            background-color: rgba(173, 151, 79, 0.35) !important;
         }
         .nav-link.active {
-            color: #808080 !important; /* Grey when selected */
+            color: #231F20 !important; /* Grey when selected */
             font-weight: 500;
-            background-color: transparent !important;
+            background-color: rgba(173, 151, 79, 0.3) !important;
             position: relative;
         }
         .nav-link.active::after {
@@ -165,15 +177,15 @@
             transform: translateX(-50%);
             width: 60%;
             height: 2px;
-            background-color: #808080; /* Grey underline */
+            background-color: #AD974F; /* Grey underline */
         }
         .nav-link.active:hover {
-            color: #808080 !important; /* Keep grey on hover when active */
+            color: #231F20 !important; /* Keep grey on hover when active */
         }
     </style>
     
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4 user-navbar">
+    <nav class="navbar navbar-expand-lg navbar-light mb-4 user-navbar" style="background-color: #231F20;">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <img src="https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png" alt="Logo" height="40" class="d-inline-block align-text-top me-2">

@@ -4,6 +4,8 @@ html, body {
   width: 100%;
   min-height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #EAEAEA;
+  color: #231F20;
 }
 
 /* Cart Item Styles */
@@ -83,13 +85,10 @@ html, body {
 }
 
 body {
-  background: linear-gradient(135deg, #050A30 0%, #231F20 55%, #BE793E 100%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-color: #EAEAEA;
   padding: 2rem 0;
   min-height: 100vh;
-  color: #EAEAEA;
+  color: #231F20;
 }
 
 select,
