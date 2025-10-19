@@ -8,7 +8,59 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<header class="landing-header">
+    <div class="container landing-nav">
+        <div class="landing-logo">
+            <span class="logo-mark">H&amp;C</span>
+            <span class="logo-text">Hook &amp; Class</span>
+        </div>
+        <nav class="landing-menu" aria-label="Primary">
+            <a href="#" class="landing-link">About</a>
+            <a href="#" class="landing-link">Services</a>
+            <a href="#" class="landing-link">Process</a>
+            <a href="#" class="landing-link">Blog</a>
+            <a href="#" class="landing-link highlight">Contact</a>
+        </nav>
+    </div>
+</header>
+
+<section class="hero-section">
+    <div class="container hero-wrapper">
+        <div class="hero-badge">Hook Agency Inspired</div>
+        <h1 class="hero-title">High-End &amp; Classy Quotations</h1>
+        <p class="hero-subtitle">Create luxurious, distinctive print quotes in minutes. Curated tools that elevate every customer touchpoint.</p>
+        <div class="hero-actions">
+            <a href="#companySelectionSection" class="btn hero-btn-outline">Learn More</a>
+            <a href="#productSelectionSection" class="btn hero-btn-solid" id="heroStartBtn">Start Now</a>
+        </div>
+    </div>
+</section>
+
+<section class="palette-section">
+    <div class="container palette-wrapper">
+        <div class="palette-label">Luxurious &amp; Distinctive</div>
+        <div class="palette-swatches" role="list">
+            <div class="palette-swatch" role="listitem">
+                <span class="palette-color" style="--swatch-color: #BE793E;"></span>
+                <span class="palette-code">#BE793E</span>
+            </div>
+            <div class="palette-swatch" role="listitem">
+                <span class="palette-color" style="--swatch-color: #AD974F;"></span>
+                <span class="palette-code">#AD974F</span>
+            </div>
+            <div class="palette-swatch" role="listitem">
+                <span class="palette-color" style="--swatch-color: #231F20;"></span>
+                <span class="palette-code">#231F20</span>
+            </div>
+            <div class="palette-swatch" role="listitem">
+                <span class="palette-color" style="--swatch-color: #EAEAEA;"></span>
+                <span class="palette-code">#EAEAEA</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container landing-container mt-5">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -16,15 +68,6 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-
-
-    <!-- Welcome Message -->
-    <div class="jumbotron text-center">
-        <h1 class="display-4">Welcome to Product Calculator for Chemo</h1>
-        <p class="lead">Your one-stop solution for chemotherapy product calculations</p>
-        <hr class="my-4">
-        <p>Get started by SELECTING COMPANY AND PRODUCT</p>
-    </div>
 
     <!-- Company Selection -->
     <div class="d-flex align-items-center justify-content-center min-vh-50 py-5" id="companySelectionSection">
