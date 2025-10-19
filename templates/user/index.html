@@ -11,27 +11,26 @@
 <header class="landing-header">
     <div class="container landing-nav">
         <div class="landing-logo">
-            <span class="logo-mark">H&amp;C</span>
-            <span class="logo-text">Hook &amp; Class</span>
+            <span class="logo-mark">PC</span>
+            <span class="logo-text">Product Calculator</span>
         </div>
         <nav class="landing-menu" aria-label="Primary">
-            <a href="#" class="landing-link">About</a>
-            <a href="#" class="landing-link">Services</a>
-            <a href="#" class="landing-link">Process</a>
-            <a href="#" class="landing-link">Blog</a>
-            <a href="#" class="landing-link highlight">Contact</a>
+            <a href="#companySelectionSection" class="landing-link">Company</a>
+            <a href="#productSelectionSection" class="landing-link">Products</a>
+            <a href="{{ url_for('login') }}" class="landing-link">Login</a>
+            <a href="{{ url_for('register') }}" class="landing-link highlight">Create Account</a>
         </nav>
     </div>
 </header>
 
 <section class="hero-section">
     <div class="container hero-wrapper">
-        <div class="hero-badge">Hook Agency Inspired</div>
-        <h1 class="hero-title">High-End &amp; Classy Quotations</h1>
-        <p class="hero-subtitle">Create luxurious, distinctive print quotes in minutes. Curated tools that elevate every customer touchpoint.</p>
+        <div class="hero-badge">Premium Print Logistics</div>
+        <h1 class="hero-title">Confident Quotes In Minutes</h1>
+        <p class="hero-subtitle">Select your company, explore curated product libraries, and deliver polished pricing to customers without leaving the dashboard.</p>
         <div class="hero-actions">
-            <a href="#companySelectionSection" class="btn hero-btn-outline">Learn More</a>
-            <a href="#productSelectionSection" class="btn hero-btn-solid" id="heroStartBtn">Start Now</a>
+            <a href="#companySelectionSection" class="btn hero-btn-outline">How It Works</a>
+            <a href="#productSelectionSection" class="btn hero-btn-solid" id="heroStartBtn">Launch Calculator</a>
         </div>
     </div>
 </section>

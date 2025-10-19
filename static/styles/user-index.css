@@ -127,8 +127,9 @@ body small {
     border-radius: 999px;
     border: 1px solid rgba(173, 151, 79, 0.6);
     color: var(--color-charcoal);
-    background: linear-gradient(135deg, var(--color-gold), var(--color-copper));
+    background: linear-gradient(135deg, var(--color-copper), var(--color-gold));
     box-shadow: 0 12px 24px rgba(173, 151, 79, 0.35);
+    font-weight: 600;
 }
 
 .landing-link.highlight::after {
