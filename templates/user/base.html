@@ -239,11 +239,6 @@
                             <i class="bi bi-beaker"></i> Chemicals &amp; Maintenance
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="cartLink" href="{{ url_for('cart') }}" data-route="{{ url_for('cart') }}">
-                            <i class="bi bi-cart"></i> Cart <span id="cartCount" class="badge bg-danger">0</span>
-                        </a>
-                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if current_user.is_authenticated %}
@@ -513,6 +508,7 @@
         document.querySelectorAll('a[data-route]').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
+                collapseNavbar();
                 const route = this.getAttribute('data-route');
                 
                 // Special handling for home link
@@ -555,6 +551,18 @@
                 checkCompanyAndNavigate(currentPath);
             }
         });
+    }
+
+    function collapseNavbar() {
+        const nav = document.getElementById('navbarNav');
+        if (!nav) return;
+        const isExpanded = nav.classList.contains('show');
+        if (!isExpanded) return;
+        let instance = bootstrap.Collapse.getInstance(nav);
+        if (!instance) {
+            instance = new bootstrap.Collapse(nav, { toggle: false });
+        }
+        instance.hide();
     }
     
     // Function to check if company is selected before navigation

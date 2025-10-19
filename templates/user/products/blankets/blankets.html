@@ -3,18 +3,6 @@
 {% block title %}Blanket Selection - Product Calculator{% endblock %}
 
 {% block content %}
-  <!-- Cart icon top right -->
-  <div style="text-align: right; margin-bottom: 20px; position: relative;">
-    <a href="{{ url_for('cart') }}" style="position: relative; display: inline-block;">
-      <img
-        src="{{ url_for('static', filename='images/cart-icon.png') }}"
-        alt="Cart"
-        style="width: 40px; height: 40px; cursor: pointer;"
-      />
-      <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
-    </a>
-  </div>
-
   <h2>Blanket Selection</h2>
 
   <div class="mb-3">
