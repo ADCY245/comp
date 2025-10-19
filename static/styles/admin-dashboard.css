@@ -16,6 +16,7 @@
     backdrop-filter: blur(22px);
     box-shadow: 0 25px 60px rgba(5, 10, 48, 0.45);
     padding: clamp(1.75rem, 2.5vw, 3.5rem);
+    margin-top: 1.75rem;
 }
 
 @media (max-width: 991px) {
@@ -39,11 +40,10 @@
 }
 
 .admin-navbar {
-    position: fixed;
     background: linear-gradient(135deg, #050A30 0%, #231F20 60%, #8E793E 100%);
     padding: 1rem 0;
     border-bottom: 1px solid rgba(173, 151, 79, 0.35);
-    box-shadow: 0 20px 45px rgba(5, 10, 48, 0.45);
+    box-shadow: 0 18px 40px rgba(5, 10, 48, 0.45);
 }
 
 .admin-navbar .navbar-brand {
