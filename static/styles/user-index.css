@@ -6,6 +6,7 @@
     --color-gold: #AD974F;
     --color-ivory: #EAEAEA;
     --color-warmgray: #8B8383;
+    --color-coolgray: #8C8C91;
     --color-ink: #151515;
 }
 
@@ -61,16 +62,17 @@ body small {
 }
 
 .user-card__header {
-    background: linear-gradient(135deg, var(--color-navy), var(--color-bronze));
+    background: var(--color-warmgray);
     color: var(--color-ivory);
     text-align: center;
     padding: 1.25rem;
-    border-bottom: 1px solid rgba(173, 151, 79, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .user-card__body {
     padding: clamp(1.75rem, 2vw, 2.5rem);
-    color: rgba(234, 234, 234, 0.9);
+    background: var(--color-bronze);
+    color: var(--color-ivory);
 }
 
 .user-input-group {
@@ -121,12 +123,12 @@ body small {
     width: 100%;
     max-height: 280px;
     overflow-y: auto;
-    background: rgba(5, 10, 48, 0.92);
-    border: 1px solid rgba(173, 151, 79, 0.35);
+    background: var(--color-charcoal);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 14px;
     display: none;
     z-index: 1050;
-    box-shadow: 0 22px 45px rgba(5, 10, 48, 0.55);
+    box-shadow: 0 22px 45px rgba(35, 31, 32, 0.55);
 }
 
 .company-selector.open .company-dropdown-list {
@@ -135,25 +137,28 @@ body small {
 
 .company-option {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(35, 31, 32, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     cursor: pointer;
     transition: background 0.25s ease, transform 0.25s ease;
-    color: var(--color-ivory);
+    background: var(--color-charcoal);
+    color: var(--color-coolgray);
 }
 
 .company-option:last-child {
     border-bottom: none;
 }
 
+.company-option strong,
 .company-option small {
     display: block;
-    color: rgba(234, 234, 234, 0.6);
+    color: var(--color-coolgray);
 }
 
 .company-option:hover,
 .company-option.active {
-    background-color: rgba(190, 121, 62, 0.2);
+    background-color: rgba(173, 151, 79, 0.22);
     transform: translateX(4px);
+    color: var(--color-ivory);
 }
 
 .company-empty {
