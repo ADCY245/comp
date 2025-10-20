@@ -204,6 +204,11 @@
                             <i class="bi bi-house-door"></i> Home
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
+                            <i class="bi bi-basket"></i> Cart
+                        </a>
+                    </li>
                     {% if request.endpoint != 'index' %}
                     <script>
                         // Home button click handler - only set up if not on index page
