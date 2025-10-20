@@ -145,14 +145,14 @@
     <style>
         /* Custom navbar styles */
         .navbar {
-            background-color: #231F20 !important; /* Primary blue */
+            background-color: #AD974F !important;
         }
         .navbar-brand {
-            color: #000000 !important; /* Black text for Product Calculator */
+            color: #FFFFFF !important;
             font-weight: bold;
         }
         .nav-link {
-            color: #000000 !important; /* White text by default */
+            color: #FFFFFF !important;
             transition: all 0.3s ease;
             position: relative;
             padding: 0.5rem 1rem;
@@ -160,13 +160,13 @@
             font-weight: 400;
         }
         .nav-link:hover {
-            color: #231F20 !important; /* Orange on hover */
-            background-color: rgba(173, 151, 79, 0.35) !important;
+            color: #231F20 !important;
+            background-color: rgba(255, 255, 255, 0.25) !important;
         }
         .nav-link.active {
-            color: #231F20 !important; /* Grey when selected */
+            color: #231F20 !important;
             font-weight: 500;
-            background-color: rgba(173, 151, 79, 0.3) !important;
+            background-color: rgba(255, 255, 255, 0.25) !important;
             position: relative;
         }
         .nav-link.active::after {
@@ -177,15 +177,15 @@
             transform: translateX(-50%);
             width: 60%;
             height: 2px;
-            background-color: #AD974F; /* Grey underline */
+            background-color: #FFFFFF;
         }
         .nav-link.active:hover {
-            color: #231F20 !important; /* Keep grey on hover when active */
+            color: #FFFFFF !important;
         }
     </style>
     
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4 user-navbar" style="background-color: #231F20;">
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 user-navbar" style="background-color: #AD974F;">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <img src="https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png" alt="Logo" height="40" class="d-inline-block align-text-top me-2">
