@@ -36,13 +36,13 @@
         }
 
         .navbar-brand {
-            color: #000000 !important;
+            color: #EAEAEA !important;
             font-weight: 600;
             letter-spacing: 0.04em;
         }
 
         .nav-link {
-            color: #000000 !important;
+            color: #EAEAEA !important;
             transition: all 0.3s ease;
             position: relative;
             padding: 0.5rem 1rem;
@@ -53,15 +53,15 @@
 
         .nav-link:hover,
         .nav-link:focus {
-            color: #231F20 !important;
-            background: rgba(173, 151, 79, 0.35) !important;
+            color: #AD974F !important;
+            background: rgba(173, 151, 79, 0.18) !important;
             box-shadow: 0 8px 18px rgba(173, 151, 79, 0.25);
         }
 
         .nav-link.active {
-            color: #231F20 !important;
+            color: #AD974F !important;
             font-weight: 600;
-            background: rgba(173, 151, 79, 0.3) !important;
+            background: transparent !important;
         }
 
         .nav-link.active::after {
@@ -76,7 +76,7 @@
         }
 
         .nav-link.active:hover {
-            color: #231F20 !important;
+            color: #F5D591 !important;
         }
 
         .navbar .navbar-toggler {
@@ -89,20 +89,20 @@
 
         .dropdown-menu {
             z-index: 2000 !important;
-            background: #FFFFFF;
+            background: rgba(35, 31, 32, 0.95);
             border: 1px solid rgba(173, 151, 79, 0.35);
             border-radius: 14px;
-            box-shadow: 0 18px 36px rgba(35, 31, 32, 0.18);
+            box-shadow: 0 18px 36px rgba(35, 31, 32, 0.35);
         }
 
         .dropdown-item {
-            color: #231F20;
+            color: #EAEAEA;
         }
 
         .dropdown-item:hover,
         .dropdown-item:focus {
-            background: rgba(173, 151, 79, 0.2);
-            color: #231F20;
+            background: rgba(173, 151, 79, 0.25);
+            color: #F5D591;
         }
 
         .company-info-card {
@@ -185,7 +185,7 @@
     </style>
     
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-light mb-4 user-navbar" style="background-color: #231F20;">
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 user-navbar" style="background-color: #231F20;">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <img src="https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png" alt="Logo" height="40" class="d-inline-block align-text-top me-2">
@@ -202,11 +202,6 @@
    id="homeLink"
    {% if request.endpoint in ['index', 'add_company', 'add_machine'] %}aria-disabled="true"{% endif %}>
                             <i class="bi bi-house-door"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
-                            <i class="bi bi-basket"></i> Cart
                         </a>
                     </li>
                     {% if request.endpoint != 'index' %}
@@ -254,6 +249,11 @@
                     <li class="nav-item">
                         <a class="nav-link" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
                             <i class="bi bi-beaker"></i> Chemicals &amp; Maintenance
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
+                            <i class="bi bi-basket"></i> Cart
                         </a>
                     </li>
                 </ul>
