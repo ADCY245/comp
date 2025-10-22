@@ -40,15 +40,15 @@ body.admin-base {
 }
 
 .admin-navbar {
-  background-color: #AD974F;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 14px 32px rgba(173, 151, 79, 0.45);
+  background-color: #231F20;
+  border-bottom: 1px solid rgba(173, 151, 79, 0.45);
+  box-shadow: 0 14px 32px rgba(35, 31, 32, 0.5);
 }
 
 .admin-navbar .navbar-brand {
   font-size: 1.45rem;
   font-weight: 600;
-  color: #FFFFFF !important;
+  color: var(--color-gold) !important;
   letter-spacing: 0.04em;
 }
 
@@ -63,9 +63,9 @@ body.admin-base {
 .admin-navbar .nav-link:hover,
 .admin-navbar .nav-link:focus,
 .admin-navbar .nav-link.active {
-  color: #231F20 !important;
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 10px 22px rgba(35, 31, 32, 0.18);
+  color: var(--color-gold) !important;
+  background: rgba(173, 151, 79, 0.18);
+  box-shadow: 0 12px 26px rgba(173, 151, 79, 0.25);
 }
 
 .admin-navbar .navbar-toggler {
