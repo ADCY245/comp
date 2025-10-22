@@ -1,3 +1,47 @@
+.modal-content {
+    background: #FFFFFF;
+    color: var(--color-charcoal);
+    border: 1px solid rgba(173, 151, 79, 0.35);
+    box-shadow: 0 24px 48px rgba(35, 31, 32, 0.25);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(173, 151, 79, 0.25);
+    background: rgba(173, 151, 79, 0.12);
+}
+
+.modal-title {
+    color: var(--color-gold);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.modal-body {
+    background: #FFFFFF;
+    color: var(--color-charcoal);
+}
+
+.modal-body h6,
+.modal-body h5 {
+    color: var(--color-gold);
+    letter-spacing: 0.02em;
+}
+
+.modal-body p,
+.modal-body li,
+.modal-body span,
+.modal-body small {
+    color: var(--color-charcoal);
+}
+
+.modal-body .text-muted {
+    color: rgba(35, 31, 32, 0.6) !important;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(173, 151, 79, 0.25);
+    background: rgba(173, 151, 79, 0.08);
+}
 :root {
     --color-navy: #050A30;
     --color-charcoal: #231F20;

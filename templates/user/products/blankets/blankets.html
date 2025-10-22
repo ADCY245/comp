@@ -3,6 +3,10 @@
 {% block title %}Blanket Selection - Product Calculator{% endblock %}
 
 {% block content %}
+  <div class="container">
+    <div id="blanketCompanySummary" class="mb-4"></div>
+  </div>
+
   <h2>Blanket Selection</h2>
 
   <div class="mb-3">
@@ -15,7 +19,7 @@
         <div class="form-text text-muted">Leave blank if the machine is unknown. The quotation will display `--`.</div>
       </div>
       <div>
-        <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-primary">
+        <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-gold">
           <i class="fas fa-plus"></i> New Machine
         </a>
       </div>

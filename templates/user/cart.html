@@ -213,15 +213,24 @@
         color: white;
     }
     
-    .cart-actions .btn-primary {
-        background-color: #0d6efd;
-        color: white;
-        border: 1px solid #0d6efd;
+    .cart-actions .btn-primary,
+    .cart-actions .btn-outline-primary {
+        border-radius: 999px;
+        border: 1px solid rgba(173, 151, 79, 0.55);
+        background-color: var(--navbar-gold);
+        color: var(--navbar-bg);
+        font-weight: 600;
+        transition: all 0.25s ease;
     }
     
-    .cart-actions .btn-primary:hover {
-        background-color: #0b5ed7;
-        border-color: #0a58ca;
+    .cart-actions .btn-primary:hover,
+    .cart-actions .btn-outline-primary:hover,
+    .cart-actions .btn-primary:focus,
+    .cart-actions .btn-outline-primary:focus {
+        background-color: #c7b06e;
+        border-color: rgba(173, 151, 79, 0.65);
+        color: var(--navbar-bg);
+        box-shadow: 0 12px 24px rgba(173, 151, 79, 0.25);
     }
 
     /* Cart items container */
@@ -453,10 +462,10 @@
                 <button id="clearCartBtn" class="btn btn-outline-danger me-2">
                     <i class="fas fa-trash me-2"></i>Clear Cart
                 </button>
-                <button type="button" class="btn btn-primary {% if session.get('selected_company') or session.get('company_name') %}d-none{% endif %}" id="selectCompanyBtn">
+                <button type="button" class="btn btn-outline-gold {% if session.get('selected_company') or session.get('company_name') %}d-none{% endif %}" id="selectCompanyBtn">
                     <i class="fas fa-building me-2"></i>Select Company First
                 </button>
-                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary {% if not session.get('selected_company') and not session.get('company_name') %}d-none{% endif %}" id="sendQuotationBtn">
+                <a href="{{ url_for('quotation_preview') }}" class="btn btn-gold {% if not session.get('selected_company') and not session.get('company_name') %}d-none{% endif %}" id="sendQuotationBtn">
                     <i class="fas fa-paper-plane me-2"></i>Send Quotation
                 </a>
                 
@@ -649,7 +658,7 @@
                                     </div>
                                     <div class="mt-3 pt-3 border-top d-flex justify-content-end gap-2">
                                         <button type="button" 
-                                                class="btn btn-outline-primary btn-sm change-item-btn" 
+                                                class="btn btn-outline-gold btn-sm change-item-btn" 
                                                 data-item-id="{{ item.id or item._id }}" 
                                                 data-index="{{ loop.index0 }}"
                                                 data-type="{{ item.type }}"
@@ -684,7 +693,7 @@
                                 <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
                                 <h4>Your cart is empty</h4>
                                 <p class="text-muted">Browse our products and add some items to your cart</p>
-                                <button type="button" class="btn btn-primary" id="emptyCartContinueShopping">
+                                <button type="button" class="btn btn-gold" id="emptyCartContinueShopping">
                                     <i class="fas fa-arrow-left me-2"></i>Continue Shopping
                                 </button>
                             </div>
@@ -701,7 +710,7 @@
                     <i class="fas fa-arrow-left me-1"></i> Continue Shopping
                 </a>
 
-                <a href="{{ url_for('quotation_preview') }}" class="btn btn-primary" id="sendQuotationBtn">
+                <a href="{{ url_for('quotation_preview') }}" class="btn btn-gold" id="sendQuotationBtn">
                     <i class="fas fa-paper-plane me-1"></i> Send Quotation
                 </a>
 

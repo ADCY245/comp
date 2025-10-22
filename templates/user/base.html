@@ -260,7 +260,7 @@
 
     <div class="container" style="padding-top: 80px;">
         <!-- Company Information Section (shown on product pages and cart) -->
-        {% if request.endpoint in ['mpacks', 'blankets', 'cart'] %}
+        {% if request.endpoint in ['mpacks', 'blankets', 'cart', 'chemicals_maintenance'] %}
             {% include 'components/company_info.html' %}
         {% endif %}
         
