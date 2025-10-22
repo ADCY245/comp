@@ -9,6 +9,11 @@
     letter-spacing: 0.01em;
 }
 
+.btn-premium:link,
+.btn-premium:visited {
+    color: var(--color-ivory);
+}
+
 .dashboard-wrapper {
     background: rgba(35, 31, 32, 0.88);
     border-radius: 28px;
@@ -294,7 +299,9 @@
 }
 
 
-.btn-premium {
+.btn-premium,
+.btn-premium:link,
+.btn-premium:visited {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -318,6 +325,7 @@
     background: linear-gradient(135deg, rgba(173, 151, 79, 0.25), rgba(190, 121, 62, 0.2));
     opacity: 0;
     transition: opacity 0.25s ease;
+    pointer-events: none;
 }
 
 .btn-premium:hover {
