@@ -8,6 +8,11 @@ html, body {
   color: #231F20;
 }
 
+:root {
+  --navbar-bg: #231F20;
+  --navbar-gold: #AD974F;
+}
+
 /* Cart Item Styles */
 .cart-item {
   transition: all 0.3s ease;

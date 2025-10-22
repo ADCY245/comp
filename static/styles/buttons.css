@@ -1,0 +1,65 @@
+.btn-primary,
+.btn-success,
+.btn-warning {
+  background-color: var(--navbar-gold);
+  border: 1px solid rgba(173, 151, 79, 0.55);
+  color: var(--navbar-bg);
+  font-weight: 600;
+  border-radius: 999px;
+  transition: all 0.25s ease;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-success:hover,
+.btn-success:focus,
+.btn-warning:hover,
+.btn-warning:focus {
+  background-color: #c7b06e;
+  color: var(--navbar-bg);
+  border-color: rgba(173, 151, 79, 0.65);
+  box-shadow: 0 12px 24px rgba(173, 151, 79, 0.25);
+}
+
+.btn-primary:disabled,
+.btn-success:disabled,
+.btn-warning:disabled,
+.btn-primary.disabled,
+.btn-success.disabled,
+.btn-warning.disabled {
+  background-color: rgba(173, 151, 79, 0.55);
+  border-color: rgba(173, 151, 79, 0.45);
+  color: rgba(35, 31, 32, 0.75);
+}
+
+.btn-gold {
+  border-radius: 999px;
+  border: 1px solid rgba(173, 151, 79, 0.45);
+  background-color: var(--navbar-gold);
+  color: var(--navbar-bg);
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.btn-gold:hover,
+.btn-gold:focus {
+  background-color: #c7b06e;
+  color: var(--navbar-bg);
+  box-shadow: 0 12px 24px rgba(173, 151, 79, 0.25);
+}
+
+.btn-outline-gold {
+  border-radius: 999px;
+  border: 1px solid rgba(173, 151, 79, 0.65);
+  color: var(--navbar-bg);
+  background-color: transparent;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.btn-outline-gold:hover,
+.btn-outline-gold:focus {
+  background-color: rgba(173, 151, 79, 0.18);
+  color: var(--navbar-bg);
+  box-shadow: 0 12px 24px rgba(173, 151, 79, 0.18);
+}
