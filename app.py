@@ -5252,22 +5252,14 @@ def send_quotation():
         selected_company = session.get('selected_company', {})
         if not isinstance(selected_company, dict):
             selected_company = {}
-
         # Get company info with proper fallbacks - prioritize database over session
         customer_name = 'Not specified'
         customer_email = ''
-        customer_address = ''
-        customer_gst = ''
-        customer_pan = ''
-        
         # First try to get from user's company_id if available
         if hasattr(current_user, 'company_id') and current_user.company_id:
             customer_name = get_company_name_by_id(current_user.company_id)
             customer_email = get_company_email_by_id(current_user.company_id)
-            customer_address = get_company_address_by_id(current_user.company_id)
-            customer_gst = get_company_gst_by_id(current_user.company_id)
-            customer_pan = get_company_pan_by_id(current_user.company_id)
-        
+
         # If not found in user's company_id, try session
         if customer_name == 'Not specified' or not customer_email:
             # Get from session if available
