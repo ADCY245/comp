@@ -3,14 +3,14 @@
 {% block title %}Add New Machine{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Add New Machine</h4>
+            <div class="card shadow form-card">
+                <div class="form-card__header">
+                    <h4 class="mb-0 form-card__title">Add New Machine</h4>
                 </div>
-                <div class="card-body">
+                <div class="card-body form-card__body">
                     <form id="addMachineForm">
                         <div class="mb-3">
                             <label for="machineName" class="form-label">Machine Name *</label>
@@ -21,7 +21,7 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <button type="submit" class="btn btn-gold" id="submitBtn">
                                 <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
                                 Add Machine
                             </button>
