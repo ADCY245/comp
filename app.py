@@ -1603,6 +1603,97 @@ def normalize_company_record(company_doc):
     return normalized
 
 
+def build_quotation_company_details(selected_company=None, session_company_id=None, session_company_email=None):
+    """Resolve company details (address & GST) for quotation displays."""
+    placeholder = "--"
+    gst_unregistered_label = "URP"
+
+    selected_company = selected_company or {}
+    company_id = selected_company.get('id') or session_company_id
+    company_email = selected_company.get('email') or session_company_email
+    company_name = selected_company.get('name')
+
+    company_record = None
+    try:
+        companies = load_companies_data()
+    except Exception as e:
+        app.logger.error(f"Failed to load companies for quotation details: {e}")
+        companies = []
+
+    if company_id and companies:
+        company_id_str = str(company_id)
+        for record in companies:
+            if str(record.get('id')) == company_id_str or str(record.get('_id')) == company_id_str:
+                company_record = record
+                break
+
+    if company_record is None and company_email and companies:
+        email_lower = company_email.strip().lower()
+        for record in companies:
+            record_email = (record.get('email') or record.get('EmailID') or '').strip().lower()
+            if record_email and record_email == email_lower:
+                company_record = record
+                break
+
+    name = (company_record.get('name') or company_record.get('Company Name')) if company_record else None
+    if not name:
+        name = company_name or 'Not specified'
+
+    email = (company_record.get('email') or company_record.get('EmailID')) if company_record else None
+    if not email:
+        email = company_email or placeholder
+
+    address = ''
+    if company_record:
+        address = (
+            company_record.get('billing_address')
+            or company_record.get('Billing Address')
+            or company_record.get('address')
+            or company_record.get('Address')
+            or ''
+        )
+    address = address.strip() if isinstance(address, str) else ''
+    if not address:
+        address = placeholder
+
+    gst_registered = False
+    gst_registered_value = None
+    if company_record:
+        gst_registered_value = (
+            company_record.get('gst_registered')
+            if 'gst_registered' in company_record
+            else company_record.get('GST Registered')
+        )
+    if gst_registered_value is not None:
+        if isinstance(gst_registered_value, str):
+            gst_registered = gst_registered_value.strip().lower() in {'true', '1', 'yes', 'y'}
+        else:
+            gst_registered = bool(gst_registered_value)
+
+    gst_number_raw = ''
+    if company_record:
+        gst_number_raw = company_record.get('gst_number') or company_record.get('GST Number') or ''
+    gst_number = ''
+    if isinstance(gst_number_raw, (int, float)):
+        gst_number = str(gst_number_raw)
+    elif isinstance(gst_number_raw, str):
+        gst_number = gst_number_raw.strip().upper()
+
+    if gst_registered:
+        gst_display = gst_number if gst_number else placeholder
+    else:
+        gst_display = gst_unregistered_label
+
+    return {
+        'name': name,
+        'email': email or placeholder,
+        'address': address,
+        'gst_registered': gst_registered,
+        'gst_number': gst_number,
+        'gst_display': gst_display
+    }
+
+
 COMPANY_IMPORT_REQUIRED_HEADERS = [
     'Company Name',
     'EmailID',
@@ -5096,6 +5187,11 @@ def quotation_preview():
         'quote_time': quote_time,
         'company_name': customer_name,
         'company_email': customer_email,
+        'company_details': build_quotation_company_details(
+            selected_company,
+            session.get('company_id'),
+            session.get('company_email')
+        ),
         'now': current_datetime,  # Add current datetime object for the template
         'calculations': {
             'subtotal_before_discount': subtotal_before_discount,
