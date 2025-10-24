@@ -19,6 +19,32 @@
                                 Please provide a machine name.
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Is the customer GST registered?</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="gstRegistered" id="gstRegisteredYes" value="yes" required>
+                                    <label class="form-check-label" for="gstRegisteredYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="gstRegistered" id="gstRegisteredNo" value="no" required>
+                                    <label class="form-check-label" for="gstRegisteredNo">No</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gst-details" id="gstDetails" style="display: none;">
+                            <div class="mb-3">
+                                <label for="gstNumber" class="form-label">GST Number *</label>
+                                <input type="text" class="form-control" id="gstNumber" pattern="^[0-9A-Z]{15}$">
+                                <div class="form-text">Enter 15 character GSTIN (letters and numbers only).</div>
+                                <div class="invalid-feedback">Please provide a valid 15 character GSTIN.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="billingAddress" class="form-label">Billing Address *</label>
+                                <textarea class="form-control" id="billingAddress" rows="2"></textarea>
+                                <div class="invalid-feedback">Billing address is required when GST is provided.</div>
+                            </div>
+                        </div>
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-gold" id="submitBtn">
@@ -48,6 +74,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const spinner = document.getElementById('spinner');
     const responseDiv = document.getElementById('responseMessage');
     const messageText = document.getElementById('messageText');
+    const gstRegisteredYes = document.getElementById('gstRegisteredYes');
+    const gstRegisteredNo = document.getElementById('gstRegisteredNo');
+    const gstDetails = document.getElementById('gstDetails');
+    const gstNumberInput = document.getElementById('gstNumber');
+    const billingAddressInput = document.getElementById('billingAddress');
+
+    function toggleGstDetails() {
+        const isRegistered = gstRegisteredYes.checked;
+        gstDetails.style.display = isRegistered ? 'block' : 'none';
+        gstNumberInput.required = isRegistered;
+        billingAddressInput.required = isRegistered;
+        if (!isRegistered) {
+            gstNumberInput.value = '';
+            billingAddressInput.value = '';
+            gstNumberInput.classList.remove('is-invalid');
+            billingAddressInput.classList.remove('is-invalid');
+        }
+    }
+
+    gstRegisteredYes.addEventListener('change', toggleGstDetails);
+    gstRegisteredNo.addEventListener('change', toggleGstDetails);
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -60,7 +107,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const machineData = {
             name: document.getElementById('machineName').value.trim(),
-            
+            gst_registered: gstRegisteredYes.checked,
+            gst_number: gstRegisteredYes.checked ? gstNumberInput.value.trim().toUpperCase() : '',
+            billing_address: gstRegisteredYes.checked ? billingAddressInput.value.trim() : ''
         };
 
         // Show loading state

@@ -4528,6 +4528,15 @@ def api_add_machine():
     data = request.get_json()
     name = data.get('name', '').strip()
     description = data.get('description', '').strip()
+    gst_registered = bool(data.get('gst_registered', False))
+    gst_number = data.get('gst_number', '').strip().upper() if gst_registered else ''
+    billing_address = data.get('billing_address', '').strip() if gst_registered else ''
+
+    if gst_registered:
+        if not gst_number or not re.match(r'^[0-9A-Z]{15}$', gst_number):
+            return jsonify({'success': False, 'message': 'A valid 15 character GST number is required.'}), 400
+        if not billing_address:
+            return jsonify({'success': False, 'message': 'Billing address is required when GST is provided.'}), 400
 
     if not name:
         return jsonify({'success': False, 'message': 'Machine name is required.'}), 400
@@ -4540,7 +4549,12 @@ def api_add_machine():
             if master_doc is None:
                 # Create master doc if it doesn't exist
                 next_id = 1
-                mongo_db.machine.insert_one({'machines': [{'id': next_id, 'name': name}]})
+                mongo_db.machine.insert_one({'machines': [{'id': next_id, 'name': name,
+                                                           'description': description,
+                                                           'gst_registered': gst_registered,
+                                                           'gst_number': gst_number,
+                                                           'billing_address': billing_address,
+                                                           'created_at': datetime.utcnow()}]})
             else:
                 machines_arr = master_doc.get('machines', [])
                 # Check if machine with this name already exists
@@ -4554,7 +4568,15 @@ def api_add_machine():
                     next_id = 1
                 mongo_db.machine.update_one(
                     {'_id': master_doc['_id']},
-                    {'$push': {'machines': {'id': next_id, 'name': name, 'description': description, 'created_at': datetime.utcnow()}}},
+                    {'$push': {'machines': {
+                        'id': next_id,
+                        'name': name,
+                        'description': description,
+                        'gst_registered': gst_registered,
+                        'gst_number': gst_number,
+                        'billing_address': billing_address,
+                        'created_at': datetime.utcnow()
+                    }}},
                     upsert=True
                 )
             machine_id = str(next_id)
@@ -4584,6 +4606,9 @@ def api_add_machine():
                 'id': next_id, 
                 'name': name, 
                 'description': description,
+                'gst_registered': gst_registered,
+                'gst_number': gst_number,
+                'billing_address': billing_address,
                 'created_at': datetime.utcnow().isoformat()
             })
             machines_data['machines'] = machines
