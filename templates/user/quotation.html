@@ -69,16 +69,7 @@
                             <i class="fas fa-building me-2 text-primary"></i>
                             <div>
                                 <div class="text-muted small">Company Name</div>
-                                <div class="fw-semibold">CGI - Chemo Graphics INTERNATIONAL</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex">
-                            <i class="fas fa-map-marker-alt me-2 text-muted mt-1"></i>
-                            <div>
-                                <div class="text-muted small">Address</div>
-                                <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
+                                <div class="fw-semibold">{{ company_details.name }}</div>
                             </div>
                         </div>
                     </div>
@@ -87,7 +78,31 @@
                             <i class="fas fa-envelope me-2 text-muted"></i>
                             <div>
                                 <div class="text-muted small">Email</div>
-                                <div><a href="mailto:INFO@CHEMO.IN">INFO@CHEMO.IN</a></div>
+                                <div>
+                                    {% if company_details.email %}
+                                        <a href="mailto:{{ company_details.email }}">{{ company_details.email }}</a>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex">
+                            <i class="fas fa-map-marker-alt me-2 text-muted mt-1"></i>
+                            <div>
+                                <div class="text-muted small">Address</div>
+                                <div>{{ company_details.address }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-id-card me-2 text-muted"></i>
+                            <div>
+                                <div class="text-muted small">GSTIN</div>
+                                <div>{{ company_details.gst_display }}</div>
                             </div>
                         </div>
                     </div>

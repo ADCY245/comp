@@ -25,6 +25,7 @@ import traceback
 import resend
 from openpyxl import Workbook, load_workbook
 from werkzeug.utils import secure_filename
+from markupsafe import Markup, escape
 
 # Import MongoDB users module
 try:
@@ -1575,6 +1576,8 @@ def normalize_company_record(company_doc):
     billing_state = _get_company_field(company_doc, 'billing_state', 'Billing State')
     billing_postal_code = _get_company_field(company_doc, 'billing_postal_code', 'Billing Postal Code')
     billing_phone = _get_company_field(company_doc, 'billing_phone', 'Billing Phone')
+    gst_registered = company_doc.get('GST Registered', company_doc.get('gst_registered'))
+    gst_number = company_doc.get('GST Number', company_doc.get('gst_number'))
     created_at = company_doc.get('created_at') or company_doc.get('Created At')
     assigned = normalize_assigned_companies(company_doc.get('assigned_to', []))
 
@@ -1590,6 +1593,8 @@ def normalize_company_record(company_doc):
         'billing_state': _normalize_company_text(billing_state),
         'billing_postal_code': _normalize_company_text(billing_postal_code),
         'billing_phone': _normalize_company_text(billing_phone),
+        'gst_registered': bool(gst_registered) if gst_registered is not None else False,
+        'gst_number': (gst_number or '').strip().upper() if isinstance(gst_number, str) else (gst_number if isinstance(gst_number, (int, float)) else ''),
         'assigned_to': assigned,
         'assigned_to_count': len(assigned),
         'created_at': _normalize_company_datetime(created_at),
@@ -3555,6 +3560,17 @@ def load_companies_data():
                         
                         # Ensure email is a string and properly formatted
                         email = str(email).strip() if email else ''
+
+                        gst_registered_raw = company.get('GST Registered')
+                        if gst_registered_raw is None:
+                            gst_registered_raw = company.get('gst_registered')
+                        if isinstance(gst_registered_raw, str):
+                            gst_registered = gst_registered_raw.strip().lower() in {'true', '1', 'yes', 'y'}
+                        else:
+                            gst_registered = bool(gst_registered_raw)
+
+                        gst_number_raw = company.get('GST Number') or company.get('gst_number') or ''
+                        gst_number = str(gst_number_raw).strip().upper()
                         
                         mapped_companies.append({
                             'id': company_id,
@@ -3578,6 +3594,10 @@ def load_companies_data():
                             'billing_postal_code': company.get('Billing Postal Code'),
                             'Billing Phone': company.get('Billing Phone'),
                             'billing_phone': company.get('Billing Phone'),
+                            'GST Registered': gst_registered,
+                            'gst_registered': gst_registered,
+                            'GST Number': gst_number,
+                            'gst_number': gst_number,
                             'Address': company.get('Address') or company.get('address', ''),
                             'address': company.get('Address') or company.get('address', ''),
                             'assigned_to': normalize_assigned_companies(company.get('assigned_to', [])),
