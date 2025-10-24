@@ -69,6 +69,70 @@
                             <i class="fas fa-building me-2 text-primary"></i>
                             <div>
                                 <div class="text-muted small">Company Name</div>
+                                <div class="fw-semibold">Chemo Graphic International</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-envelope me-2 text-muted"></i>
+                            <div>
+                                <div class="text-muted small">Email</div>
+                                <div>
+                                    <a href="mailto:info@chemo.in">info@chemo.in</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-phone me-2 text-muted"></i>
+                            <div>
+                                <div class="text-muted small">Phone</div>
+                                <div><a href="tel:+919930070755">9930070755</a></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex">
+                            <i class="fas fa-map-marker-alt me-2 text-muted mt-1"></i>
+                            <div>
+                                <div class="text-muted small">Address</div>
+                                <div>113, High Tech Industrial Centre,<br>Caves Road, Jogeshwari (East),<br>Mumbai - 400060</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-id-card me-2 text-muted"></i>
+                            <div>
+                                <div class="text-muted small">GSTIN</div>
+                                <div>27AAAPB9020H1Z6</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-3 border-top">
+                        <div class="text-muted small">Prepared by:</div>
+                        <div class="fw-semibold">{{ current_user.username }}</div>
+                        <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Customer Information</h5>
+                    <span class="badge bg-success">Verified</span>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-building me-2 text-primary"></i>
+                            <div>
+                                <div class="text-muted small">Company Name</div>
                                 <div class="fw-semibold">{{ company_details.name }}</div>
                             </div>
                         </div>
@@ -103,47 +167,6 @@
                             <div>
                                 <div class="text-muted small">GSTIN</div>
                                 <div>{{ company_details.gst_display }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-auto pt-3 border-top">
-                        <div class="text-muted small">Prepared by:</div>
-                        <div class="fw-semibold">{{ current_user.username }}</div>
-                        <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customer Information -->
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Customer Information</h5>
-                    <span class="badge bg-success">Verified</span>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <div class="mb-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-building me-2 text-primary"></i>
-                            <div>
-                                <div class="text-muted small">Company Name</div>
-                                <div class="fw-semibold">{{ session.get('company_name', 'Not specified') }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-envelope me-2 text-muted"></i>
-                            <div>
-                                <div class="text-muted small">Email</div>
-                                <div>
-                                    {% if session.get('company_email') %}
-                                        <a href="mailto:{{ session.company_email }}">{{ session.company_email }}</a>
-                                    {% else %}
-                                        <span class="text-muted">Not specified</span>
-                                    {% endif %}
-                                </div>
                             </div>
                         </div>
                     </div>

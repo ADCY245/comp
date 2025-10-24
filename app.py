@@ -1603,15 +1603,16 @@ def normalize_company_record(company_doc):
     return normalized
 
 
-def build_quotation_company_details(selected_company=None, session_company_id=None, session_company_email=None):
+def build_quotation_company_details(selected_company=None, session_company_id=None, session_company_email=None, fallback=None):
     """Resolve company details (address & GST) for quotation displays."""
     placeholder = "--"
     gst_unregistered_label = "URP"
 
     selected_company = selected_company or {}
+    fallback = fallback or {}
     company_id = selected_company.get('id') or session_company_id
-    company_email = selected_company.get('email') or session_company_email
-    company_name = selected_company.get('name')
+    company_email = selected_company.get('email') or session_company_email or fallback.get('email')
+    company_name = selected_company.get('name') or fallback.get('name')
 
     company_record = None
     try:
