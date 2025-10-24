@@ -5249,21 +5249,27 @@ def send_quotation():
         if not products:
             return jsonify({'error': 'Cart is empty'}), 400
 
+        selected_company = session.get('selected_company', {})
+        if not isinstance(selected_company, dict):
+            selected_company = {}
+
         # Get company info with proper fallbacks - prioritize database over session
         customer_name = 'Not specified'
         customer_email = ''
+        customer_address = ''
+        customer_gst = ''
+        customer_pan = ''
         
         # First try to get from user's company_id if available
         if hasattr(current_user, 'company_id') and current_user.company_id:
             customer_name = get_company_name_by_id(current_user.company_id)
             customer_email = get_company_email_by_id(current_user.company_id)
+            customer_address = get_company_address_by_id(current_user.company_id)
+            customer_gst = get_company_gst_by_id(current_user.company_id)
+            customer_pan = get_company_pan_by_id(current_user.company_id)
         
         # If not found in user's company_id, try session
         if customer_name == 'Not specified' or not customer_email:
-            selected_company = session.get('selected_company', {})
-            if not isinstance(selected_company, dict):
-                selected_company = {}
-            
             # Get from session if available
             if not customer_email:
                 customer_email = (
@@ -5355,6 +5361,27 @@ def send_quotation():
                 'id': current_user.company_id if hasattr(current_user, 'company_id') else session.get('company_id', '')
             }
             session.modified = True
+
+        customer_details = build_quotation_company_details(
+            selected_company,
+            session.get('company_id'),
+            session.get('company_email'),
+            fallback={'name': customer_name, 'email': customer_email}
+        )
+
+        customer_name_html = escape(customer_details.get('name') or 'Not specified')
+        customer_email_value = customer_details.get('email') or '--'
+        if customer_email_value and customer_email_value not in ('--', 'Not specified'):
+            customer_email_html = (
+                f"<a href='mailto:{escape(customer_email_value)}' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>{escape(customer_email_value)}</a>"
+            )
+        else:
+            customer_email_html = "<span style='color: #6c757d;'>--</span>"
+
+        customer_address_value = customer_details.get('address') or '--'
+        customer_address_html = escape(customer_address_value).replace('\n', '<br>')
+        customer_gst_display = customer_details.get('gst_display') or 'URP'
+        customer_gst_html = escape(customer_gst_display)
 
         # Send to customer, operations email, and current user (remove duplicates)
         user_email = current_user.email if hasattr(current_user, 'email') else None
@@ -5532,6 +5559,12 @@ def send_quotation():
         quote_id = get_next_quote_id()
 
         # Build email content with improved table layout and consistent white background
+        company_name_display = "Chemo Graphic International (CGI)"
+        company_email_html = "<a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a>"
+        company_phone_html = "<a href='tel:+919930070755' style='color: #0d6efd; text-decoration: none;'>9930070755</a>"
+        company_address_html = "113, High Tech Industrial Centre,<br>Caves Road, Jogeshwari (East),<br>Mumbai - 400060"
+        company_gst_html = "27AAAPB9020H1Z6"
+
         email_content = f"""
         <div style='font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; line-height: 1.6; background-color: #e0caa9; padding: 20px;'>
           <div style='background-color: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 2rem; margin-bottom: 1.5rem;'>
@@ -5558,21 +5591,35 @@ def send_quotation():
                             <i class='fas fa-building' style='color: #0d6efd; margin-right: 10px; font-size: 18px;'></i>
                             <div>
                               <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Company Name</div>
-                              <div style='font-weight: 600;'>CGI - Chemo Graphics INTERNATIONAL</div>
-                            </div>
-                          </div>
-                          <div style='margin-bottom: 16px; display: flex;'>
-                            <i class='fas fa-map-marker-alt' style='color: #6c757d; margin-right: 10px; font-size: 16px; margin-top: 4px;'></i>
-                            <div>
-                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
-                              <div>113, 114 High Tech Industrial Centre,<br>Caves Rd, Jogeshwari East,<br>Mumbai, Maharashtra 400060</div>
+                              <div style='font-weight: 600;'>{escape(company_name_display)}</div>
                             </div>
                           </div>
                           <div style='margin-bottom: 16px; display: flex; align-items: center;'>
                             <i class='fas fa-envelope' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
                             <div>
                               <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                              <div><a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a></div>
+                              <div>{company_email_html}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex;'>
+                            <i class='fas fa-map-marker-alt' style='color: #6c757d; margin-right: 10px; font-size: 16px; margin-top: 4px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
+                              <div>{company_address_html}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-phone' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Phone</div>
+                              <div>{company_phone_html}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-id-card' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>GSTIN</div>
+                              <div>{company_gst_html}</div>
                             </div>
                           </div>
                           <div style='margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6;'>
@@ -5598,14 +5645,28 @@ def send_quotation():
                             <i class='fas fa-building' style='color: #0d6efd; margin-right: 10px; font-size: 18px;'></i>
                             <div>
                               <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Company Name</div>
-                              <div style='font-weight: 600;'>{customer_name}</div>
+                              <div style='font-weight: 600;'>{customer_name_html}</div>
                             </div>
                           </div>
                           <div style='margin-bottom: 16px; display: flex; align-items: center;'>
                             <i class='fas fa-envelope' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
                             <div>
                               <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Email</div>
-                              <div><a href='mailto:{customer_email}' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>{customer_email}</a></div>
+                              <div>{customer_email_html}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex;'>
+                            <i class='fas fa-map-marker-alt' style='color: #6c757d; margin-right: 10px; font-size: 16px; margin-top: 4px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>Address</div>
+                              <div>{customer_address_html}</div>
+                            </div>
+                          </div>
+                          <div style='margin-bottom: 16px; display: flex; align-items: center;'>
+                            <i class='fas fa-id-card' style='color: #6c757d; margin-right: 10px; font-size: 16px;'></i>
+                            <div>
+                              <div style='color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;'>GSTIN</div>
+                              <div>{customer_gst_html}</div>
                             </div>
                           </div>
                           <div style='margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6;'>
@@ -5704,7 +5765,7 @@ def send_quotation():
                     'created_at_iso': quote_generated_at.isoformat(),
                     'created_at_ist': quote_generated_at.isoformat(),
                     'created_at_utc': quote_generated_at_utc.isoformat(),
-                    'from_company': 'CGI - Chemo Graphics INTERNATIONAL',
+                    'from_company': 'Chemo Graphic International (CGI)',
                     'from_email': 'info@chemo.in',
                     'prepared_by_name': current_user.username,
                     'prepared_by_email': current_user.email,
