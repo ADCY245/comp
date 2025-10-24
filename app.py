@@ -4380,11 +4380,38 @@ def api_add_company():
     data = request.get_json()
     name = data.get('name', '').strip()
     email = data.get('email', '').strip().lower()
+    phone = data.get('phone', '').strip()
+    billing_phone = data.get('billing_phone', '').strip()
+    billing_attention = data.get('billing_attention', '').strip()
+    billing_address = data.get('billing_address', '').strip()
+    billing_street = data.get('billing_street', '').strip()
+    billing_city = data.get('billing_city', '').strip()
+    billing_state = data.get('billing_state', '').strip()
+    billing_postal_code = data.get('billing_postal_code', '').strip()
+    gst_registered = bool(data.get('gst_registered', False))
+    gst_number = data.get('gst_number', '').strip().upper() if gst_registered else ''
     app.logger.info(f"Received request to add company: {name} <{email}>")
 
-    if not name or not email:
-        app.logger.warning("Missing name or email in request")
-        return jsonify({'success': False, 'message': 'Name and email are required.'}), 400
+    required_fields = {
+        'Name': name,
+        'Email': email,
+        'Phone': phone,
+        'Billing Phone': billing_phone,
+        'Billing Attention': billing_attention,
+        'Billing Address': billing_address,
+        'Billing City': billing_city,
+        'Billing State': billing_state,
+        'Billing Postal Code': billing_postal_code
+    }
+
+    missing = [label for label, value in required_fields.items() if not value]
+    if missing:
+        app.logger.warning(f"Missing required fields in add_company request: {missing}")
+        return jsonify({'success': False, 'message': f"Missing required fields: {', '.join(missing)}."}), 400
+
+    if gst_registered and (not gst_number or not re.match(r'^[0-9A-Z]{15}$', gst_number)):
+        app.logger.warning("Invalid GST number provided")
+        return jsonify({'success': False, 'message': 'A valid 15 character GSTIN is required when GST registered is Yes.'}), 400
 
     try:
         # Use the global mongo_db connection
@@ -4423,8 +4450,18 @@ def api_add_company():
                     
                 # Insert new company with consistent field names (only one set of fields)
                 company_data = {
-                    'Company Name': name.strip(),
-                    'EmailID': email.lower().strip(),
+                    'Company Name': name,
+                    'EmailID': email,
+                    'Phone': phone,
+                    'Billing Phone': billing_phone,
+                    'Billing Attention': billing_attention,
+                    'Billing Address': billing_address,
+                    'Billing Street': billing_street,
+                    'Billing City': billing_city,
+                    'Billing State': billing_state,
+                    'Billing Postal Code': billing_postal_code,
+                    'GST Registered': gst_registered,
+                    'GST Number': gst_number,
                     'created_at': datetime.utcnow(),
                     'created_by': str(current_user.id)
                 }
@@ -4464,6 +4501,16 @@ def api_add_company():
                 'id': company_id,
                 'Company Name': name,
                 'EmailID': email,
+                'Phone': phone,
+                'Billing Phone': billing_phone,
+                'Billing Attention': billing_attention,
+                'Billing Address': billing_address,
+                'Billing Street': billing_street,
+                'Billing City': billing_city,
+                'Billing State': billing_state,
+                'Billing Postal Code': billing_postal_code,
+                'GST Registered': gst_registered,
+                'GST Number': gst_number,
                 'created_at': datetime.utcnow().isoformat(),
                 'created_by': str(current_user.id)
             })

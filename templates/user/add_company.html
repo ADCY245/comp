@@ -12,18 +12,76 @@
                 </div>
                 <div class="card-body form-card__body">
                     <form id="addCompanyForm">
-                        <div class="mb-3">
-                            <label for="companyName" class="form-label">Company Name *</label>
-                            <input type="text" class="form-control" id="companyName" required>
-                            <div class="invalid-feedback">
-                                Please provide a company name.
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="companyName" class="form-label">Company Name *</label>
+                                <input type="text" class="form-control" id="companyName" required>
+                                <div class="invalid-feedback">Please provide a company name.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyEmail" class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" id="companyEmail" required>
+                                <div class="invalid-feedback">Please provide a valid email address.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="companyPhone" class="form-label">Company Phone *</label>
+                                <input type="text" class="form-control" id="companyPhone" required>
+                                <div class="invalid-feedback">Company phone is required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="billingPhone" class="form-label">Billing Phone *</label>
+                                <input type="text" class="form-control" id="billingPhone" required>
+                                <div class="invalid-feedback">Billing phone is required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="billingAttention" class="form-label">Billing Attention *</label>
+                                <input type="text" class="form-control" id="billingAttention" required>
+                                <div class="invalid-feedback">Billing attention is required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="postalCode" class="form-label">Postal Code *</label>
+                                <input type="text" class="form-control" id="postalCode" required>
+                                <div class="invalid-feedback">Postal code is required.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="billingAddress" class="form-label">Billing Address *</label>
+                                <textarea class="form-control" id="billingAddress" rows="2" required></textarea>
+                                <div class="invalid-feedback">Billing address is required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="billingStreet" class="form-label">Billing Street <small class="text-muted">(optional)</small></label>
+                                <input type="text" class="form-control" id="billingStreet">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="billingCity" class="form-label">Billing City *</label>
+                                <input type="text" class="form-control" id="billingCity" required>
+                                <div class="invalid-feedback">City is required.</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="billingState" class="form-label">Billing State *</label>
+                                <input type="text" class="form-control" id="billingState" required>
+                                <div class="invalid-feedback">State is required.</div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="companyEmail" class="form-label">Email Address *</label>
-                            <input type="email" class="form-control" id="companyEmail" required>
-                            <div class="invalid-feedback">
-                                Please provide a valid email address.
+                            <label class="form-label">Is the customer GST registered?</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="gstRegistered" id="gstRegisteredYes" value="yes" required>
+                                    <label class="form-check-label" for="gstRegisteredYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="gstRegistered" id="gstRegisteredNo" value="no" required>
+                                    <label class="form-check-label" for="gstRegisteredNo">No</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gst-details" id="gstDetails" style="display: none;">
+                            <div class="mb-3">
+                                <label for="gstNumber" class="form-label">GSTIN *</label>
+                                <input type="text" class="form-control" id="gstNumber" pattern="^[0-9A-Z]{15}$">
+                                <div class="form-text">Enter the 15 character GSTIN (letters and numbers only).</div>
+                                <div class="invalid-feedback">Please provide a valid 15 character GSTIN.</div>
                             </div>
                         </div>
                         <div class="d-grid gap-2">
@@ -54,6 +112,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const spinner = document.getElementById('spinner');
     const responseDiv = document.getElementById('responseMessage');
     const messageText = document.getElementById('messageText');
+    const gstRegisteredYes = document.getElementById('gstRegisteredYes');
+    const gstRegisteredNo = document.getElementById('gstRegisteredNo');
+    const gstDetails = document.getElementById('gstDetails');
+    const gstNumberInput = document.getElementById('gstNumber');
+
+    function toggleGstDetails() {
+        const isRegistered = gstRegisteredYes.checked;
+        gstDetails.style.display = isRegistered ? 'block' : 'none';
+        gstNumberInput.required = isRegistered;
+        if (!isRegistered) {
+            gstNumberInput.value = '';
+            gstNumberInput.classList.remove('is-invalid');
+        }
+    }
+
+    gstRegisteredYes.addEventListener('change', toggleGstDetails);
+    gstRegisteredNo.addEventListener('change', toggleGstDetails);
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -66,7 +141,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const companyData = {
             name: document.getElementById('companyName').value.trim(),
-            email: document.getElementById('companyEmail').value.trim().toLowerCase()
+            email: document.getElementById('companyEmail').value.trim().toLowerCase(),
+            phone: document.getElementById('companyPhone').value.trim(),
+            billing_phone: document.getElementById('billingPhone').value.trim(),
+            billing_attention: document.getElementById('billingAttention').value.trim(),
+            billing_address: document.getElementById('billingAddress').value.trim(),
+            billing_street: document.getElementById('billingStreet').value.trim(),
+            billing_city: document.getElementById('billingCity').value.trim(),
+            billing_state: document.getElementById('billingState').value.trim(),
+            billing_postal_code: document.getElementById('postalCode').value.trim(),
+            gst_registered: gstRegisteredYes.checked,
+            gst_number: gstRegisteredYes.checked ? gstNumberInput.value.trim().toUpperCase() : ''
         };
 
         // Show loading state
