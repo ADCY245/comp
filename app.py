@@ -5572,9 +5572,8 @@ def send_quotation():
                   <td style='vertical-align: top; width: 50%; padding: 0;'>
                     <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
                       <tr>
-                        <td style='background-color: #f8f9fa; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;'>
+                        <td style='background-color: #f8f9fa; padding: 16px 20px;'>
                           <h5 style='margin: 0; font-size: 16px; font-weight: 600;'>Company Information</h5>
-                          <span style='display: inline-block; background-color: #198754; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 999px;'>Verified</span>
                         </td>
                       </tr>
                       <tr>
@@ -5626,9 +5625,8 @@ def send_quotation():
                   <td style='vertical-align: top; width: 50%; padding: 0;'>
                     <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
                       <tr>
-                        <td style='background-color: #f8f9fa; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;'>
+                        <td style='background-color: #f8f9fa; padding: 16px 20px;'>
                           <h5 style='margin: 0; font-size: 16px; font-weight: 600;'>Customer Information</h5>
-                          <span style='display: inline-block; background-color: #198754; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 999px;'>Verified</span>
                         </td>
                       </tr>
                       <tr>
