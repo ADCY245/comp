@@ -535,11 +535,14 @@
                             {% if item.machine %}data-machine="{{ item.machine }}"{% endif %}
                             {% if item.thickness %}data-thickness="{{ item.thickness }}"{% endif %}
                             {% if item.size %}data-size="{{ item.size }}"{% endif %}
+                            {% if item.display_size_label %}data-display-size-label="{{ item.display_size_label }}"{% endif %}
                             {% if item.underpacking_type %}data-underpacking-type="{{ item.underpacking_type }}"{% endif %}
                             {% if item.custom_length_mm %}data-custom-length-mm="{{ item.custom_length_mm }}"{% endif %}
                             {% if item.custom_width_mm %}data-custom-width-mm="{{ item.custom_width_mm }}"{% endif %}
                             {% if item.standard_length_mm %}data-standard-length-mm="{{ item.standard_length_mm }}"{% endif %}
                             {% if item.standard_width_mm %}data-standard-width-mm="{{ item.standard_width_mm }}"{% endif %}
+                            {% if item.display_length_mm %}data-display-length-mm="{{ item.display_length_mm }}"{% endif %}
+                            {% if item.display_width_mm %}data-display-width-mm="{{ item.display_width_mm }}"{% endif %}
                             {% if item.cut_to_custom_size is not none %}data-cut-to-custom-size="{{ item.cut_to_custom_size }}"{% endif %}
                             {% if item.bar_type %}data-bar-type="{{ item.bar_type }}"{% endif %}
                         {% endif %}>

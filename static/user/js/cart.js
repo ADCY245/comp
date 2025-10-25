@@ -2122,7 +2122,7 @@ function renderBlanketDetails(item, data) {
         const widthMeters = widthMm / 1000;
         const areaSqM = (lengthMm * widthMm) / 1_000_000;
 
-        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> ${formatNumber(widthMm, 0)}mm x ${formatNumber(lengthMm, 0)}mm (${formatNumber(widthMeters, 2)}m x ${formatNumber(lengthMeters, 2)}m)</p>`);
+        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> Width = ${formatNumber(widthMm, 0)}mm, Length = ${formatNumber(lengthMm, 0)}mm (${formatNumber(widthMeters, 2)}m x ${formatNumber(lengthMeters, 2)}m)</p>`);
         lines.push(`<p class="mb-1"><strong>Area:</strong> ${formatNumber(areaSqM, 2)} m² (${formatNumber(lengthMm * widthMm, 0, false)} mm²)</p>`);
     }
 
@@ -2147,10 +2147,15 @@ function renderMPackDetails(item, data) {
     const customWidth = toNumber(data.custom_width_mm ?? item.getAttribute('data-custom-width-mm'));
     const standardLength = toNumber(data.standard_length_mm ?? data.length ?? item.getAttribute('data-standard-length-mm') ?? item.getAttribute('data-length'));
     const standardWidth = toNumber(data.standard_width_mm ?? data.width ?? item.getAttribute('data-standard-width-mm') ?? item.getAttribute('data-width'));
+    const displayLengthFallback = toNumber(data.display_length_mm ?? item.getAttribute('data-display-length-mm'));
+    const displayWidthFallback = toNumber(data.display_width_mm ?? item.getAttribute('data-display-width-mm'));
     const cutToCustom = strToBool(data.cut_to_custom_size ?? item.getAttribute('data-cut-to-custom-size'));
 
-    const displayLength = cutToCustom && customLength ? customLength : standardLength;
-    const displayWidth = cutToCustom && customWidth ? customWidth : standardWidth;
+    const resolvedStandardLength = standardLength ?? displayLengthFallback;
+    const resolvedStandardWidth = standardWidth ?? displayWidthFallback;
+
+    const displayLength = cutToCustom && customLength ? customLength : resolvedStandardLength;
+    const displayWidth = cutToCustom && customWidth ? customWidth : resolvedStandardWidth;
 
     const lines = [];
 
@@ -2182,12 +2187,12 @@ function renderMPackDetails(item, data) {
 
     if (displayWidth !== null && displayLength !== null) {
         const areaSqM = (displayLength * displayWidth) / 1_000_000;
-        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> ${formatNumber(displayWidth, 0)} x ${formatNumber(displayLength, 0)} mm</p>`);
+        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> Width = ${formatNumber(displayWidth, 0)}mm, Length = ${formatNumber(displayLength, 0)}mm</p>`);
         lines.push(`<p class="mb-1"><strong>Area:</strong> ${formatNumber(areaSqM, 3)} m²</p>`);
 
         if (cutToCustom) {
-            if (standardWidth && standardLength) {
-                lines.push(`<p class="text-muted small mb-1">Cut from standard ${formatNumber(standardWidth, 0)} x ${formatNumber(standardLength, 0)} mm.</p>`);
+            if (resolvedStandardWidth && resolvedStandardLength) {
+                lines.push(`<p class="text-muted small mb-1">Cut from standard ${formatNumber(resolvedStandardWidth, 0)} x ${formatNumber(resolvedStandardLength, 0)} mm.</p>`);
             } else if (size) {
                 lines.push(`<p class="text-muted small mb-1">Cut from standard ${escapeHtml(size)}.</p>`);
             }
@@ -2253,6 +2258,9 @@ function updateItemDisplay(item, data) {
         'custom_width_mm',
         'standard_length_mm',
         'standard_width_mm',
+        'display_length_mm',
+        'display_width_mm',
+        'display_size_label',
         'cut_to_custom_size',
         'rate_per_sqmt'
     ];
@@ -2426,9 +2434,12 @@ function updateItemDisplay(item, data) {
                 'data-gst-percent': gstPercent,
                 'data-thickness': data.thickness || item.getAttribute('data-thickness'),
                 'data-size': data.size || item.getAttribute('data-size'),
+                'data-display-size-label': data.display_size_label || item.getAttribute('data-display-size-label'),
                 'data-machine': data.machine || item.getAttribute('data-machine'),
                 'data-type': data.type || item.getAttribute('data-type'),
-                'data-name': data.name || item.getAttribute('data-name')
+                'data-name': data.name || item.getAttribute('data-name'),
+                'data-display-length-mm': data.display_length_mm || item.getAttribute('data-display-length-mm'),
+                'data-display-width-mm': data.display_width_mm || item.getAttribute('data-display-width-mm')
             };
             
             // Set all data attributes on the item
@@ -2475,10 +2486,11 @@ function updateItemDisplay(item, data) {
             }
             
             // Update size display
-            const size = data.size || item.getAttribute('data-size');
-            if (size) {
-                // Update the data attribute
-                item.setAttribute('data-size', size);
+            const sizeLabel = data.display_size_label || data.size || item.getAttribute('data-display-size-label') || item.getAttribute('data-size');
+            if (sizeLabel) {
+                // Update the data attributes
+                item.setAttribute('data-size', sizeLabel);
+                item.setAttribute('data-display-size-label', sizeLabel);
                 
                 // Update all size displays in the item
                 const sizeDisplays = item.querySelectorAll('.size-value, .mpack-size, .item-size, .size-display .size-value');
@@ -2486,13 +2498,13 @@ function updateItemDisplay(item, data) {
                     if (display.classList.contains('size-display')) {
                         // If it's the container, update the span inside it
                         const span = display.querySelector('span.size-value');
-                        if (span) span.textContent = size;
+                        if (span) span.textContent = sizeLabel;
                     } else {
                         // Direct update for other elements
-                        display.textContent = size;
+                        display.textContent = sizeLabel;
                     }
                 });
-                console.log('Updated size display to:', size);
+                console.log('Updated size display to:', sizeLabel);
             }
             
             // Update machine display
