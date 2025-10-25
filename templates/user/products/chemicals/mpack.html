@@ -97,15 +97,15 @@
 
     <div id="cutDetailsSection" class="alert alert-info" style="display:none;">
       <h6 class="mb-2">Cutting summary</h6>
-      <div class="d-flex justify-content-between">
+      <div class="d-flex justify-content-between" id="cutStandardRow" style="display:none;">
         <span>Standard sheet area:</span>
         <span><strong><span id="standardAreaDisplay">0.000</span> sq.m</strong></span>
       </div>
-      <div class="d-flex justify-content-between">
+      <div class="d-flex justify-content-between" id="cutCustomRow" style="display:none;">
         <span>Your required size area:</span>
         <span><strong><span id="customAreaDisplay">0.000</span> sq.m</strong></span>
       </div>
-      <p class="mb-0 text-muted small">Pricing remains based on the selected standard size to allow for cutting wastage.</p>
+      <p class="mb-0 text-muted small" id="cutDetailsNote">Select whether we should cut to your entered size. Pricing remains based on the selected standard size.</p>
     </div>
 
     <!-- Price Calculation Section -->

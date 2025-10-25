@@ -2978,6 +2978,21 @@ def add_to_cart():
                 'error': 'No data provided'
             }), 400
 
+        def to_float(value):
+            try:
+                if value is None or value == '':
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        def to_bool(value):
+            if isinstance(value, bool):
+                return value
+            if value is None:
+                return False
+            return str(value).strip().lower() in ('1', 'true', 'yes', 'y', 'on')
+
         # Validate required fields for blanket
         required_fields = ['type', 'name', 'machine', 'length', 'width', 'unit', 'quantity', 'base_price', 'bar_price', 'gst_percent']
         if data.get('type') == 'blanket' and not all(data.get(field) is not None for field in required_fields):
@@ -3052,6 +3067,37 @@ def add_to_cart():
         else:
             # Handle other product types (mpack, etc.)
             import uuid
+
+            standard_length = to_float(data.get('standard_length_mm'))
+            standard_width = to_float(data.get('standard_width_mm'))
+            standard_area = to_float(data.get('standard_area_sqm'))
+            if standard_area is None and standard_length is not None and standard_width is not None:
+                standard_area = (standard_length * standard_width) / 1_000_000
+
+            custom_length = to_float(data.get('custom_length_mm'))
+            custom_width = to_float(data.get('custom_width_mm'))
+            custom_area = to_float(data.get('custom_area_sqm'))
+            if custom_area is None and custom_length is not None and custom_width is not None:
+                custom_area = (custom_length * custom_width) / 1_000_000
+
+            display_length = to_float(data.get('display_length_mm'))
+            display_width = to_float(data.get('display_width_mm'))
+            cut_to_custom = to_bool(data.get('cut_to_custom_size'))
+
+            if display_length is None:
+                display_length = custom_length if cut_to_custom and custom_length is not None else standard_length
+            if display_width is None:
+                display_width = custom_width if cut_to_custom and custom_width is not None else standard_width
+
+            standard_size_label = data.get('standard_size_label') or data.get('size', '')
+            custom_size_label = data.get('custom_size_label') or ''
+            display_size_label = data.get('display_size_label') or (
+                custom_size_label if cut_to_custom and custom_size_label else standard_size_label
+            )
+
+            width_value = display_width if display_width is not None else (standard_width if standard_width is not None else 0)
+            height_value = display_length if display_length is not None else (standard_length if standard_length is not None else 0)
+
             product = {
                 'id': str(uuid.uuid4()),  # Add unique ID
                 'type': data.get('type'),
@@ -3063,9 +3109,23 @@ def add_to_cart():
                 # Include MPack specific details
                 'machine': data.get('machine', ''),
                 'thickness': data.get('thickness', ''),
-                'size': data.get('size', ''),
+                'size': display_size_label or data.get('size', ''),
                 'underpacking_type': data.get('underpacking_type', ''),  # Add underpacking type
-                'added_at': datetime.utcnow().isoformat()  # Add timestamp for sorting
+                'added_at': datetime.utcnow().isoformat(),  # Add timestamp for sorting
+                'cut_to_custom_size': cut_to_custom,
+                'custom_length_mm': custom_length,
+                'custom_width_mm': custom_width,
+                'custom_area_sqm': custom_area,
+                'standard_length_mm': standard_length,
+                'standard_width_mm': standard_width,
+                'standard_area_sqm': standard_area,
+                'standard_size_label': standard_size_label,
+                'custom_size_label': custom_size_label,
+                'display_size_label': display_size_label,
+                'display_length_mm': display_length,
+                'display_width_mm': display_width,
+                'width': width_value,
+                'height': height_value
             }
             
             # Calculate prices for other product types if needed
@@ -3100,7 +3160,11 @@ def add_to_cart():
                     'final_total': product['total_price'],
                     'machine': product.get('machine', ''),
                     'thickness': product.get('thickness', ''),
-                    'size': product.get('size', '')
+                    'size': product.get('size', ''),
+                    'standard_size_label': standard_size_label,
+                    'custom_size_label': custom_size_label,
+                    'display_size_label': display_size_label,
+                    'cut_to_custom_size': cut_to_custom
                 }
         
         # Get existing cart or create new one

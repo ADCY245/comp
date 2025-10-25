@@ -19,6 +19,9 @@ let cutYesRadio;
 let cutNoRadio;
 let standardAreaDisplayEl;
 let customAreaDisplayEl;
+let cutStandardRowEl;
+let cutCustomRowEl;
+let cutDetailsNoteEl;
 
 function isPositiveNumber(value) {
   return typeof value === 'number' && !Number.isNaN(value) && value > 0;
@@ -39,6 +42,27 @@ function parseSizeLabel(label) {
     width: parseFloat(match[1]),
     length: parseFloat(match[2])
   };
+}
+
+const CUT_NOTE_STANDARD = 'Underpacking will be supplied in the selected standard size.';
+const CUT_NOTE_CUSTOM = 'Underpacking will be cut to your entered size. Pricing remains based on the selected standard size to allow for cutting wastage.';
+const CUT_NOTE_WAITING = 'Select whether we should cut to your entered size. Pricing remains based on the selected standard size.';
+
+function formatDimensionValue(value) {
+  if (!isPositiveNumber(value)) {
+    return null;
+  }
+  const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+function formatDimensionLabel(lengthMm, widthMm) {
+  const formattedLength = formatDimensionValue(lengthMm);
+  const formattedWidth = formatDimensionValue(widthMm);
+  if (!formattedLength || !formattedWidth) {
+    return '';
+  }
+  return `${formattedWidth} x ${formattedLength} mm`;
 }
 
 let selectedStandardSizeId = '';
@@ -70,6 +94,15 @@ function hideCuttingSections() {
   if (customAreaDisplayEl) {
     customAreaDisplayEl.textContent = '0.000';
   }
+  if (cutStandardRowEl) {
+    cutStandardRowEl.style.display = 'none';
+  }
+  if (cutCustomRowEl) {
+    cutCustomRowEl.style.display = 'none';
+  }
+  if (cutDetailsNoteEl) {
+    cutDetailsNoteEl.textContent = CUT_NOTE_WAITING;
+  }
 }
 
 function showCutQuestion(resetRadios = true) {
@@ -80,6 +113,8 @@ function showCutQuestion(resetRadios = true) {
     if (cutYesRadio) cutYesRadio.checked = false;
     if (cutNoRadio) cutNoRadio.checked = false;
     if (cutDetailsSectionEl) cutDetailsSectionEl.style.display = 'none';
+    if (cutDetailsNoteEl) cutDetailsNoteEl.textContent = CUT_NOTE_WAITING;
+    if (cutCustomRowEl) cutCustomRowEl.style.display = 'none';
   } else if (cutYesRadio && cutYesRadio.checked) {
     updateCutDetails();
   }
@@ -90,28 +125,48 @@ function updateCutDetails() {
     return;
   }
 
-  if (hasValidCustomSize() && hasValidStandardSize()) {
-    const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
+  const hasStandard = hasValidStandardSize();
+  const hasCustom = hasValidCustomSize();
+
+  if (!hasStandard) {
+    hideCuttingSections();
+    return;
+  }
+
+  const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
+  standardSize.area = standardArea;
+
+  if (standardAreaDisplayEl) {
+    standardAreaDisplayEl.textContent = standardArea.toFixed(3);
+  }
+
+  if (cutStandardRowEl) {
+    cutStandardRowEl.style.display = 'flex';
+  }
+
+  const shouldShowCustomRow = Boolean(cutYesRadio && cutYesRadio.checked && hasCustom);
+
+  if (hasCustom) {
     const customArea = customSize.area || mmToSqm(customSize.length, customSize.width);
-
-    standardSize.area = standardArea;
     customSize.area = customArea;
-
-    if (standardAreaDisplayEl) {
-      standardAreaDisplayEl.textContent = standardArea.toFixed(3);
-    }
     if (customAreaDisplayEl) {
       customAreaDisplayEl.textContent = customArea.toFixed(3);
     }
-
-    if (cutYesRadio && cutYesRadio.checked) {
-      cutDetailsSectionEl.style.display = 'block';
-    } else {
-      cutDetailsSectionEl.style.display = 'none';
-    }
-  } else {
-    cutDetailsSectionEl.style.display = 'none';
   }
+
+  if (cutCustomRowEl) {
+    cutCustomRowEl.style.display = shouldShowCustomRow ? 'flex' : 'none';
+  }
+
+  if (cutDetailsNoteEl) {
+    if (!hasCustom) {
+      cutDetailsNoteEl.textContent = CUT_NOTE_STANDARD;
+    } else {
+      cutDetailsNoteEl.textContent = shouldShowCustomRow ? CUT_NOTE_CUSTOM : CUT_NOTE_STANDARD;
+    }
+  }
+
+  cutDetailsSectionEl.style.display = 'block';
 }
 
 function resetStandardSelection({ preserveSearchValue = false, preserveOptions = true } = {}) {
@@ -459,12 +514,18 @@ function getFormData() {
   const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
   const standardWidth = typeof dimensionMeta.width === 'number' ? dimensionMeta.width : (standardSize.width || 0);
   const standardLength = typeof dimensionMeta.length === 'number' ? dimensionMeta.length : (standardSize.length || 0);
-  const standardArea = standardSize.area || mmToSqm(standardLength, standardWidth);
+  const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
 
   const customLength = customSize.length || null;
   const customWidth = customSize.width || null;
   const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
+
+  const standardSizeLabel = selectedSize;
+  const customSizeLabel = customLength && customWidth ? formatDimensionLabel(customLength, customWidth) : '';
+  const displayWidth = cutToCustom && isPositiveNumber(customWidth) ? customWidth : standardWidth;
+  const displayLength = cutToCustom && isPositiveNumber(customLength) ? customLength : standardLength;
+  const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
 
   return {
     id: 'mpack_' + Date.now(),
@@ -472,9 +533,9 @@ function getFormData() {
     name: underpackingTypeDisplay,
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
-    size: selectedSize,
-    width: standardWidth,
-    height: standardLength,
+    size: displaySizeLabel,
+    width: displayWidth,
+    height: displayLength,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
@@ -487,6 +548,8 @@ function getFormData() {
     standard_width_mm: standardWidth,
     standard_area_sqm: standardArea,
     cut_to_custom_size: cutToCustom,
+    standard_size_label: standardSizeLabel,
+    custom_size_label: customSizeLabel,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
@@ -547,6 +610,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   cutNoRadio = document.getElementById('cutNo');
   standardAreaDisplayEl = document.getElementById('standardAreaDisplay');
   customAreaDisplayEl = document.getElementById('customAreaDisplay');
+  cutStandardRowEl = document.getElementById('cutStandardRow');
+  cutCustomRowEl = document.getElementById('cutCustomRow');
+  cutDetailsNoteEl = document.getElementById('cutDetailsNote');
 
   // Disable standard size search until custom size captured
   if (sizeInputEl) {
@@ -566,16 +632,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (cutYesRadio) {
     cutYesRadio.addEventListener('change', () => {
-      if (cutYesRadio.checked) {
-        updateCutDetails();
-      }
+      updateCutDetails();
     });
   }
   if (cutNoRadio) {
     cutNoRadio.addEventListener('change', () => {
-      if (cutDetailsSectionEl) {
-        cutDetailsSectionEl.style.display = 'none';
-      }
+      updateCutDetails();
     });
   }
 
@@ -1296,15 +1358,21 @@ async function addMpackToCart() {
   const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
+  const standardSizeLabel = selectedSize;
+  const customSizeLabel = customLength && customWidth ? formatDimensionLabel(customLength, customWidth) : '';
+  const displayWidth = cutToCustom && isPositiveNumber(customWidth) ? customWidth : standardWidth;
+  const displayLength = cutToCustom && isPositiveNumber(customLength) ? customLength : standardLength;
+  const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
+
   const product = {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
     name: underpackingTypeDisplay,
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
-    size: selectedSize,
-    width: standardWidth,
-    height: standardLength,
+    size: displaySizeLabel,
+    width: displayWidth,
+    height: displayLength,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
@@ -1328,7 +1396,12 @@ async function addMpackToCart() {
     standard_length_mm: standardLength,
     standard_width_mm: standardWidth,
     standard_area_sqm: standardArea,
-    cut_to_custom_size: cutToCustom
+    cut_to_custom_size: cutToCustom,
+    standard_size_label: standardSizeLabel,
+    custom_size_label: customSizeLabel,
+    display_size_label: displaySizeLabel,
+    display_length_mm: displayLength,
+    display_width_mm: displayWidth
   };
 
   // Show loading state
@@ -1364,7 +1437,7 @@ async function addMpackToCart() {
     name: underpackingTypeDisplay,
     machine: machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
-    size: selectedSize,
+    size: displaySizeLabel,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
@@ -1379,7 +1452,12 @@ async function addMpackToCart() {
     standard_length_mm: standardLength,
     standard_width_mm: standardWidth,
     standard_area_sqm: standardArea,
-    cut_to_custom_size: cutToCustom
+    cut_to_custom_size: cutToCustom,
+    standard_size_label: standardSizeLabel,
+    custom_size_label: customSizeLabel,
+    display_size_label: displaySizeLabel,
+    display_length_mm: displayLength,
+    display_width_mm: displayWidth
   };
 
   // Add item_id for edit mode

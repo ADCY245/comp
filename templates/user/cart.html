@@ -552,8 +552,34 @@
                                                 </p>
                                             {% endif %}
                                             
-                                            {% if item.type == 'mpack' and item.size %}
-                                                <p class="mb-1 size-display"><strong>Size:</strong> {{ item.size }}</p>
+                                            {% if item.type == 'mpack' %}
+                                                {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
+                                                {% set display_length = (use_custom and item.custom_length_mm) or (item.standard_length_mm or item.length) %}
+                                                {% set display_width = (use_custom and item.custom_width_mm) or (item.standard_width_mm or item.width) %}
+                                                {% if display_length and display_width %}
+                                                    {% set length_display = '%g' % (display_length|float) %}
+                                                    {% set width_display = '%g' % (display_width|float) %}
+                                                    {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
+                                                    <p class="mb-1 size-display"><strong>Dimensions:</strong> {{ width_display }} x {{ length_display }} mm</p>
+                                                    <p class="mb-1"><strong>Area:</strong> {{ '%.3f'|format(area_sqm) }} m²</p>
+                                                {% elif item.size %}
+                                                    <p class="mb-1 size-display"><strong>Size:</strong> {{ item.size }}</p>
+                                                {% endif %}
+                                                {% if use_custom %}
+                                                    {% set std_length = item.standard_length_mm or item.length %}
+                                                    {% set std_width = item.standard_width_mm or item.width %}
+                                                    {% if std_length and std_width %}
+                                                        {% set std_length_display = '%g' % (std_length|float) %}
+                                                        {% set std_width_display = '%g' % (std_width|float) %}
+                                                        <p class="text-muted small mb-1">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</p>
+                                                    {% elif item.size %}
+                                                        <p class="text-muted small mb-1">Cut from standard {{ item.size }}.</p>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if item.size %}
+                                                        <p class="text-muted small mb-1">Supplied in standard {{ item.size }}.</p>
+                                                    {% endif %}
+                                                {% endif %}
                                             {% elif item.length and item.width %}
                                                 <p class="mb-1"><strong>Dimensions:</strong> {{ item.length }}mm x {{ item.width }}mm ({{ "%.2f"|format((item.length|float / 1000)) }}m x {{ "%.2f"|format((item.width|float / 1000)) }}m)</p>
                                                 <p class="mb-1"><strong>Area:</strong> {{ "%.2f"|format((item.length|float * item.width|float) / 1000000) }} m² ({{ "%.2f"|format((item.length|float * item.width|float)) }} mm²)</p>

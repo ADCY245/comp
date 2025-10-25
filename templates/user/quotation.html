@@ -231,21 +231,44 @@
           </td>
           <td>{% if item.get('thickness') %}{% if item.type == 'blanket' %}{{ item.thickness|replace('.0', '') }} mm{% else %}{{ item.thickness }}{% if item.thickness and not (item.thickness|string).endswith(('mm', 'micron', 'in', 'cm')) and item.thickness|float >= 1 %} mm{% endif %}{% endif %}{% else %}------{% endif %}</td>
           <td>
-            {% if item.get('size') %}
+            {% if prod_type == 'mpack' %}
+              {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
+              {% set display_length = (use_custom and item.custom_length_mm) or (item.display_length_mm or item.standard_length_mm or item.length) %}
+              {% set display_width = (use_custom and item.custom_width_mm) or (item.display_width_mm or item.standard_width_mm or item.width) %}
+              {% if display_length and display_width %}
+                {% set length_display = '%g' % (display_length|float) %}
+                {% set width_display = '%g' % (display_width|float) %}
+                {{ width_display }} x {{ length_display }} mm
+                {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
+                <div class="text-muted small">Area: {{ '%.3f'|format(area_sqm) }} m²</div>
+              {% elif item.size %}
+                {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+              {% else %}
+                ------
+              {% endif %}
+              {% if use_custom %}
+                {% set std_length = item.standard_length_mm or item.length %}
+                {% set std_width = item.standard_width_mm or item.width %}
+                {% if std_length and std_width %}
+                  {% set std_length_display = '%g' % (std_length|float) %}
+                  {% set std_width_display = '%g' % (std_width|float) %}
+                  <div class="text-muted small">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</div>
+                {% elif item.standard_size_label %}
+                  <div class="text-muted small">Cut from standard {{ item.standard_size_label }}.</div>
+                {% endif %}
+              {% else %}
+                {% if item.standard_size_label %}
+                  <div class="text-muted small">Supplied in standard {{ item.standard_size_label }}.</div>
+                {% endif %}
+              {% endif %}
+            {% elif item.get('size') %}
               {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
             {% elif item.get('length') and item.get('width') %}
-              {% if item.type == 'mpack' %}
-                {{ '%sx%s mm'|format(
-                  item.length|string|replace('.0', ''),
-                  item.width|string|replace('.0', '')
-                ) }}
-              {% else %}
-                {{ '%sx%s%s'|format(
-                  item.length|string|replace('.0', ''),
-                  item.width|string|replace('.0', ''),
-                  item.get('unit', '')|replace('mm', ' mm')
-                ) }}
-              {% endif %}
+              {{ '%sx%s%s'|format(
+                item.length|string|replace('.0', ''),
+                item.width|string|replace('.0', ''),
+                item.get('unit', '')|replace('mm', ' mm')
+              ) }}
             {% else %}
               ------
             {% endif %}
