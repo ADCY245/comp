@@ -35,7 +35,7 @@
 
   <div id="mpackSection" style="display:none;">
     <!-- Thickness -->
-    <div class="row mb-3">
+    <div class="row mb-3 align-items-end">
       <div class="col-md-4">
         <label for="thicknessSelect" class="form-label">Select Thickness (micron):</label>
         <select id="thicknessSelect" class="form-select">
@@ -49,10 +49,23 @@
           <option value="400">400</option>
         </select>
       </div>
-      
-      <!-- Size with Search -->
       <div class="col-md-8">
-        <label for="sizeInput" class="form-label">Search Size:</label>
+        <label class="form-label" for="customLengthInput">Enter required size (mm):</label>
+        <div class="input-group">
+          <input type="number" class="form-control" id="customLengthInput" placeholder="Length" min="0" step="0.1">
+          <span class="input-group-text">&times;</span>
+          <input type="number" class="form-control" id="customWidthInput" placeholder="Width" min="0" step="0.1">
+        </div>
+        <div class="form-text">Use decimal values if needed. Example: 640.5 × 540.25 mm.</div>
+        <div class="form-text text-muted" id="customSizeSummary">Awaiting input…</div>
+        <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both length and width to continue.</div>
+      </div>
+    </div>
+
+    <!-- Size with Search -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <label for="sizeInput" class="form-label">Select Chemo standard size:</label>
         <div class="search-container">
           <input type="text" id="sizeInput" class="form-control" placeholder="Type to search sizes (e.g., 260x350)">
           <div id="sizeSuggestions" class="list-group mt-2" style="display:none;max-height:200px;overflow-y:auto;position: absolute;width: 100%;z-index: 1000;"></div>
@@ -61,6 +74,38 @@
           <option value="">-- Select Size --</option>
         </select>
       </div>
+    </div>
+
+    <div id="cutQuestionSection" class="card mb-3" style="display:none;">
+      <div class="card-body">
+        <label class="form-label d-block">Should we cut the underpacking to your entered size?</label>
+        <div class="d-flex flex-wrap align-items-start gap-4">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="cutFromInput" id="cutYes" value="yes">
+            <label class="form-check-label" for="cutYes">
+              Yes
+              <span class="text-muted small d-block">(Price will still be taken as per standard sizes considering wastage.)</span>
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="cutFromInput" id="cutNo" value="no">
+            <label class="form-check-label" for="cutNo">No</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cutDetailsSection" class="alert alert-info" style="display:none;">
+      <h6 class="mb-2">Cutting summary</h6>
+      <div class="d-flex justify-content-between">
+        <span>Standard sheet area:</span>
+        <span><strong><span id="standardAreaDisplay">0.000</span> sq.m</strong></span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Your required size area:</span>
+        <span><strong><span id="customAreaDisplay">0.000</span> sq.m</strong></span>
+      </div>
+      <p class="mb-0 text-muted small">Pricing remains based on the selected standard size to allow for cutting wastage.</p>
     </div>
 
     <!-- Price Calculation Section -->

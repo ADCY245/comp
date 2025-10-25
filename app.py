@@ -5521,7 +5521,6 @@ def send_quotation():
             </tbody>
         </table>
         <p>For more information, please contact: <a href='mailto:info@chemo.in'>info@chemo.in</a></p>
-        <p>This quotation is not a contract or invoice. It is our best estimate.</p>
         """
 
         # Calculate discount information from products

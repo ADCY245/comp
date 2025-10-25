@@ -1,8 +1,210 @@
 let priceMap = {};
+let sizeMetaMap = {};
 let currentNetPrice = 0;
 let currentDiscount = 0; // Track current discount percentage
 let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
+let customSize = { length: null, width: null, area: 0 };
+let standardSize = { length: null, width: null, area: 0 };
+
+let sizeInputEl;
+let sizeSelectEl;
+let customLengthInputEl;
+let customWidthInputEl;
+let customSizeSummaryEl;
+let customSizeFeedbackEl;
+let cutQuestionSectionEl;
+let cutDetailsSectionEl;
+let cutYesRadio;
+let cutNoRadio;
+let standardAreaDisplayEl;
+let customAreaDisplayEl;
+
+function isPositiveNumber(value) {
+  return typeof value === 'number' && !Number.isNaN(value) && value > 0;
+}
+
+function mmToSqm(lengthMm, widthMm) {
+  if (!isPositiveNumber(lengthMm) || !isPositiveNumber(widthMm)) {
+    return 0;
+  }
+  return (lengthMm / 1000) * (widthMm / 1000);
+}
+
+function parseSizeLabel(label) {
+  if (!label) return null;
+  const match = label.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  return {
+    width: parseFloat(match[1]),
+    length: parseFloat(match[2])
+  };
+}
+
+let selectedStandardSizeId = '';
+
+function hasValidCustomSize() {
+  return isPositiveNumber(customSize.length) && isPositiveNumber(customSize.width);
+}
+
+function hasValidStandardSize() {
+  return isPositiveNumber(standardSize.length) && isPositiveNumber(standardSize.width);
+}
+
+function hideCuttingSections() {
+  if (cutQuestionSectionEl) {
+    cutQuestionSectionEl.style.display = 'none';
+  }
+  if (cutDetailsSectionEl) {
+    cutDetailsSectionEl.style.display = 'none';
+  }
+  if (cutYesRadio) {
+    cutYesRadio.checked = false;
+  }
+  if (cutNoRadio) {
+    cutNoRadio.checked = false;
+  }
+  if (standardAreaDisplayEl) {
+    standardAreaDisplayEl.textContent = '0.000';
+  }
+  if (customAreaDisplayEl) {
+    customAreaDisplayEl.textContent = '0.000';
+  }
+}
+
+function showCutQuestion(resetRadios = true) {
+  if (cutQuestionSectionEl) {
+    cutQuestionSectionEl.style.display = 'block';
+  }
+  if (resetRadios) {
+    if (cutYesRadio) cutYesRadio.checked = false;
+    if (cutNoRadio) cutNoRadio.checked = false;
+    if (cutDetailsSectionEl) cutDetailsSectionEl.style.display = 'none';
+  } else if (cutYesRadio && cutYesRadio.checked) {
+    updateCutDetails();
+  }
+}
+
+function updateCutDetails() {
+  if (!cutDetailsSectionEl) {
+    return;
+  }
+
+  if (hasValidCustomSize() && hasValidStandardSize()) {
+    const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
+    const customArea = customSize.area || mmToSqm(customSize.length, customSize.width);
+
+    standardSize.area = standardArea;
+    customSize.area = customArea;
+
+    if (standardAreaDisplayEl) {
+      standardAreaDisplayEl.textContent = standardArea.toFixed(3);
+    }
+    if (customAreaDisplayEl) {
+      customAreaDisplayEl.textContent = customArea.toFixed(3);
+    }
+
+    if (cutYesRadio && cutYesRadio.checked) {
+      cutDetailsSectionEl.style.display = 'block';
+    } else {
+      cutDetailsSectionEl.style.display = 'none';
+    }
+  } else {
+    cutDetailsSectionEl.style.display = 'none';
+  }
+}
+
+function resetStandardSelection({ preserveSearchValue = false, preserveOptions = true } = {}) {
+  selectedStandardSizeId = '';
+  standardSize = { length: null, width: null, area: 0 };
+
+  if (sizeSelectEl) {
+    sizeSelectEl.value = '';
+    if (!preserveOptions) {
+      sizeSelectEl.innerHTML = '<option value="">-- Select Size --</option>';
+      sizeSelectEl.disabled = true;
+    }
+  }
+
+  if (sizeInputEl && !preserveSearchValue) {
+    sizeInputEl.value = '';
+  }
+
+  hideCuttingSections();
+}
+
+function updateCustomSizeState({ showFeedback = false } = {}) {
+  const rawLength = customLengthInputEl ? customLengthInputEl.value : '';
+  const rawWidth = customWidthInputEl ? customWidthInputEl.value : '';
+  const lengthVal = parseFloat(rawLength || '');
+  const widthVal = parseFloat(rawWidth || '');
+  const valid = isPositiveNumber(lengthVal) && isPositiveNumber(widthVal);
+
+  if (valid) {
+    customSize.length = lengthVal;
+    customSize.width = widthVal;
+    customSize.area = mmToSqm(lengthVal, widthVal);
+
+    if (customSizeSummaryEl) {
+      customSizeSummaryEl.textContent = `${lengthVal.toFixed(2)} mm × ${widthVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
+    }
+    if (customSizeFeedbackEl) {
+      customSizeFeedbackEl.classList.add('d-none');
+    }
+    if (sizeInputEl) {
+      sizeInputEl.disabled = false;
+      sizeInputEl.classList.remove('is-invalid');
+    }
+    if (sizeSelectEl) {
+      sizeSelectEl.disabled = false;
+    }
+    return true;
+  }
+
+  customSize.length = null;
+  customSize.width = null;
+  customSize.area = 0;
+
+  if (customSizeSummaryEl) {
+    customSizeSummaryEl.textContent = 'Awaiting input…';
+  }
+  if (sizeInputEl) {
+    sizeInputEl.disabled = true;
+    sizeInputEl.classList.toggle('is-invalid', showFeedback);
+  }
+  if (sizeSelectEl) {
+    sizeSelectEl.disabled = true;
+  }
+  if (customSizeFeedbackEl) {
+    customSizeFeedbackEl.classList[showFeedback ? 'remove' : 'add']('d-none');
+  }
+  hideCuttingSections();
+  return false;
+}
+
+function handleCustomSizeInputChange() {
+  const hadStandardSelection = Boolean(selectedStandardSizeId) || hasValidStandardSize();
+  const isValid = updateCustomSizeState();
+
+  if (hadStandardSelection || !isValid) {
+    resetStandardSelection();
+    resetCalculations();
+  }
+
+  if (!isValid && sizeInputEl) {
+    sizeInputEl.value = '';
+  }
+
+  if (isValid && cutYesRadio && cutYesRadio.checked) {
+    updateCutDetails();
+  }
+}
+
+function resetCustomSizeInputs() {
+  if (customLengthInputEl) customLengthInputEl.value = '';
+  if (customWidthInputEl) customWidthInputEl.value = '';
+  updateCustomSizeState();
+}
 
 // Debug function to log element status
 function logElementStatus(id) {
@@ -249,16 +451,20 @@ function getFormData() {
   const gstAmount = priceAfterDiscount * gstRate;
   const finalPrice = priceAfterDiscount + gstAmount;
   
-  // Get size from dropdown (like thickness)
-  const selectedSize = sizeSelect.options[sizeSelect.selectedIndex].text;
-  
-  // Parse width and height from the selected size
-  let width = 0, height = 0;
-  const sizeMatch = selectedSize.match(/(\d+)\s*[xX×]\s*(\d+)/);
-  if (sizeMatch && sizeMatch.length >= 3) {
-    width = parseInt(sizeMatch[1].trim());
-    height = parseInt(sizeMatch[2].trim());
-  }
+  // Get size details
+  const sizeValue = sizeSelect.value;
+  const sizeOption = sizeSelect.options[sizeSelect.selectedIndex];
+  const selectedSize = sizeOption ? sizeOption.text : '';
+  const metaFromMap = sizeMetaMap[sizeValue];
+  const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
+  const standardWidth = typeof dimensionMeta.width === 'number' ? dimensionMeta.width : (standardSize.width || 0);
+  const standardLength = typeof dimensionMeta.length === 'number' ? dimensionMeta.length : (standardSize.length || 0);
+  const standardArea = standardSize.area || mmToSqm(standardLength, standardWidth);
+
+  const customLength = customSize.length || null;
+  const customWidth = customSize.width || null;
+  const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
+  const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
   return {
     id: 'mpack_' + Date.now(),
@@ -267,13 +473,20 @@ function getFormData() {
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: selectedSize,
-    width: width,
-    height: height,
+    width: standardWidth,
+    height: standardLength,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
     gst_percent: 18,
+    custom_length_mm: customLength,
+    custom_width_mm: customWidth,
+    custom_area_sqm: customArea,
+    standard_length_mm: standardLength,
+    standard_width_mm: standardWidth,
+    standard_area_sqm: standardArea,
+    cut_to_custom_size: cutToCustom,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
@@ -317,37 +530,82 @@ function handleCompanyFromUrl() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("MPACK JS loaded - DOM fully loaded");
-  
+
   // Handle company info from URL if present
   handleCompanyFromUrl();
-  
+
+  // Cache DOM references for new workflow pieces
+  sizeInputEl = document.getElementById('sizeInput');
+  sizeSelectEl = document.getElementById('sizeSelect');
+  customLengthInputEl = document.getElementById('customLengthInput');
+  customWidthInputEl = document.getElementById('customWidthInput');
+  customSizeSummaryEl = document.getElementById('customSizeSummary');
+  customSizeFeedbackEl = document.getElementById('customSizeFeedback');
+  cutQuestionSectionEl = document.getElementById('cutQuestionSection');
+  cutDetailsSectionEl = document.getElementById('cutDetailsSection');
+  cutYesRadio = document.getElementById('cutYes');
+  cutNoRadio = document.getElementById('cutNo');
+  standardAreaDisplayEl = document.getElementById('standardAreaDisplay');
+  customAreaDisplayEl = document.getElementById('customAreaDisplay');
+
+  // Disable standard size search until custom size captured
+  if (sizeInputEl) {
+    sizeInputEl.disabled = true;
+  }
+  if (sizeSelectEl) {
+    sizeSelectEl.disabled = true;
+  }
+
+  // Attach listeners for custom size inputs
+  if (customLengthInputEl) {
+    customLengthInputEl.addEventListener('input', handleCustomSizeInputChange);
+  }
+  if (customWidthInputEl) {
+    customWidthInputEl.addEventListener('input', handleCustomSizeInputChange);
+  }
+
+  if (cutYesRadio) {
+    cutYesRadio.addEventListener('change', () => {
+      if (cutYesRadio.checked) {
+        updateCutDetails();
+      }
+    });
+  }
+  if (cutNoRadio) {
+    cutNoRadio.addEventListener('change', () => {
+      if (cutDetailsSectionEl) {
+        cutDetailsSectionEl.style.display = 'none';
+      }
+    });
+  }
+
   try {
     // Load machines first
     console.log("Loading machines...");
     loadMachines();
-    
+
     // Load discounts
     console.log("Loading discounts...");
     await loadDiscounts();
-    
+
     // Check if we're editing an existing cart item
     console.log("Checking for editing item...");
-    const editingItem = checkForEditingItem();
-    
-    if (editingItem) {
+    const foundEditingItem = checkForEditingItem();
+
+    if (foundEditingItem) {
+      editingItem = foundEditingItem;
       console.log("Editing existing item:", editingItem);
-      
+
       // Small delay to ensure all elements are rendered
       setTimeout(() => {
         try {
           prefillFormWithItem(editingItem);
-          
+
           // Update the add to cart button to show "Update Item"
           const addToCartBtn = document.getElementById('addToCartBtn');
           if (addToCartBtn) {
             addToCartBtn.textContent = 'Update Item';
-            // Update the onclick handler to use updateCartItem with both button and itemId
-            addToCartBtn.onclick = async function(e) { 
+            addToCartBtn.onclick = async function (e) {
               e.preventDefault();
               try {
                 await updateCartItem(this, editingItem.id);
@@ -357,24 +615,22 @@ document.addEventListener("DOMContentLoaded", async () => {
               }
             };
           }
-          
+
           // Show the mpack section if it's hidden
-          const mpackSection = document.getElementById("mpackSection");
+          const mpackSection = document.getElementById('mpackSection');
           if (mpackSection) {
             mpackSection.style.display = 'block';
           }
-          
         } catch (error) {
-          console.error("Error prefilling form with item:", error);
+          console.error('Error prefilling form with item:', error);
         }
       }, 100);
     } else {
-      console.log("No editing item found");
+      editingItem = null;
+      console.log('No editing item found');
     }
-    
   } catch (error) {
-    console.error("Error initializing MPack page:", error);
-    // Show error to user
+    console.error('Error initializing MPack page:', error);
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger';
     errorDiv.textContent = 'Error loading page. Please refresh and try again.';
@@ -382,18 +638,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Debug log element statuses
-  console.log("Checking required elements...");
-  logElementStatus("machineSelect");
-  logElementStatus("mpackSection");
-  logElementStatus("thicknessSelect");
-  logElementStatus("sizeSelect");
-  logElementStatus("sheetInput");
-  logElementStatus("discountSelect");
+  console.log('Checking required elements...');
+  logElementStatus('machineSelect');
+  logElementStatus('mpackSection');
+  logElementStatus('thicknessSelect');
+  logElementStatus('sizeSelect');
+  logElementStatus('sheetInput');
+  logElementStatus('discountSelect');
 
   // Set up the add to cart button
   const addToCartBtn = document.getElementById('addToCartBtn');
   if (addToCartBtn) {
-    addToCartBtn.onclick = async function(e) {
+    addToCartBtn.onclick = async function (e) {
       e.preventDefault();
       try {
         if (editingItem) {
@@ -409,64 +665,68 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Safely add event listener to machine select
-  const machineSelect = document.getElementById("machineSelect");
-  const underpackingTypeSelect = document.getElementById("underpackingType");
-  const mpackSection = document.getElementById("mpackSection");
+  const machineSelect = document.getElementById('machineSelect');
+  const underpackingTypeSelect = document.getElementById('underpackingType');
+  const mpackSection = document.getElementById('mpackSection');
 
   if (!machineSelect) {
-    console.error("machineSelect element not found!");
+    console.error('machineSelect element not found!');
   }
 
   if (!mpackSection) {
-    console.error("mpackSection element not found!");
+    console.error('mpackSection element not found!');
   }
-  
+
   if (underpackingTypeSelect && mpackSection) {
-    console.log("Setting up underpacking type change handler...");
-    underpackingTypeSelect.addEventListener("change", () => {
+    console.log('Setting up underpacking type change handler...');
+    underpackingTypeSelect.addEventListener('change', () => {
       const hasSelection = !!underpackingTypeSelect.value;
-      mpackSection.style.display = hasSelection ? "block" : "none";
+      mpackSection.style.display = hasSelection ? 'block' : 'none';
       if (!hasSelection) {
-        if (machineSelect) machineSelect.value = "";
+        if (machineSelect) {
+          machineSelect.value = '';
+        }
+        resetCustomSizeInputs();
+        resetStandardSelection({ preserveOptions: false });
         resetCalculations();
       }
     });
   }
 
   // Update thickness change handler to recalculate prices
-  const thicknessSelect = document.getElementById("thicknessSelect");
+  const thicknessSelect = document.getElementById('thicknessSelect');
   if (thicknessSelect) {
-    thicknessSelect.addEventListener("change", () => {
+    thicknessSelect.addEventListener('change', () => {
       loadSizes();
-      // Reset current discount when thickness changes
       currentDiscount = 0;
-      const discountSelect = document.getElementById("discountSelect");
-      if (discountSelect) discountSelect.value = "";
+      const discountSelect = document.getElementById('discountSelect');
+      if (discountSelect) {
+        discountSelect.value = '';
+      }
       calculateFinalPrice();
     });
   }
-  
+
   // Update size selection handler
-  const sizeSelect = document.getElementById("sizeSelect");
-  if (sizeSelect) {
-    sizeSelect.addEventListener("change", () => {
+  if (sizeSelectEl) {
+    sizeSelectEl.addEventListener('change', () => {
       handleSizeSelection();
       calculateFinalPrice();
     });
   }
 
-  // Initialize size search functionality handler
-  const sheetInput = document.getElementById("sheetInput");
+  // Quantity input handler
+  const sheetInput = document.getElementById('sheetInput');
   if (sheetInput) {
-    sheetInput.addEventListener("input", () => {
+    sheetInput.addEventListener('input', () => {
       calculateFinalPrice();
     });
   }
-  
-  // Update discount select handler
-  const discountSelect = document.getElementById("discountSelect");
+
+  // Discount select handler
+  const discountSelect = document.getElementById('discountSelect');
   if (discountSelect) {
-    discountSelect.addEventListener("change", () => {
+    discountSelect.addEventListener('change', () => {
       applyDiscount();
       calculateFinalPrice();
     });
@@ -542,6 +802,7 @@ function loadSizes() {
       
       // Clear and rebuild price map
       priceMap = {};
+      sizeMetaMap = {};
       
       // Populate size dropdown with prices
       thicknessData.sizes.forEach(item => {
@@ -551,7 +812,18 @@ function loadSizes() {
         opt.dataset.price = item.price;
         sizeSelect.appendChild(opt);
         priceMap[item.id] = item.price;
+        sizeMetaMap[item.id] = { width: item.width, length: item.length, price: item.price };
       });
+
+      resetStandardSelection({ preserveOptions: true });
+
+      if (!hasValidCustomSize()) {
+        sizeSelect.disabled = true;
+        if (sizeInputEl) sizeInputEl.disabled = true;
+      } else {
+        sizeSelect.disabled = false;
+        if (sizeInputEl) sizeInputEl.disabled = false;
+      }
       
       // Show UI sections
       const sizeSection = document.getElementById("sizeSection");
@@ -620,45 +892,66 @@ function loadSizes() {
 }
 
 function handleSizeSelection() {
-  const sizeSelect = document.getElementById("sizeSelect");
-  const selectedId = sizeSelect.value;
-  
+  if (!sizeSelectEl) return;
+  const selectedId = sizeSelectEl.value;
+
   if (!selectedId) {
+    selectedStandardSizeId = '';
+    standardSize = { length: null, width: null, area: 0 };
+    hideCuttingSections();
     resetCalculations();
     return;
   }
-  
-  // Show price section when a size is selected
-  const priceSection = document.getElementById("priceSection");
-  if (priceSection) priceSection.style.display = selectedId ? "block" : "none";
-  
-  // Update net price display safely
+
+  selectedStandardSizeId = selectedId;
+
+  const selectedOption = sizeSelectEl.options[sizeSelectEl.selectedIndex];
+  const optionText = selectedOption ? selectedOption.text : '';
+  const dimensionMeta = sizeMetaMap[selectedId] || parseSizeLabel(optionText) || {};
+  if (dimensionMeta) {
+    if (typeof dimensionMeta.width === 'number') {
+      standardSize.width = dimensionMeta.width;
+    }
+    if (typeof dimensionMeta.length === 'number') {
+      standardSize.length = dimensionMeta.length;
+    }
+    standardSize.area = mmToSqm(standardSize.length, standardSize.width);
+  }
+
+  if (hasValidCustomSize()) {
+    showCutQuestion();
+    updateCutDetails();
+  } else {
+    hideCuttingSections();
+  }
+
   currentNetPrice = parseFloat(priceMap[selectedId] || 0);
-  const netPriceElement = document.getElementById("netPrice");
+  const netPriceElement = document.getElementById('netPrice');
   if (netPriceElement) {
     netPriceElement.textContent = currentNetPrice.toFixed(2);
   }
-  
-  // Reset sheet input and calculate initial price
-  const sheetInput = document.getElementById("sheetInput");
+
+  const sheetInput = document.getElementById('sheetInput');
   if (sheetInput) {
-    sheetInput.value = "1";
+    sheetInput.value = '1';
   }
-  
-  // Reset discount when size changes
+
   currentDiscount = 0;
-  const discountSelect = document.getElementById("discountSelect");
+  const discountSelect = document.getElementById('discountSelect');
   if (discountSelect) {
-    discountSelect.value = "";
+    discountSelect.value = '';
   }
-  
-  // Clear discount details
-  const discountDetails = document.getElementById("discountDetails");
+
+  const discountDetails = document.getElementById('discountDetails');
   if (discountDetails) {
-    discountDetails.innerHTML = "";
+    discountDetails.innerHTML = '';
   }
-  
-  // Update price display
+
+  const priceSection = document.getElementById('priceSection');
+  if (priceSection) {
+    priceSection.style.display = 'block';
+  }
+
   calculateFinalPrice();
 }
 
@@ -990,16 +1283,19 @@ async function addMpackToCart() {
   const finalPrice = priceAfterDiscount + gstAmount;
 
   // Get size from dropdown (like thickness)
-  const selectedSize = sizeSelect.options[sizeSelect.selectedIndex].text;
-  
-  // Parse width and height from the selected size
-  let width = 0, height = 0;
-  const sizeMatch = selectedSize.match(/(\d+)\s*[xX×]\s*(\d+)/);
-  if (sizeMatch && sizeMatch.length >= 3) {
-    width = parseInt(sizeMatch[1].trim());
-    height = parseInt(sizeMatch[2].trim());
-  }
-  
+  const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+  const selectedSize = selectedOption ? selectedOption.text : '';
+  const metaFromMap = sizeMetaMap[sizeSelect.value];
+  const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
+  const standardWidth = typeof dimensionMeta.width === 'number' ? dimensionMeta.width : (standardSize.width || 0);
+  const standardLength = typeof dimensionMeta.length === 'number' ? dimensionMeta.length : (standardSize.length || 0);
+  const standardArea = standardSize.area || mmToSqm(standardLength, standardWidth);
+
+  const customLength = customSize.length || null;
+  const customWidth = customSize.width || null;
+  const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
+  const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
+
   const product = {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
@@ -1007,8 +1303,8 @@ async function addMpackToCart() {
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: selectedSize,
-    width: width,
-    height: height,
+    width: standardWidth,
+    height: standardLength,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
@@ -1025,7 +1321,14 @@ async function addMpackToCart() {
       gst_percent: 18,
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
-    }
+    },
+    custom_length_mm: customLength,
+    custom_width_mm: customWidth,
+    custom_area_sqm: customArea,
+    standard_length_mm: standardLength,
+    standard_width_mm: standardWidth,
+    standard_area_sqm: standardArea,
+    cut_to_custom_size: cutToCustom
   };
 
   // Show loading state
@@ -1069,7 +1372,14 @@ async function addMpackToCart() {
     gst_percent: 18,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
-    calculations: product.calculations
+    calculations: product.calculations,
+    custom_length_mm: customLength,
+    custom_width_mm: customWidth,
+    custom_area_sqm: customArea,
+    standard_length_mm: standardLength,
+    standard_width_mm: standardWidth,
+    standard_area_sqm: standardArea,
+    cut_to_custom_size: cutToCustom
   };
 
   // Add item_id for edit mode
