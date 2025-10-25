@@ -528,11 +528,21 @@
                              {% if item.machine %}data-machine="{{ item.machine }}"{% endif %}
                              {% if item.thickness %}data-thickness="{{ item.thickness }}"{% endif %}
                          {% elif item.type == 'mpack' %}
-                             data-unit-price="{{ item.unit_price|default(0) }}" 
-                             data-quantity="{{ item.quantity|default(1) }}" 
-                             data-discount-percent="{{ item.discount_percent|default(0) }}" 
-                             data-gst-percent="{{ item.gst_percent|default(18) }}"
-                         {% endif %}>
+                            data-unit-price="{{ item.unit_price|default(0) }}" 
+                            data-quantity="{{ item.quantity|default(1) }}" 
+                            data-discount-percent="{{ item.discount_percent|default(0) }}" 
+                            data-gst-percent="{{ item.gst_percent|default(18) }}"
+                            {% if item.machine %}data-machine="{{ item.machine }}"{% endif %}
+                            {% if item.thickness %}data-thickness="{{ item.thickness }}"{% endif %}
+                            {% if item.size %}data-size="{{ item.size }}"{% endif %}
+                            {% if item.underpacking_type %}data-underpacking-type="{{ item.underpacking_type }}"{% endif %}
+                            {% if item.custom_length_mm %}data-custom-length-mm="{{ item.custom_length_mm }}"{% endif %}
+                            {% if item.custom_width_mm %}data-custom-width-mm="{{ item.custom_width_mm }}"{% endif %}
+                            {% if item.standard_length_mm %}data-standard-length-mm="{{ item.standard_length_mm }}"{% endif %}
+                            {% if item.standard_width_mm %}data-standard-width-mm="{{ item.standard_width_mm }}"{% endif %}
+                            {% if item.cut_to_custom_size is not none %}data-cut-to-custom-size="{{ item.cut_to_custom_size }}"{% endif %}
+                            {% if item.bar_type %}data-bar-type="{{ item.bar_type }}"{% endif %}
+                        {% endif %}>
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="item-details w-100">

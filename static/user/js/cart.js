@@ -1029,17 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check for duplicate MPacks
     checkForDuplicateMpacks();
     
-    // Set up clear cart button
-    const clearCartBtn = document.getElementById('clearCartBtn');
-    if (clearCartBtn) {
-        clearCartBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm('Are you sure you want to clear your cart? This cannot be undone.')) {
-                handleClearCart(e);
-            }
-        });
-    }
-    
     // Set up checkout button
     const checkoutBtn = document.getElementById('checkoutBtn');
     if (checkoutBtn) {
@@ -2042,7 +2031,7 @@ function removeFromCart(event, itemId, callback) {
     });
 }
 
-// Utility helpers for refreshing cart item metadata and display
+    // Utility helpers for refreshing cart item metadata and display
 function setDataAttribute(element, attribute, value) {
     if (!element) return;
 

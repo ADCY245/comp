@@ -66,6 +66,8 @@ function formatDimensionLabel(lengthMm, widthMm) {
 }
 
 let selectedStandardSizeId = '';
+// Legacy alias kept for backwards compatibility with older handlers
+let selectedSizeId = '';
 
 function hasValidCustomSize() {
   return isPositiveNumber(customSize.length) && isPositiveNumber(customSize.width);
@@ -171,6 +173,7 @@ function updateCutDetails() {
 
 function resetStandardSelection({ preserveSearchValue = false, preserveOptions = true } = {}) {
   selectedStandardSizeId = '';
+  selectedSizeId = '';
   standardSize = { length: null, width: null, area: 0 };
 
   if (sizeSelectEl) {
@@ -959,6 +962,7 @@ function handleSizeSelection() {
 
   if (!selectedId) {
     selectedStandardSizeId = '';
+    selectedSizeId = '';
     standardSize = { length: null, width: null, area: 0 };
     hideCuttingSections();
     resetCalculations();
@@ -966,6 +970,7 @@ function handleSizeSelection() {
   }
 
   selectedStandardSizeId = selectedId;
+  selectedSizeId = selectedId;
 
   const selectedOption = sizeSelectEl.options[sizeSelectEl.selectedIndex];
   const optionText = selectedOption ? selectedOption.text : '';
@@ -1218,7 +1223,8 @@ function calculateFinalPrice() {
   }
   
   if (priceSection) {
-    priceSection.style.display = selectedSizeId ? "block" : "none";
+    const hasSizeSelection = Boolean(selectedStandardSizeId || (sizeSelectEl && sizeSelectEl.value));
+    priceSection.style.display = hasSizeSelection ? "block" : "none";
   }
 }
 
