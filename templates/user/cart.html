@@ -441,7 +441,34 @@
     .price-breakdown div {
         margin-bottom: 5px;
     }
-    </style>
+
+    @media (max-width: 768px) {
+        .cart-summary {
+            padding: 15px;
+        }
+
+        .cart-summary .card {
+            box-shadow: none;
+        }
+
+        .cart-summary .card-body {
+            padding: 15px;
+        }
+
+        .cart-summary .fs-5 {
+            font-size: 1.2rem;
+        }
+
+        .cart-footer {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .cart-footer .btn {
+            width: 100%;
+        }
+    }
 {% endblock %}
 
 {% block content %}

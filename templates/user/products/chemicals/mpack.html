@@ -50,15 +50,15 @@
         </select>
       </div>
       <div class="col-md-8">
-        <label class="form-label" for="customLengthInput">Enter required size (mm):</label>
+        <label class="form-label" for="customWidthInput">Enter required size (Width × Length in mm):</label>
         <div class="input-group">
-          <input type="number" class="form-control" id="customLengthInput" placeholder="Length" min="0" step="0.1">
-          <span class="input-group-text">&times;</span>
           <input type="number" class="form-control" id="customWidthInput" placeholder="Width" min="0" step="0.1">
+          <span class="input-group-text">&times;</span>
+          <input type="number" class="form-control" id="customLengthInput" placeholder="Length" min="0" step="0.1">
         </div>
-        <div class="form-text">Use decimal values if needed. Example: 640.5 × 540.25 mm.</div>
+        <div class="form-text">Use decimal values if needed. Example: 540.25 × 640.5 mm.</div>
         <div class="form-text text-muted" id="customSizeSummary">Awaiting input…</div>
-        <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both length and width to continue.</div>
+        <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both width and length to continue.</div>
       </div>
     </div>
 

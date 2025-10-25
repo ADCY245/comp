@@ -201,7 +201,7 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     customSize.area = mmToSqm(lengthVal, widthVal);
 
     if (customSizeSummaryEl) {
-      customSizeSummaryEl.textContent = `${lengthVal.toFixed(2)} mm × ${widthVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
+      customSizeSummaryEl.textContent = `${widthVal.toFixed(2)} mm × ${lengthVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');

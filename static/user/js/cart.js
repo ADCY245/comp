@@ -1250,6 +1250,7 @@ function updateCartTotals() {
             const cartSummary = document.getElementById('cartSummary');
             if (cartSummary) {
                 cartSummary.innerHTML = '';
+                cartSummary.style.display = 'none';
             }
             return;
         } else {
@@ -1345,6 +1346,7 @@ function updateCartTotals() {
         // Update the cart summary
         const cartSummary = document.getElementById('cartSummary');
         if (cartSummary) {
+            cartSummary.style.display = 'block';
             // Round all values to 2 decimal places
             subtotal = Math.round(subtotal * 100) / 100;
             totalDiscount = Math.round(totalDiscount * 100) / 100;
@@ -1992,20 +1994,23 @@ function removeFromCart(event, itemId, callback) {
                 // Wait for the fade-out animation to complete before removing
                 setTimeout(() => {
                     itemElement.remove();
-                    
-                    // Update cart count and total
+
+                    // Update cart count and totals
                     updateCartCount(data.cart_count || 0);
-                    
+                    updateCartTotals();
+
                     // Show success message
                     showToast('Success', 'Item removed from cart', 'success');
-                    
+
                     // If no items left, show empty cart message
                     const cartItems = document.querySelectorAll('.cart-item');
                     if (cartItems.length === 0) {
-                        document.getElementById('cartItems').style.display = 'none';
-                        document.getElementById('emptyCartMessage').style.display = 'block';
+                        const cartItemsWrapper = document.getElementById('cartItems');
+                        if (cartItemsWrapper) cartItemsWrapper.style.display = 'none';
+                        const emptyState = document.getElementById('emptyCart');
+                        if (emptyState) emptyState.style.display = 'block';
                     }
-                    
+
                     // Call the callback if provided
                     if (typeof callback === 'function') {
                         callback();
