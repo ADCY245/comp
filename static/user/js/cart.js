@@ -2042,6 +2042,190 @@ function removeFromCart(event, itemId, callback) {
     });
 }
 
+// Utility helpers for refreshing cart item metadata and display
+function setDataAttribute(element, attribute, value) {
+    if (!element) return;
+
+    if (value === undefined || value === null || value === '') {
+        element.removeAttribute(attribute);
+    } else {
+        element.setAttribute(attribute, value);
+    }
+}
+
+function escapeHtml(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function toNumber(value) {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    return Number.isNaN(num) ? null : num;
+}
+
+function formatNumber(value, decimals = 2, trimZeros = true) {
+    const num = toNumber(value);
+    if (num === null) return '';
+
+    let formatted = num.toFixed(decimals);
+    if (trimZeros) {
+        formatted = formatted.replace(/\.0+$/, '');
+        formatted = formatted.replace(/(\.\d*?[1-9])0+$/, '$1');
+    }
+
+    return formatted;
+}
+
+function strToBool(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+        return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+    }
+    return false;
+}
+
+function formatUnderpackingType(type) {
+    if (!type) return '';
+    const normalized = type.toLowerCase();
+
+    switch (normalized) {
+        case 'mtech_mpack':
+            return 'Mtech Mpack';
+        case 'mark3zet':
+            return 'Mark3zet';
+        default:
+            return normalized
+                .split(/[_\s-]+/)
+                .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' ');
+    }
+}
+
+function renderBlanketDetails(item, data) {
+    const detailsEl = item.querySelector('.product-details');
+    if (!detailsEl) return;
+
+    const machine = data.machine ?? item.getAttribute('data-machine');
+    const thickness = data.thickness ?? item.getAttribute('data-thickness');
+    const lengthMm = toNumber(data.length ?? item.getAttribute('data-length'));
+    const widthMm = toNumber(data.width ?? item.getAttribute('data-width'));
+    const barType = data.bar_type ?? item.getAttribute('data-bar-type');
+
+    const lines = [];
+
+    if (machine) {
+        lines.push(`<p class="mb-1"><strong>Machine:</strong> ${escapeHtml(machine)}</p>`);
+    }
+
+    if (thickness) {
+        const thicknessValue = toNumber(thickness);
+        const displayThickness = thicknessValue !== null ? `${formatNumber(thicknessValue, 2)}mm` : escapeHtml(thickness);
+        lines.push(`<p class="mb-1"><strong>Thickness:</strong> ${displayThickness}</p>`);
+    }
+
+    if (lengthMm !== null && widthMm !== null) {
+        const lengthMeters = lengthMm / 1000;
+        const widthMeters = widthMm / 1000;
+        const areaSqM = (lengthMm * widthMm) / 1_000_000;
+
+        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> ${formatNumber(widthMm, 0)}mm x ${formatNumber(lengthMm, 0)}mm (${formatNumber(widthMeters, 2)}m x ${formatNumber(lengthMeters, 2)}m)</p>`);
+        lines.push(`<p class="mb-1"><strong>Area:</strong> ${formatNumber(areaSqM, 2)} m² (${formatNumber(lengthMm * widthMm, 0, false)} mm²)</p>`);
+    }
+
+    if (barType) {
+        lines.push(`<p class="mb-1"><strong>Barring:</strong> ${escapeHtml(barType)}</p>`);
+    }
+
+    detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
+}
+
+function renderMPackDetails(item, data) {
+    const detailsEl = item.querySelector('.product-details');
+    if (!detailsEl) return;
+
+    const machine = data.machine ?? item.getAttribute('data-machine');
+    const thicknessRaw = data.thickness ?? item.getAttribute('data-thickness');
+    const underpackingTypeRaw = data.underpacking_type ?? item.getAttribute('data-underpacking-type');
+    const barType = data.bar_type ?? item.getAttribute('data-bar-type');
+    const size = data.size ?? item.getAttribute('data-size');
+
+    const customLength = toNumber(data.custom_length_mm ?? item.getAttribute('data-custom-length-mm'));
+    const customWidth = toNumber(data.custom_width_mm ?? item.getAttribute('data-custom-width-mm'));
+    const standardLength = toNumber(data.standard_length_mm ?? data.length ?? item.getAttribute('data-standard-length-mm') ?? item.getAttribute('data-length'));
+    const standardWidth = toNumber(data.standard_width_mm ?? data.width ?? item.getAttribute('data-standard-width-mm') ?? item.getAttribute('data-width'));
+    const cutToCustom = strToBool(data.cut_to_custom_size ?? item.getAttribute('data-cut-to-custom-size'));
+
+    const displayLength = cutToCustom && customLength ? customLength : standardLength;
+    const displayWidth = cutToCustom && customWidth ? customWidth : standardWidth;
+
+    const lines = [];
+
+    if (machine) {
+        lines.push(`<p class="mb-1"><strong>Machine:</strong> ${escapeHtml(machine)}</p>`);
+    }
+
+    if (underpackingTypeRaw) {
+        lines.push(`<p class="mb-1"><strong>Type:</strong> ${escapeHtml(formatUnderpackingType(underpackingTypeRaw))}</p>`);
+    }
+
+    if (thicknessRaw) {
+        const thicknessNumber = toNumber(thicknessRaw);
+        let suffix = '';
+        let displayValue = escapeHtml(thicknessRaw);
+
+        if (thicknessNumber !== null) {
+            if (thicknessNumber >= 1) {
+                suffix = 'mm';
+                displayValue = formatNumber(thicknessNumber, 2);
+            } else {
+                suffix = 'micron';
+                displayValue = formatNumber(thicknessNumber, 0);
+            }
+        }
+
+        lines.push(`<p class="mb-1"><strong>Thickness:</strong> ${displayValue}${suffix}</p>`);
+    }
+
+    if (displayWidth !== null && displayLength !== null) {
+        const areaSqM = (displayLength * displayWidth) / 1_000_000;
+        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> ${formatNumber(displayWidth, 0)} x ${formatNumber(displayLength, 0)} mm</p>`);
+        lines.push(`<p class="mb-1"><strong>Area:</strong> ${formatNumber(areaSqM, 3)} m²</p>`);
+
+        if (cutToCustom) {
+            if (standardWidth && standardLength) {
+                lines.push(`<p class="text-muted small mb-1">Cut from standard ${formatNumber(standardWidth, 0)} x ${formatNumber(standardLength, 0)} mm.</p>`);
+            } else if (size) {
+                lines.push(`<p class="text-muted small mb-1">Cut from standard ${escapeHtml(size)}.</p>`);
+            }
+        } else if (size) {
+            lines.push(`<p class="text-muted small mb-1">Supplied in standard ${escapeHtml(size)}.</p>`);
+        }
+    } else if (size) {
+        lines.push(`<p class="mb-1"><strong>Size:</strong> ${escapeHtml(size)}</p>`);
+        lines.push(`<p class="text-muted small mb-1">Supplied in standard ${escapeHtml(size)}.</p>`);
+    }
+
+    if (barType) {
+        lines.push(`<p class="mb-1"><strong>Barring:</strong> ${escapeHtml(barType)}</p>`);
+    }
+
+    detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
+}
+
+function updateProductDetails(item, data) {
+    const type = data.type || item.getAttribute('data-type');
+    if (type === 'blanket') {
+        renderBlanketDetails(item, data);
+    } else if (type === 'mpack') {
+        renderMPackDetails(item, data);
+    }
+}
+
 // Function to update item display with all price information
 function updateItemDisplay(item, data) {
     if (!item || !data) return;
@@ -2066,13 +2250,62 @@ function updateItemDisplay(item, data) {
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
     }
-    
+
+    // Sync additional metadata used in the descriptive section
+    const metadataFields = [
+        'machine',
+        'thickness',
+        'length',
+        'width',
+        'bar_type',
+        'size',
+        'underpacking_type',
+        'custom_length_mm',
+        'custom_width_mm',
+        'standard_length_mm',
+        'standard_width_mm',
+        'cut_to_custom_size',
+        'rate_per_sqmt'
+    ];
+
+    metadataFields.forEach(field => {
+        if (Object.prototype.hasOwnProperty.call(data, field)) {
+            const attrName = `data-${field.replace(/_/g, '-')}`;
+            const value = data[field];
+
+            if (value === undefined || value === null || value === '') {
+                item.removeAttribute(attrName);
+            } else {
+                item.setAttribute(attrName, value);
+            }
+        }
+    });
+
+    // Sync name attribute for downstream lookups and headings
+    if (data.name) {
+        setDataAttribute(item, 'data-name', data.name);
+        const titleEl = item.querySelector('.product-title');
+        if (titleEl) {
+            titleEl.textContent = data.name;
+        }
+    }
+
     // Update the quantity input
     const quantityInput = item.querySelector('.quantity-input');
     if (quantityInput) {
         quantityInput.value = data.quantity || 1;
     }
-    
+
+    // Update discount input if present
+    const discountInput = item.querySelector('.discount-input');
+    if (discountInput && Object.prototype.hasOwnProperty.call(data, 'discount_percent')) {
+        const discountValue = Number(data.discount_percent || 0);
+        discountInput.value = discountValue % 1 === 0 ? discountValue : discountValue.toFixed(1);
+    }
+
+    // Refresh descriptive product details (machine, dimensions, etc.)
+    updateProductDetails(item, data);
+
     // Update the price displays
     if (data.type === 'blanket') {
         // Get dimensions and rates from data or fall back to item attributes
