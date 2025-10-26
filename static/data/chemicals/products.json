@@ -1,23 +1,93 @@
-[
-  {
-    "id": "chem-101",
-    "name": "Anilox Roller Cleaner",
-    "description": "High-performance cleaner for removing dried ink and contaminants.",
-    "unit": "Ltr",
-    "price": 1450.0
-  },
-  {
-    "id": "chem-102",
-    "name": "Plate Cleaning Solution",
-    "description": "Ready-to-use solution for manual and automatic plate cleaning.",
-    "unit": "Ltr",
-    "price": 980.0
-  },
-  {
-    "id": "chem-103",
-    "name": "Fountain Solution Additive",
-    "description": "Balances pH levels for consistent print quality.",
-    "unit": "Ltr",
-    "price": 1250.0
-  }
-]
+{
+  "categories": [
+    {
+      "id": "fount",
+      "name": "Fount Solutions",
+      "description": "Solutions that stabilise water balance and maintain optimal pH on press.",
+      "icon": "fas fa-tint",
+      "products": [
+        {
+          "id": "fount-101",
+          "name": "Premium Offset Fount Concentrate",
+          "description": "Concentrated solution for sheet-fed presses delivering stable ink/water balance.",
+          "icon": "fas fa-flask",
+          "formats": [
+            { "id": "fount-101-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-101-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-101-25l", "label": "25L Can", "size_litre": 25 }
+          ]
+        },
+        {
+          "id": "fount-102",
+          "name": "Alcohol Substitution Fount",
+          "description": "Reduces IPA usage while keeping plates clean and water receptive.",
+          "icon": "fas fa-water",
+          "formats": [
+            { "id": "fount-102-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-102-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-102-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wash",
+      "name": "Wash & Cleaning",
+      "description": "Dedicated washes to keep rollers, blankets and press components in top condition.",
+      "icon": "fas fa-soap",
+      "products": [
+        {
+          "id": "wash-201",
+          "name": "Low VOC Blanket Wash",
+          "description": "Fast-acting wash for manual and automatic blanket cleaning systems.",
+          "icon": "fas fa-pump-soap",
+          "formats": [
+            { "id": "wash-201-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-201-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-201-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-202",
+          "name": "Deep Clean Roller Wash",
+          "description": "High solvency wash for removing stubborn glaze and dried ink from rollers.",
+          "icon": "fas fa-brush",
+          "formats": [
+            { "id": "wash-202-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-202-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-202-25l", "label": "25L Can", "size_litre": 25 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "maintenance",
+      "name": "Maintenance Aids",
+      "description": "Housekeeping products that keep presses reliable with minimal downtime.",
+      "icon": "fas fa-toolbox",
+      "products": [
+        {
+          "id": "maint-301",
+          "name": "Calcium Remover",
+          "description": "Neutralises calcium build-up on rollers and dampening systems.",
+          "icon": "fas fa-atom",
+          "formats": [
+            { "id": "maint-301-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-301-5l", "label": "5L Bottle", "size_litre": 5 }
+          ]
+        },
+        {
+          "id": "maint-302",
+          "name": "Anti-Mould Circulation Cleaner",
+          "description": "Keeps recirculation tanks hygienic and prevents algae growth.",
+          "icon": "fas fa-bacteria",
+          "formats": [
+            { "id": "maint-302-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-302-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-302-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        }
+      ]
+    }
+  ]
+}
