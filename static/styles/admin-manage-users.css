@@ -138,3 +138,10 @@
     border-color: rgba(173, 151, 79, 0.45);
     color: #EAEAEA;
 }
+
+/* Company detail modal styling */
+#companyModal .form-label {
+    color: #C8AA4E;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+}
