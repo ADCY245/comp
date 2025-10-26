@@ -2122,7 +2122,7 @@ function renderBlanketDetails(item, data) {
         const widthMeters = widthMm / 1000;
         const areaSqM = (lengthMm * widthMm) / 1_000_000;
 
-        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> Width = ${formatNumber(widthMm, 0)}mm, Length = ${formatNumber(lengthMm, 0)}mm (${formatNumber(widthMeters, 2)}m x ${formatNumber(lengthMeters, 2)}m)</p>`);
+        lines.push(`<p class="mb-1"><strong>Dimensions:</strong> Length = ${formatNumber(lengthMm, 0)}mm, Width = ${formatNumber(widthMm, 0)}mm (${formatNumber(lengthMeters, 2)}m x ${formatNumber(widthMeters, 2)}m)</p>`);
         lines.push(`<p class="mb-1"><strong>Area:</strong> ${formatNumber(areaSqM, 2)} m² (${formatNumber(lengthMm * widthMm, 0, false)} mm²)</p>`);
     }
 
