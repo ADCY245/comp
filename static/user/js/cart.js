@@ -240,6 +240,7 @@ function updateCompanyDisplay(name, email) {
             companyInfoEl.innerHTML = '<p class="text-muted mb-0" id="companyEmail">No email provided</p>';
         }
     }
+    updateCartTotals();
 }
 
 // Initialize company info from URL parameters and storage
@@ -2212,13 +2213,54 @@ function renderMPackDetails(item, data) {
     detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
 }
 
-function updateProductDetails(item, data) {
-    const type = data.type || item.getAttribute('data-type');
-    if (type === 'blanket') {
-        renderBlanketDetails(item, data);
-    } else if (type === 'mpack') {
-        renderMPackDetails(item, data);
+function renderChemicalDetails(item, data) {
+    const detailsEl = item.querySelector('.product-details');
+    if (!detailsEl) return;
+
+    const lines = [];
+
+    // Machine
+    if (data.machine) {
+        lines.push(`<p class="mb-1"><strong>Machine:</strong> ${escapeHtml(data.machine)}</p>`);
     }
+
+    // Category
+    if (data.category) {
+        lines.push(`<p class="mb-1"><strong>Category:</strong> ${escapeHtml(data.category)}</p>`);
+    }
+
+    // Format Label
+    if (data.format_label) {
+        lines.push(`<p class="mb-1"><strong>Format:</strong> ${escapeHtml(data.format_label)}</p>`);
+    }
+
+    // Quantity Litre
+    if (data.quantity_litre) {
+        lines.push(`<p class="mb-1"><strong>Quantity:</strong> ${escapeHtml(data.quantity_litre)}L</p>`);
+    }
+
+    // Packs Needed
+    if (data.packs_needed) {
+        lines.push(`<p class="mb-1"><strong>Packs:</strong> ${escapeHtml(data.packs_needed)}</p>`);
+    }
+
+    // Total Litre (if different from quantity_litre)
+    if (data.total_litre && data.quantity_litre && data.total_litre > data.quantity_litre) {
+        const surplusText = data.surplus_litre ? ` (${escapeHtml(data.surplus_litre)}L surplus)` : '';
+        lines.push(`<p class="mb-1 text-muted small"><strong>Total Volume:</strong> ${escapeHtml(data.total_litre)}L${surplusText}</p>`);
+    }
+
+    detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
+}
+
+function escapeHtml(text) {
+    if (text === undefined || text === null) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Function to update item display with all price information
@@ -2244,6 +2286,11 @@ function updateItemDisplay(item, data) {
         item.dataset.quantity = data.quantity || 1;
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
+    } else if (data.type === 'chemical') {
+        item.dataset.unitPrice = data.unit_price || 0;
+        item.dataset.quantity = data.quantity || 1;
+        item.dataset.discountPercent = data.discount_percent || 0;
+        item.dataset.gstPercent = data.gst_percent || 18;
     }
 
     // Sync additional metadata used in the descriptive section
@@ -2263,7 +2310,14 @@ function updateItemDisplay(item, data) {
         'display_width_mm',
         'display_size_label',
         'cut_to_custom_size',
-        'rate_per_sqmt'
+        'rate_per_sqmt',
+        'category',
+        'format_label',
+        'pack_size_litre',
+        'quantity_litre',
+        'packs_needed',
+        'total_litre',
+        'surplus_litre'
     ];
 
     metadataFields.forEach(field => {
@@ -2635,10 +2689,55 @@ function updateItemDisplay(item, data) {
         if (totalElement) {
             totalElement.textContent = `₹${total.toFixed(2)}`;
         }
+    } else if (data.type === 'chemical') {
+        // Handle chemical items
+        const unitPrice = parseFloat(data.unit_price || item.getAttribute('data-unit-price') || 0);
+        const quantity = parseInt(data.quantity || 1);
+        const discountPercent = parseFloat(data.discount_percent || item.getAttribute('data-discount-percent') || 0);
+        const gstPercent = parseFloat(data.gst_percent || item.getAttribute('data-gst-percent') || 18);
+
+        // Calculate prices
+        const subtotal = unitPrice * quantity;
+        const discountAmount = (subtotal * discountPercent) / 100;
+        const discountedSubtotal = subtotal - discountAmount;
+        const gstAmount = (discountedSubtotal * gstPercent) / 100;
+        const total = discountedSubtotal + gstAmount;
+
+        // Update all price displays
+        const updatePriceElement = (selector, value, prefix = '₹') => {
+            const elements = item.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (el) el.textContent = `${prefix}${value.toFixed(2)}`;
+            });
+        };
+
+        updatePriceElement('.unit-price, .item-unit-price', unitPrice);
+        updatePriceElement('.subtotal, .item-subtotal, .subtotal-value', subtotal);
+        updatePriceElement('.discount-amount, .item-discount', discountAmount);
+        updatePriceElement('.total-before-gst, .pre-gst-total, .item-total-before-gst', discountedSubtotal);
+        updatePriceElement('.gst-amount, .item-gst', gstAmount);
+        updatePriceElement('.total-amount, .item-total, .total-value', total);
+
+        // Update hidden inputs
+        const hiddenGstInput = item.querySelector('input[name$="_gst_amount"]');
+        if (hiddenGstInput) {
+            hiddenGstInput.value = gstAmount.toFixed(2);
+        }
+
+        const hiddenTotalInput = item.querySelector('input[name$="_total"]');
+        if (hiddenTotalInput) {
+            hiddenTotalInput.value = total.toFixed(2);
+        }
+
+        // Update total
+        const totalElement = item.querySelector('.total-value');
+        if (totalElement) {
+            totalElement.textContent = `₹${total.toFixed(2)}`;
+        }
     }
-    
-    // Removed recursive call to prevent infinite loop
+
+    // Update cart totals after item updates
+    updateCartTotals();
 }
 
 // End of file
-
