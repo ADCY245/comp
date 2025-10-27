@@ -2213,80 +2213,104 @@ function renderMPackDetails(item, data) {
     detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
 }
 
-function renderChemicalDetails(item, data) {
+function renderChemicalMaintenanceDetails(item, data) {
     const detailsEl = item.querySelector('.product-details');
     if (!detailsEl) return;
+
+    const getValue = (key, attrName = `data-${key.replace(/_/g, '-')}`) => {
+        if (data && Object.prototype.hasOwnProperty.call(data, key)) {
+            const value = data[key];
+            if (value !== undefined && value !== null && value !== '') {
+                return value;
+            }
+        }
+
+        const attrValue = item.getAttribute(attrName);
+        return attrValue !== null ? attrValue : undefined;
+    };
 
     const lines = [];
 
     // Machine
-    if (data.machine) {
-        lines.push(`<p class="mb-1"><strong>Machine:</strong> ${escapeHtml(data.machine)}</p>`);
+    const machine = getValue('machine');
+    if (machine) {
+        lines.push(`<p class="mb-1"><strong>Machine:</strong> ${escapeHtml(machine)}</p>`);
     }
 
     // Category
-    if (data.category) {
-        lines.push(`<p class="mb-1"><strong>Category:</strong> ${escapeHtml(data.category)}</p>`);
+    const category = getValue('category');
+    if (category) {
+        lines.push(`<p class="mb-1"><strong>Category:</strong> ${escapeHtml(category)}</p>`);
     }
 
     // Format Label
-    if (data.format_label) {
-        lines.push(`<p class="mb-1"><strong>Format:</strong> ${escapeHtml(data.format_label)}</p>`);
+    const formatLabel = getValue('format_label');
+    if (formatLabel) {
+        lines.push(`<p class="mb-1"><strong>Format:</strong> ${escapeHtml(formatLabel)}</p>`);
     }
 
     // Quantity Litre
-    if (data.quantity_litre) {
-        lines.push(`<p class="mb-1"><strong>Quantity:</strong> ${escapeHtml(data.quantity_litre)}L</p>`);
+    const quantityLitre = getValue('quantity_litre');
+    if (quantityLitre) {
+        lines.push(`<p class="mb-1"><strong>Quantity:</strong> ${escapeHtml(quantityLitre)}L</p>`);
     }
 
     // Packs Needed
-    if (data.packs_needed) {
-        lines.push(`<p class="mb-1"><strong>Packs:</strong> ${escapeHtml(data.packs_needed)}</p>`);
+    const packsNeeded = getValue('packs_needed');
+    if (packsNeeded) {
+        lines.push(`<p class="mb-1"><strong>Packs:</strong> ${escapeHtml(packsNeeded)}</p>`);
     }
 
     // Total Litre (if different from quantity_litre)
-    if (data.total_litre && data.quantity_litre && data.total_litre > data.quantity_litre) {
-        const surplusText = data.surplus_litre ? ` (${escapeHtml(data.surplus_litre)}L surplus)` : '';
-        lines.push(`<p class="mb-1 text-muted small"><strong>Total Volume:</strong> ${escapeHtml(data.total_litre)}L${surplusText}</p>`);
+    const totalLitre = getValue('total_litre');
+    const surplusLitre = getValue('surplus_litre');
+    if (totalLitre && quantityLitre && parseFloat(totalLitre) > parseFloat(quantityLitre)) {
+        const surplusText = surplusLitre ? ` (${escapeHtml(surplusLitre)}L surplus)` : '';
+        lines.push(`<p class="mb-1 text-muted small"><strong>Total Volume:</strong> ${escapeHtml(totalLitre)}L${surplusText}</p>`);
     }
 
     detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
 }
 
-function escapeHtml(text) {
-    if (text === undefined || text === null) return '';
-    return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+function updateProductDetails(item, data) {
+    const type = data.type || item.getAttribute('data-type');
+    if (type === 'blanket') {
+        renderBlanketDetails(item, data);
+    } else if (type === 'mpack') {
+        renderMPackDetails(item, data);
+    } else if (type === 'chemical' || type === 'maintenance') {
+        renderChemicalMaintenanceDetails(item, data);
+    }
 }
 
-// Function to update item display with all price information
 function updateItemDisplay(item, data) {
     if (!item || !data) return;
-    
+
+    const type = data.type || item.getAttribute('data-type');
+    if (!data.type && type) {
+        data.type = type;
+    }
+
     // Initialize variables to avoid reference errors
     let discountAmount = 0;
     let discountPercent = 0;
     let quantity = 1;
     let gstAmount = 0;
     let total = 0;
-    
+
     // Update the data attributes with the latest values
-    if (data.type === 'blanket') {
+    if (type === 'blanket') {
         item.dataset.basePrice = data.base_price || 0;
         item.dataset.barPrice = data.bar_price || 0;
         item.dataset.quantity = data.quantity || 1;
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
-    } else if (data.type === 'mpack') {
+    } else if (type === 'mpack') {
         item.dataset.unitPrice = data.unit_price || 0;
         item.dataset.quantity = data.quantity || 1;
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
-    } else if (data.type === 'chemical') {
+    } else if (type === 'chemical' || type === 'maintenance') {
         item.dataset.unitPrice = data.unit_price || 0;
         item.dataset.quantity = data.quantity || 1;
         item.dataset.discountPercent = data.discount_percent || 0;
@@ -2321,16 +2345,16 @@ function updateItemDisplay(item, data) {
     ];
 
     metadataFields.forEach(field => {
-        if (Object.prototype.hasOwnProperty.call(data, field)) {
-            const attrName = `data-${field.replace(/_/g, '-')}`;
-            const value = data[field];
+        if (!Object.prototype.hasOwnProperty.call(data, field)) return;
 
-            if (value === undefined || value === null || value === '') {
-                item.removeAttribute(attrName);
-            } else {
-                item.setAttribute(attrName, value);
-            }
+        const attrName = `data-${field.replace(/_/g, '-')}`;
+        const value = data[field];
+
+        if (value === undefined || value === null || value === '') {
+            return;
         }
+
+        item.setAttribute(attrName, value);
     });
 
     // Sync name attribute for downstream lookups and headings
@@ -2355,11 +2379,10 @@ function updateItemDisplay(item, data) {
         discountInput.value = discountValue % 1 === 0 ? discountValue : discountValue.toFixed(1);
     }
 
-    // Refresh descriptive product details (machine, dimensions, etc.)
     updateProductDetails(item, data);
 
     // Update the price displays
-    if (data.type === 'blanket') {
+    if (type === 'blanket') {
         // Get dimensions and rates from data or fall back to item attributes
         const length = parseFloat(data.length || item.getAttribute('data-length') || 0) / 1000; // Convert mm to m
         const width = parseFloat(data.width || item.getAttribute('data-width') || 0) / 1000; // Convert mm to m
@@ -2465,7 +2488,7 @@ function updateItemDisplay(item, data) {
         if (hiddenTotalInput) {
             hiddenTotalInput.value = total.toFixed(2);
         }
-    } else if (data.type === 'mpack') {
+    } else if (type === 'mpack') {
         // Initialize variables at function scope
         let unitPrice, quantity, subtotal, discountPercent, discountAmount, totalBeforeGst, gstPercent;
         
@@ -2681,7 +2704,7 @@ function updateItemDisplay(item, data) {
         // Update pre-GST total
         const preGstTotalElement = item.querySelector('.pre-gst-total .pre-gst-amount');
         if (preGstTotalElement) {
-            preGstTotalElement.textContent = `₹${taxableAmount.toFixed(2)}`;
+            preGstTotalElement.textContent = `₹${totalBeforeGst.toFixed(2)}`;
         }
         
         // Update total
@@ -2689,7 +2712,7 @@ function updateItemDisplay(item, data) {
         if (totalElement) {
             totalElement.textContent = `₹${total.toFixed(2)}`;
         }
-    } else if (data.type === 'chemical') {
+    } else if (type === 'chemical' || type === 'maintenance') {
         // Handle chemical items
         const unitPrice = parseFloat(data.unit_price || item.getAttribute('data-unit-price') || 0);
         const quantity = parseInt(data.quantity || 1);
@@ -2702,6 +2725,57 @@ function updateItemDisplay(item, data) {
         const discountedSubtotal = subtotal - discountAmount;
         const gstAmount = (discountedSubtotal * gstPercent) / 100;
         const total = discountedSubtotal + gstAmount;
+
+        const resolveValue = (key, attrName = `data-${key.replace(/_/g, '-')}`) => {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                const value = data[key];
+                if (value !== undefined && value !== null && value !== '') {
+                    return value;
+                }
+            }
+
+            const attrValue = item.getAttribute(attrName);
+            return attrValue !== null ? attrValue : undefined;
+        };
+
+        const dataAttributes = {
+            'data-unit-price': unitPrice,
+            'data-quantity': quantity,
+            'data-discount-percent': discountPercent,
+            'data-gst-percent': gstPercent,
+            'data-machine': resolveValue('machine'),
+            'data-category': resolveValue('category'),
+            'data-name': resolveValue('name', 'data-name'),
+            'data-type': type,
+            'data-format-label': resolveValue('format_label'),
+            'data-pack-size-litre': resolveValue('pack_size_litre'),
+            'data-quantity-litre': resolveValue('quantity_litre'),
+            'data-packs-needed': resolveValue('packs_needed'),
+            'data-total-litre': resolveValue('total_litre'),
+            'data-surplus-litre': resolveValue('surplus_litre')
+        };
+
+        Object.entries(dataAttributes).forEach(([attr, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                item.setAttribute(attr, value);
+            }
+        });
+
+        const quantityInput = item.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.value = quantity;
+        }
+
+        const discountInput = item.querySelector('.discount-input');
+        if (discountInput && Object.prototype.hasOwnProperty.call(data, 'discount_percent')) {
+            const discountValue = Number(data.discount_percent || 0);
+            discountInput.value = discountValue % 1 === 0 ? discountValue : discountValue.toFixed(1);
+        }
+
+        const quantityDisplays = item.querySelectorAll('.quantity-display, .item-quantity');
+        quantityDisplays.forEach(el => {
+            el.textContent = quantity;
+        });
 
         // Update all price displays
         const updatePriceElement = (selector, value, prefix = '₹') => {
@@ -2735,9 +2809,6 @@ function updateItemDisplay(item, data) {
             totalElement.textContent = `₹${total.toFixed(2)}`;
         }
     }
-
-    // Update cart totals after item updates
-    updateCartTotals();
 }
 
 // End of file
