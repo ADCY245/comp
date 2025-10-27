@@ -86,15 +86,17 @@
 
     if (updateDiscountBtn) {
       updateDiscountBtn.addEventListener('click', () => {
-        updatePricingBreakdown();
         updateSummary();
       });
     }
 
     if (discountInput) {
       discountInput.addEventListener('input', () => {
-        const value = parseFloat(discountInput.value) || 0;
-        discountInput.value = Math.max(0, Math.min(100, value)); // Clamp between 0-100
+        const rawValue = parseFloat(discountInput.value);
+        const finiteValue = Number.isFinite(rawValue) ? rawValue : 0;
+        const clampedValue = Math.max(0, Math.min(100, finiteValue));
+        discountInput.value = clampedValue;
+        updateSummary();
       });
 
       discountInput.addEventListener('keydown', (event) => {
@@ -381,20 +383,23 @@
     }
 
     if (state.selectedFormat) {
-      const size = state.selectedFormat.size_litre;
-      const meta = size ? `${size} litre pack` : 'Pack size not specified';
-      items.push(summaryItem('Packaging', state.selectedFormat.label || 'Selected format', meta));
+      const size = state.selectedFormat.size_litre ? `${state.selectedFormat.size_litre} litre pack` : 'Pack size not specified';
+      const detail = state.selectedFormat.label || 'Selected format';
+      items.push(summaryItem('Packaging', detail, size));
     }
 
-    if (state.selectedFormat && Number.isFinite(state.quantityLitres) && state.quantityLitres > 0) {
-      const size = state.selectedFormat.size_litre || 0;
-      let detail = `${formatNumber(state.quantityLitres)} L requested`;
+    const quantityLitresValue = Number(state.quantityLitres);
+    const hasValidQuantity = Number.isFinite(quantityLitresValue) && quantityLitresValue > 0;
+
+    if (state.selectedFormat && hasValidQuantity) {
+      const size = Number(state.selectedFormat.size_litre) || 0;
+      let detail = `${formatNumber(quantityLitresValue)} L requested`;
 
       if (size > 0) {
-        const containers = Math.ceil(state.quantityLitres / size);
+        const containers = Math.ceil(quantityLitresValue / size);
         const achievedLitres = containers * size;
-        const surplus = achievedLitres - state.quantityLitres;
-        detail = `${formatNumber(state.quantityLitres)} L → ${containers} × ${state.selectedFormat.label}`;
+        const surplus = achievedLitres - quantityLitresValue;
+        detail = `${formatNumber(quantityLitresValue)} L → ${containers} × ${state.selectedFormat.label}`;
         if (surplus > 0) {
           detail += ` (covers ${formatNumber(achievedLitres)} L, ${formatNumber(surplus)} L surplus)`;
         }
@@ -403,35 +408,48 @@
       items.push(summaryItem('Quantity', detail));
     }
 
-    // Show pricing summary if pricing section is visible
-    if (pricingSection && pricingSection.style.display === 'block') {
-      const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
-      const discountLabel = currentDiscount > 0 ? ` (${currentDiscount}% discount)` : '';
+    const hasCompleteSelection = Boolean(
+      state.selectedCategory &&
+      state.selectedProduct &&
+      state.selectedFormat &&
+      hasValidQuantity
+    );
+
+    if (hasCompleteSelection) {
+      const discountValue = discountInput ? parseFloat(discountInput.value) : 0;
+      const discountPercent = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
+      const discountLabel = discountPercent > 0 ? ` (${discountPercent}% discount)` : '';
 
       items.push(summaryItem('Pricing', `Standard Pricing${discountLabel}`));
 
-      // Calculate current total for summary display
-      if (state.selectedFormat && state.quantityLitres) {
-        const format = state.selectedFormat;
-        const quantityLitres = state.quantityLitres;
-        const packSize = format.size_litre;
-        const packsNeeded = Math.ceil(quantityLitres / packSize);
-        const basePricePerPack = 100;
-        const subtotal = basePricePerPack * packsNeeded;
+      const format = state.selectedFormat;
+      const packSizeRaw = Number(format.size_litre);
+      const packSize = (Number.isFinite(packSizeRaw) && packSizeRaw > 0) ? packSizeRaw : quantityLitresValue || 1;
+      const packsNeeded = Math.max(1, Math.ceil(quantityLitresValue / packSize));
+      const basePricePerPack = 100;
+      const subtotal = basePricePerPack * packsNeeded;
 
-        const discountAmount = (subtotal * currentDiscount) / 100;
-        const discountedSubtotal = subtotal - discountAmount;
-        const gstAmount = (discountedSubtotal * 18) / 100;
-        const finalTotal = discountedSubtotal + gstAmount;
+      const discountAmount = (subtotal * discountPercent) / 100;
+      const discountedSubtotal = subtotal - discountAmount;
+      const gstPercent = 18;
+      const gstAmount = (discountedSubtotal * gstPercent) / 100;
+      const finalTotal = discountedSubtotal + gstAmount;
 
-        items.push(summaryItem('Total Price', `₹${finalTotal.toFixed(2)} incl. GST`));
-      }
+      items.push(summaryItem('Total Price', `₹${finalTotal.toFixed(2)} incl. GST`));
     }
 
-    // Show/hide pricing section based on complete selection
     if (pricingSection && pricingBreakdown) {
-      const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
       pricingSection.style.display = hasCompleteSelection ? 'block' : 'none';
+
+      if (hasCompleteSelection) {
+        updatePricingBreakdown();
+      } else {
+        pricingBreakdown.innerHTML = '';
+        const actionsContainer = pricingSection.querySelector('.pricing-actions');
+        if (actionsContainer) {
+          actionsContainer.remove();
+        }
+      }
     }
 
     if (!items.length) {
@@ -442,16 +460,21 @@
   }
 
   function updatePricingBreakdown() {
-    if (!pricingBreakdown || !state.selectedFormat || !state.quantityLitres) {
+    if (!pricingSection || !pricingBreakdown || !state.selectedFormat) {
+      return;
+    }
+
+    const quantityLitresValue = Number(state.quantityLitres);
+    if (!Number.isFinite(quantityLitresValue) || quantityLitresValue <= 0) {
       return;
     }
 
     const format = state.selectedFormat;
-    const quantityLitres = state.quantityLitres;
-    const packSize = format.size_litre;
+    const packSizeRaw = Number(format.size_litre);
+    const packSize = (Number.isFinite(packSizeRaw) && packSizeRaw > 0) ? packSizeRaw : quantityLitresValue || 1;
 
     // Calculate number of packs needed
-    const packsNeeded = Math.ceil(quantityLitres / packSize);
+    const packsNeeded = Math.max(1, Math.ceil(quantityLitresValue / packSize));
     const totalLitres = packsNeeded * packSize;
 
     // Base pricing
@@ -459,7 +482,8 @@
     const subtotal = basePricePerPack * packsNeeded;
 
     // Get current discount from DOM
-    const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+    const discountValue = discountInput ? parseFloat(discountInput.value) : 0;
+    const currentDiscount = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
 
     // Calculate discount and final pricing
     const discountAmount = (subtotal * currentDiscount) / 100;

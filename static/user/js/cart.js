@@ -2088,15 +2088,6 @@ function removeFromCart(event, itemId, callback) {
                     // Show success message
                     showToast('Success', 'Item removed from cart', 'success');
 
-                    // If no items left, show empty cart message
-                    const cartItems = document.querySelectorAll('.cart-item');
-                    if (cartItems.length === 0) {
-                        const cartItemsWrapper = document.getElementById('cartItems');
-                        if (cartItemsWrapper) cartItemsWrapper.style.display = 'none';
-                        const emptyState = document.getElementById('emptyCart');
-                        if (emptyState) emptyState.style.display = 'block';
-                    }
-
                     // Call the callback if provided
                     if (typeof callback === 'function') {
                         callback();
