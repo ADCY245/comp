@@ -866,19 +866,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Re-initialize company info after cart is loaded to ensure it's displayed
         setTimeout(initCompanyInfo, 500);
         
-        // Initialize cart calculations
-        initializeCartCalculations();
-        
-        // Update cart totals
-        console.log('Updating cart totals...');
-        updateCartTotals();
-        
-        // Check for duplicate items
-        console.log('Checking for duplicate MPacks...');
-        checkForDuplicateMpacks();
-        
-        console.log('Checking for duplicate Blankets...');
-        checkForDuplicateBlankets();
 
         console.log('Checking for duplicate Chemicals...');
         checkForDuplicateChemicals();
@@ -1104,9 +1091,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cartContainer.style.visibility = 'visible';
         
         const observer = new MutationObserver(function() {
-            checkForDuplicateMpacks();
-            checkForDuplicateBlankets();
-            checkForDuplicateChemicals();
+            // Removed duplicate function calls
             updateCartTotals(); // Ensure totals are updated on any cart changes
         });
         
@@ -1124,11 +1109,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 500);
     }
-    
-    // Check for duplicate items on initial load
-    checkForDuplicateMpacks();
-    checkForDuplicateBlankets();
-    checkForDuplicateChemicals();
     
     console.log('Cart initialization complete');
 });
