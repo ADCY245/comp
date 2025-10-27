@@ -275,8 +275,47 @@
   color: rgba(248, 250, 252, 0.75);
 }
 
-/* Add to Cart Section */
+/* Add to Cart Section - beside machine selection */
 .add-to-cart-section {
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(5, 10, 48, 0.9));
+  color: #f8fafc;
+  padding: 1.5rem;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  min-height: fit-content;
+}
+
+.add-to-cart-section .btn-primary {
+  background: linear-gradient(135deg, rgba(196, 147, 61, 1), rgba(173, 151, 79, 1));
+  border: none;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 16px rgba(196, 147, 61, 0.3);
+}
+
+.add-to-cart-section .btn-primary:hover {
+  background: linear-gradient(135deg, rgba(173, 151, 79, 1), rgba(196, 147, 61, 1));
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(196, 147, 61, 0.4);
+}
+
+.add-to-cart-section .btn-primary:disabled {
+  opacity: 0.6;
+  transform: none;
+  box-shadow: 0 4px 8px rgba(196, 147, 61, 0.2);
+}
+
+#cart-message {
+  min-height: 1.5rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* Pricing & Discount Section */
+.pricing-section {
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(5, 10, 48, 0.9));
   color: #f8fafc;
@@ -285,27 +324,27 @@
   margin-top: 1.5rem;
 }
 
-.add-to-cart-container {
+.pricing-container {
   max-width: 600px;
   margin: 0 auto;
 }
 
-.add-to-cart-options {
+.pricing-options {
   background: rgba(248, 250, 252, 0.08);
   border-radius: 12px;
   padding: 1.5rem;
   border: 1px solid rgba(248, 250, 252, 0.1);
 }
 
-.add-to-cart-options .form-label {
+.pricing-options .form-label {
   color: rgba(248, 250, 252, 0.8);
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-.add-to-cart-options .form-select,
-.add-to-cart-options .form-control {
+.pricing-options .form-select,
+.pricing-options .form-control {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(248, 250, 252, 0.2);
   color: #1f2937;
@@ -313,13 +352,13 @@
   padding: 0.75rem 1rem;
 }
 
-.add-to-cart-options .form-select:focus,
-.add-to-cart-options .form-control:focus {
+.pricing-options .form-select:focus,
+.pricing-options .form-control:focus {
   border-color: rgba(196, 147, 61, 0.8);
   box-shadow: 0 0 0 0.2rem rgba(196, 147, 61, 0.15);
 }
 
-.add-to-cart-preview {
+.pricing-preview {
   background: rgba(248, 250, 252, 0.05);
   border-radius: 12px;
   padding: 1.25rem;
@@ -367,44 +406,20 @@
   color: rgba(196, 147, 61, 1);
 }
 
-.add-to-cart-section .btn-primary {
-  background: linear-gradient(135deg, rgba(196, 147, 61, 1), rgba(173, 151, 79, 1));
-  border: none;
-  color: #0f172a;
-  font-weight: 600;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 16px rgba(196, 147, 61, 0.3);
-}
-
-.add-to-cart-section .btn-primary:hover {
-  background: linear-gradient(135deg, rgba(173, 151, 79, 1), rgba(196, 147, 61, 1));
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(196, 147, 61, 0.4);
-}
-
-.add-to-cart-section .btn-primary:disabled {
-  opacity: 0.6;
-  transform: none;
-  box-shadow: 0 4px 8px rgba(196, 147, 61, 0.2);
-}
-
-#cart-message {
-  min-height: 1.5rem;
-  font-weight: 500;
-}
-
 @media (max-width: 767.98px) {
   .add-to-cart-section {
     padding: 1.5rem;
   }
 
-  .add-to-cart-options .row {
+  .pricing-section {
+    padding: 1.5rem;
+  }
+
+  .pricing-options .row {
     --bs-gutter-x: 1rem;
   }
 
-  .add-to-cart-options .col-md-6 {
+  .pricing-options .col-md-6 {
     margin-bottom: 1rem;
   }
 }

@@ -10,6 +10,8 @@
   const quantityHelper = document.getElementById('quantityHelper');
   const summaryBody = document.getElementById('chemSummaryBody');
   const addToCartBtn = document.getElementById('addToCartBtn');
+  const addToCartSection = document.getElementById('addToCartSection');
+  const pricingSection = document.getElementById('pricingSection');
   const pricingTierSelect = document.getElementById('pricingTier');
   const additionalDiscountInput = document.getElementById('additionalDiscount');
   const pricingBreakdown = document.getElementById('pricingBreakdown');
@@ -432,8 +434,8 @@
       items.push(summaryItem('Quantity', detail));
     }
 
-    // Show pricing summary if Add to Cart section is visible
-    if (addToCartSection && addToCartSection.style.display === 'block' && state.calculatedPricing) {
+    // Show pricing summary if pricing section is visible
+    if (pricingSection && pricingSection.style.display === 'block' && state.calculatedPricing) {
       const pricing = state.calculatedPricing;
       const tierDiscount = pricing.tierDiscount + state.additionalDiscount;
       const discountLabel = tierDiscount > 0 ? ` (${tierDiscount}% discount)` : '';
@@ -442,10 +444,15 @@
       items.push(summaryItem('Total Price', `₹${pricing.finalTotal.toFixed(2)} incl. GST`));
     }
 
-    // Show/hide Add to Cart button based on complete selection
+    // Show/hide sections based on complete selection
     if (addToCartSection && addToCartBtn) {
       const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
       addToCartSection.style.display = hasCompleteSelection ? 'block' : 'none';
+    }
+
+    if (pricingSection && pricingBreakdown) {
+      const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
+      pricingSection.style.display = hasCompleteSelection ? 'block' : 'none';
 
       if (hasCompleteSelection) {
         updatePricingBreakdown();
@@ -665,6 +672,9 @@
     }
     if (addToCartSection) {
       addToCartSection.style.display = 'none';
+    }
+    if (pricingSection) {
+      pricingSection.style.display = 'none';
     }
     if (pricingTierSelect) {
       pricingTierSelect.value = 'standard';
