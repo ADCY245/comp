@@ -2406,71 +2406,69 @@ function updateItemDisplay(item, data) {
         if (hiddenGstInput) {
             hiddenGstInput.value = gstAmount.toFixed(2);
         }
-        
+
         const hiddenTotalInput = item.querySelector('input[name$="_total"]');
         if (hiddenTotalInput) {
             hiddenTotalInput.value = total.toFixed(2);
         }
-    } else if (data.type === 'mpack') {
+    } else if (data.type === 'mpack' || data.type === 'chemical') {
         // Initialize variables at function scope
         let unitPrice, quantity, subtotal, discountPercent, discountAmount, totalBeforeGst, gstPercent;
-        
+
         try {
-            // Handle mpack items
+            // Handle mpack and chemical items
             unitPrice = parseFloat(data.unit_price || item.getAttribute('data-unit-price') || 0);
             quantity = parseInt(data.quantity || 1);
-            subtotal = unitPrice * quantity;
             discountPercent = parseFloat(data.discount_percent || item.getAttribute('data-discount-percent') || 0);
+            gstPercent = parseFloat(data.gst_percent || item.getAttribute('data-gst-percent') || 18);
+
+            // Calculate prices
+            subtotal = unitPrice * quantity;
             discountAmount = (subtotal * discountPercent) / 100;
             totalBeforeGst = subtotal - discountAmount;
-            gstPercent = parseFloat(data.gst_percent || item.getAttribute('data-gst-percent') || 12);
             gstAmount = (totalBeforeGst * gstPercent) / 100;
             total = totalBeforeGst + gstAmount;
-            
+
             // Update all item data attributes from the data object
             const dataAttributes = {
                 'data-unit-price': unitPrice,
                 'data-quantity': quantity,
                 'data-discount-percent': discountPercent,
                 'data-gst-percent': gstPercent,
-                'data-thickness': data.thickness || item.getAttribute('data-thickness'),
-                'data-size': data.size || item.getAttribute('data-size'),
-                'data-display-size-label': data.display_size_label || item.getAttribute('data-display-size-label'),
                 'data-machine': data.machine || item.getAttribute('data-machine'),
                 'data-type': data.type || item.getAttribute('data-type'),
                 'data-name': data.name || item.getAttribute('data-name'),
-                'data-display-length-mm': data.display_length_mm || item.getAttribute('data-display-length-mm'),
-                'data-display-width-mm': data.display_width_mm || item.getAttribute('data-display-width-mm')
+                'data-format-label': data.format_label || item.getAttribute('data-format-label'),
+                'data-pack-size-litre': data.pack_size_litre || item.getAttribute('data-pack-size-litre'),
+                'data-quantity-litre': data.quantity_litre || item.getAttribute('data-quantity-litre'),
+                'data-packs-needed': data.packs_needed || item.getAttribute('data-packs-needed'),
+                'data-total-litre': data.total_litre || item.getAttribute('data-total-litre'),
+                'data-surplus-litre': data.surplus_litre || item.getAttribute('data-surplus-litre'),
+                'data-thickness': data.thickness || item.getAttribute('data-thickness'),
+                'data-size': data.size || item.getAttribute('data-size'),
+                'data-display-size-label': data.display_size_label || item.getAttribute('data-display-size-label'),
+                'data-category': data.category || item.getAttribute('data-category')
             };
-            
+
             // Set all data attributes on the item
             Object.entries(dataAttributes).forEach(([key, value]) => {
                 if (value !== null && value !== undefined) {
                     item.setAttribute(key, value);
                 }
             });
-            
-            // Debug logging
-            console.log('MPack update:', { 
-                unitPrice, 
-                quantity, 
-                subtotal, 
-                discountPercent, 
-                discountAmount, 
-                totalBeforeGst, 
-                gstPercent, 
-                gstAmount, 
-                total,
-                dataAttributes
-            });
-            
-            // Update all display elements with the latest data
-            const updateElement = (selector, value, suffix = '') => {
-                const elements = item.querySelectorAll(selector);
-                elements.forEach(el => {
-                    if (el) el.textContent = value + (suffix ? ` ${suffix}` : '');
-                });
-            };
+
+            // Update quantity display
+            const quantityInput = item.querySelector('.quantity-input');
+            if (quantityInput) {
+                quantityInput.value = quantity;
+            }
+
+            // Update discount input if present
+            const discountInput = item.querySelector('.discount-input');
+            if (discountInput && Object.prototype.hasOwnProperty.call(data, 'discount_percent')) {
+                const discountValue = Number(data.discount_percent || 0);
+                discountInput.value = discountValue % 1 === 0 ? discountValue : discountValue.toFixed(1);
+            }
 
             // Update all price displays
             const updatePriceElement = (selector, value, prefix = '₹') => {
@@ -2480,95 +2478,24 @@ function updateItemDisplay(item, data) {
                 });
             };
 
-            // Update thickness display
-            const thickness = data.thickness || item.getAttribute('data-thickness');
-            if (thickness) {
-                updateElement('.thickness-value, .item-thickness', thickness, 'micron');
-            }
-            
-            // Update size display
-            const sizeLabel = data.display_size_label || data.size || item.getAttribute('data-display-size-label') || item.getAttribute('data-size');
-            if (sizeLabel) {
-                // Update the data attributes
-                item.setAttribute('data-size', sizeLabel);
-                item.setAttribute('data-display-size-label', sizeLabel);
-                
-                // Update all size displays in the item
-                const sizeDisplays = item.querySelectorAll('.size-value, .mpack-size, .item-size, .size-display .size-value');
-                sizeDisplays.forEach(display => {
-                    if (display.classList.contains('size-display')) {
-                        // If it's the container, update the span inside it
-                        const span = display.querySelector('span.size-value');
-                        if (span) span.textContent = sizeLabel;
-                    } else {
-                        // Direct update for other elements
-                        display.textContent = sizeLabel;
-                    }
-                });
-                console.log('Updated size display to:', sizeLabel);
-            }
-            
-            // Update machine display
-            const machine = data.machine || item.getAttribute('data-machine');
-            if (machine) {
-                updateElement('.machine-value, .item-machine', machine);
-            }
-            
-            // Update type display
-            const type = data.type || item.getAttribute('data-type');
-            if (type) {
-                updateElement('.type-value, .item-type', type);
-            }
-            
-            // Update quantity display
-            updateElement('.quantity-display, .item-quantity', quantity);
-            
-            // Update price displays
             updatePriceElement('.unit-price, .item-unit-price', unitPrice);
-            
-            // Explicitly update subtotal elements to ensure they're updated
-            const subtotalElements = item.querySelectorAll('.subtotal, .item-subtotal, .subtotal-value');
-            subtotalElements.forEach(el => {
-                el.textContent = `₹${subtotal.toFixed(2)}`;
-            });
-            
-            // Also update any hidden inputs that might store the subtotal
-            const subtotalInputElements = item.querySelectorAll('input[type="hidden"][name$="_subtotal"]');
-            subtotalInputElements.forEach(input => {
-                input.value = subtotal.toFixed(2);
-            });
-            
+            updatePriceElement('.subtotal, .item-subtotal, .subtotal-value', subtotal);
             updatePriceElement('.discount-amount, .item-discount', discountAmount);
             updatePriceElement('.total-before-gst, .pre-gst-total, .item-total-before-gst', totalBeforeGst);
             updatePriceElement('.gst-amount, .item-gst', gstAmount);
             updatePriceElement('.total-amount, .item-total, .total-value', total);
-            
+
             // Update hidden inputs
             const hiddenGstInput = item.querySelector('input[name$="_gst_amount"]');
             if (hiddenGstInput) {
                 hiddenGstInput.value = gstAmount.toFixed(2);
             }
-            
+
             const hiddenTotalInput = item.querySelector('input[name$="_total"]');
             if (hiddenTotalInput) {
                 hiddenTotalInput.value = total.toFixed(2);
             }
-            
-            // Debug log the final state
-            console.log('Updated MPack item display:', {
-                unitPrice,
-                quantity,
-                subtotal,
-                discountAmount,
-                totalBeforeGst,
-                gstAmount,
-                total,
-                size,
-                thickness,
-                machine,
-                type
-            });
-            
+
             // Update discount row if it exists
             const discountRow = item.querySelector('.discount-row');
             if (discountRow) {
@@ -2580,28 +2507,42 @@ function updateItemDisplay(item, data) {
                     if (discountAmountElement) {
                         discountAmountElement.textContent = `-₹${discountAmount.toFixed(2)}`;
                     }
-                    
-                    // Update after discount value for MPack items
-                    const afterDiscountElement = item.querySelector('.after-discount-amount');
-                    if (afterDiscountElement) {
-                        afterDiscountElement.textContent = `₹${(subtotal - discountAmount).toFixed(2)}`;
-                    }
-                    
+
                     const discountPercentElement = discountRow.querySelector('.discount-percent');
                     if (discountPercentElement) {
                         discountPercentElement.textContent = `${discountPercent}%`;
                     }
                 } else {
                     discountRow.style.display = 'none';
-                    
-                    // Reset after discount value when no discount
-                    const afterDiscountElement = item.querySelector('.after-discount-amount');
-                    if (afterDiscountElement) {
-                        afterDiscountElement.textContent = `₹${subtotal.toFixed(2)}`;
-                    }
                 }
             }
-            
+
+            // Update GST row if it exists
+            const gstRow = item.querySelector('.gst-row');
+            if (gstRow) {
+                const gstAmountElement = gstRow.querySelector('.gst-amount') || 
+                                       gstRow.querySelector('span:last-child');
+                if (gstAmountElement) {
+                    gstAmountElement.textContent = `₹${gstAmount.toFixed(2)}`;
+                }
+                const gstPercentElement = gstRow.querySelector('.gst-percent');
+                if (gstPercentElement) {
+                    gstPercentElement.textContent = `${gstPercent}%`;
+                }
+            }
+
+            // Update pre-GST total
+            const preGstTotalElement = item.querySelector('.pre-gst-total .pre-gst-amount');
+            if (preGstTotalElement) {
+                preGstTotalElement.textContent = `₹${totalBeforeGst.toFixed(2)}`;
+            }
+
+            // Update total
+            const totalElement = item.querySelector('.total-value');
+            if (totalElement) {
+                totalElement.textContent = `₹${total.toFixed(2)}`;
+            }
+
             // Update cart totals after item updates
             updateCartTotals();
         } catch (error) {
@@ -2609,36 +2550,9 @@ function updateItemDisplay(item, data) {
             showToast('Error', 'Failed to update MPack item. Please refresh the page.', 'error');
             return; // Exit the function if there's an error
         }
-        
-        // Update GST row if it exists
-        const gstRow = item.querySelector('.gst-row');
-        if (gstRow) {
-            const gstAmountElement = gstRow.querySelector('.gst-amount') || 
-                                   gstRow.querySelector('span:last-child');
-            if (gstAmountElement) {
-                gstAmountElement.textContent = `₹${gstAmount.toFixed(2)}`;
-            }
-            const gstPercentElement = gstRow.querySelector('.gst-percent');
-            if (gstPercentElement) {
-                gstPercentElement.textContent = `${gstPercent}%`;
-            }
-        }
-        
-        // Update pre-GST total
-        const preGstTotalElement = item.querySelector('.pre-gst-total .pre-gst-amount');
-        if (preGstTotalElement) {
-            preGstTotalElement.textContent = `₹${taxableAmount.toFixed(2)}`;
-        }
-        
-        // Update total
-        const totalElement = item.querySelector('.total-value');
-        if (totalElement) {
-            totalElement.textContent = `₹${total.toFixed(2)}`;
-        }
     }
-    
-    // Removed recursive call to prevent infinite loop
 }
 
-// End of file
 
+
+// ... (rest of the code remains the same)
