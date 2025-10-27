@@ -1290,28 +1290,99 @@ function updateCartTotals() {
         let totalGst = 0;
         let total = 0;
         let totalItems = 0;
-        
+
         const cartItems = document.querySelectorAll('.cart-item');
         const emptyCart = document.getElementById('emptyCart');
         const cartItemsContainer = document.getElementById('cartItems');
-        
-        // Show/hide empty cart message
+        const cartContainer = document.getElementById('cart-container') || document.querySelector('.cart-container');
+        let cartSummary = document.getElementById('cartSummary');
+        const cartFooter = cartContainer ? cartContainer.querySelector('.cart-footer') : document.querySelector('.cart-footer');
+        const sendQuotationBtn = document.getElementById('sendQuotationBtn');
+        const clearCartBtn = document.getElementById('clearCartBtn');
+        const clearCartBtnFooter = document.getElementById('clearCartBtnFooter');
+
+        // Ensure the cart summary container exists
+        if (!cartSummary) {
+            cartSummary = document.createElement('div');
+            cartSummary.id = 'cartSummary';
+            cartSummary.className = 'cart-summary mt-4';
+
+            if (cartContainer) {
+                if (cartFooter) {
+                    cartContainer.insertBefore(cartSummary, cartFooter);
+                } else {
+                    cartContainer.appendChild(cartSummary);
+                }
+            } else {
+                document.body.appendChild(cartSummary);
+            }
+        }
+
+        if (cartFooter) {
+            cartFooter.style.display = 'flex';
+        }
+
+        // Handle empty cart state
         if (cartItems.length === 0) {
             if (emptyCart) emptyCart.style.display = 'block';
-            if (cartItemsContainer) cartItemsContainer.style.display = 'flex';
-            
-            // Clear the cart summary
-            const cartSummary = document.getElementById('cartSummary');
-            if (cartSummary) {
-                cartSummary.innerHTML = '';
-                cartSummary.style.display = 'none';
+            if (cartItemsContainer) cartItemsContainer.style.display = 'none';
+
+            cartSummary.style.display = 'block';
+            cartSummary.style.visibility = 'visible';
+            cartSummary.style.opacity = '1';
+            cartSummary.innerHTML = `
+                <div class="card">
+                    <div class="card-body text-center py-4">
+                        <h5 class="card-title mb-3">Order Summary</h5>
+                        <p class="text-muted mb-1">Your cart is empty.</p>
+                        <p class="text-muted mb-0">Add items to see totals and checkout options.</p>
+                    </div>
+                </div>`;
+
+            if (sendQuotationBtn) {
+                sendQuotationBtn.classList.add('disabled');
+                sendQuotationBtn.setAttribute('aria-disabled', 'true');
+                sendQuotationBtn.style.pointerEvents = 'none';
+                sendQuotationBtn.tabIndex = -1;
             }
+
+            if (clearCartBtn) {
+                clearCartBtn.disabled = true;
+                clearCartBtn.classList.add('disabled');
+            }
+
+            if (clearCartBtnFooter) {
+                clearCartBtnFooter.disabled = true;
+                clearCartBtnFooter.classList.add('disabled');
+            }
+
             return;
-        } else {
-            if (emptyCart) emptyCart.style.display = 'none';
-            if (cartItemsContainer) cartItemsContainer.style.display = 'block';
         }
-        
+
+        if (emptyCart) emptyCart.style.display = 'none';
+        if (cartItemsContainer) {
+            cartItemsContainer.style.display = 'block';
+            cartItemsContainer.style.visibility = 'visible';
+            cartItemsContainer.style.opacity = '1';
+        }
+
+        if (sendQuotationBtn) {
+            sendQuotationBtn.classList.remove('disabled');
+            sendQuotationBtn.removeAttribute('aria-disabled');
+            sendQuotationBtn.style.pointerEvents = '';
+            sendQuotationBtn.tabIndex = 0;
+        }
+
+        if (clearCartBtn) {
+            clearCartBtn.disabled = false;
+            clearCartBtn.classList.remove('disabled');
+        }
+
+        if (clearCartBtnFooter) {
+            clearCartBtnFooter.disabled = false;
+            clearCartBtnFooter.classList.remove('disabled');
+        }
+
         // Calculate totals for all items
         cartItems.forEach(item => {
             try {
@@ -1434,19 +1505,8 @@ function updateCartTotals() {
         });
         
         // Update the cart summary
-        const cartSummary = document.getElementById('cartSummary');
-        const cartItemsContainer2 = document.getElementById('cartItems');
-        const cartContainer2 = document.getElementById('cart-container');
-
-        console.log('updateCartTotals: cartSummary element =', cartSummary);
-        console.log('updateCartTotals: cartItemsContainer element =', cartItemsContainer2);
-        console.log('updateCartTotals: cartContainer element =', cartContainer2);
-
         if (cartSummary) {
-            console.log('updateCartTotals: setting cartSummary display to block');
             cartSummary.style.display = 'block';
-
-            // Ensure cart summary is visible
             cartSummary.style.visibility = 'visible';
             cartSummary.style.opacity = '1';
 
@@ -1485,22 +1545,6 @@ function updateCartTotals() {
                         </div>
                     </div>
                 </div>`;
-            console.log('updateCartTotals: cart summary updated and shown');
-        } else {
-            console.error('updateCartTotals: cartSummary element not found!');
-        }
-
-        // Ensure cart containers are visible
-        if (cartItemsContainer2) {
-            console.log('updateCartTotals: ensuring cartItemsContainer is visible');
-            cartItemsContainer2.style.display = 'block';
-            cartItemsContainer2.style.visibility = 'visible';
-        }
-
-        if (cartContainer2) {
-            console.log('updateCartTotals: ensuring cartContainer is visible');
-            cartContainer2.style.display = 'block';
-            cartContainer2.style.visibility = 'visible';
         }
     } catch (error) {
         console.error('Error updating cart totals:', error);
