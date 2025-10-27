@@ -347,15 +347,8 @@ function normalizeCartData(cartData) {
     }
 }
 
-// Track if cart has been initialized to prevent multiple initializations
-let cartInitialized = false;
-
 // Initialize all cart handlers
 function initializeCart() {
-    if (cartInitialized) {
-        console.log('Cart already initialized, skipping...');
-        return;
-    }
     console.log('Initializing cart...');
     
     // Load and normalize cart data
@@ -430,9 +423,6 @@ function initializeCart() {
         if (emptyCartDiv) emptyCartDiv.style.display = 'none';
         if (cartItemsDiv) cartItemsDiv.style.display = 'block';
     }
-
-    // Mark cart as initialized to prevent multiple initializations
-    cartInitialized = true;
 }
 
 // Make createProductTypeModal available globally
@@ -613,6 +603,12 @@ function checkForDuplicateMpacks() {
 function checkForDuplicateBlankets() {
     try {
         const blanketItems = document.querySelectorAll('.cart-item[data-type="blanket"]');
+        console.log('checkForDuplicateBlankets: Found Blanket items:', blanketItems.length);
+        console.log('checkForDuplicateBlankets: Blanket items:', Array.from(blanketItems).map(item => ({
+            id: item.getAttribute('data-id'),
+            name: item.getAttribute('data-name'),
+            type: item.getAttribute('data-type')
+        })));
         if (!blanketItems.length) return;
 
         const seen = new Map();
@@ -850,8 +846,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initial empty state check
         updateCartEmptyState();
         
-        // Initialize the cart (only once due to the guard)
+        // Initialize cart
         initializeCart();
+        
+        // Set up continue shopping buttons
         const continueShoppingBtn = document.getElementById('continueShoppingBtn');
         const continueShoppingBtnBottom = document.getElementById('continueShoppingBtnBottom');
         
@@ -866,6 +864,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Re-initialize company info after cart is loaded to ensure it's displayed
         setTimeout(initCompanyInfo, 500);
         
+        // Initialize cart calculations
+        initializeCartCalculations();
+        
+        // Update cart totals
+        console.log('Updating cart totals...');
+        updateCartTotals();
+        
+        // Check for duplicate items
+        console.log('Checking for duplicate MPacks...');
+        checkForDuplicateMpacks();
+        
+        console.log('Checking for duplicate Blankets...');
+        checkForDuplicateBlankets();
 
         console.log('Checking for duplicate Chemicals...');
         checkForDuplicateChemicals();
@@ -1091,7 +1102,9 @@ document.addEventListener('DOMContentLoaded', function() {
         cartContainer.style.visibility = 'visible';
         
         const observer = new MutationObserver(function() {
-            // Removed duplicate function calls
+            checkForDuplicateMpacks();
+            checkForDuplicateBlankets();
+            checkForDuplicateChemicals();
             updateCartTotals(); // Ensure totals are updated on any cart changes
         });
         
@@ -1109,6 +1122,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 500);
     }
+    
+    // Initialize the cart
+    initializeCart();
+    
+    // Check for duplicate items on initial load
+    checkForDuplicateMpacks();
+    checkForDuplicateBlankets();
+    checkForDuplicateChemicals();
     
     console.log('Cart initialization complete');
 });
@@ -1274,16 +1295,8 @@ function updateCartTotals() {
         const emptyCart = document.getElementById('emptyCart');
         const cartItemsContainer = document.getElementById('cartItems');
         
-        console.log('updateCartTotals: Found cart items:', cartItems.length);
-        console.log('updateCartTotals: Cart items:', Array.from(cartItems).map(item => ({
-            id: item.getAttribute('data-item-id'),
-            name: item.getAttribute('data-name'),
-            type: item.getAttribute('data-type')
-        })));
-
         // Show/hide empty cart message
         if (cartItems.length === 0) {
-            console.log('updateCartTotals: No cart items, hiding summary');
             if (emptyCart) emptyCart.style.display = 'block';
             if (cartItemsContainer) cartItemsContainer.style.display = 'flex';
             
@@ -1292,11 +1305,9 @@ function updateCartTotals() {
             if (cartSummary) {
                 cartSummary.innerHTML = '';
                 cartSummary.style.display = 'none';
-                console.log('updateCartTotals: Cleared and hid cart summary');
             }
             return;
         } else {
-            console.log('updateCartTotals: Items found, showing summary');
             if (emptyCart) emptyCart.style.display = 'none';
             if (cartItemsContainer) cartItemsContainer.style.display = 'block';
         }
@@ -1424,12 +1435,8 @@ function updateCartTotals() {
         
         // Update the cart summary
         const cartSummary = document.getElementById('cartSummary');
-        console.log('updateCartTotals: cartItems length =', cartItems.length);
-        console.log('updateCartTotals: cartSummary element =', cartSummary);
-
         if (cartSummary) {
             cartSummary.style.display = 'block';
-            console.log('updateCartTotals: showing cart summary');
             // Round all values to 2 decimal places
             subtotal = Math.round(subtotal * 100) / 100;
             totalDiscount = Math.round(totalDiscount * 100) / 100;
@@ -2078,11 +2085,9 @@ function removeFromCart(event, itemId, callback) {
                 
                 // Wait for the fade-out animation to complete before removing
                 setTimeout(() => {
-                    console.log('removeFromCart: removing item element');
                     itemElement.remove();
 
                     // Update cart count and totals
-                    console.log('removeFromCart: calling updateCartCount and updateCartTotals');
                     updateCartCount(data.cart_count || 0);
                     updateCartTotals();
 
@@ -2302,7 +2307,13 @@ function renderMPackDetails(item, data) {
 
 function renderChemicalMaintenanceDetails(item, data) {
     const detailsEl = item.querySelector('.product-details');
-    if (!detailsEl) return;
+    if (!detailsEl) {
+        console.warn('renderChemicalMaintenanceDetails: No .product-details element found');
+        return;
+    }
+
+    console.log('renderChemicalMaintenanceDetails called for:', item.getAttribute('data-name'));
+    console.log('renderChemicalMaintenanceDetails data:', data);
 
     const getValue = (key, attrName = `data-${key.replace(/_/g, '-')}`) => {
         if (data && Object.prototype.hasOwnProperty.call(data, key)) {
@@ -2332,18 +2343,21 @@ function renderChemicalMaintenanceDetails(item, data) {
 
     // Format Label
     const formatLabel = getValue('format_label');
+    console.log('renderChemicalMaintenanceDetails: formatLabel =', formatLabel);
     if (formatLabel) {
         lines.push(`<p class="mb-1"><strong>Format:</strong> ${escapeHtml(formatLabel)}</p>`);
     }
 
     // Quantity Litre
     const quantityLitre = getValue('quantity_litre');
+    console.log('renderChemicalMaintenanceDetails: quantityLitre =', quantityLitre);
     if (quantityLitre) {
         lines.push(`<p class="mb-1"><strong>Quantity:</strong> ${escapeHtml(quantityLitre)}L</p>`);
     }
 
     // Packs Needed
     const packsNeeded = getValue('packs_needed');
+    console.log('renderChemicalMaintenanceDetails: packsNeeded =', packsNeeded);
     if (packsNeeded) {
         lines.push(`<p class="mb-1"><strong>Packs:</strong> ${escapeHtml(packsNeeded)}</p>`);
     }
@@ -2356,7 +2370,9 @@ function renderChemicalMaintenanceDetails(item, data) {
         lines.push(`<p class="mb-1 text-muted small"><strong>Total Volume:</strong> ${escapeHtml(totalLitre)}L${surplusText}</p>`);
     }
 
-    detailsEl.innerHTML = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
+    const content = lines.join('') || '<p class="text-muted mb-0">No additional details available.</p>';
+    console.log('renderChemicalMaintenanceDetails: final content =', content);
+    detailsEl.innerHTML = content;
 }
 
 function updateProductDetails(item, data) {
