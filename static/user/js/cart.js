@@ -597,6 +597,41 @@ function checkForDuplicateMpacks() {
     }
 }
 
+// Helper to detect duplicate Blanket items in the cart (non-destructive)
+function checkForDuplicateBlankets() {
+    try {
+        const blanketItems = document.querySelectorAll('.cart-item[data-type="blanket"]');
+        if (!blanketItems.length) return;
+
+        const seen = new Map();
+
+        blanketItems.forEach(item => {
+            const keyParts = [
+                item.getAttribute('data-name') || '',
+                item.getAttribute('data-machine') || '',
+                item.getAttribute('data-size') || '',
+                item.getAttribute('data-thickness') || '',
+                item.getAttribute('data-length') || '',
+                item.getAttribute('data-width') || ''
+            ];
+
+            const key = keyParts.join('|');
+            if (seen.has(key)) {
+                console.warn('Duplicate blanket detected', { key, item });
+            } else {
+                seen.set(key, item);
+            }
+        });
+    } catch (error) {
+        console.error('Error checking duplicate blankets:', error);
+    }
+}
+
+// Expose for legacy inline handlers expecting global functions
+if (typeof window !== 'undefined') {
+    window.checkForDuplicateBlankets = checkForDuplicateBlankets;
+}
+
 // Helper to remove or merge duplicate Chemical items in the cart
 function checkForDuplicateChemicals() {
     try {
@@ -2693,7 +2728,7 @@ function updateItemDisplay(item, data) {
                 totalBeforeGst,
                 gstAmount,
                 total,
-                size,
+                size: sizeLabel,
                 thickness,
                 machine,
                 type
