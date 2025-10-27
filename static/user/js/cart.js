@@ -1435,14 +1435,27 @@ function updateCartTotals() {
         
         // Update the cart summary
         const cartSummary = document.getElementById('cartSummary');
+        const cartItemsContainer2 = document.getElementById('cartItems');
+        const cartContainer2 = document.getElementById('cart-container');
+
+        console.log('updateCartTotals: cartSummary element =', cartSummary);
+        console.log('updateCartTotals: cartItemsContainer element =', cartItemsContainer2);
+        console.log('updateCartTotals: cartContainer element =', cartContainer2);
+
         if (cartSummary) {
+            console.log('updateCartTotals: setting cartSummary display to block');
             cartSummary.style.display = 'block';
+
+            // Ensure cart summary is visible
+            cartSummary.style.visibility = 'visible';
+            cartSummary.style.opacity = '1';
+
             // Round all values to 2 decimal places
             subtotal = Math.round(subtotal * 100) / 100;
             totalDiscount = Math.round(totalDiscount * 100) / 100;
             totalGst = Math.round(totalGst * 100) / 100;
             total = Math.round(total * 100) / 100;
-            
+
             cartSummary.innerHTML = `
                 <div class="card">
                     <div class="card-body">
@@ -1472,6 +1485,22 @@ function updateCartTotals() {
                         </div>
                     </div>
                 </div>`;
+            console.log('updateCartTotals: cart summary updated and shown');
+        } else {
+            console.error('updateCartTotals: cartSummary element not found!');
+        }
+
+        // Ensure cart containers are visible
+        if (cartItemsContainer2) {
+            console.log('updateCartTotals: ensuring cartItemsContainer is visible');
+            cartItemsContainer2.style.display = 'block';
+            cartItemsContainer2.style.visibility = 'visible';
+        }
+
+        if (cartContainer2) {
+            console.log('updateCartTotals: ensuring cartContainer is visible');
+            cartContainer2.style.display = 'block';
+            cartContainer2.style.visibility = 'visible';
         }
     } catch (error) {
         console.error('Error updating cart totals:', error);
