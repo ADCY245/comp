@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     calculateMPackPrices(cartItem);
                 } else if (itemType === 'blanket') {
                     calculateBlanketPrices(cartItem);
-                } else if (itemType === 'chemical') {
+                } else if (itemType === 'chemical' || itemType === 'maintenance') {
                     calculateChemicalPrices(cartItem);
                 }
             }
@@ -1100,7 +1100,7 @@ function initializeCartCalculations() {
             calculateMPackPrices(item);
         } else if (item.dataset.type === 'blanket') {
             calculateBlanketPrices(item);
-        } else if (item.dataset.type === 'chemical') {
+        } else if (item.dataset.type === 'chemical' || item.dataset.type === 'maintenance') {
             calculateChemicalPrices(item);
         }
     });
@@ -1141,12 +1141,49 @@ function calculateMPackPrices(item) {
     };
 }
 
+// Function to calculate blanket prices
+function calculateBlanketPrices(item) {
+    const basePrice = parseFloat(item.getAttribute('data-base-price') || item.dataset.basePrice || 0);
+    const barPrice = parseFloat(item.getAttribute('data-bar-price') || item.dataset.barPrice || 0);
+    const quantity = parseInt(item.querySelector('.quantity-input')?.value || item.getAttribute('data-quantity') || item.dataset.quantity || 1);
+    const discountPercent = parseFloat(item.querySelector('.discount-input')?.value || item.getAttribute('data-discount-percent') || item.dataset.discountPercent || 0);
+    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || item.dataset.gstPercent || 18);
+
+    const netPricePerPiece = basePrice + barPrice;
+    const subtotal = netPricePerPiece * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const total = discountedSubtotal + gstAmount;
+
+    updateItemDisplay(item, {
+        type: 'blanket',
+        base_price: basePrice,
+        bar_price: barPrice,
+        quantity,
+        discount_percent: discountPercent,
+        gst_percent: gstPercent,
+        subtotal,
+        discount_amount: discountAmount,
+        gst_amount: gstAmount,
+        final_total: total
+    });
+
+    return {
+        subtotal: round(subtotal, 2),
+        discountAmount: round(discountAmount, 2),
+        discountedSubtotal: round(discountedSubtotal, 2),
+        gstAmount: round(gstAmount, 2),
+        total: round(total, 2)
+    };
+}
+
 // Function to calculate chemical prices
 function calculateChemicalPrices(item) {
-    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || 0);
-    const quantity = parseInt(item.querySelector('.quantity-input')?.value || 1);
-    const discountPercent = parseFloat(item.querySelector('.discount-input')?.value || 0);
-    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || 18);
+    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || item.dataset.unitPrice || 0);
+    const quantity = parseInt(item.querySelector('.quantity-input')?.value || item.getAttribute('data-quantity') || item.dataset.quantity || 1);
+    const discountPercent = parseFloat(item.querySelector('.discount-input')?.value || item.getAttribute('data-discount-percent') || item.dataset.discountPercent || 0);
+    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || item.dataset.gstPercent || 18);
 
     // Calculate prices
     const subtotal = unitPrice * quantity;
@@ -1154,6 +1191,19 @@ function calculateChemicalPrices(item) {
     const discountedSubtotal = subtotal - discountAmount;
     const gstAmount = (discountedSubtotal * gstPercent) / 100;
     const total = discountedSubtotal + gstAmount;
+
+    const type = item.getAttribute('data-type') || 'chemical';
+    updateItemDisplay(item, {
+        type,
+        unit_price: unitPrice,
+        quantity,
+        discount_percent: discountPercent,
+        gst_percent: gstPercent,
+        subtotal,
+        discount_amount: discountAmount,
+        gst_amount: gstAmount,
+        final_total: total
+    });
 
     // Update the displayed subtotal in the item row
     const subtotalElement = item.querySelector('.subtotal-value, .item-subtotal');
@@ -1250,13 +1300,14 @@ function updateCartTotals() {
                     
                     // Update item display
                     updateItemDisplay(item, {
-                        finalTotal: itemTotal,
-                        discountAmount: discountAmount,
-                        gstAmount: gstAmount,
+                        type: 'mpack',
+                        final_total: itemTotal,
+                        discount_amount: discountAmount,
+                        gst_amount: gstAmount,
                         quantity: validQuantity,
-                        unitPrice: unitPrice,
-                        discountPercent: discountPercent,
-                        gstPercent: gstPercent
+                        unit_price: unitPrice,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent
                     });
                     
                 } else if (type === 'blanket') {
@@ -1286,16 +1337,17 @@ function updateCartTotals() {
                     
                     // Update item display
                     updateItemDisplay(item, {
-                        finalTotal: itemTotal,
-                        discountAmount: discountAmount,
-                        gstAmount: gstAmount,
+                        type: 'blanket',
+                        final_total: itemTotal,
+                        discount_amount: discountAmount,
+                        gst_amount: gstAmount,
                         quantity: validQuantity,
-                        basePrice: basePrice,
-                        barPrice: barPrice,
-                        discountPercent: discountPercent,
-                        gstPercent: gstPercent
+                        base_price: basePrice,
+                        bar_price: barPrice,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent
                     });
-                } else if (type === 'chemical') {
+                } else if (type === 'chemical' || type === 'maintenance') {
                     // Get prices for chemical
                     const unitPrice = parseFloat(item.getAttribute('data-unit-price') || '0');
                     const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
@@ -1320,13 +1372,14 @@ function updateCartTotals() {
 
                     // Update item display
                     updateItemDisplay(item, {
-                        finalTotal: itemTotal,
-                        discountAmount: discountAmount,
-                        gstAmount: gstAmount,
+                        type,
+                        final_total: itemTotal,
+                        discount_amount: discountAmount,
+                        gst_amount: gstAmount,
                         quantity: validQuantity,
-                        unitPrice: unitPrice,
-                        discountPercent: discountPercent,
-                        gstPercent: gstPercent
+                        unit_price: unitPrice,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent
                     });
                 }
             } catch (error) {
