@@ -9,6 +9,8 @@
   const quantityInput = document.getElementById('quantityLitres');
   const quantityHelper = document.getElementById('quantityHelper');
   const summaryBody = document.getElementById('chemSummaryBody');
+  const addToCartBtn = document.getElementById('addToCartBtn');
+  const addToCartSection = document.getElementById('addToCartSection');
 
   if (!categoryOptionsEl || !productOptionsEl || !formatOptionsEl || !summaryBody) {
     return;
@@ -84,6 +86,18 @@
     if (filter200LButton) {
       filter200LButton.addEventListener('click', () => {
         toggle200LFilter();
+      });
+    }
+
+    if (addToCartBtn) {
+      addToCartBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        try {
+          await addChemicalToCart();
+        } catch (error) {
+          console.error('Error adding chemical to cart:', error);
+          showToast('Error', 'Failed to add chemical to cart. Please try again.', 'error');
+        }
       });
     }
 
@@ -396,11 +410,187 @@
       items.push(summaryItem('Quantity', detail));
     }
 
+    // Show/hide Add to Cart button based on complete selection
+    if (addToCartSection && addToCartBtn) {
+      const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
+      addToCartSection.style.display = hasCompleteSelection ? 'block' : 'none';
+    }
+
     if (!items.length) {
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by choosing a chemical category.</p>';
     } else {
       summaryBody.innerHTML = items.join('');
     }
+  }
+
+  async function addChemicalToCart() {
+    // Validate all required selections
+    if (!state.selectedCategory) {
+      showToast('Error', 'Please select a chemical category.', 'error');
+      return;
+    }
+
+    if (!state.selectedProduct) {
+      showToast('Error', 'Please select a product.', 'error');
+      return;
+    }
+
+    if (!state.selectedFormat) {
+      showToast('Error', 'Please select a packaging format.', 'error');
+      return;
+    }
+
+    if (!state.quantityLitres || state.quantityLitres <= 0) {
+      showToast('Error', 'Please enter a valid quantity.', 'error');
+      return;
+    }
+
+    // Calculate pricing
+    const format = state.selectedFormat;
+    const quantityLitres = state.quantityLitres;
+    const packSize = format.size_litre;
+
+    // Calculate number of packs needed
+    const packsNeeded = Math.ceil(quantityLitres / packSize);
+    const totalLitres = packsNeeded * packSize;
+    const surplusLitres = totalLitres - quantityLitres;
+
+    // Calculate price per pack (assuming base price from product data)
+    const basePricePerPack = 100; // This should come from product data or API
+    const subtotal = basePricePerPack * packsNeeded;
+    const discountPercent = 0; // Default no discount
+    const discountAmount = (subtotal * discountPercent) / 100;
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstPercent = 18; // Standard GST rate
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
+
+    // Create chemical product object
+    const chemicalProduct = {
+      id: 'chemical_' + Date.now(),
+      type: 'chemical',
+      name: state.selectedProduct.name,
+      machine: state.machineName || '--',
+      category: state.selectedCategory.name,
+      product_id: state.selectedProduct.id,
+      format_id: format.id,
+      format_label: format.label,
+      pack_size_litre: packSize,
+      quantity_litre: quantityLitres,
+      packs_needed: packsNeeded,
+      total_litre: totalLitres,
+      surplus_litre: surplusLitres,
+      unit_price: basePricePerPack,
+      quantity: packsNeeded,
+      discount_percent: discountPercent,
+      gst_percent: gstPercent,
+      image: 'images/chemical-placeholder.jpg',
+      added_at: new Date().toISOString(),
+      calculations: {
+        unit_price: basePricePerPack,
+        quantity: packsNeeded,
+        subtotal: subtotal,
+        discount_percent: discountPercent,
+        discount_amount: discountAmount,
+        discounted_subtotal: discountedSubtotal,
+        gst_percent: gstPercent,
+        gst_amount: gstAmount,
+        final_total: finalTotal
+      }
+    };
+
+    // Show loading state
+    const originalText = addToCartBtn.innerHTML;
+    addToCartBtn.disabled = true;
+    addToCartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+
+    try {
+      const response = await fetch('/add_to_cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chemicalProduct)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast('Success', 'Chemical added to cart!', 'success');
+        updateCartCount();
+
+        // Reset form after successful addition
+        setTimeout(() => {
+          resetForm();
+        }, 1500);
+      } else {
+        throw new Error(data.message || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding chemical to cart:', error);
+      showToast('Error', error.message || 'Failed to add chemical to cart. Please try again.', 'error');
+    } finally {
+      addToCartBtn.disabled = false;
+      addToCartBtn.innerHTML = originalText;
+    }
+  }
+
+  function resetForm() {
+    state.selectedCategory = null;
+    state.selectedProduct = null;
+    state.selectedFormat = null;
+    state.quantityLitres = null;
+    state.machineName = '';
+    state.filter200LActive = false;
+
+    // Reset UI elements
+    if (machineSelect) machineSelect.value = '';
+    if (filter200LButton) {
+      filter200LButton.classList.remove('active');
+      filter200LButton.setAttribute('aria-pressed', 'false');
+    }
+    if (quantityInput) {
+      quantityInput.value = '';
+      quantityInput.disabled = true;
+      quantityInput.placeholder = 'Select a packaging format first';
+    }
+    if (quantityHelper) {
+      quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
+    }
+    if (addToCartSection) {
+      addToCartSection.style.display = 'none';
+    }
+
+    renderCategories();
+    renderProducts();
+    renderFormats();
+    updateSummary();
+  }
+
+  // Simple toast function (fallback if cart.js is not loaded)
+  function showToast(title, message, type = 'info') {
+    // Check if cart.js showToast is available
+    if (typeof window.showToast === 'function') {
+      window.showToast(title, message, type);
+      return;
+    }
+
+    // Fallback implementation
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`;
+    toast.role = 'alert';
+    toast.innerHTML = `
+      <strong>${title}</strong> ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    // Add to top of page
+    document.body.insertBefore(toast, document.body.firstChild);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 5000);
   }
 
   function summaryItem(label, value, note) {
