@@ -1,6 +1,8 @@
 // Get cart container reference at the top
 const cartContainer = document.getElementById('cart-container');
 
+let isUpdatingCartTotals = false;
+
 // Helper function to round numbers to 2 decimal places
 function round(value, decimals) {
     return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
@@ -1273,6 +1275,9 @@ function convertToMeters(value, unit) {
 }
 
 function updateCartTotals() {
+    if (isUpdatingCartTotals) return;
+    isUpdatingCartTotals = true;
+
     try {
         let subtotal = 0;
         let totalDiscount = 0;
@@ -1464,6 +1469,8 @@ function updateCartTotals() {
         }
     } catch (error) {
         console.error('Error updating cart totals:', error);
+    } finally {
+        isUpdatingCartTotals = false;
     }
 }
 
@@ -2433,16 +2440,19 @@ function updateItemDisplay(item, data) {
     ];
 
     metadataFields.forEach(field => {
-        if (!Object.prototype.hasOwnProperty.call(data, field)) return;
-
         const attrName = `data-${field.replace(/_/g, '-')}`;
-        const value = data[field];
 
-        if (value === undefined || value === null || value === '') {
-            return;
+        if (Object.prototype.hasOwnProperty.call(data, field)) {
+            const value = data[field];
+            if (value !== undefined && value !== null && value !== '') {
+                item.setAttribute(attrName, value);
+            }
+        } else {
+            const existingValue = item.getAttribute(attrName);
+            if (existingValue !== null && existingValue !== '') {
+                data[field] = existingValue;
+            }
         }
-
-        item.setAttribute(attrName, value);
     });
 
     // Sync name attribute for downstream lookups and headings
@@ -2802,10 +2812,15 @@ function updateItemDisplay(item, data) {
         }
     } else if (type === 'chemical' || type === 'maintenance') {
         // Handle chemical items
-        const unitPrice = parseFloat(data.unit_price || item.getAttribute('data-unit-price') || 0);
-        const quantity = parseInt(data.quantity || 1);
-        const discountPercent = parseFloat(data.discount_percent || item.getAttribute('data-discount-percent') || 0);
-        const gstPercent = parseFloat(data.gst_percent || item.getAttribute('data-gst-percent') || 18);
+        let unitPrice = parseFloat(data.unit_price ?? item.getAttribute('data-unit-price') ?? 0);
+        let quantity = parseInt(data.quantity ?? item.getAttribute('data-quantity') ?? 1, 10);
+        let discountPercent = parseFloat(data.discount_percent ?? item.getAttribute('data-discount-percent') ?? 0);
+        let gstPercent = parseFloat(data.gst_percent ?? item.getAttribute('data-gst-percent') ?? 18);
+
+        if (!Number.isFinite(unitPrice)) unitPrice = 0;
+        if (!Number.isFinite(quantity) || quantity < 1) quantity = 1;
+        if (!Number.isFinite(discountPercent) || discountPercent < 0) discountPercent = 0;
+        if (!Number.isFinite(gstPercent) || gstPercent < 0) gstPercent = 0;
 
         // Calculate prices
         const subtotal = unitPrice * quantity;
@@ -2867,9 +2882,10 @@ function updateItemDisplay(item, data) {
 
         // Update all price displays
         const updatePriceElement = (selector, value, prefix = '₹') => {
+            const amount = Number.isFinite(value) ? value : 0;
             const elements = item.querySelectorAll(selector);
             elements.forEach(el => {
-                if (el) el.textContent = `${prefix}${value.toFixed(2)}`;
+                if (el) el.textContent = `${prefix}${amount.toFixed(2)}`;
             });
         };
 
