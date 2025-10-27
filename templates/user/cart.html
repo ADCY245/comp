@@ -600,105 +600,124 @@
                                             {% if item.machine %}
                                                 <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
                                             {% endif %}
-                                            
-                                            {% if item.underpacking_type %}
-                                                <p class="mb-1"><strong>Type:</strong> 
-                                                    {% if item.underpacking_type == 'mtech_mpack' %}
-                                                        Mtech Mpack
-                                                    {% elif item.underpacking_type == 'mark3zet' %}
-                                                        Mark3zet
-                                                    {% else %}
-                                                        {{ item.underpacking_type|title }}
-                                                    {% endif %}
-                                                </p>
-                                            {% endif %}
-                                            
-                                            {% if item.thickness %}
-                                                <p class="mb-1">
-                                                    <strong>Thickness:</strong> 
-                                                    {% if item.type == 'blanket' %}
-                                                        {{ item.thickness }}mm
-                                                    {% else %}
-                                                        {% set thickness = item.thickness|string %}
-                                                        {{ thickness }}{% if not (thickness.endswith('mm') or thickness.endswith('in') or thickness.endswith('cm') or thickness.endswith('micron')) %}{% if thickness|float >= 1 %}mm{% else %}micron{% endif %}{% endif %}
-                                                    {% endif %}
-                                                </p>
-                                            {% endif %}
-                                            
-                                            {% if item.type == 'mpack' %}
-                                                {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
-                                                {% set display_length = (use_custom and item.custom_length_mm) or (item.standard_length_mm or item.length) %}
-                                                {% set display_width = (use_custom and item.custom_width_mm) or (item.standard_width_mm or item.width) %}
-                                                {% if display_length and display_width %}
-                                                    {% set length_display = '%g' % (display_length|float) %}
-                                                    {% set width_display = '%g' % (display_width|float) %}
-                                                    {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
-                                                    <p class="mb-1 size-display"><strong>Dimensions:</strong> {{ width_display }} x {{ length_display }} mm</p>
-                                                    <p class="mb-1"><strong>Area:</strong> {{ '%.3f'|format(area_sqm) }} m²</p>
-                                                {% elif item.size %}
-                                                    <p class="mb-1 size-display"><strong>Size:</strong> {{ item.size }}</p>
+
+                                            {% if item.type in ['chemical', 'maintenance'] %}
+                                                {% if item.category %}
+                                                    <p class="mb-1"><strong>Category:</strong> {{ item.category }}</p>
                                                 {% endif %}
-                                                {% if use_custom %}
-                                                    {% set std_length = item.standard_length_mm or item.length %}
-                                                    {% set std_width = item.standard_width_mm or item.width %}
-                                                    {% if std_length and std_width %}
-                                                        {% set std_length_display = '%g' % (std_length|float) %}
-                                                        {% set std_width_display = '%g' % (std_width|float) %}
-                                                        <p class="text-muted small mb-1">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</p>
+
+                                                {% if item.format_label %}
+                                                    <p class="mb-1"><strong>Format:</strong> {{ item.format_label }}</p>
+                                                {% endif %}
+
+                                                {% if item.quantity_litre %}
+                                                    <p class="mb-1"><strong>Quantity:</strong> {{ item.quantity_litre }}L</p>
+                                                {% endif %}
+
+                                                {% if item.packs_needed %}
+                                                    <p class="mb-1"><strong>Packs:</strong> {{ item.packs_needed }}</p>
+                                                {% endif %}
+
+                                                {% if item.total_litre and item.quantity_litre and item.total_litre > item.quantity_litre %}
+                                                    <p class="mb-1 text-muted small">
+                                                        <strong>Total Volume:</strong> {{ item.total_litre }}L
+                                                        {% if item.surplus_litre %}
+                                                            ({{ item.surplus_litre }}L surplus)
+                                                        {% endif %}
+                                                    </p>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if item.category %}
+                                                    <p class="mb-1"><strong>Category:</strong> {{ item.category }}</p>
+                                                {% endif %}
+
+                                                {% if item.format_label %}
+                                                    <p class="mb-1"><strong>Packaging:</strong> {{ item.format_label }}</p>
+                                                {% endif %}
+
+                                                {% if item.pack_size_litre %}
+                                                    <p class="mb-1"><strong>Pack Size:</strong> {{ item.pack_size_litre }}L</p>
+                                                {% endif %}
+
+                                                {% if item.quantity_litre %}
+                                                    <p class="mb-1"><strong>Requested:</strong> {{ item.quantity_litre }}L</p>
+                                                {% endif %}
+
+                                                {% if item.packs_needed %}
+                                                    <p class="mb-1"><strong>Packs:</strong> {{ item.packs_needed }}</p>
+                                                {% endif %}
+
+                                                {% if item.total_litre and item.quantity_litre and item.total_litre > item.quantity_litre %}
+                                                    <p class="mb-1 text-muted small">
+                                                        <strong>Total Volume:</strong> {{ item.total_litre }}L
+                                                        {% if item.surplus_litre %}
+                                                            ({{ item.surplus_litre }}L surplus)
+                                                        {% endif %}
+                                                    </p>
+                                                {% endif %}
+
+                                                {% if item.underpacking_type %}
+                                                    <p class="mb-1"><strong>Type:</strong>
+                                                        {% if item.underpacking_type == 'mtech_mpack' %}
+                                                            Mtech Mpack
+                                                        {% elif item.underpacking_type == 'mark3zet' %}
+                                                            Mark3zet
+                                                        {% else %}
+                                                            {{ item.underpacking_type|title }}
+                                                        {% endif %}
+                                                    </p>
+                                                {% endif %}
+
+                                                {% if item.thickness %}
+                                                    <p class="mb-1">
+                                                        <strong>Thickness:</strong>
+                                                        {% if item.type == 'blanket' %}
+                                                            {{ item.thickness }}mm
+                                                        {% else %}
+                                                            {% set thickness = item.thickness|string %}
+                                                            {{ thickness }}{% if not (thickness.endswith('mm') or thickness.endswith('in') or thickness.endswith('cm') or thickness.endswith('micron')) %}{% if thickness|float >= 1 %}mm{% else %}micron{% endif %}{% endif %}
+                                                        {% endif %}
+                                                    </p>
+                                                {% endif %}
+
+                                                {% if item.type == 'mpack' %}
+                                                    {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
+                                                    {% set display_length = (use_custom and item.custom_length_mm) or (item.standard_length_mm or item.length) %}
+                                                    {% set display_width = (use_custom and item.custom_width_mm) or (item.standard_width_mm or item.width) %}
+                                                    {% if display_length and display_width %}
+                                                        {% set length_display = '%g' % (display_length|float) %}
+                                                        {% set width_display = '%g' % (display_width|float) %}
+                                                        {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
+                                                        <p class="mb-1 size-display"><strong>Dimensions:</strong> {{ width_display }} x {{ length_display }} mm</p>
+                                                        <p class="mb-1"><strong>Area:</strong> {{ '%.3f'|format(area_sqm) }} m²</p>
                                                     {% elif item.size %}
-                                                        <p class="text-muted small mb-1">Cut from standard {{ item.size }}.</p>
+                                                        <p class="mb-1 size-display"><strong>Size:</strong> {{ item.size }}</p>
                                                     {% endif %}
-                                                {% else %}
-                                                    {% if item.size %}
-                                                        <p class="text-muted small mb-1">Supplied in standard {{ item.size }}.</p>
+                                                    {% if use_custom %}
+                                                        {% set std_length = item.standard_length_mm or item.length %}
+                                                        {% set std_width = item.standard_width_mm or item.width %}
+                                                        {% if std_length and std_width %}
+                                                            {% set std_length_display = '%g' % (std_length|float) %}
+                                                            {% set std_width_display = '%g' % (std_width|float) %}
+                                                            <p class="text-muted small mb-1">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</p>
+                                                        {% elif item.size %}
+                                                            <p class="text-muted small mb-1">Cut from standard {{ item.size }}.</p>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        {% if item.size %}
+                                                            <p class="text-muted small mb-1">Supplied in standard {{ item.size }}.</p>
+                                                        {% endif %}
                                                     {% endif %}
+                                                {% elif item.length and item.width %}
+                                                    <p class="mb-1"><strong>Dimensions:</strong> Length = {{ item.length }}mm, Width = {{ item.width }}mm ({{ "%.2f"|format((item.length|float / 1000)) }}m x {{ "%.2f"|format((item.width|float / 1000)) }}m)</p>
+                                                    <p class="mb-1"><strong>Area:</strong> {{ "%.2f"|format((item.length|float * item.width|float) / 1000000) }} m² ({{ "%.2f"|format((item.length|float * item.width|float)) }} mm²)</p>
                                                 {% endif %}
-                                            {% elif item.length and item.width %}
-                                                <p class="mb-1"><strong>Dimensions:</strong> Length = {{ item.length }}mm, Width = {{ item.width }}mm ({{ "%.2f"|format((item.length|float / 1000)) }}m x {{ "%.2f"|format((item.width|float / 1000)) }}m)</p>
-                                                <p class="mb-1"><strong>Area:</strong> {{ "%.2f"|format((item.length|float * item.width|float) / 1000000) }} m² ({{ "%.2f"|format((item.length|float * item.width|float)) }} mm²)</p>
-                                            {% endif %}
-                                            
-                                            {% if item.bar_type %}
-                                                <p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }}</p>
+
+                                                {% if item.bar_type %}
+                                                    <p class="mb-1"><strong>Barring:</strong> {{ item.bar_type }}</p>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
-                                    </div>
-                                    {% if item.type == 'chemical' %}
-                                        <div class="product-details mb-3">
-                                            {% if item.machine %}
-                                                <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
-                                            {% endif %}
-
-                                            {% if item.category %}
-                                                <p class="mb-1"><strong>Category:</strong> {{ item.category }}</p>
-                                            {% endif %}
-
-                                            {% if item.format_label %}
-                                                <p class="mb-1"><strong>Packaging:</strong> {{ item.format_label }}</p>
-                                            {% endif %}
-
-                                            {% if item.pack_size_litre %}
-                                                <p class="mb-1"><strong>Pack Size:</strong> {{ item.pack_size_litre }}L</p>
-                                            {% endif %}
-
-                                            {% if item.quantity_litre %}
-                                                <p class="mb-1"><strong>Requested:</strong> {{ item.quantity_litre }}L</p>
-                                            {% endif %}
-
-                                            {% if item.packs_needed %}
-                                                <p class="mb-1"><strong>Packs:</strong> {{ item.packs_needed }}</p>
-                                            {% endif %}
-
-                                            {% if item.total_litre and item.quantity_litre and item.total_litre > item.quantity_litre %}
-                                                <p class="mb-1 text-muted small">
-                                                    <strong>Total Volume:</strong> {{ item.total_litre }}L
-                                                    {% if item.surplus_litre %}
-                                                        ({{ item.surplus_litre }}L surplus)
-                                                    {% endif %}
-                                                </p>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
                                     <div class="price-details mt-3 p-3 bg-light rounded w-100">
                                         <div class="price-grid">
                                             <div class="price-row">
