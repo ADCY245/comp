@@ -602,30 +602,45 @@
                                             {% endif %}
 
                                             {% if item.type in ['chemical', 'maintenance'] %}
-                                                {% if item.category %}
-                                                    <p class="mb-1"><strong>Category:</strong> {{ item.category }}</p>
-                                                {% endif %}
-
-                                                {% if item.format_label %}
-                                                    <p class="mb-1"><strong>Format:</strong> {{ item.format_label }}</p>
-                                                {% endif %}
-
-                                                {% if item.quantity_litre %}
-                                                    <p class="mb-1"><strong>Quantity:</strong> {{ item.quantity_litre }}L</p>
-                                                {% endif %}
-
-                                                {% if item.packs_needed %}
-                                                    <p class="mb-1"><strong>Packs:</strong> {{ item.packs_needed }}</p>
-                                                {% endif %}
-
-                                                {% if item.total_litre and item.quantity_litre and item.total_litre > item.quantity_litre %}
-                                                    <p class="mb-1 text-muted small">
-                                                        <strong>Total Volume:</strong> {{ item.total_litre }}L
-                                                        {% if item.surplus_litre %}
-                                                            ({{ item.surplus_litre }}L surplus)
+                                                <div class="product-format-badge mb-2">
+                                                    <span class="badge bg-gold text-dark">
+                                                        <i class="fas fa-box me-1"></i>
+                                                        {% if item.format_label %}
+                                                            {{ item.format_label }}
+                                                        {% else %}
+                                                            Standard
                                                         {% endif %}
-                                                    </p>
-                                                {% endif %}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="product-specs">
+                                                    {% if item.category %}
+                                                        <p class="mb-1"><i class="fas fa-tag me-2 text-muted"></i> {{ item.category }}</p>
+                                                    {% endif %}
+                                                    
+                                                    {% if item.quantity_litre %}
+                                                        <p class="mb-1">
+                                                            <i class="fas fa-flask me-2 text-muted"></i> 
+                                                            <span class="me-2">Quantity:</span>
+                                                            <strong>{{ item.quantity_litre }}L</strong>
+                                                            {% if item.packs_needed and item.packs_needed > 1 %}
+                                                                <span class="text-muted ms-2">({{ item.packs_needed }} packs)</span>
+                                                            {% endif %}
+                                                        </p>
+                                                    {% endif %}
+                                                    
+                                                    {% if item.total_litre and item.quantity_litre and item.total_litre > item.quantity_litre %}
+                                                        <div class="alert alert-sm alert-warning p-2 mt-2 mb-2">
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            <small>
+                                                                <strong>Total Volume:</strong> {{ item.total_litre }}L
+                                                                {% if item.surplus_litre %}
+                                                                    ({{ item.surplus_litre }}L surplus)
+                                                                {% endif %}
+                                                            </small>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
                                             {% else %}
                                                 {% if item.category %}
                                                     <p class="mb-1"><strong>Category:</strong> {{ item.category }}</p>
@@ -687,9 +702,8 @@
                                                     {% if display_length and display_width %}
                                                         {% set length_display = '%g' % (display_length|float) %}
                                                         {% set width_display = '%g' % (display_width|float) %}
-                                                        {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
                                                         <p class="mb-1 size-display"><strong>Dimensions:</strong> {{ width_display }} x {{ length_display }} mm</p>
-                                                        <p class="mb-1"><strong>Area:</strong> {{ '%.3f'|format(area_sqm) }} m²</p>
+                                                        <p class="mb-1"><strong>Area:</strong> {{ '%.3f'|format((display_length|float * display_width|float) / 1000000) }} m²</p>
                                                     {% elif item.size %}
                                                         <p class="mb-1 size-display"><strong>Size:</strong> {{ item.size }}</p>
                                                     {% endif %}

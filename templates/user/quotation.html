@@ -192,8 +192,8 @@
         <th>Machine</th>
         <th>Product Type</th>
         <th>Type</th>
-        <th>Thickness</th>
-        <th>Dimensions</th>
+        <th>Format / Thickness</th>
+        <th>Details</th>
         <th>Barring Type</th>
         <th>Qty</th>
         <th>Price</th>
@@ -229,48 +229,85 @@
               {{ item.get('name', '----') }}
             {% endif %}
           </td>
-          <td>{% if item.get('thickness') %}{% if item.type == 'blanket' %}{{ item.thickness|replace('.0', '') }} mm{% else %}{{ item.thickness }}{% if item.thickness and not (item.thickness|string).endswith(('mm', 'micron', 'in', 'cm')) and item.thickness|float >= 1 %} mm{% endif %}{% endif %}{% else %}------{% endif %}</td>
           <td>
-            {% if prod_type == 'mpack' %}
-              {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
-              {% set display_length = (use_custom and item.custom_length_mm) or (item.display_length_mm or item.standard_length_mm or item.length) %}
-              {% set display_width = (use_custom and item.custom_width_mm) or (item.display_width_mm or item.standard_width_mm or item.width) %}
-              {% if display_length and display_width %}
-                {% set length_display = '%g' % (display_length|float) %}
-                {% set width_display = '%g' % (display_width|float) %}
-                {{ width_display }} x {{ length_display }} mm
-                {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
-                <div class="text-muted small">Area: {{ '%.3f'|format(area_sqm) }} m²</div>
-              {% elif item.size %}
-                {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+            {% if prod_type in ['chemical', 'maintenance'] %}
+              {% if item.get('format_label') %}
+                {{ item.format_label }}
+              {% elif item.get('pack_size_litre') %}
+                {{ item.pack_size_litre }}L Pack
               {% else %}
                 ------
               {% endif %}
-              {% if use_custom %}
-                {% set std_length = item.standard_length_mm or item.length %}
-                {% set std_width = item.standard_width_mm or item.width %}
-                {% if std_length and std_width %}
-                  {% set std_length_display = '%g' % (std_length|float) %}
-                  {% set std_width_display = '%g' % (std_width|float) %}
-                  <div class="text-muted small">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</div>
-                {% elif item.standard_size_label %}
-                  <div class="text-muted small">Cut from standard {{ item.standard_size_label }}.</div>
+            {% else %}
+              {% if item.get('thickness') %}
+                {% if item.type == 'blanket' %}
+                  {{ item.thickness|replace('.0', '') }} mm
+                {% else %}
+                  {{ item.thickness }}{% if item.thickness and not (item.thickness|string).endswith(('mm', 'micron', 'in', 'cm')) and item.thickness|float >= 1 %} mm{% endif %}
                 {% endif %}
               {% else %}
-                {% if item.standard_size_label %}
-                  <div class="text-muted small">Supplied in standard {{ item.standard_size_label }}.</div>
-                {% endif %}
+                ------
               {% endif %}
-            {% elif item.get('size') %}
-              {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
-            {% elif item.get('length') and item.get('width') %}
-              {{ '%sx%s%s'|format(
-                item.length|string|replace('.0', ''),
-                item.width|string|replace('.0', ''),
-                item.get('unit', '')|replace('mm', ' mm')
-              ) }}
+            {% endif %}
+          </td>
+          <td>
+            {% if prod_type in ['chemical', 'maintenance'] %}
+              <div class="d-flex flex-column gap-1">
+                {% if item.get('category') %}
+                  <span><strong>Category:</strong> {{ item.category }}</span>
+                {% endif %}
+                {% if item.get('quantity_litre') %}
+                  <span><strong>Quantity:</strong> {{ item.quantity_litre }}L</span>
+                {% endif %}
+                {% if item.get('packs_needed') %}
+                  <span><strong>Packs:</strong> {{ item.packs_needed }}</span>
+                {% endif %}
+                {% if item.get('total_litre') and item.get('quantity_litre') and item.total_litre|float > item.quantity_litre|float %}
+                  <small class="text-muted"><strong>Total Volume:</strong> {{ item.total_litre }}L{% if item.get('surplus_litre') %} ({{ item.surplus_litre }}L surplus){% endif %}</small>
+                {% endif %}
+              </div>
             {% else %}
-              ------
+              {% if prod_type == 'mpack' %}
+                {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
+                {% set display_length = (use_custom and item.custom_length_mm) or (item.display_length_mm or item.standard_length_mm or item.length) %}
+                {% set display_width = (use_custom and item.custom_width_mm) or (item.display_width_mm or item.standard_width_mm or item.width) %}
+                {% if display_length and display_width %}
+                  {% set length_display = '%g' % (display_length|float) %}
+                  {% set width_display = '%g' % (display_width|float) %}
+                  {{ width_display }} x {{ length_display }} mm
+                  {% set area_sqm = (display_length|float * display_width|float) / 1000000 %}
+                  <div class="text-muted small">Area: {{ '%.3f'|format(area_sqm) }} m²</div>
+                {% elif item.size %}
+                  {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+                {% else %}
+                  ------
+                {% endif %}
+                {% if use_custom %}
+                  {% set std_length = item.standard_length_mm or item.length %}
+                  {% set std_width = item.standard_width_mm or item.width %}
+                  {% if std_length and std_width %}
+                    {% set std_length_display = '%g' % (std_length|float) %}
+                    {% set std_width_display = '%g' % (std_width|float) %}
+                    <div class="text-muted small">Cut from standard {{ std_width_display }} x {{ std_length_display }} mm.</div>
+                  {% elif item.standard_size_label %}
+                    <div class="text-muted small">Cut from standard {{ item.standard_size_label }}.</div>
+                  {% endif %}
+                {% else %}
+                  {% if item.standard_size_label %}
+                    <div class="text-muted small">Supplied in standard {{ item.standard_size_label }}.</div>
+                  {% endif %}
+                {% endif %}
+              {% elif item.get('size') %}
+                {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+              {% elif item.get('length') and item.get('width') %}
+                {{ '%sx%s%s'|format(
+                  item.length|string|replace('.0', ''),
+                  item.width|string|replace('.0', ''),
+                  item.get('unit', '')|replace('mm', ' mm')
+                ) }}
+              {% else %}
+                ------
+              {% endif %}
             {% endif %}
           </td>
           <td>{{ item.get('bar_type', '------') if prod_type == 'blanket' else '------' }}</td>
