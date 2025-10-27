@@ -1,7 +1,7 @@
 (function() {
   const dataUrl = '/static/data/chemicals/products.json';
 
-  const machineInput = document.getElementById('machineNameInput');
+  const machineSelect = document.getElementById('machineSelect');
   const categoryOptionsEl = document.getElementById('categoryOptions');
   const productOptionsEl = document.getElementById('productOptions');
   const formatOptionsEl = document.getElementById('formatOptions');
@@ -15,6 +15,7 @@
 
   const state = {
     machineName: '',
+    machines: [],
     categories: [],
     selectedCategory: null,
     selectedProduct: null,
@@ -25,8 +26,11 @@
   document.addEventListener('DOMContentLoaded', initializeConfigurator);
 
   async function initializeConfigurator() {
-    renderCategoryPlaceholder('Loading categories…');
     try {
+      // Load machines first
+      await loadMachines();
+
+      renderCategoryPlaceholder('Loading categories…');
       const response = await fetch(dataUrl, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`Failed to fetch chemicals data (${response.status})`);
@@ -43,10 +47,34 @@
     updateSummary();
   }
 
+  function loadMachines() {
+    return fetch("/api/machines")
+      .then(res => res.json())
+      .then(data => {
+        state.machines = Array.isArray(data) ? data : data.machines || [];
+        if (machineSelect) {
+          machineSelect.innerHTML = '<option value="">-- Select Machine (optional) --</option>';
+          state.machines.forEach(machine => {
+            const opt = document.createElement("option");
+            opt.value = machine.id;
+            opt.textContent = machine.name;
+            machineSelect.appendChild(opt);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error loading machine data:', error);
+        if (machineSelect) {
+          machineSelect.innerHTML = '<option value="">-- Error loading machines --</option>';
+        }
+      });
+  }
+
   function setupEventListeners() {
-    if (machineInput) {
-      machineInput.addEventListener('input', event => {
-        state.machineName = (event.target.value || '').trim();
+    if (machineSelect) {
+      machineSelect.addEventListener('change', event => {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        state.machineName = selectedOption && selectedOption.value ? selectedOption.textContent : '';
         updateSummary();
       });
     }

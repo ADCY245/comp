@@ -24,12 +24,9 @@
             <h3 class="chem-step__title">Machine (optional)</h3>
             <p class="chem-step__helper">Share the press this order is for and we&rsquo;ll include it in the summary.</p>
           </div>
-          <input type="text"
-                 id="machineNameInput"
-                 class="form-control"
-                 placeholder="e.g. Heidelberg SM 74"
-                 autocomplete="off"
-                 maxlength="120">
+          <select class="form-select" id="machineSelect" aria-label="Select Machine">
+            <option value="">-- Select Machine (optional) --</option>
+          </select>
         </section>
 
         <section class="chem-step" id="chemStepCategory">
