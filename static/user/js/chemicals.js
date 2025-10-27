@@ -11,8 +11,8 @@
   const addToCartBtn = document.getElementById('addToCartBtn');
   const addToCartSection = document.getElementById('addToCartSection');
   const pricingSection = document.getElementById('pricingSection');
-  const pricingTierSelect = document.getElementById('pricingTier');
-  const additionalDiscountInput = document.getElementById('additionalDiscount');
+  const discountInput = document.getElementById('discountPercent');
+  const updateDiscountBtn = document.getElementById('updateDiscountBtn');
   const pricingBreakdown = document.getElementById('pricingBreakdown');
 
   if (!categoryOptionsEl || !productOptionsEl || !formatOptionsEl || !summaryBody) {
@@ -85,19 +85,24 @@
       });
     }
 
-    if (pricingTierSelect) {
-      pricingTierSelect.addEventListener('change', () => {
+    if (updateDiscountBtn) {
+      updateDiscountBtn.addEventListener('click', () => {
         updatePricingBreakdown();
         updateSummary();
       });
     }
 
-    if (additionalDiscountInput) {
-      additionalDiscountInput.addEventListener('input', () => {
-        const value = parseFloat(additionalDiscountInput.value) || 0;
-        additionalDiscountInput.value = Math.max(0, Math.min(50, value)); // Clamp between 0-50
-        updatePricingBreakdown();
-        updateSummary();
+    if (discountInput) {
+      discountInput.addEventListener('input', () => {
+        const value = parseFloat(discountInput.value) || 0;
+        discountInput.value = Math.max(0, Math.min(100, value)); // Clamp between 0-100
+      });
+
+      discountInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          updateDiscountBtn.click();
+        }
       });
     }
 
@@ -401,10 +406,10 @@
 
     // Show pricing summary if pricing section is visible
     if (pricingSection && pricingSection.style.display === 'block') {
-      const currentPricingTier = pricingTierSelect ? pricingTierSelect.value : 'standard';
-      const currentAdditionalDiscount = additionalDiscountInput ? parseFloat(additionalDiscountInput.value) || 0 : 0;
+      const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+      const discountLabel = currentDiscount > 0 ? ` (${currentDiscount}% discount)` : '';
 
-      items.push(summaryItem('Pricing', `${currentPricingTier.charAt(0).toUpperCase() + currentPricingTier.slice(1)}`));
+      items.push(summaryItem('Pricing', `Standard Pricing${discountLabel}`));
 
       // Calculate current total for summary display
       if (state.selectedFormat && state.quantityLitres) {
@@ -415,19 +420,10 @@
         const basePricePerPack = 100;
         const subtotal = basePricePerPack * packsNeeded;
 
-        let tierDiscount = 0;
-        switch (currentPricingTier) {
-          case 'bulk': tierDiscount = 5; break;
-          case 'wholesale': tierDiscount = 10; break;
-          case 'distributor': tierDiscount = 15; break;
-        }
-
-        const tierDiscountAmount = (subtotal * tierDiscount) / 100;
-        const discountedSubtotal = subtotal - tierDiscountAmount;
-        const additionalDiscountAmount = (discountedSubtotal * currentAdditionalDiscount) / 100;
-        const finalDiscountedSubtotal = discountedSubtotal - additionalDiscountAmount;
-        const gstAmount = (finalDiscountedSubtotal * 18) / 100;
-        const finalTotal = finalDiscountedSubtotal + gstAmount;
+        const discountAmount = (subtotal * currentDiscount) / 100;
+        const discountedSubtotal = subtotal - discountAmount;
+        const gstAmount = (discountedSubtotal * 18) / 100;
+        const finalTotal = discountedSubtotal + gstAmount;
 
         items.push(summaryItem('Total Price', `₹${finalTotal.toFixed(2)} incl. GST`));
       }
@@ -468,37 +464,15 @@
     const basePricePerPack = 100; // This should come from product data or API
     const subtotal = basePricePerPack * packsNeeded;
 
-    // Get current pricing values from DOM
-    const currentPricingTier = pricingTierSelect ? pricingTierSelect.value : 'standard';
-    const currentAdditionalDiscount = additionalDiscountInput ? parseFloat(additionalDiscountInput.value) || 0 : 0;
+    // Get current discount from DOM
+    const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
 
-    // Apply pricing tier discount
-    let tierDiscount = 0;
-    switch (currentPricingTier) {
-      case 'bulk':
-        tierDiscount = 5;
-        break;
-      case 'wholesale':
-        tierDiscount = 10;
-        break;
-      case 'distributor':
-        tierDiscount = 15;
-        break;
-      default:
-        tierDiscount = 0;
-    }
-
-    const tierDiscountAmount = (subtotal * tierDiscount) / 100;
-    const discountedSubtotal = subtotal - tierDiscountAmount;
-
-    // Apply additional discount
-    const additionalDiscountAmount = (discountedSubtotal * currentAdditionalDiscount) / 100;
-    const finalDiscountedSubtotal = discountedSubtotal - additionalDiscountAmount;
-
-    // Calculate GST and total
+    // Calculate discount and final pricing
+    const discountAmount = (subtotal * currentDiscount) / 100;
+    const discountedSubtotal = subtotal - discountAmount;
     const gstPercent = 18;
-    const gstAmount = (finalDiscountedSubtotal * gstPercent) / 100;
-    const finalTotal = finalDiscountedSubtotal + gstAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
 
     // Update pricing breakdown display
     pricingBreakdown.innerHTML = `
@@ -506,15 +480,10 @@
         <span class="pricing-label">Base Price (${packsNeeded} × ${format.label}):</span>
         <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
       </div>
-      ${tierDiscount > 0 ? `
+      ${currentDiscount > 0 ? `
       <div class="pricing-row">
-        <span class="pricing-label">${currentPricingTier.charAt(0).toUpperCase() + currentPricingTier.slice(1)} Discount (${tierDiscount}%):</span>
-        <span class="pricing-value pricing-discount">-₹${tierDiscountAmount.toFixed(2)}</span>
-      </div>` : ''}
-      ${currentAdditionalDiscount > 0 ? `
-      <div class="pricing-row">
-        <span class="pricing-label">Additional Discount (${currentAdditionalDiscount}%):</span>
-        <span class="pricing-value pricing-discount">-₹${additionalDiscountAmount.toFixed(2)}</span>
+        <span class="pricing-label">Discount (${currentDiscount}%):</span>
+        <span class="pricing-value pricing-discount">-₹${discountAmount.toFixed(2)}</span>
       </div>` : ''}
       <div class="pricing-row">
         <span class="pricing-label">GST (${gstPercent}%):</span>
@@ -550,8 +519,7 @@
     }
 
     // Calculate pricing using current form values
-    const currentPricingTier = pricingTierSelect ? pricingTierSelect.value : 'standard';
-    const currentAdditionalDiscount = additionalDiscountInput ? parseFloat(additionalDiscountInput.value) || 0 : 0;
+    const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
 
     const format = state.selectedFormat;
     const quantityLitres = state.quantityLitres;
@@ -562,37 +530,18 @@
     const totalLitres = packsNeeded * packSize;
     const surplusLitres = totalLitres - quantityLitres;
 
-    // Base pricing
+    // Base pricing (no tier discounts)
     const basePricePerPack = 100; // This should come from product data or API
     const subtotal = basePricePerPack * packsNeeded;
 
-    // Apply pricing tier discount
-    let tierDiscount = 0;
-    switch (currentPricingTier) {
-      case 'bulk':
-        tierDiscount = 5;
-        break;
-      case 'wholesale':
-        tierDiscount = 10;
-        break;
-      case 'distributor':
-        tierDiscount = 15;
-        break;
-      default:
-        tierDiscount = 0;
-    }
-
-    const tierDiscountAmount = (subtotal * tierDiscount) / 100;
-    const discountedSubtotal = subtotal - tierDiscountAmount;
-
-    // Apply additional discount
-    const additionalDiscountAmount = (discountedSubtotal * currentAdditionalDiscount) / 100;
-    const finalDiscountedSubtotal = discountedSubtotal - additionalDiscountAmount;
+    // Apply discount
+    const discountAmount = (subtotal * currentDiscount) / 100;
+    const discountedSubtotal = subtotal - discountAmount;
 
     // Calculate GST and total
     const gstPercent = 18;
-    const gstAmount = (finalDiscountedSubtotal * gstPercent) / 100;
-    const finalTotal = finalDiscountedSubtotal + gstAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
 
     // Create chemical product object with calculated pricing
     const chemicalProduct = {
@@ -611,18 +560,18 @@
       surplus_litre: surplusLitres,
       unit_price: basePricePerPack,
       quantity: packsNeeded,
-      discount_percent: tierDiscount + currentAdditionalDiscount,
+      discount_percent: currentDiscount,
       gst_percent: gstPercent,
-      pricing_tier: currentPricingTier,
+      pricing_tier: 'standard',
       image: 'images/chemical-placeholder.jpg',
       added_at: new Date().toISOString(),
       calculations: {
         unit_price: basePricePerPack,
         quantity: packsNeeded,
         subtotal: subtotal,
-        discount_percent: tierDiscount + currentAdditionalDiscount,
-        discount_amount: tierDiscountAmount + additionalDiscountAmount,
-        discounted_subtotal: finalDiscountedSubtotal,
+        discount_percent: currentDiscount,
+        discount_amount: discountAmount,
+        discounted_subtotal: discountedSubtotal,
         gst_percent: gstPercent,
         gst_amount: gstAmount,
         final_total: finalTotal
@@ -686,11 +635,8 @@
     if (pricingSection) {
       pricingSection.style.display = 'none';
     }
-    if (pricingTierSelect) {
-      pricingTierSelect.value = 'standard';
-    }
-    if (additionalDiscountInput) {
-      additionalDiscountInput.value = '0';
+    if (discountInput) {
+      discountInput.value = '0';
     }
     if (pricingBreakdown) {
       pricingBreakdown.innerHTML = '';
