@@ -24,9 +24,18 @@
             <h3 class="chem-step__title">Machine (optional)</h3>
             <p class="chem-step__helper">Share the press this order is for and we&rsquo;ll include it in the summary.</p>
           </div>
-          <select class="form-select" id="machineSelect" aria-label="Select Machine">
-            <option value="">-- Select Machine (optional) --</option>
-          </select>
+          <div class="d-flex align-items-end gap-2">
+            <div class="flex-grow-1">
+              <select class="form-select" id="machineSelect" aria-label="Select Machine">
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div>
+              <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
+          </div>
         </section>
 
         <section class="chem-step" id="chemStepCategory">
