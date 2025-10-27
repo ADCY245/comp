@@ -8,12 +8,11 @@
   const quantityInput = document.getElementById('quantityLitres');
   const quantityHelper = document.getElementById('quantityHelper');
   const summaryBody = document.getElementById('chemSummaryBody');
-  const addToCartBtn = document.getElementById('addToCartBtn');
-  const addToCartSection = document.getElementById('addToCartSection');
   const pricingSection = document.getElementById('pricingSection');
   const discountInput = document.getElementById('discountPercent');
   const updateDiscountBtn = document.getElementById('updateDiscountBtn');
   const pricingBreakdown = document.getElementById('pricingBreakdown');
+  const addToCartBtn = document.getElementById('addToCartBtn');
 
   if (!categoryOptionsEl || !productOptionsEl || !formatOptionsEl || !summaryBody) {
     return;
@@ -429,12 +428,7 @@
       }
     }
 
-    // Show/hide sections based on complete selection
-    if (addToCartSection && addToCartBtn) {
-      const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
-      addToCartSection.style.display = hasCompleteSelection ? 'block' : 'none';
-    }
-
+    // Show/hide pricing section based on complete selection
     if (pricingSection && pricingBreakdown) {
       const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
       pricingSection.style.display = hasCompleteSelection ? 'block' : 'none';
@@ -474,7 +468,7 @@
     const gstAmount = (discountedSubtotal * gstPercent) / 100;
     const finalTotal = discountedSubtotal + gstAmount;
 
-    // Update pricing breakdown display
+    // Update pricing breakdown display with Add to Cart button
     pricingBreakdown.innerHTML = `
       <div class="pricing-row">
         <span class="pricing-label">Base Price (${packsNeeded} × ${format.label}):</span>
@@ -494,6 +488,32 @@
         <span class="pricing-value pricing-total">₹${finalTotal.toFixed(2)}</span>
       </div>
     `;
+
+    // Add pricing actions section after the breakdown
+    const pricingPreview = pricingBreakdown.closest('.pricing-preview');
+    if (pricingPreview && !pricingPreview.nextElementSibling?.classList.contains('pricing-actions')) {
+      pricingPreview.insertAdjacentHTML('afterend', `
+        <div class="pricing-actions">
+          <button class="btn btn-primary add-to-cart-btn">
+            <i class="fas fa-cart-plus me-2"></i>Add to Cart
+          </button>
+        </div>
+      `);
+
+      // Add event listener to the dynamically created button
+      const cartBtn = pricingPreview.nextElementSibling.querySelector('.add-to-cart-btn');
+      if (cartBtn) {
+        cartBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          try {
+            await addChemicalToCart();
+          } catch (error) {
+            console.error('Error adding chemical to cart:', error);
+            showToast('Error', 'Failed to add chemical to cart. Please try again.', 'error');
+          }
+        });
+      }
+    }
   }
 
   async function addChemicalToCart() {
@@ -578,37 +598,43 @@
       }
     };
 
-    // Show loading state
-    const originalText = addToCartBtn.innerHTML;
-    addToCartBtn.disabled = true;
-    addToCartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+    // Show loading state on the Add to Cart button
+    const cartBtn = document.querySelector('.add-to-cart-btn') || addToCartBtn;
+    if (cartBtn) {
+      const originalText = cartBtn.innerHTML;
+      cartBtn.disabled = true;
+      cartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
 
-    try {
-      const response = await fetch('/add_to_cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chemicalProduct)
-      });
+      try {
+        const response = await fetch('/add_to_cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chemicalProduct)
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.success) {
-        showToast('Success', 'Chemical added to cart!', 'success');
-        updateCartCount();
+        if (data.success) {
+          showToast('Success', 'Chemical added to cart!', 'success');
+          updateCartCount();
 
-        // Reset form after successful addition
-        setTimeout(() => {
-          resetForm();
-        }, 1500);
-      } else {
-        throw new Error(data.message || 'Failed to add to cart');
+          // Reset form after successful addition
+          setTimeout(() => {
+            resetForm();
+          }, 1500);
+        } else {
+          throw new Error(data.message || 'Failed to add to cart');
+        }
+      } catch (error) {
+        console.error('Error adding chemical to cart:', error);
+        showToast('Error', error.message || 'Failed to add chemical to cart. Please try again.', 'error');
+      } finally {
+        // Restore button state
+        if (cartBtn) {
+          cartBtn.disabled = false;
+          cartBtn.innerHTML = originalText;
+        }
       }
-    } catch (error) {
-      console.error('Error adding chemical to cart:', error);
-      showToast('Error', error.message || 'Failed to add chemical to cart. Please try again.', 'error');
-    } finally {
-      addToCartBtn.disabled = false;
-      addToCartBtn.innerHTML = originalText;
     }
   }
 
@@ -629,9 +655,6 @@
     if (quantityHelper) {
       quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
     }
-    if (addToCartSection) {
-      addToCartSection.style.display = 'none';
-    }
     if (pricingSection) {
       pricingSection.style.display = 'none';
     }
@@ -640,6 +663,12 @@
     }
     if (pricingBreakdown) {
       pricingBreakdown.innerHTML = '';
+    }
+
+    // Remove any existing pricing actions
+    const existingActions = document.querySelector('.pricing-actions');
+    if (existingActions) {
+      existingActions.remove();
     }
 
     renderCategories();

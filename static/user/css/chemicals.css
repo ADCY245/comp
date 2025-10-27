@@ -432,6 +432,36 @@
   color: rgba(196, 147, 61, 1);
 }
 
+.pricing-actions .btn-primary {
+  background: linear-gradient(135deg, rgba(196, 147, 61, 1), rgba(173, 151, 79, 1));
+  border: none;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(196, 147, 61, 0.3);
+  font-size: 0.95rem;
+}
+
+.pricing-actions .btn-primary:hover {
+  background: linear-gradient(135deg, rgba(173, 151, 79, 1), rgba(196, 147, 61, 1));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(196, 147, 61, 0.4);
+}
+
+.pricing-actions .btn-primary:disabled {
+  opacity: 0.6;
+  transform: none;
+  box-shadow: 0 2px 6px rgba(196, 147, 61, 0.2);
+}
+
+#cart-message {
+  min-height: 1.5rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 767.98px) {
   .pricing-section {
     padding: 1.5rem;
@@ -439,6 +469,15 @@
 
   .pricing-options .input-group {
     max-width: 100%;
+  }
+
+  .pricing-actions {
+    padding-top: 0.75rem;
+  }
+
+  .pricing-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
