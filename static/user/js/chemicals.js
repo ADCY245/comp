@@ -10,7 +10,9 @@
   const quantityHelper = document.getElementById('quantityHelper');
   const summaryBody = document.getElementById('chemSummaryBody');
   const addToCartBtn = document.getElementById('addToCartBtn');
-  const addToCartSection = document.getElementById('addToCartSection');
+  const pricingTierSelect = document.getElementById('pricingTier');
+  const additionalDiscountInput = document.getElementById('additionalDiscount');
+  const pricingBreakdown = document.getElementById('pricingBreakdown');
 
   if (!categoryOptionsEl || !productOptionsEl || !formatOptionsEl || !summaryBody) {
     return;
@@ -24,7 +26,9 @@
     selectedProduct: null,
     selectedFormat: null,
     quantityLitres: null,
-    filter200LActive: false
+    filter200LActive: false,
+    pricingTier: 'standard',
+    additionalDiscount: 0
   };
 
   document.addEventListener('DOMContentLoaded', initializeConfigurator);
@@ -98,6 +102,24 @@
           console.error('Error adding chemical to cart:', error);
           showToast('Error', 'Failed to add chemical to cart. Please try again.', 'error');
         }
+      });
+    }
+
+    if (pricingTierSelect) {
+      pricingTierSelect.addEventListener('change', () => {
+        state.pricingTier = pricingTierSelect.value;
+        updatePricingBreakdown();
+        updateSummary();
+      });
+    }
+
+    if (additionalDiscountInput) {
+      additionalDiscountInput.addEventListener('input', () => {
+        const value = parseFloat(additionalDiscountInput.value) || 0;
+        state.additionalDiscount = Math.max(0, Math.min(50, value)); // Clamp between 0-50
+        additionalDiscountInput.value = state.additionalDiscount;
+        updatePricingBreakdown();
+        updateSummary();
       });
     }
 
@@ -410,10 +432,24 @@
       items.push(summaryItem('Quantity', detail));
     }
 
+    // Show pricing summary if Add to Cart section is visible
+    if (addToCartSection && addToCartSection.style.display === 'block' && state.calculatedPricing) {
+      const pricing = state.calculatedPricing;
+      const tierDiscount = pricing.tierDiscount + state.additionalDiscount;
+      const discountLabel = tierDiscount > 0 ? ` (${tierDiscount}% discount)` : '';
+
+      items.push(summaryItem('Pricing', `${state.pricingTier.charAt(0).toUpperCase() + state.pricingTier.slice(1)}${discountLabel}`));
+      items.push(summaryItem('Total Price', `₹${pricing.finalTotal.toFixed(2)} incl. GST`));
+    }
+
     // Show/hide Add to Cart button based on complete selection
     if (addToCartSection && addToCartBtn) {
       const hasCompleteSelection = state.selectedCategory && state.selectedProduct && state.selectedFormat && state.quantityLitres > 0;
       addToCartSection.style.display = hasCompleteSelection ? 'block' : 'none';
+
+      if (hasCompleteSelection) {
+        updatePricingBreakdown();
+      }
     }
 
     if (!items.length) {
@@ -421,6 +457,93 @@
     } else {
       summaryBody.innerHTML = items.join('');
     }
+  }
+
+  function updatePricingBreakdown() {
+    if (!pricingBreakdown || !state.selectedFormat || !state.quantityLitres) {
+      return;
+    }
+
+    const format = state.selectedFormat;
+    const quantityLitres = state.quantityLitres;
+    const packSize = format.size_litre;
+
+    // Calculate number of packs needed
+    const packsNeeded = Math.ceil(quantityLitres / packSize);
+    const totalLitres = packsNeeded * packSize;
+
+    // Base pricing
+    const basePricePerPack = 100; // This should come from product data or API
+    const subtotal = basePricePerPack * packsNeeded;
+
+    // Apply pricing tier discount
+    let tierDiscount = 0;
+    switch (state.pricingTier) {
+      case 'bulk':
+        tierDiscount = 5;
+        break;
+      case 'wholesale':
+        tierDiscount = 10;
+        break;
+      case 'distributor':
+        tierDiscount = 15;
+        break;
+      default:
+        tierDiscount = 0;
+    }
+
+    const tierDiscountAmount = (subtotal * tierDiscount) / 100;
+    const discountedSubtotal = subtotal - tierDiscountAmount;
+
+    // Apply additional discount
+    const additionalDiscountAmount = (discountedSubtotal * state.additionalDiscount) / 100;
+    const finalDiscountedSubtotal = discountedSubtotal - additionalDiscountAmount;
+
+    // Calculate GST and total
+    const gstPercent = 18;
+    const gstAmount = (finalDiscountedSubtotal * gstPercent) / 100;
+    const finalTotal = finalDiscountedSubtotal + gstAmount;
+
+    // Update pricing breakdown display
+    pricingBreakdown.innerHTML = `
+      <div class="pricing-row">
+        <span class="pricing-label">Base Price (${packsNeeded} × ${format.label}):</span>
+        <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
+      </div>
+      ${tierDiscount > 0 ? `
+      <div class="pricing-row">
+        <span class="pricing-label">${state.pricingTier.charAt(0).toUpperCase() + state.pricingTier.slice(1)} Discount (${tierDiscount}%):</span>
+        <span class="pricing-value pricing-discount">-₹${tierDiscountAmount.toFixed(2)}</span>
+      </div>` : ''}
+      ${state.additionalDiscount > 0 ? `
+      <div class="pricing-row">
+        <span class="pricing-label">Additional Discount (${state.additionalDiscount}%):</span>
+        <span class="pricing-value pricing-discount">-₹${additionalDiscountAmount.toFixed(2)}</span>
+      </div>` : ''}
+      <div class="pricing-row">
+        <span class="pricing-label">GST (${gstPercent}%):</span>
+        <span class="pricing-value">₹${gstAmount.toFixed(2)}</span>
+      </div>
+      <div class="pricing-row">
+        <span class="pricing-label">Total:</span>
+        <span class="pricing-value pricing-total">₹${finalTotal.toFixed(2)}</span>
+      </div>
+    `;
+
+    // Store calculated values for cart submission
+    state.calculatedPricing = {
+      basePricePerPack,
+      packsNeeded,
+      subtotal,
+      tierDiscount,
+      tierDiscountAmount,
+      additionalDiscount: state.additionalDiscount,
+      additionalDiscountAmount,
+      discountedSubtotal: finalDiscountedSubtotal,
+      gstPercent,
+      gstAmount,
+      finalTotal
+    };
   }
 
   async function addChemicalToCart() {
@@ -445,27 +568,18 @@
       return;
     }
 
-    // Calculate pricing
+    // Calculate pricing (now using the calculated values from updatePricingBreakdown)
+    const pricing = state.calculatedPricing;
+    if (!pricing) {
+      showToast('Error', 'Please wait for pricing to be calculated.', 'error');
+      return;
+    }
+
     const format = state.selectedFormat;
     const quantityLitres = state.quantityLitres;
     const packSize = format.size_litre;
-
-    // Calculate number of packs needed
-    const packsNeeded = Math.ceil(quantityLitres / packSize);
-    const totalLitres = packsNeeded * packSize;
+    const totalLitres = pricing.packsNeeded * packSize;
     const surplusLitres = totalLitres - quantityLitres;
-
-    // Calculate price per pack (assuming base price from product data)
-    const basePricePerPack = 100; // This should come from product data or API
-    const subtotal = basePricePerPack * packsNeeded;
-    const discountPercent = 0; // Default no discount
-    const discountAmount = (subtotal * discountPercent) / 100;
-    const discountedSubtotal = subtotal - discountAmount;
-    const gstPercent = 18; // Standard GST rate
-    const gstAmount = (discountedSubtotal * gstPercent) / 100;
-    const finalTotal = discountedSubtotal + gstAmount;
-
-    // Create chemical product object
     const chemicalProduct = {
       id: 'chemical_' + Date.now(),
       type: 'chemical',
@@ -477,26 +591,17 @@
       format_label: format.label,
       pack_size_litre: packSize,
       quantity_litre: quantityLitres,
-      packs_needed: packsNeeded,
+      packs_needed: pricing.packsNeeded,
       total_litre: totalLitres,
       surplus_litre: surplusLitres,
-      unit_price: basePricePerPack,
-      quantity: packsNeeded,
-      discount_percent: discountPercent,
-      gst_percent: gstPercent,
+      unit_price: pricing.basePricePerPack,
+      quantity: pricing.packsNeeded,
+      discount_percent: pricing.tierDiscount + state.additionalDiscount,
+      gst_percent: pricing.gstPercent,
+      pricing_tier: state.pricingTier,
       image: 'images/chemical-placeholder.jpg',
       added_at: new Date().toISOString(),
-      calculations: {
-        unit_price: basePricePerPack,
-        quantity: packsNeeded,
-        subtotal: subtotal,
-        discount_percent: discountPercent,
-        discount_amount: discountAmount,
-        discounted_subtotal: discountedSubtotal,
-        gst_percent: gstPercent,
-        gst_amount: gstAmount,
-        final_total: finalTotal
-      }
+      calculations: pricing
     };
 
     // Show loading state
@@ -540,6 +645,9 @@
     state.quantityLitres = null;
     state.machineName = '';
     state.filter200LActive = false;
+    state.pricingTier = 'standard';
+    state.additionalDiscount = 0;
+    state.calculatedPricing = null;
 
     // Reset UI elements
     if (machineSelect) machineSelect.value = '';
@@ -557,6 +665,15 @@
     }
     if (addToCartSection) {
       addToCartSection.style.display = 'none';
+    }
+    if (pricingTierSelect) {
+      pricingTierSelect.value = 'standard';
+    }
+    if (additionalDiscountInput) {
+      additionalDiscountInput.value = '0';
+    }
+    if (pricingBreakdown) {
+      pricingBreakdown.innerHTML = '';
     }
 
     renderCategories();
