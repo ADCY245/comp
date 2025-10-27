@@ -2,6 +2,7 @@
   const dataUrl = '/static/data/chemicals/products.json';
 
   const machineSelect = document.getElementById('machineSelect');
+  const filter200LButton = document.getElementById('filter200LDrum');
   const categoryOptionsEl = document.getElementById('categoryOptions');
   const productOptionsEl = document.getElementById('productOptions');
   const formatOptionsEl = document.getElementById('formatOptions');
@@ -20,7 +21,8 @@
     selectedCategory: null,
     selectedProduct: null,
     selectedFormat: null,
-    quantityLitres: null
+    quantityLitres: null,
+    filter200LActive: false
   };
 
   document.addEventListener('DOMContentLoaded', initializeConfigurator);
@@ -79,6 +81,12 @@
       });
     }
 
+    if (filter200LButton) {
+      filter200LButton.addEventListener('click', () => {
+        toggle200LFilter();
+      });
+    }
+
     if (quantityInput) {
       quantityInput.addEventListener('input', () => {
         if (!state.selectedFormat) {
@@ -97,6 +105,38 @@
         updateSummary();
       });
     }
+  }
+
+  function toggle200LFilter() {
+    state.filter200LActive = !state.filter200LActive;
+
+    // Update button styling
+    if (filter200LButton) {
+      if (state.filter200LActive) {
+        filter200LButton.classList.add('active');
+        filter200LButton.setAttribute('aria-pressed', 'true');
+      } else {
+        filter200LButton.classList.remove('active');
+        filter200LButton.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    // Clear selections and re-render
+    state.selectedProduct = null;
+    state.selectedFormat = null;
+    state.quantityLitres = null;
+    if (quantityInput) {
+      quantityInput.value = '';
+      quantityInput.disabled = true;
+      quantityInput.placeholder = 'Select a packaging format first';
+    }
+    if (quantityHelper) {
+      quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
+    }
+
+    renderProducts();
+    renderFormats();
+    updateSummary();
   }
 
   function renderCategories() {
@@ -144,6 +184,14 @@
     state.selectedProduct = null;
     state.selectedFormat = null;
     state.quantityLitres = null;
+    state.filter200LActive = false; // Reset filter when changing category
+
+    // Reset filter button styling
+    if (filter200LButton) {
+      filter200LButton.classList.remove('active');
+      filter200LButton.setAttribute('aria-pressed', 'false');
+    }
+
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = true;
@@ -165,12 +213,23 @@
       return;
     }
 
-    const products = Array.isArray(state.selectedCategory.products)
+    let products = Array.isArray(state.selectedCategory.products)
       ? state.selectedCategory.products
       : [];
 
+    // Filter products to show only those with 200L drum formats if filter is active
+    if (state.filter200LActive) {
+      products = products.filter(product => {
+        const formats = Array.isArray(product.formats) ? product.formats : [];
+        return formats.some(format => format.size_litre === 200);
+      });
+    }
+
     if (!products.length) {
-      productOptionsEl.innerHTML = '<p class="chem-placeholder mb-0">No products listed for this category yet.</p>';
+      const message = state.filter200LActive
+        ? 'No products with 200L drum packaging available in this category.'
+        : 'No products listed for this category yet.';
+      productOptionsEl.innerHTML = `<p class="chem-placeholder mb-0">${sanitize(message)}</p>`;
       return;
     }
 
@@ -178,11 +237,15 @@
       .map(product => {
         const isActive = state.selectedProduct?.id === product.id;
         const icon = product.icon || state.selectedCategory.icon || 'fas fa-box';
+        const formats = Array.isArray(product.formats) ? product.formats : [];
+        const has200L = formats.some(format => format.size_litre === 200);
+        const drumBadge = has200L ? '<span class="badge bg-warning text-dark ms-2">200L Available</span>' : '';
+
         return `
           <button type="button" class="chem-option ${isActive ? 'chem-option--active' : ''}" data-product-id="${product.id}" aria-pressed="${isActive}">
             <span class="chem-option__icon" aria-hidden="true"><i class="${icon}"></i></span>
             <span>
-              <span class="chem-option__title">${sanitize(product.name)}</span>
+              <span class="chem-option__title">${sanitize(product.name)} ${drumBadge}</span>
               <span class="chem-option__subtitle">${sanitize(product.description || 'Description coming soon.')}</span>
             </span>
           </button>
@@ -296,6 +359,10 @@
 
     if (state.machineName) {
       items.push(summaryItem('Machine', state.machineName));
+    }
+
+    if (state.filter200LActive) {
+      items.push(summaryItem('Filter', '200L Drums Only'));
     }
 
     if (state.selectedCategory) {

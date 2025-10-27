@@ -30,7 +30,10 @@
                 <option value="">-- Select Machine (optional) --</option>
               </select>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+              <button type="button" id="filter200LDrum" class="btn btn-outline-gold">
+                <i class="fas fa-drum"></i> 200L Drum
+              </button>
               <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold">
                 <i class="fas fa-plus"></i> New Machine
               </a>

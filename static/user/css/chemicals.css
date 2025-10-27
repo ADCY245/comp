@@ -153,6 +153,21 @@
   box-shadow: 0 18px 36px rgba(196, 147, 61, 0.18);
 }
 
+/* 200L Drum filter button active state */
+.btn-outline-gold.active {
+  background: linear-gradient(135deg, rgba(196, 147, 61, 0.25), rgba(173, 151, 79, 0.15));
+  border-color: rgba(196, 147, 61, 0.95);
+  color: #C8AA4E;
+  box-shadow: 0 8px 16px rgba(196, 147, 61, 0.25);
+}
+
+.btn-outline-gold.active:hover {
+  background: linear-gradient(135deg, rgba(196, 147, 61, 0.35), rgba(173, 151, 79, 0.25));
+  border-color: rgba(196, 147, 61, 1);
+  color: #D4B561;
+  box-shadow: 0 12px 24px rgba(196, 147, 61, 0.35);
+}
+
 .chem-placeholder {
   color: #6b7280;
   font-size: 0.9rem;
