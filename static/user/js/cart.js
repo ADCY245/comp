@@ -347,8 +347,15 @@ function normalizeCartData(cartData) {
     }
 }
 
+// Track if cart has been initialized to prevent multiple initializations
+let cartInitialized = false;
+
 // Initialize all cart handlers
 function initializeCart() {
+    if (cartInitialized) {
+        console.log('Cart already initialized, skipping...');
+        return;
+    }
     console.log('Initializing cart...');
     
     // Load and normalize cart data
@@ -423,6 +430,9 @@ function initializeCart() {
         if (emptyCartDiv) emptyCartDiv.style.display = 'none';
         if (cartItemsDiv) cartItemsDiv.style.display = 'block';
     }
+
+    // Mark cart as initialized to prevent multiple initializations
+    cartInitialized = true;
 }
 
 // Make createProductTypeModal available globally
@@ -840,10 +850,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initial empty state check
         updateCartEmptyState();
         
-        // Initialize cart
+        // Initialize the cart (only once due to the guard)
         initializeCart();
-        
-        // Set up continue shopping buttons
         const continueShoppingBtn = document.getElementById('continueShoppingBtn');
         const continueShoppingBtnBottom = document.getElementById('continueShoppingBtnBottom');
         
@@ -1117,9 +1125,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
     
-    // Initialize the cart
-    initializeCart();
-    
     // Check for duplicate items on initial load
     checkForDuplicateMpacks();
     checkForDuplicateBlankets();
@@ -1289,8 +1294,16 @@ function updateCartTotals() {
         const emptyCart = document.getElementById('emptyCart');
         const cartItemsContainer = document.getElementById('cartItems');
         
+        console.log('updateCartTotals: Found cart items:', cartItems.length);
+        console.log('updateCartTotals: Cart items:', Array.from(cartItems).map(item => ({
+            id: item.getAttribute('data-item-id'),
+            name: item.getAttribute('data-name'),
+            type: item.getAttribute('data-type')
+        })));
+
         // Show/hide empty cart message
         if (cartItems.length === 0) {
+            console.log('updateCartTotals: No cart items, hiding summary');
             if (emptyCart) emptyCart.style.display = 'block';
             if (cartItemsContainer) cartItemsContainer.style.display = 'flex';
             
@@ -1299,9 +1312,11 @@ function updateCartTotals() {
             if (cartSummary) {
                 cartSummary.innerHTML = '';
                 cartSummary.style.display = 'none';
+                console.log('updateCartTotals: Cleared and hid cart summary');
             }
             return;
         } else {
+            console.log('updateCartTotals: Items found, showing summary');
             if (emptyCart) emptyCart.style.display = 'none';
             if (cartItemsContainer) cartItemsContainer.style.display = 'block';
         }
@@ -1429,8 +1444,12 @@ function updateCartTotals() {
         
         // Update the cart summary
         const cartSummary = document.getElementById('cartSummary');
+        console.log('updateCartTotals: cartItems length =', cartItems.length);
+        console.log('updateCartTotals: cartSummary element =', cartSummary);
+
         if (cartSummary) {
             cartSummary.style.display = 'block';
+            console.log('updateCartTotals: showing cart summary');
             // Round all values to 2 decimal places
             subtotal = Math.round(subtotal * 100) / 100;
             totalDiscount = Math.round(totalDiscount * 100) / 100;
@@ -2079,9 +2098,11 @@ function removeFromCart(event, itemId, callback) {
                 
                 // Wait for the fade-out animation to complete before removing
                 setTimeout(() => {
+                    console.log('removeFromCart: removing item element');
                     itemElement.remove();
 
                     // Update cart count and totals
+                    console.log('removeFromCart: calling updateCartCount and updateCartTotals');
                     updateCartCount(data.cart_count || 0);
                     updateCartTotals();
 
