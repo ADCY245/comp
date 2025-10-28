@@ -3480,6 +3480,15 @@ def update_cart_item():
 @login_required
 def update_cart_quantity():
     """Update the quantity of a product in the user's cart."""
+    def to_float(value):
+        """Safely convert the provided value to float, returning None on failure."""
+        try:
+            if value is None or value == '':
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+            
     if not current_user.is_authenticated:
         return jsonify({
             'success': False,
