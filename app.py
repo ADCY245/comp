@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_from_directory, abort, make_response
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
