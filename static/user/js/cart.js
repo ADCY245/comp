@@ -1739,44 +1739,40 @@ function updateCartItemQuantity(index, newQuantity, type) {
     // Update empty state after quantity changes
     updateCartEmptyState();
     const csrfToken = getCSRFToken();
-    
+
     // Try to find the cart item in the DOM
     let cartItem = document.querySelector(`.cart-item[data-index="${index}"]`);
-    
+    let itemId = null;
+
     // If not found, try to find by type and index
     if (!cartItem && type) {
         cartItem = document.querySelector(`.cart-item[data-type="${type}"][data-index="${index}"]`);
     }
-    
+
     // If still not found, try to find any cart item with the index
     if (!cartItem) {
         const allCartItems = document.querySelectorAll('.cart-item');
-        for (const item of allCartItems) {
-            if (item.getAttribute('data-index') === index) {
-                cartItem = item;
-                // Update the index in case we found by item_id
-                if (itemId && !cartItem.getAttribute('data-index')) {
-                    cartItem.setAttribute('data-index', index);
-                }
+        for (const candidate of allCartItems) {
+            const candidateIndex = candidate.getAttribute('data-index');
+            if (candidateIndex === String(index)) {
+                cartItem = candidate;
                 break;
             }
         }
     }
-    
-    if (!cartItem) {
+
+    if (cartItem) {
+        itemId = cartItem.getAttribute('data-item-id');
+    } else {
         console.warn('Cart item not found in DOM, but will still update server-side');
-        // Continue with the update even if we can't find the DOM element
     }
-    
+
     const quantityInput = cartItem ? cartItem.querySelector('.quantity-input') : null;
     const originalValue = quantityInput ? quantityInput.value : '';
-    
+
     if (quantityInput) {
         quantityInput.disabled = true;
     }
-    
-    // Get item ID from the cart item or use the index as fallback
-    const itemId = cartItem ? cartItem.getAttribute('data-item-id') : null;
     
     fetch('/update_cart_quantity', {
         method: 'POST',
@@ -1809,7 +1805,6 @@ function updateCartItemQuantity(index, newQuantity, type) {
                     itemData.type = cartItem ? cartItem.getAttribute('data-type') : '';
                 }
 
-                const quantityInput = item.querySelector('.quantity-input');
                 if (quantityInput) {
                     const isChemical = itemData.type === 'chemical' || itemData.type === 'maintenance';
                     const qtyValue = itemData.quantity_litre ?? itemData.quantity;
