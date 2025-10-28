@@ -570,13 +570,13 @@
     const packSize = format.size_litre;
 
     // Calculate number of packs needed
-    const packsNeeded = Math.ceil(quantityLitres / packSize);
-    const totalLitres = packsNeeded * packSize;
+    const packsNeeded = packSize ? Math.ceil(quantityLitres / packSize) : 0;
+    const totalLitres = packSize ? packsNeeded * packSize : quantityLitres;
     const surplusLitres = totalLitres - quantityLitres;
 
-    // Base pricing (no tier discounts)
-    const basePricePerPack = 100; // This should come from product data or API
-    const subtotal = basePricePerPack * packsNeeded;
+    // Base pricing (placeholder rate per litre until API provides real data)
+    const basePricePerLitre = 50; // TODO: replace with product-specific litre pricing data/API
+    const subtotal = basePricePerLitre * quantityLitres;
 
     // Apply discount
     const discountAmount = (subtotal * currentDiscount) / 100;
@@ -602,16 +602,17 @@
       packs_needed: packsNeeded,
       total_litre: totalLitres,
       surplus_litre: surplusLitres,
-      unit_price: basePricePerPack,
-      quantity: packsNeeded,
+      unit_price: basePricePerLitre,
+      price_per_litre: basePricePerLitre,
+      quantity: quantityLitres,
       discount_percent: currentDiscount,
       gst_percent: gstPercent,
       pricing_tier: 'standard',
       image: 'images/chemical-placeholder.jpg',
       added_at: new Date().toISOString(),
       calculations: {
-        unit_price: basePricePerPack,
-        quantity: packsNeeded,
+        unit_price: basePricePerLitre,
+        quantity: quantityLitres,
         subtotal: subtotal,
         discount_percent: currentDiscount,
         discount_amount: discountAmount,

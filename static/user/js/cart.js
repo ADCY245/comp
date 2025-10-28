@@ -2,6 +2,7 @@
 const cartContainer = document.getElementById('cart-container');
 
 let isUpdatingCartTotals = false;
+let isRemovingCartItem = false;
 
 // Helper function to round numbers to 2 decimal places
 function round(value, decimals) {
@@ -547,6 +548,9 @@ function handleContinueShopping(event) {
 
 // Helper to remove or merge duplicate MPack items in the cart
 function checkForDuplicateMpacks() {
+    if (isRemovingCartItem) {
+        return;
+    }
     try {
         const mpackItems = document.querySelectorAll('.cart-item[data-type="mpack"]');
         const seen = new Map();
@@ -601,6 +605,9 @@ function checkForDuplicateMpacks() {
 
 // Helper to detect duplicate Blanket items in the cart (non-destructive)
 function checkForDuplicateBlankets() {
+    if (isRemovingCartItem) {
+        return;
+    }
     try {
         const blanketItems = document.querySelectorAll('.cart-item[data-type="blanket"]');
         console.log('checkForDuplicateBlankets: Found Blanket items:', blanketItems.length);
@@ -642,6 +649,9 @@ if (typeof window !== 'undefined') {
 
 // Helper to remove or merge duplicate Chemical items in the cart
 function checkForDuplicateChemicals() {
+    if (isRemovingCartItem) {
+        return;
+    }
     try {
         const chemicalItems = document.querySelectorAll('.cart-item[data-type="chemical"]');
         const seen = new Map();
@@ -654,9 +664,10 @@ function checkForDuplicateChemicals() {
             const formatLabel = item.dataset.formatLabel || '';
             const packSize = item.dataset.packSizeLitre || '';
             const machine = item.dataset.machine || '';
+            const pricePerLitre = item.dataset.pricePerLitre || item.dataset.unitPrice || '';
 
             // Create a composite key using all relevant attributes
-            const key = `${itemId}-${itemName}-${category}-${formatLabel}-${packSize}-${machine}`.toLowerCase();
+            const key = `${itemId}-${itemName}-${category}-${formatLabel}-${packSize}-${machine}-${pricePerLitre}`.toLowerCase();
 
             if (!key) return; // Skip if no identifiable key
 
@@ -917,39 +928,44 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target.closest('.quantity-decrease') || event.target.classList.contains('quantity-decrease')) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             const button = event.target.closest('.quantity-decrease');
             const inputGroup = button.closest('.input-group');
             const input = inputGroup ? inputGroup.querySelector('.quantity-input') : null;
             
             if (input) {
-                let value = parseInt(input.value) || 1;
-                if (value > 1) {
-                    // Update the value locally
-                    input.value = value - 1;
-                    
-                    // Schedule the update to happen after a short delay
-                    // This allows for multiple quick clicks without sending multiple requests
+                const container = input.closest('.cart-item');
+                const type = container?.getAttribute('data-type');
+                let value = parseFloat(input.value) || 1;
+                if (type === 'chemical' || type === 'maintenance') {
+                    value = Math.max(0.1, value - 1);
+                    input.value = value.toFixed(2).replace(/\.00$/, '');
+                    scheduleQuantityUpdate(input);
+                } else if (value > 1) {
+                    input.value = Math.max(1, Math.round(value - 1));
                     scheduleQuantityUpdate(input);
                 }
             }
         }
-        
+
         // Handle increase quantity button click
         else if (event.target.closest('.quantity-increase') || event.target.classList.contains('quantity-increase')) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             const button = event.target.closest('.quantity-increase');
             const input = button.closest('.input-group')?.querySelector('.quantity-input');
             
             if (input) {
-                // Get current value and increment
-                let value = parseInt(input.value) || 1;
-                input.value = value + 1;
-                
-                // Schedule the update to happen after a short delay
-                // This allows for multiple quick clicks without sending multiple requests
+                const container = input.closest('.cart-item');
+                const type = container?.getAttribute('data-type');
+                let value = parseFloat(input.value) || 1;
+                if (type === 'chemical' || type === 'maintenance') {
+                    value = Math.max(0.1, value + 1);
+                    input.value = value.toFixed(2).replace(/\.00$/, '');
+                } else {
+                    input.value = Math.max(1, Math.round(value + 1));
+                }
                 scheduleQuantityUpdate(input);
             }
         }
@@ -1003,12 +1019,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inputGroup) inputGroup.classList.add('loading');
         
         // Get and validate the quantity
-        let newQuantity = parseInt(input.value);
-        if (isNaN(newQuantity) || newQuantity < 1) {
-            newQuantity = 1;
-            input.value = 1;
+        const type = cartItem.getAttribute('data-type');
+        let newQuantity = parseFloat(input.value);
+        if (isNaN(newQuantity) || newQuantity <= 0) {
+            newQuantity = type === 'chemical' || type === 'maintenance' ? 0.1 : 1;
+            input.value = type === 'chemical' || type === 'maintenance'
+                ? newQuantity.toFixed(2).replace(/\.00$/, '')
+                : Math.round(newQuantity);
+        } else if (type !== 'chemical' && type !== 'maintenance') {
+            newQuantity = Math.max(1, Math.round(newQuantity));
+            input.value = newQuantity;
+        } else {
+            newQuantity = Math.max(0.1, newQuantity);
+            input.value = newQuantity.toFixed(2).replace(/\.00$/, '');
         }
-        
+
         // Update the cart item quantity
         updateCartItemQuantity(index, newQuantity);
     }
@@ -1186,8 +1211,8 @@ function calculateMPackPrices(item) {
 
 // Function to calculate blanket prices
 function calculateBlanketPrices(item) {
-    const basePrice = parseFloat(item.getAttribute('data-base-price') || item.dataset.basePrice || 0);
-    const barPrice = parseFloat(item.getAttribute('data-bar-price') || item.dataset.barPrice || 0);
+    const basePrice = parseFloat(item.getAttribute('data-base-price') || 0);
+    const barPrice = parseFloat(item.getAttribute('data-bar-price') || 0);
     const quantity = parseInt(item.querySelector('.quantity-input')?.value || item.getAttribute('data-quantity') || item.dataset.quantity || 1);
     const discountPercent = parseFloat(item.querySelector('.discount-input')?.value || item.getAttribute('data-discount-percent') || item.dataset.discountPercent || 0);
     const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || item.dataset.gstPercent || 18);
@@ -1223,13 +1248,13 @@ function calculateBlanketPrices(item) {
 
 // Function to calculate chemical prices
 function calculateChemicalPrices(item) {
-    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || item.dataset.unitPrice || 0);
-    const quantity = parseInt(item.querySelector('.quantity-input')?.value || item.getAttribute('data-quantity') || item.dataset.quantity || 1);
+    const litres = parseFloat(item.getAttribute('data-quantity-litre') || item.dataset.quantityLitre || item.dataset.quantity || 0);
+    const pricePerLitre = parseFloat(item.getAttribute('data-price-per-litre') || item.dataset.pricePerLitre || item.dataset.unitPrice || 0);
     const discountPercent = parseFloat(item.querySelector('.discount-input')?.value || item.getAttribute('data-discount-percent') || item.dataset.discountPercent || 0);
     const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || item.dataset.gstPercent || 18);
 
-    // Calculate prices
-    const subtotal = unitPrice * quantity;
+    const effectiveQuantity = litres > 0 ? litres : 0;
+    const subtotal = pricePerLitre * effectiveQuantity;
     const discountAmount = subtotal * (discountPercent / 100);
     const discountedSubtotal = subtotal - discountAmount;
     const gstAmount = (discountedSubtotal * gstPercent) / 100;
@@ -1238,8 +1263,9 @@ function calculateChemicalPrices(item) {
     const type = item.getAttribute('data-type') || 'chemical';
     updateItemDisplay(item, {
         type,
-        unit_price: unitPrice,
-        quantity,
+        unit_price: pricePerLitre,
+        quantity: effectiveQuantity,
+        quantity_litre: effectiveQuantity,
         discount_percent: discountPercent,
         gst_percent: gstPercent,
         subtotal,
@@ -1248,13 +1274,11 @@ function calculateChemicalPrices(item) {
         final_total: total
     });
 
-    // Update the displayed subtotal in the item row
     const subtotalElement = item.querySelector('.subtotal-value, .item-subtotal');
     if (subtotalElement) {
         subtotalElement.textContent = `₹${subtotal.toFixed(2)}`;
     }
 
-    // Update Pre-GST total value element only (span), not the entire row
     const preGstElement = item.querySelector('.pre-gst-total .pre-gst-amount, .total-before-gst');
     if (preGstElement) {
         preGstElement.textContent = `₹${discountedSubtotal.toFixed(2)}`;
@@ -1392,12 +1416,11 @@ function updateCartTotals() {
         cartItems.forEach(item => {
             try {
                 const type = item.getAttribute('data-type');
-                const quantity = parseInt(item.getAttribute('data-quantity') || '1');
-                
-                // Ensure quantity is at least 1
-                const validQuantity = isNaN(quantity) || quantity < 1 ? 1 : quantity;
-                
+
                 if (type === 'mpack') {
+                    const quantity = parseInt(item.getAttribute('data-quantity') || '1');
+                    const validQuantity = isNaN(quantity) || quantity < 1 ? 1 : quantity;
+
                     // Get prices for mpack
                     const unitPrice = parseFloat(item.getAttribute('data-unit-price') || '0');
                     const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
@@ -1433,6 +1456,9 @@ function updateCartTotals() {
                     });
                     
                 } else if (type === 'blanket') {
+                    const quantity = parseInt(item.getAttribute('data-quantity') || '1');
+                    const validQuantity = isNaN(quantity) || quantity < 1 ? 1 : quantity;
+
                     // Get prices for blanket
                     const basePrice = parseFloat(item.getAttribute('data-base-price') || '0');
                     const barPrice = parseFloat(item.getAttribute('data-bar-price') || '0');
@@ -1470,13 +1496,15 @@ function updateCartTotals() {
                         gst_percent: gstPercent
                     });
                 } else if (type === 'chemical' || type === 'maintenance') {
-                    // Get prices for chemical
-                    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || '0');
+                    const litres = parseFloat(item.getAttribute('data-quantity-litre') || item.dataset.quantityLitre || '0');
+                    const pricePerLitre = parseFloat(item.getAttribute('data-price-per-litre') || item.dataset.pricePerLitre || item.getAttribute('data-unit-price') || '0');
                     const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
                     const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '18');
 
+                    const validQuantity = Number.isFinite(litres) && litres > 0 ? litres : 0;
+
                     // Calculate prices
-                    const itemSubtotal = unitPrice * validQuantity;
+                    const itemSubtotal = pricePerLitre * validQuantity;
                     const discountAmount = itemSubtotal * (discountPercent / 100);
                     const discountedSubtotal = itemSubtotal - discountAmount;
                     const gstAmount = (discountedSubtotal * gstPercent) / 100;
@@ -1491,6 +1519,8 @@ function updateCartTotals() {
 
                     // Update data attributes
                     item.setAttribute('data-quantity', validQuantity.toString());
+                    item.setAttribute('data-quantity-litre', validQuantity.toString());
+                    item.setAttribute('data-unit-price', pricePerLitre.toString());
 
                     // Update item display
                     updateItemDisplay(item, {
@@ -1499,7 +1529,8 @@ function updateCartTotals() {
                         discount_amount: discountAmount,
                         gst_amount: gstAmount,
                         quantity: validQuantity,
-                        unit_price: unitPrice,
+                        quantity_litre: validQuantity,
+                        unit_price: pricePerLitre,
                         discount_percent: discountPercent,
                         gst_percent: gstPercent
                     });
@@ -1694,17 +1725,27 @@ function handleQuantityChange(event) {
     }
     
     // Ensure the quantity is at least 1
-    let newQuantity = parseInt(input.value);
-    if (isNaN(newQuantity) || newQuantity < 1) {
-        newQuantity = 1;
-        input.value = 1;
+    let newQuantity = parseFloat(input.value);
+    if (isNaN(newQuantity) || newQuantity <= 0) {
+        newQuantity = cartItem.getAttribute('data-type') === 'chemical' || cartItem.getAttribute('data-type') === 'maintenance' ? 0.1 : 1;
+        input.value = cartItem.getAttribute('data-type') === 'chemical' || cartItem.getAttribute('data-type') === 'maintenance'
+            ? newQuantity.toFixed(2).replace(/\.00$/, '')
+            : Math.round(newQuantity);
     }
-    
+
+    if (cartItem.getAttribute('data-type') !== 'chemical' && cartItem.getAttribute('data-type') !== 'maintenance') {
+        newQuantity = Math.max(1, Math.round(newQuantity));
+        input.value = newQuantity;
+    } else {
+        newQuantity = Math.max(0.1, newQuantity);
+        input.value = newQuantity.toFixed(2).replace(/\.00$/, '');
+    }
+
     // Add loading state
     input.disabled = true;
     const buttons = cartItem.querySelectorAll('.quantity-decrease, .quantity-increase');
     buttons.forEach(btn => btn.disabled = true);
-    
+
     // Add loading class to parent for visual feedback
     const quantityControls = input.closest('.input-group');
     if (quantityControls) {
@@ -1768,7 +1809,7 @@ function updateCartItemQuantity(index, newQuantity, type) {
         body: JSON.stringify({
             index: parseInt(index),
             item_id: itemId,
-            quantity: parseInt(newQuantity),
+            quantity: parseFloat(newQuantity),
             type: cartItem ? cartItem.getAttribute('data-type') : null
         })
     })
@@ -1792,7 +1833,11 @@ function updateCartItemQuantity(index, newQuantity, type) {
 
                 // Sync the quantity input first
                 if (quantityInput) {
-                    quantityInput.value = itemData.quantity || 1;
+                    const isChemical = itemData.type === 'chemical' || itemData.type === 'maintenance';
+                    const qtyValue = itemData.quantity || (isChemical ? itemData.quantity_litre : 1) || 1;
+                    quantityInput.value = isChemical
+                        ? parseFloat(qtyValue).toFixed(2).replace(/\.00$/, '')
+                        : qtyValue;
                 }
 
                 // Delegate DOM refresh to central utility
@@ -1854,12 +1899,19 @@ function handleQuantityInputChange(event) {
         return;
     }
     
-    let newQuantity = parseInt(input.value);
-    if (isNaN(newQuantity) || newQuantity < 1) {
-        newQuantity = 1;
-        input.value = 1;
+    let newQuantity = parseFloat(input.value);
+    if (isNaN(newQuantity) || newQuantity <= 0) {
+        newQuantity = type === 'chemical' || type === 'maintenance' ? 0.1 : 1;
     }
-    
+
+    if (type !== 'chemical' && type !== 'maintenance') {
+        newQuantity = Math.max(1, Math.round(newQuantity));
+        input.value = newQuantity;
+    } else {
+        newQuantity = Math.max(0.1, newQuantity);
+        input.value = newQuantity.toFixed(2).replace(/\.00$/, '');
+    }
+
     updateCartItemQuantity(index, newQuantity, type);
 }
 
@@ -2140,6 +2192,8 @@ function removeFromCart(event, itemId, callback) {
     }
     
     // Make API call to remove item from cart
+    isRemovingCartItem = true;
+
     fetch('/remove_from_cart', {
         method: 'POST',
         headers: {
@@ -2188,7 +2242,7 @@ function removeFromCart(event, itemId, callback) {
     })
     .catch(error => {
         console.error('Error removing item from cart:', error);
-        showToast('Error', 'Failed to remove item from cart', 'error');
+        showToast('Error', error.message || 'An error occurred while removing item from cart', 'error');
         
         // Reset button state on error
         if (button) {
@@ -2200,6 +2254,9 @@ function removeFromCart(event, itemId, callback) {
         if (typeof callback === 'function') {
             callback();
         }
+    })
+    .finally(() => {
+        isRemovingCartItem = false;
     });
 }
 
@@ -2492,8 +2549,12 @@ function updateItemDisplay(item, data) {
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
     } else if (type === 'chemical' || type === 'maintenance') {
-        item.dataset.unitPrice = data.unit_price || 0;
-        item.dataset.quantity = data.quantity || 1;
+        const litres = data.quantity_litre ?? data.quantity;
+        const pricePerLitre = data.price_per_litre ?? data.unit_price;
+        item.dataset.unitPrice = pricePerLitre || 0;
+        item.dataset.pricePerLitre = pricePerLitre || 0;
+        item.dataset.quantity = litres || 0;
+        item.dataset.quantityLitre = litres || 0;
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
     }
@@ -2553,7 +2614,11 @@ function updateItemDisplay(item, data) {
     // Update the quantity input
     const quantityInput = item.querySelector('.quantity-input');
     if (quantityInput) {
-        quantityInput.value = data.quantity || 1;
+        const isChemical = type === 'chemical' || type === 'maintenance';
+        const qtyValue = isChemical ? (data.quantity_litre ?? data.quantity ?? 0) : (data.quantity ?? 1);
+        quantityInput.value = isChemical
+            ? parseFloat(qtyValue).toFixed(2).replace(/\.00$/, '')
+            : qtyValue;
     }
 
     // Update discount input if present

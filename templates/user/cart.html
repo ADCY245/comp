@@ -542,6 +542,7 @@
                             {% if item.bar_type %}data-bar-type="{{ item.bar_type }}"{% endif %}
                         {% elif item.type == 'chemical' %}
                             data-unit-price="{{ item.unit_price|default(0) }}" 
+                            {% if item.price_per_litre %}data-price-per-litre="{{ item.price_per_litre }}"{% endif %}
                             data-quantity="{{ item.quantity|default(1) }}" 
                             data-discount-percent="{{ item.discount_percent|default(0) }}" 
                             data-gst-percent="{{ item.gst_percent|default(18) }}"
