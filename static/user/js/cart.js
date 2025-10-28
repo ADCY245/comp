@@ -2115,6 +2115,66 @@ function handleRemoveClick(e) {
     }
 }
 
+async function refreshCartDisplayFromServer() {
+    try {
+        const currentUrl = `${window.location.pathname}${window.location.search || ''}`;
+        const response = await fetch(currentUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch updated cart');
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const updateSection = (selector, updateCallback) => {
+            const fresh = doc.querySelector(selector);
+            const current = document.querySelector(selector);
+
+            if (fresh && current) {
+                if (fresh.tagName === 'SCRIPT') {
+                    current.textContent = fresh.textContent;
+                } else {
+                    current.innerHTML = fresh.innerHTML;
+                    if (fresh instanceof HTMLElement && current instanceof HTMLElement) {
+                        current.className = fresh.className;
+                        current.style.display = fresh.style.display;
+                        current.style.visibility = fresh.style.visibility;
+                        current.style.opacity = fresh.style.opacity;
+                    }
+                }
+
+                if (typeof updateCallback === 'function') {
+                    updateCallback(current, fresh);
+                }
+            }
+        };
+
+        updateSection('#cartItems', current => {
+            // Ensure indices remain sequential for newly rendered items
+            current.querySelectorAll('.cart-item').forEach((item, index) => {
+                item.setAttribute('data-index', index.toString());
+            });
+        });
+        updateSection('#emptyCart');
+        updateSection('#cartSummary');
+        updateSection('.cart-footer');
+        updateSection('#serverCartData');
+
+        // Re-run cart initialization to restore event handlers and calculations
+        initializeCart();
+    } catch (error) {
+        console.error('Error refreshing cart display from server:', error);
+        throw error;
+    }
+}
+
 // Function to remove item from cart using item ID
 function removeFromCart(event, itemId, callback) {
     // Prevent default form submission if called from a form
@@ -2193,6 +2253,32 @@ function removeFromCart(event, itemId, callback) {
     })
     .then(data => {
         if (data.success) {
+            const finalizeRemoval = () => {
+                updateCartCount(data.cart_count || 0);
+
+                const refreshPromise = refreshCartDisplayFromServer()
+                    .catch(err => {
+                        console.error('Falling back to local cart update:', err);
+                        updateCartTotals();
+                        updateCartEmptyState();
+                    })
+                    .finally(() => {
+                        if (typeof callback === 'function') {
+                            callback();
+                        } else if (button) {
+                            if (document.body.contains(button)) {
+                                button.innerHTML = originalHtml;
+                                button.disabled = false;
+                            }
+                        }
+
+                        releaseRemovalGuard();
+                    });
+
+                showToast('Success', 'Item removed from cart', 'success');
+                return refreshPromise;
+            };
+
             // Fade out the item
             if (itemElement) {
                 itemElement.style.opacity = '0.5';
@@ -2201,24 +2287,10 @@ function removeFromCart(event, itemId, callback) {
                 // Wait for the fade-out animation to complete before removing
                 setTimeout(() => {
                     itemElement.remove();
-
-                    // Update cart count and totals
-                    updateCartCount(data.cart_count || 0);
-                    updateCartTotals();
-
-                    // Show success message
-                    showToast('Success', 'Item removed from cart', 'success');
-
-                    // Call the callback if provided
-                    if (typeof callback === 'function') {
-                        callback();
-                    } else if (button) {
-                        // Reset button state
-                        button.innerHTML = originalHtml;
-                        button.disabled = false;
-                    }
-                    releaseRemovalGuard();
+                    finalizeRemoval();
                 }, 300);
+            } else {
+                finalizeRemoval();
             }
         } else {
             releaseRemovalGuard(true);
