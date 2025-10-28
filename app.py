@@ -86,8 +86,16 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # Configure allowed hosts and server name for domain
-app.config['ALLOWED_HOSTS'] = ['127.0.0.1', 'localhost', 'physihome.shop', 'www.physihome.shop']
-app.config['SERVER_NAME'] = 'physihome.shop'  # Primary domain without www
+default_allowed_hosts = (
+    '127.0.0.1,localhost,physihome.shop,'
+    'www.physihome.shop,nn-x3p8.onrender.com'
+)
+raw_hosts = os.getenv('ALLOWED_HOSTS', default_allowed_hosts)
+app.config['ALLOWED_HOSTS'] = [host.strip() for host in raw_hosts.split(',') if host.strip()]
+
+primary_domain = os.getenv('PRIMARY_DOMAIN')
+if primary_domain:
+    app.config['SERVER_NAME'] = primary_domain
 
 # Host checking middleware
 @app.before_request
@@ -100,8 +108,8 @@ def check_host():
     host = request.host.split(':')[0]  # Remove port if present
     
     # Check if the host is allowed
-    allowed_hosts = app.config['ALLOWED_HOSTS']
-    if host not in allowed_hosts:
+    allowed_hosts = app.config.get('ALLOWED_HOSTS', [])
+    if allowed_hosts and host not in allowed_hosts:
         return f'Access denied for host: {host}', 400
 
 # Include 'templates/user' in the Jinja2 search path so that render_template('cart.html')
