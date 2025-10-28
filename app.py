@@ -80,6 +80,16 @@ def get_next_quote_id():
             app.logger.error(f"Failed to generate sequential quotation id: {e}")
     return f"CGI_Q{int(datetime.now(IST).timestamp())}"
 
+
+def to_float(value):
+    """Safely convert the provided value to float, returning None on failure."""
+    try:
+        if value is None or value == '':
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
 # CORS Configuration
 from flask_cors import CORS
 # Initialize Flask app and login manager
@@ -2979,14 +2989,6 @@ def add_to_cart():
                 'success': False,
                 'error': 'No data provided'
             }), 400
-
-        def to_float(value):
-            try:
-                if value is None or value == '':
-                    return None
-                return float(value)
-            except (TypeError, ValueError):
-                return None
 
         def to_bool(value):
             if isinstance(value, bool):
