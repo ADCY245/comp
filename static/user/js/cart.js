@@ -1282,6 +1282,14 @@ function convertToMeters(value, unit) {
 
 function updateCartTotals() {
     if (isUpdatingCartTotals) return;
+
+    const cartContainer = document.getElementById('cart-container') || document.querySelector('.cart-container');
+    let cartSummary = document.getElementById('cartSummary');
+
+    if (!cartContainer && !cartSummary) {
+        return;
+    }
+
     isUpdatingCartTotals = true;
 
     try {
@@ -1294,8 +1302,7 @@ function updateCartTotals() {
         const cartItems = document.querySelectorAll('.cart-item');
         const emptyCart = document.getElementById('emptyCart');
         const cartItemsContainer = document.getElementById('cartItems');
-        const cartContainer = document.getElementById('cart-container') || document.querySelector('.cart-container');
-        let cartSummary = document.getElementById('cartSummary');
+        cartSummary = cartSummary || document.getElementById('cartSummary');
         const cartFooter = cartContainer ? cartContainer.querySelector('.cart-footer') : document.querySelector('.cart-footer');
         const sendQuotationBtn = document.getElementById('sendQuotationBtn');
         const clearCartBtn = document.getElementById('clearCartBtn');
@@ -1313,8 +1320,6 @@ function updateCartTotals() {
                 } else {
                     cartContainer.appendChild(cartSummary);
                 }
-            } else {
-                document.body.appendChild(cartSummary);
             }
         }
 
