@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response, abort, send_file
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_from_directory, abort, make_response
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from functools import wraps
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
@@ -83,6 +84,26 @@ def get_next_quote_id():
 from flask_cors import CORS
 # Initialize Flask app and login manager
 app = Flask(__name__)
+
+# Configure allowed hosts and server name for domain
+app.config['ALLOWED_HOSTS'] = ['127.0.0.1', 'localhost', 'physihome.shop', 'www.physihome.shop']
+app.config['SERVER_NAME'] = 'physihome.shop'  # Primary domain without www
+
+# Host checking middleware
+@app.before_request
+def check_host():
+    # Skip host checking for development
+    if app.debug:
+        return
+        
+    # Get the host from the request
+    host = request.host.split(':')[0]  # Remove port if present
+    
+    # Check if the host is allowed
+    allowed_hosts = app.config['ALLOWED_HOSTS']
+    if host not in allowed_hosts:
+        return f'Access denied for host: {host}', 400
+
 # Include 'templates/user' in the Jinja2 search path so that render_template('cart.html')
 # and similar calls find templates stored under that sub-directory without changing
 # every individual render_template path.
@@ -3491,8 +3512,11 @@ def update_cart_quantity():
                 'message': 'No data provided'
             }), 400
             
-        item_id = data.get('item_id')
-        quantity = int(data.get('quantity', 1))
+        product_type = data.get('type', 'mpack')
+        if product_type in ('chemical', 'maintenance'):
+            quantity = to_float(data.get('quantity_litre') or data.get('quantity') or 0) or 0
+        else:
+            quantity = int(data.get('quantity', 1))
         
         # Validate quantity
         if quantity < 1:

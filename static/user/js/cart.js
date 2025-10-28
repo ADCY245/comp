@@ -653,52 +653,30 @@ function checkForDuplicateChemicals() {
         return;
     }
     try {
-        const chemicalItems = document.querySelectorAll('.cart-item[data-type="chemical"]');
+        const chemicalItems = document.querySelectorAll('.cart-item[data-type="chemical"], .cart-item[data-type="maintenance"]');
         const seen = new Map();
 
         chemicalItems.forEach(item => {
             // Create a unique key based on all relevant attributes
             const itemId = item.dataset.id || '';
+            const lineItemIndex = item.dataset.index || '';
             const itemName = item.dataset.name || item.querySelector('.item-name')?.textContent?.trim() || '';
             const category = item.dataset.category || '';
             const formatLabel = item.dataset.formatLabel || '';
             const packSize = item.dataset.packSizeLitre || '';
             const machine = item.dataset.machine || '';
             const pricePerLitre = item.dataset.pricePerLitre || item.dataset.unitPrice || '';
+            const quantityLitre = item.dataset.quantityLitre || item.dataset.quantity || '';
 
-            // Create a composite key using all relevant attributes
-            const key = `${itemId}-${itemName}-${category}-${formatLabel}-${packSize}-${machine}-${pricePerLitre}`.toLowerCase();
+            // Include index and quantity in composite key so unique rows stay separate
+            const key = `${lineItemIndex}-${itemId}-${itemName}-${category}-${formatLabel}-${packSize}-${machine}-${pricePerLitre}-${quantityLitre}`.toLowerCase();
 
             if (!key) return; // Skip if no identifiable key
 
             if (seen.has(key)) {
-                // Duplicate found â€“ only merge if it's truly the same product with same attributes
-                const existing = seen.get(key);
-                const existingAttrs = existing.dataset;
-                const newAttrs = item.dataset;
-
-                // Check if all data attributes match before considering them duplicates
-                let isExactMatch = true;
-                for (const attr in existingAttrs) {
-                    if (existingAttrs[attr] !== newAttrs[attr]) {
-                        isExactMatch = false;
-                        break;
-                    }
-                }
-
-                if (isExactMatch) {
-                    const qtyInputExisting = existing.querySelector('.quantity-input');
-                    const qtyInputDuplicate = item.querySelector('.quantity-input');
-
-                    if (qtyInputExisting && qtyInputDuplicate) {
-                        const totalQty = (parseInt(qtyInputExisting.value) || 1) + (parseInt(qtyInputDuplicate.value) || 1);
-                        qtyInputExisting.value = totalQty;
-                        existing.setAttribute('data-quantity', totalQty);
-                    }
-
-                    // Remove the duplicate row from DOM
-                    item.remove();
-                }
+                // Duplicate found – only remove if it's a true clone (likely leftover from re-render)
+                console.log('Removing duplicate chemical item with key:', key, item);
+                item.remove();
             } else {
                 seen.set(key, item);
             }
@@ -1438,7 +1416,7 @@ function updateCartTotals() {
                     totalDiscount += discountAmount;
                     totalGst += gstAmount;
                     total += itemTotal;
-                    totalItems += validQuantity;
+                    totalItems += 1;
                     
                     // Update data attributes
                     item.setAttribute('data-quantity', validQuantity.toString());
@@ -1831,13 +1809,13 @@ function updateCartItemQuantity(index, newQuantity, type) {
                     itemData.type = cartItem ? cartItem.getAttribute('data-type') : '';
                 }
 
-                // Sync the quantity input first
+                const quantityInput = item.querySelector('.quantity-input');
                 if (quantityInput) {
                     const isChemical = itemData.type === 'chemical' || itemData.type === 'maintenance';
-                    const qtyValue = itemData.quantity || (isChemical ? itemData.quantity_litre : 1) || 1;
+                    const qtyValue = itemData.quantity_litre ?? itemData.quantity;
                     quantityInput.value = isChemical
-                        ? parseFloat(qtyValue).toFixed(2).replace(/\.00$/, '')
-                        : qtyValue;
+                        ? formatNumber(qtyValue ?? 0, 2)
+                        : (Math.max(1, Math.round(qtyValue ?? 1)));
                 }
 
                 // Delegate DOM refresh to central utility
@@ -2955,99 +2933,78 @@ function updateItemDisplay(item, data) {
         if (preGstTotalElement) {
             preGstTotalElement.textContent = `₹${totalBeforeGst.toFixed(2)}`;
         }
-        
-        // Update total
-        const totalElement = item.querySelector('.total-value');
-        if (totalElement) {
-            totalElement.textContent = `₹${total.toFixed(2)}`;
-        }
     } else if (type === 'chemical' || type === 'maintenance') {
-        // Handle chemical items
-        let unitPrice = parseFloat(data.unit_price ?? item.getAttribute('data-unit-price') ?? 0);
-        let quantity = parseInt(data.quantity ?? item.getAttribute('data-quantity') ?? 1, 10);
-        let discountPercent = parseFloat(data.discount_percent ?? item.getAttribute('data-discount-percent') ?? 0);
-        let gstPercent = parseFloat(data.gst_percent ?? item.getAttribute('data-gst-percent') ?? 18);
+        // Handle chemical items with litre-based pricing
+        const rawPricePerLitre = data.price_per_litre ?? data.unit_price ??
+            item.getAttribute('data-price-per-litre') ?? item.getAttribute('data-unit-price');
+        const rawQuantityLitre = data.quantity_litre ?? data.quantity ??
+            item.getAttribute('data-quantity-litre') ?? item.getAttribute('data-quantity');
+        const rawDiscountPercent = data.discount_percent ?? item.getAttribute('data-discount-percent');
+        const rawGstPercent = data.gst_percent ?? item.getAttribute('data-gst-percent');
 
-        if (!Number.isFinite(unitPrice)) unitPrice = 0;
-        if (!Number.isFinite(quantity) || quantity < 1) quantity = 1;
+        let pricePerLitre = toNumber(rawPricePerLitre) ?? 0;
+        let quantityLitres = toNumber(rawQuantityLitre) ?? 0;
+        let discountPercent = toNumber(rawDiscountPercent) ?? 0;
+        let gstPercent = toNumber(rawGstPercent) ?? 18;
+
+        if (!Number.isFinite(pricePerLitre) || pricePerLitre < 0) pricePerLitre = 0;
+        if (!Number.isFinite(quantityLitres) || quantityLitres < 0) quantityLitres = 0;
         if (!Number.isFinite(discountPercent) || discountPercent < 0) discountPercent = 0;
         if (!Number.isFinite(gstPercent) || gstPercent < 0) gstPercent = 0;
 
-        // Calculate prices
-        const subtotal = unitPrice * quantity;
-        const discountAmount = (subtotal * discountPercent) / 100;
+        const subtotal = pricePerLitre * quantityLitres;
+        const discountAmount = subtotal * (discountPercent / 100);
         const discountedSubtotal = subtotal - discountAmount;
-        const gstAmount = (discountedSubtotal * gstPercent) / 100;
+        const gstAmount = discountedSubtotal * (gstPercent / 100);
         const total = discountedSubtotal + gstAmount;
 
-        const resolveValue = (key, attrName = `data-${key.replace(/_/g, '-')}`) => {
-            if (Object.prototype.hasOwnProperty.call(data, key)) {
-                const value = data[key];
-                if (value !== undefined && value !== null && value !== '') {
-                    return value;
-                }
-            }
+        // Persist key attributes back on the DOM node
+        item.dataset.unitPrice = pricePerLitre.toString();
+        item.dataset.pricePerLitre = pricePerLitre.toString();
+        item.dataset.quantity = quantityLitres.toString();
+        item.dataset.quantityLitre = quantityLitres.toString();
+        item.dataset.discountPercent = discountPercent.toString();
+        item.dataset.gstPercent = gstPercent.toString();
 
-            const attrValue = item.getAttribute(attrName);
-            return attrValue !== null ? attrValue : undefined;
-        };
-
-        const dataAttributes = {
-            'data-unit-price': unitPrice,
-            'data-quantity': quantity,
-            'data-discount-percent': discountPercent,
-            'data-gst-percent': gstPercent,
-            'data-machine': resolveValue('machine'),
-            'data-category': resolveValue('category'),
-            'data-name': resolveValue('name', 'data-name'),
-            'data-type': type,
-            'data-format-label': resolveValue('format_label'),
-            'data-pack-size-litre': resolveValue('pack_size_litre'),
-            'data-quantity-litre': resolveValue('quantity_litre'),
-            'data-packs-needed': resolveValue('packs_needed'),
-            'data-total-litre': resolveValue('total_litre'),
-            'data-surplus-litre': resolveValue('surplus_litre')
-        };
-
-        Object.entries(dataAttributes).forEach(([attr, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                item.setAttribute(attr, value);
-            }
-        });
-
+        // Update quantity input for litre precision
         const quantityInput = item.querySelector('.quantity-input');
         if (quantityInput) {
-            quantityInput.value = quantity;
+            quantityInput.value = quantityLitres > 0
+                ? quantityLitres.toFixed(2).replace(/\.00$/, '')
+                : '0';
         }
 
+        // Update discount input if present
         const discountInput = item.querySelector('.discount-input');
         if (discountInput && Object.prototype.hasOwnProperty.call(data, 'discount_percent')) {
-            const discountValue = Number(data.discount_percent || 0);
-            discountInput.value = discountValue % 1 === 0 ? discountValue : discountValue.toFixed(1);
+            discountInput.value = discountPercent % 1 === 0
+                ? discountPercent
+                : discountPercent.toFixed(1);
         }
 
+        // Refresh quantity displays
         const quantityDisplays = item.querySelectorAll('.quantity-display, .item-quantity');
+        const quantityLabel = quantityLitres > 0 ? `${formatNumber(quantityLitres, 2)} L` : '0 L';
         quantityDisplays.forEach(el => {
-            el.textContent = quantity;
+            el.textContent = quantityLabel;
         });
 
-        // Update all price displays
-        const updatePriceElement = (selector, value, prefix = '₹') => {
+        // Helper to update monetary values consistently
+        const applyPrice = (selector, value, prefix = '₹') => {
             const amount = Number.isFinite(value) ? value : 0;
-            const elements = item.querySelectorAll(selector);
-            elements.forEach(el => {
-                if (el) el.textContent = `${prefix}${amount.toFixed(2)}`;
+            item.querySelectorAll(selector).forEach(el => {
+                el.textContent = `${prefix}${amount.toFixed(2)}`;
             });
         };
 
-        updatePriceElement('.unit-price, .item-unit-price', unitPrice);
-        updatePriceElement('.subtotal, .item-subtotal, .subtotal-value', subtotal);
-        updatePriceElement('.discount-amount, .item-discount', discountAmount);
-        updatePriceElement('.total-before-gst, .pre-gst-total, .item-total-before-gst', discountedSubtotal);
-        updatePriceElement('.gst-amount, .item-gst', gstAmount);
-        updatePriceElement('.total-amount, .item-total, .total-value', total);
+        applyPrice('.unit-price, .item-unit-price', pricePerLitre);
+        applyPrice('.subtotal, .item-subtotal, .subtotal-value', subtotal);
+        applyPrice('.discount-amount, .item-discount', discountAmount, '-₹');
+        applyPrice('.total-before-gst, .pre-gst-total, .item-total-before-gst', discountedSubtotal);
+        applyPrice('.gst-amount, .item-gst', gstAmount);
+        applyPrice('.total-amount, .item-total, .total-value', total);
 
-        // Update hidden inputs
+        // Update hidden inputs to stay in sync
         const hiddenGstInput = item.querySelector('input[name$="_gst_amount"]');
         if (hiddenGstInput) {
             hiddenGstInput.value = gstAmount.toFixed(2);
@@ -3057,13 +3014,6 @@ function updateItemDisplay(item, data) {
         if (hiddenTotalInput) {
             hiddenTotalInput.value = total.toFixed(2);
         }
-
-        // Update total
-        const totalElement = item.querySelector('.total-value');
-        if (totalElement) {
-            totalElement.textContent = `₹${total.toFixed(2)}`;
-        }
     }
 }
-
 // End of file
