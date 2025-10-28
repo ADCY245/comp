@@ -181,9 +181,21 @@ def company_required(view_func):
 
 # -----------------------------------------------------------------------
 
+cors_origins_env = os.getenv('CORS_ORIGINS')
+if cors_origins_env:
+    cors_allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
+else:
+    cors_allowed_origins = [
+        'https://physihome.shop',
+        'https://www.physihome.shop',
+        'https://nn-x3p8.onrender.com',
+        'http://127.0.0.1:5000',
+        'http://localhost:5000'
+    ]
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["*"],
+        "origins": cors_allowed_origins,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "supports_credentials": True
     }
@@ -3521,24 +3533,26 @@ def update_cart_quantity():
             }), 400
             
         product_type = data.get('type', 'mpack')
+        item_id = data.get('item_id')
         if product_type in ('chemical', 'maintenance'):
-            quantity = to_float(data.get('quantity_litre') or data.get('quantity') or 0) or 0
+            quantity_value = to_float(data.get('quantity_litre') or data.get('quantity') or 0)
+            quantity = quantity_value if quantity_value is not None else 0
         else:
             quantity = int(data.get('quantity', 1))
-        
+
         # Validate quantity
-        if quantity < 1:
+        if product_type in ('chemical', 'maintenance'):
+            if quantity <= 0:
+                return jsonify({
+                    'success': False,
+                    'message': 'Quantity must be greater than 0 for chemical items'
+                }), 400
+        elif quantity < 1:
             return jsonify({
                 'success': False,
                 'message': 'Quantity must be at least 1'
             }), 400
             
-        if not item_id:
-            return jsonify({
-                'success': False,
-                'message': 'Item ID is required'
-            }), 400
-        
         # Get current cart
         cart = get_user_cart()
         products = cart.get('products', [])
@@ -3551,7 +3565,9 @@ def update_cart_quantity():
             if str(item.get('id')) == str(item_id):
                 # Update the quantity
                 item['quantity'] = quantity
-                
+                if product_type in ('chemical', 'maintenance'):
+                    item['quantity_litre'] = quantity
+
                 # Recalculate prices if needed (for blankets)
                 if item.get('type') == 'blanket':
                     # Recalculate blanket prices
@@ -3582,6 +3598,31 @@ def update_cart_quantity():
                         }
                     })
                 
+                if item.get('type') in ('chemical', 'maintenance'):
+                    price_per_litre = item.get('price_per_litre') or item.get('unit_price') or 0
+                    discount_percent = item.get('discount_percent', 0)
+                    gst_percent = item.get('gst_percent', 18)
+
+                    subtotal = price_per_litre * quantity
+                    discount_amount = subtotal * (discount_percent / 100)
+                    discounted_subtotal = subtotal - discount_amount
+                    gst_amount = (discounted_subtotal * gst_percent / 100)
+                    final_total = discounted_subtotal + gst_amount
+
+                    item['total_price'] = round(final_total, 2)
+                    item['calculations'] = {
+                        **item.get('calculations', {}),
+                        'unit_price': round(price_per_litre, 2),
+                        'quantity': quantity,
+                        'subtotal': round(subtotal, 2),
+                        'discount_percent': discount_percent,
+                        'discount_amount': round(discount_amount, 2),
+                        'discounted_subtotal': round(discounted_subtotal, 2),
+                        'gst_percent': gst_percent,
+                        'gst_amount': round(gst_amount, 2),
+                        'final_total': round(final_total, 2)
+                    }
+
                 updated_item = item
                 item_updated = True
                 break
@@ -3593,7 +3634,7 @@ def update_cart_quantity():
             return jsonify({
                 'success': True,
                 'message': 'Cart quantity updated',
-                'cart_count': len(products),
+                'cart_count': sum(1 for _ in products),
                 'updated_item': updated_item
             })
         else:

@@ -2169,6 +2169,16 @@ function removeFromCart(event, itemId, callback) {
         console.error('Error finding item in cart:', error);
     }
     
+    const releaseRemovalGuard = (immediate = false) => {
+        if (immediate) {
+            isRemovingCartItem = false;
+        } else {
+            setTimeout(() => {
+                isRemovingCartItem = false;
+            }, 150);
+        }
+    };
+
     // Make API call to remove item from cart
     isRemovingCartItem = true;
 
@@ -2212,9 +2222,11 @@ function removeFromCart(event, itemId, callback) {
                         button.innerHTML = originalHtml;
                         button.disabled = false;
                     }
+                    releaseRemovalGuard();
                 }, 300);
             }
         } else {
+            releaseRemovalGuard(true);
             throw new Error(data.error || 'Failed to remove item from cart');
         }
     })
@@ -2232,14 +2244,17 @@ function removeFromCart(event, itemId, callback) {
         if (typeof callback === 'function') {
             callback();
         }
+
+        releaseRemovalGuard(true);
     })
     .finally(() => {
-        isRemovingCartItem = false;
+        // Do nothing
     });
 }
 
     // Utility helpers for refreshing cart item metadata and display
 function setDataAttribute(element, attribute, value) {
+    // ...
     if (!element) return;
 
     if (value === undefined || value === null || value === '') {

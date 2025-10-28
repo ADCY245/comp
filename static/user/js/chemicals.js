@@ -28,6 +28,20 @@
     quantityLitres: null
   };
 
+  function getBasePricePerLitre(product = state.selectedProduct, format = state.selectedFormat) {
+    const productPrice = product && Number(product.price_per_litre);
+    if (Number.isFinite(productPrice) && productPrice > 0) {
+      return productPrice;
+    }
+
+    const formatPrice = format && Number(format.price_per_litre);
+    if (Number.isFinite(formatPrice) && formatPrice > 0) {
+      return formatPrice;
+    }
+
+    return 50; // Fallback placeholder until catalogue provides per-litre pricing
+  }
+
   document.addEventListener('DOMContentLoaded', initializeConfigurator);
 
   async function initializeConfigurator() {
@@ -420,22 +434,31 @@
       const discountPercent = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
       const discountLabel = discountPercent > 0 ? ` (${discountPercent}% discount)` : '';
 
-      items.push(summaryItem('Pricing', `Standard Pricing${discountLabel}`));
-
       const format = state.selectedFormat;
       const packSizeRaw = Number(format.size_litre);
       const packSize = (Number.isFinite(packSizeRaw) && packSizeRaw > 0) ? packSizeRaw : quantityLitresValue || 1;
       const packsNeeded = Math.max(1, Math.ceil(quantityLitresValue / packSize));
-      const basePricePerPack = 100;
-      const subtotal = basePricePerPack * packsNeeded;
-
-      const discountAmount = (subtotal * discountPercent) / 100;
-      const discountedSubtotal = subtotal - discountAmount;
+      const basePricePerLitre = getBasePricePerLitre();
+      const priceForLitres = basePricePerLitre * quantityLitresValue;
+      const discountAmount = (priceForLitres * discountPercent) / 100;
+      const discountedSubtotal = priceForLitres - discountAmount;
       const gstPercent = 18;
       const gstAmount = (discountedSubtotal * gstPercent) / 100;
       const finalTotal = discountedSubtotal + gstAmount;
 
-      items.push(summaryItem('Total Price', `₹${finalTotal.toFixed(2)} incl. GST`));
+      items.push(summaryItem('Containers Needed', `${packsNeeded} × ${sanitize(format.label || 'container')}`));
+      items.push(summaryItem('Litres Required', `${formatNumber(quantityLitresValue)} L`));
+      items.push(summaryItem(
+        'Base Price',
+        `₹${priceForLitres.toFixed(2)}`,
+        `₹${basePricePerLitre.toFixed(2)} × ${formatNumber(quantityLitresValue)} L`
+      ));
+      items.push(summaryItem('Pricing', `Standard Pricing${discountLabel}`));
+      if (discountPercent > 0) {
+        items.push(summaryItem('Discount', `-₹${discountAmount.toFixed(2)}`));
+      }
+      items.push(summaryItem('GST', `₹${gstAmount.toFixed(2)} (${gstPercent}%)`));
+      items.push(summaryItem('Estimated Total', `₹${finalTotal.toFixed(2)}`));
     }
 
     if (pricingSection && pricingBreakdown) {
@@ -477,17 +500,16 @@
     const packsNeeded = Math.max(1, Math.ceil(quantityLitresValue / packSize));
     const totalLitres = packsNeeded * packSize;
 
-    // Base pricing
-    const basePricePerPack = 100; // This should come from product data or API
-    const subtotal = basePricePerPack * packsNeeded;
+    const basePricePerLitre = getBasePricePerLitre();
+    const priceForRequestedLitres = basePricePerLitre * quantityLitresValue;
 
     // Get current discount from DOM
     const discountValue = discountInput ? parseFloat(discountInput.value) : 0;
     const currentDiscount = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
 
     // Calculate discount and final pricing
-    const discountAmount = (subtotal * currentDiscount) / 100;
-    const discountedSubtotal = subtotal - discountAmount;
+    const discountAmount = (priceForRequestedLitres * currentDiscount) / 100;
+    const discountedSubtotal = priceForRequestedLitres - discountAmount;
     const gstPercent = 18;
     const gstAmount = (discountedSubtotal * gstPercent) / 100;
     const finalTotal = discountedSubtotal + gstAmount;
@@ -495,8 +517,16 @@
     // Update pricing breakdown display with Add to Cart button
     pricingBreakdown.innerHTML = `
       <div class="pricing-row">
-        <span class="pricing-label">Base Price (${packsNeeded} × ${format.label}):</span>
-        <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
+        <span class="pricing-label">No. of ${sanitize(format.label || 'containers')}:</span>
+        <span class="pricing-value">${packsNeeded}</span>
+      </div>
+      <div class="pricing-row">
+        <span class="pricing-label">Litres required:</span>
+        <span class="pricing-value">${formatNumber(quantityLitresValue)} L</span>
+      </div>
+      <div class="pricing-row">
+        <span class="pricing-label">Price (₹${basePricePerLitre.toFixed(2)} × ${formatNumber(quantityLitresValue)} L):</span>
+        <span class="pricing-value">₹${priceForRequestedLitres.toFixed(2)}</span>
       </div>
       ${currentDiscount > 0 ? `
       <div class="pricing-row">
@@ -575,7 +605,7 @@
     const surplusLitres = totalLitres - quantityLitres;
 
     // Base pricing (placeholder rate per litre until API provides real data)
-    const basePricePerLitre = 50; // TODO: replace with product-specific litre pricing data/API
+    const basePricePerLitre = getBasePricePerLitre();
     const subtotal = basePricePerLitre * quantityLitres;
 
     // Apply discount
