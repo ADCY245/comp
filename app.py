@@ -3105,13 +3105,12 @@ def add_to_cart():
                 'unit_price': float(data.get('unit_price', 0)),
                 'quantity': int(data.get('quantity', 1)),
                 'discount_percent': float(data.get('discount_percent', 0)),
-                'gst_percent': float(data.get('gst_percent', 18)),  # 18% GST for MPack
-                # Include MPack specific details
+                'gst_percent': float(data.get('gst_percent', 18)),
                 'machine': data.get('machine', ''),
                 'thickness': data.get('thickness', ''),
                 'size': display_size_label or data.get('size', ''),
-                'underpacking_type': data.get('underpacking_type', ''),  # Add underpacking type
-                'added_at': datetime.utcnow().isoformat(),  # Add timestamp for sorting
+                'underpacking_type': data.get('underpacking_type', ''),
+                'added_at': datetime.utcnow().isoformat(),
                 'cut_to_custom_size': cut_to_custom,
                 'custom_length_mm': custom_length,
                 'custom_width_mm': custom_width,
@@ -3127,9 +3126,65 @@ def add_to_cart():
                 'width': width_value,
                 'height': height_value
             }
-            
+
+            product_type = product.get('type')
+
+            if product_type in ('chemical', 'maintenance'):
+                pack_size = to_float(data.get('pack_size_litre'))
+                quantity_litre = to_float(data.get('quantity_litre'))
+                total_litre = to_float(data.get('total_litre'))
+                surplus_litre = to_float(data.get('surplus_litre'))
+
+                packs_needed_raw = data.get('packs_needed', product.get('quantity'))
+                try:
+                    packs_needed = int(packs_needed_raw) if packs_needed_raw is not None else product.get('quantity')
+                except (TypeError, ValueError):
+                    packs_needed = product.get('quantity')
+
+                subtotal = product['unit_price'] * product.get('quantity', 1)
+                discount_percent = product.get('discount_percent', 0.0)
+                discount_amount = subtotal * (discount_percent / 100)
+                discounted_subtotal = subtotal - discount_amount
+                gst_percent = product.get('gst_percent', 18.0)
+                gst_amount = discounted_subtotal * (gst_percent / 100)
+                final_total = discounted_subtotal + gst_amount
+
+                product.update({
+                    'category': data.get('category', ''),
+                    'product_id': data.get('product_id'),
+                    'format_id': data.get('format_id'),
+                    'format_label': data.get('format_label'),
+                    'pack_size_litre': pack_size,
+                    'quantity_litre': quantity_litre,
+                    'packs_needed': packs_needed,
+                    'total_litre': total_litre,
+                    'surplus_litre': surplus_litre,
+                    'pricing_tier': data.get('pricing_tier', 'standard'),
+                    'subtotal': round(subtotal, 2),
+                    'discount_amount': round(discount_amount, 2),
+                    'discounted_subtotal': round(discounted_subtotal, 2),
+                    'gst_amount': round(gst_amount, 2),
+                    'total': round(final_total, 2),
+                    'total_price': round(final_total, 2)
+                })
+
+                product['calculations'] = {
+                    'unit_price': round(product['unit_price'], 2),
+                    'quantity': product.get('quantity', 1),
+                    'subtotal': round(subtotal, 2),
+                    'discount_percent': discount_percent,
+                    'discount_amount': round(discount_amount, 2),
+                    'discounted_subtotal': round(discounted_subtotal, 2),
+                    'gst_percent': gst_percent,
+                    'gst_amount': round(gst_amount, 2),
+                    'final_total': round(final_total, 2)
+                }
+
+                # Ensure pack-specific metrics are reflected in quantity fields
+                product['quantity'] = packs_needed
+
             # Calculate prices for other product types if needed
-            if product['type'] == 'mpack':
+            if product_type == 'mpack':
                 price = product['unit_price']
                 quantity = product['quantity']
                 discount_percent = product['discount_percent']
