@@ -85,33 +85,6 @@ from flask_cors import CORS
 # Initialize Flask app and login manager
 app = Flask(__name__)
 
-# Configure allowed hosts and server name for domain
-default_allowed_hosts = (
-    '127.0.0.1,localhost,physihome.shop,'
-    'www.physihome.shop,nn-x3p8.onrender.com'
-)
-raw_hosts = os.getenv('ALLOWED_HOSTS', default_allowed_hosts)
-app.config['ALLOWED_HOSTS'] = [host.strip() for host in raw_hosts.split(',') if host.strip()]
-
-primary_domain = os.getenv('PRIMARY_DOMAIN')
-if primary_domain:
-    app.config['SERVER_NAME'] = primary_domain
-
-# Host checking middleware
-@app.before_request
-def check_host():
-    # Skip host checking for development
-    if app.debug:
-        return
-        
-    # Get the host from the request
-    host = request.host.split(':')[0]  # Remove port if present
-    
-    # Check if the host is allowed
-    allowed_hosts = app.config.get('ALLOWED_HOSTS', [])
-    if allowed_hosts and host not in allowed_hosts:
-        return f'Access denied for host: {host}', 400
-
 # Include 'templates/user' in the Jinja2 search path so that render_template('cart.html')
 # and similar calls find templates stored under that sub-directory without changing
 # every individual render_template path.
@@ -181,21 +154,9 @@ def company_required(view_func):
 
 # -----------------------------------------------------------------------
 
-cors_origins_env = os.getenv('CORS_ORIGINS')
-if cors_origins_env:
-    cors_allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
-else:
-    cors_allowed_origins = [
-        'https://physihome.shop',
-        'https://www.physihome.shop',
-        'https://nn-x3p8.onrender.com',
-        'http://127.0.0.1:5000',
-        'http://localhost:5000'
-    ]
-
 CORS(app, resources={
     r"/api/*": {
-        "origins": cors_allowed_origins,
+        "origins": ["*"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "supports_credentials": True
     }
