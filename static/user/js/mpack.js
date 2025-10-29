@@ -4,8 +4,8 @@ let currentNetPrice = 0;
 let currentDiscount = 0; // Track current discount percentage
 let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
-let customSize = { length: null, width: null, area: 0 };
-let standardSize = { length: null, width: null, area: 0 };
+let customSize = { across: null, along: null, area: 0 };
+let standardSize = { across: null, along: null, area: 0 };
 
 let sizeInputEl;
 let sizeSelectEl;
@@ -27,11 +27,11 @@ function isPositiveNumber(value) {
   return typeof value === 'number' && !Number.isNaN(value) && value > 0;
 }
 
-function mmToSqm(lengthMm, widthMm) {
-  if (!isPositiveNumber(lengthMm) || !isPositiveNumber(widthMm)) {
+function mmToSqm(acrossMm, alongMm) {
+  if (!isPositiveNumber(acrossMm) || !isPositiveNumber(alongMm)) {
     return 0;
   }
-  return (lengthMm / 1000) * (widthMm / 1000);
+  return (acrossMm / 1000) * (alongMm / 1000);
 }
 
 function parseSizeLabel(label) {
@@ -39,8 +39,8 @@ function parseSizeLabel(label) {
   const match = label.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
   if (!match) return null;
   return {
-    width: parseFloat(match[1]),
-    length: parseFloat(match[2])
+    along: parseFloat(match[1]),
+    across: parseFloat(match[2])
   };
 }
 
@@ -56,13 +56,13 @@ function formatDimensionValue(value) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
-function formatDimensionLabel(lengthMm, widthMm) {
-  const formattedLength = formatDimensionValue(lengthMm);
-  const formattedWidth = formatDimensionValue(widthMm);
-  if (!formattedLength || !formattedWidth) {
+function formatDimensionLabel(acrossMm, alongMm) {
+  const formattedAcross = formatDimensionValue(acrossMm);
+  const formattedAlong = formatDimensionValue(alongMm);
+  if (!formattedAcross || !formattedAlong) {
     return '';
   }
-  return `${formattedWidth} x ${formattedLength} mm`;
+  return `${formattedAlong} x ${formattedAcross} mm`;
 }
 
 let selectedStandardSizeId = '';
@@ -70,11 +70,11 @@ let selectedStandardSizeId = '';
 let selectedSizeId = '';
 
 function hasValidCustomSize() {
-  return isPositiveNumber(customSize.length) && isPositiveNumber(customSize.width);
+  return isPositiveNumber(customSize.across) && isPositiveNumber(customSize.along);
 }
 
 function hasValidStandardSize() {
-  return isPositiveNumber(standardSize.length) && isPositiveNumber(standardSize.width);
+  return isPositiveNumber(standardSize.across) && isPositiveNumber(standardSize.along);
 }
 
 function hideCuttingSections() {
@@ -135,7 +135,7 @@ function updateCutDetails() {
     return;
   }
 
-  const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
+  const standardArea = standardSize.area || mmToSqm(standardSize.across, standardSize.along);
   standardSize.area = standardArea;
 
   if (standardAreaDisplayEl) {
@@ -149,7 +149,7 @@ function updateCutDetails() {
   const shouldShowCustomRow = Boolean(cutYesRadio && cutYesRadio.checked && hasCustom);
 
   if (hasCustom) {
-    const customArea = customSize.area || mmToSqm(customSize.length, customSize.width);
+    const customArea = customSize.area || mmToSqm(customSize.across, customSize.along);
     customSize.area = customArea;
     if (customAreaDisplayEl) {
       customAreaDisplayEl.textContent = customArea.toFixed(3);
@@ -174,7 +174,7 @@ function updateCutDetails() {
 function resetStandardSelection({ preserveSearchValue = false, preserveOptions = true } = {}) {
   selectedStandardSizeId = '';
   selectedSizeId = '';
-  standardSize = { length: null, width: null, area: 0 };
+  standardSize = { across: null, along: null, area: 0 };
 
   if (sizeSelectEl) {
     sizeSelectEl.value = '';
@@ -194,17 +194,17 @@ function resetStandardSelection({ preserveSearchValue = false, preserveOptions =
 function updateCustomSizeState({ showFeedback = false } = {}) {
   const rawLength = customLengthInputEl ? customLengthInputEl.value : '';
   const rawWidth = customWidthInputEl ? customWidthInputEl.value : '';
-  const lengthVal = parseFloat(rawLength || '');
-  const widthVal = parseFloat(rawWidth || '');
-  const valid = isPositiveNumber(lengthVal) && isPositiveNumber(widthVal);
+  const acrossVal = parseFloat(rawLength || '');
+  const alongVal = parseFloat(rawWidth || '');
+  const valid = isPositiveNumber(acrossVal) && isPositiveNumber(alongVal);
 
   if (valid) {
-    customSize.length = lengthVal;
-    customSize.width = widthVal;
-    customSize.area = mmToSqm(lengthVal, widthVal);
+    customSize.across = acrossVal;
+    customSize.along = alongVal;
+    customSize.area = mmToSqm(acrossVal, alongVal);
 
     if (customSizeSummaryEl) {
-      customSizeSummaryEl.textContent = `${widthVal.toFixed(2)} mm × ${lengthVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
+      customSizeSummaryEl.textContent = `${alongVal.toFixed(2)} mm × ${acrossVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');
@@ -219,8 +219,8 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     return true;
   }
 
-  customSize.length = null;
-  customSize.width = null;
+  customSize.across = null;
+  customSize.along = null;
   customSize.area = 0;
 
   if (customSizeSummaryEl) {
@@ -515,19 +515,19 @@ function getFormData() {
   const selectedSize = sizeOption ? sizeOption.text : '';
   const metaFromMap = sizeMetaMap[sizeValue];
   const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
-  const standardWidth = typeof dimensionMeta.width === 'number' ? dimensionMeta.width : (standardSize.width || 0);
-  const standardLength = typeof dimensionMeta.length === 'number' ? dimensionMeta.length : (standardSize.length || 0);
-  const standardArea = standardSize.area || mmToSqm(standardSize.length, standardSize.width);
+  const standardAlong = typeof dimensionMeta.along === 'number' ? dimensionMeta.along : (standardSize.along || 0);
+  const standardAcross = typeof dimensionMeta.across === 'number' ? dimensionMeta.across : (standardSize.across || 0);
+  const standardArea = standardSize.area || mmToSqm(standardSize.across, standardSize.along);
 
-  const customLength = customSize.length || null;
-  const customWidth = customSize.width || null;
-  const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
+  const customAcross = customSize.across || null;
+  const customAlong = customSize.along || null;
+  const customArea = customSize.area || (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
   const standardSizeLabel = selectedSize;
-  const customSizeLabel = customLength && customWidth ? formatDimensionLabel(customLength, customWidth) : '';
-  const displayWidth = cutToCustom && isPositiveNumber(customWidth) ? customWidth : standardWidth;
-  const displayLength = cutToCustom && isPositiveNumber(customLength) ? customLength : standardLength;
+  const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
+  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
+  const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
   const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
 
   return {
@@ -537,18 +537,18 @@ function getFormData() {
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: displaySizeLabel,
-    width: displayWidth,
-    height: displayLength,
+    along_mm: displayAlong,
+    across_mm: displayAcross,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
     gst_percent: 18,
-    custom_length_mm: customLength,
-    custom_width_mm: customWidth,
+    custom_along_mm: customAlong,
+    custom_across_mm: customAcross,
     custom_area_sqm: customArea,
-    standard_length_mm: standardLength,
-    standard_width_mm: standardWidth,
+    standard_along_mm: standardAlong,
+    standard_across_mm: standardAcross,
     standard_area_sqm: standardArea,
     cut_to_custom_size: cutToCustom,
     standard_size_label: standardSizeLabel,
@@ -1355,19 +1355,19 @@ async function addMpackToCart() {
   const selectedSize = selectedOption ? selectedOption.text : '';
   const metaFromMap = sizeMetaMap[sizeSelect.value];
   const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
-  const standardWidth = typeof dimensionMeta.width === 'number' ? dimensionMeta.width : (standardSize.width || 0);
-  const standardLength = typeof dimensionMeta.length === 'number' ? dimensionMeta.length : (standardSize.length || 0);
-  const standardArea = standardSize.area || mmToSqm(standardLength, standardWidth);
+  const standardAlong = typeof dimensionMeta.along === 'number' ? dimensionMeta.along : (standardSize.along || 0);
+  const standardAcross = typeof dimensionMeta.across === 'number' ? dimensionMeta.across : (standardSize.across || 0);
+  const standardArea = standardSize.area || mmToSqm(standardSize.across, standardSize.along);
 
-  const customLength = customSize.length || null;
-  const customWidth = customSize.width || null;
-  const customArea = customSize.area || (customLength && customWidth ? mmToSqm(customLength, customWidth) : null);
+  const customAcross = customSize.across || null;
+  const customAlong = customSize.along || null;
+  const customArea = customSize.area || (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
   const standardSizeLabel = selectedSize;
-  const customSizeLabel = customLength && customWidth ? formatDimensionLabel(customLength, customWidth) : '';
-  const displayWidth = cutToCustom && isPositiveNumber(customWidth) ? customWidth : standardWidth;
-  const displayLength = cutToCustom && isPositiveNumber(customLength) ? customLength : standardLength;
+  const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
+  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
+  const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
   const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
 
   const product = {
@@ -1377,8 +1377,8 @@ async function addMpackToCart() {
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: displaySizeLabel,
-    width: displayWidth,
-    height: displayLength,
+    along_mm: displayAlong,
+    across_mm: displayAcross,
     underpacking_type: underpackingType,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
@@ -1396,18 +1396,18 @@ async function addMpackToCart() {
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
     },
-    custom_length_mm: customLength,
-    custom_width_mm: customWidth,
+    custom_across_mm: customAcross,
+    custom_along_mm: customAlong,
     custom_area_sqm: customArea,
-    standard_length_mm: standardLength,
-    standard_width_mm: standardWidth,
+    standard_across_mm: standardAcross,
+    standard_along_mm: standardAlong,
     standard_area_sqm: standardArea,
     cut_to_custom_size: cutToCustom,
     standard_size_label: standardSizeLabel,
     custom_size_label: customSizeLabel,
     display_size_label: displaySizeLabel,
-    display_length_mm: displayLength,
-    display_width_mm: displayWidth
+    display_across_mm: displayAcross,
+    display_along_mm: displayAlong
   };
 
   // Show loading state
