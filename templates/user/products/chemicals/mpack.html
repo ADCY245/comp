@@ -58,19 +58,19 @@
                 <desc id="alongDiagramDesc">Two touching cylinders with an arrow above indicating the along measurement.</desc>
                 <defs>
                   <marker id="alongArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-                    <path d="M0,0 L8,4 L0,8 z" fill="#111827" />
+                    <path d="M0,0 L8,4 L0,8 z" fill="#FFD700" />
                   </marker>
                 </defs>
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="30" y1="25" x2="190" y2="25" marker-start="url(#alongArrowHead)" marker-end="url(#alongArrowHead)" />
-                  <text x="110" y="15" text-anchor="middle" font-size="14" fill="#111827">Along</text>
+                  <line x1="30" y1="25" x2="190" y2="25" stroke="#FFD700" stroke-width="3" marker-start="url(#alongArrowHead)" marker-end="url(#alongArrowHead)" />
+                  <text x="110" y="20" text-anchor="middle" font-size="16" font-weight="bold" fill="#FFD700" style="font-family: Arial, sans-serif; text-shadow: 0 0 2px rgba(0,0,0,0.5);">Along</text>
                   <path d="M40 40 h120 a20 20 0 0 1 0 40 h-120 a20 20 0 0 1 0-40 z" />
                   <ellipse cx="160" cy="60" rx="20" ry="20" />
                   <path d="M40 80 h120 a20 20 0 0 1 0 40 h-120 a20 20 0 0 1 0-40 z" />
                   <ellipse cx="160" cy="100" rx="20" ry="20" />
                 </g>
               </svg>
-              <figcaption class="fw-semibold">Along (Cylinder width)</figcaption>
+              <figcaption class="fw-semibold">Along (Cylinder length)</figcaption>
               <span class="text-muted small">Measure parallel to the cylinder axis.</span>
             </figure>
             <div class="mt-3">
@@ -85,16 +85,16 @@
                 <desc id="acrossDiagramDesc">Single cylinder cross-section with a curved arrow along the circumference indicating the across measurement.</desc>
                 <defs>
                   <marker id="acrossArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-                    <path d="M0,0 L8,4 L0,8 z" fill="#dc2626" />
+                    <path d="M0,0 L8,4 L0,8 z" fill="#6B7280" />
                   </marker>
                 </defs>
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="100" cy="100" r="70" />
-                  <path d="M52 144 A70 70 0 0 1 148 56" stroke="#dc2626" stroke-width="4" marker-start="url(#acrossArrowHead)" marker-end="url(#acrossArrowHead)" />
+                  <path d="M52 144 A70 70 0 0 1 148 56" stroke="#6B7280" stroke-width="4" marker-start="url(#acrossArrowHead)" marker-end="url(#acrossArrowHead)" />
                 </g>
-                <text x="100" y="108" text-anchor="middle" font-size="14" fill="#dc2626">Across</text>
+                <text x="100" y="108" text-anchor="middle" font-size="16" font-weight="bold" fill="#6B7280" style="font-family: Arial, sans-serif; text-shadow: 0 0 2px rgba(255,255,255,0.5);">Across</text>
               </svg>
-              <figcaption class="fw-semibold">Across (Cylinder length)</figcaption>
+              <figcaption class="fw-semibold">Across (Cylinder width)</figcaption>
               <span class="text-muted small">Measure around the cylinder circumference.</span>
             </figure>
             <div class="mt-3">
