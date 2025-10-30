@@ -55,7 +55,7 @@
             <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
               <svg viewBox="0 0 220 200" width="170" height="140" role="img" aria-labelledby="alongDiagramTitle alongDiagramDesc">
                 <title id="alongDiagramTitle">Along direction illustration</title>
-                <desc id="alongDiagramDesc">Two stacked cylinders with a feed sheet between them and an arrow above indicating the along measurement.</desc>
+                <desc id="alongDiagramDesc">Two touching cylinders with an arrow above indicating the along measurement.</desc>
                 <defs>
                   <marker id="alongArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
                     <path d="M0,0 L8,4 L0,8 z" fill="#111827" />
@@ -64,14 +64,10 @@
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="30" y1="25" x2="190" y2="25" marker-start="url(#alongArrowHead)" marker-end="url(#alongArrowHead)" />
                   <text x="110" y="15" text-anchor="middle" font-size="14" fill="#111827">Along</text>
-                  <rect x="30" y="50" width="110" height="40" rx="20" ry="20" />
-                  <ellipse cx="140" cy="70" rx="20" ry="20" />
-                  <rect x="30" y="115" width="110" height="40" rx="20" ry="20" />
-                  <ellipse cx="140" cy="135" rx="20" ry="20" />
-                  <path d="M95 90 v85 h40 q12 0 12 12 q0 12 -12 12 h-55" />
-                  <line x1="102" y1="108" x2="132" y2="108" />
-                  <line x1="102" y1="123" x2="132" y2="123" />
-                  <line x1="102" y1="138" x2="128" y2="138" />
+                  <path d="M40 40 h120 a20 20 0 0 1 0 40 h-120 a20 20 0 0 1 0-40 z" />
+                  <ellipse cx="160" cy="60" rx="20" ry="20" />
+                  <path d="M40 80 h120 a20 20 0 0 1 0 40 h-120 a20 20 0 0 1 0-40 z" />
+                  <ellipse cx="160" cy="100" rx="20" ry="20" />
                 </g>
               </svg>
               <figcaption class="fw-semibold">Along (Cylinder width)</figcaption>
