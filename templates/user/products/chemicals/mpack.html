@@ -50,57 +50,83 @@
         </select>
       </div>
       <div class="col-md-8">
-        <div class="d-flex flex-wrap gap-3 mb-3">
-          <figure class="d-flex flex-column align-items-center text-center mb-0">
-            <svg viewBox="0 0 160 90" width="140" height="90" role="img" aria-labelledby="alongDiagramTitle alongDiagramDesc">
-              <title id="alongDiagramTitle">Along direction illustration</title>
-              <desc id="alongDiagramDesc">Cylinder showing measurement taken along the cylinder width.</desc>
-              <defs>
-                <linearGradient id="alongCylinderShade" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#f5f5f5" />
-                  <stop offset="100%" stop-color="#d9d9d9" />
-                </linearGradient>
-                <marker id="alongArrowHead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 z" fill="#4f46e5" />
+        <div class="row g-4 align-items-start mb-3">
+          <div class="col-md-6">
+            <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+              <svg viewBox="0 0 200 160" width="150" height="120" role="img" aria-labelledby="alongDiagramTitle alongDiagramDesc">
+                <title id="alongDiagramTitle">Along direction illustration</title>
+                <desc id="alongDiagramDesc">Double cylinder with sheet diagram and double-headed arrow indicating the along measurement.</desc>
+                <defs>
+                  <marker id="alongDoubleArrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+                  <path d="M0,0 L8,4 L0,8 z" fill="#1f2937" />
                 </marker>
               </defs>
-              <ellipse cx="130" cy="45" rx="18" ry="28" fill="#d0d0d0" />
-              <rect x="30" y="17" width="100" height="56" fill="url(#alongCylinderShade)" stroke="#9aa0a6" stroke-width="2" />
-              <ellipse cx="30" cy="45" rx="18" ry="28" fill="#e0e0e0" stroke="#9aa0a6" stroke-width="2" />
-              <path d="M35 12 L125 12" stroke="#4f46e5" stroke-width="4" marker-end="url(#alongArrowHead)" marker-start="url(#alongArrowHead)" />
-              <text x="80" y="8" text-anchor="middle" font-size="12" fill="#4f46e5">Along</text>
+              <g fill="none" stroke="#1f2937" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+                <line x1="30" y1="25" x2="170" y2="25" marker-start="url(#alongDoubleArrow)" marker-end="url(#alongDoubleArrow)" />
+                <text x="100" y="15" text-anchor="middle" font-size="12" fill="#1f2937">Along</text>
+                <path d="M35 55 H165 a20 20 0 0 1 0 40 H35 a20 20 0 0 1 0-40 Z" />
+                <ellipse cx="35" cy="75" rx="20" ry="20" />
+                <ellipse cx="165" cy="75" rx="20" ry="20" />
+                <path d="M35 105 H165 a20 20 0 0 1 0 40 H35 a20 20 0 0 1 0-40 Z" />
+                <ellipse cx="35" cy="125" rx="20" ry="20" />
+                <ellipse cx="165" cy="125" rx="20" ry="20" />
+                <path d="M85 90 V150" />
+                <path d="M85 90 H160 V142 L145 155 H85 Z" />
+                <path d="M105 135 L120 115 L135 133" />
+                <circle cx="140" cy="118" r="6" />
+              </g>
             </svg>
-            <figcaption class="fw-semibold">Along (Cylinder width)</figcaption>
-            <span class="text-muted small">Measure parallel to the cylinder axis.</span>
-          </figure>
-          <figure class="d-flex flex-column align-items-center text-center mb-0">
-            <svg viewBox="0 0 160 90" width="140" height="90" role="img" aria-labelledby="acrossDiagramTitle acrossDiagramDesc">
-              <title id="acrossDiagramTitle">Across direction illustration</title>
-              <desc id="acrossDiagramDesc">Cylinder showing measurement taken across the cylinder length.</desc>
-              <defs>
-                <linearGradient id="acrossCylinderShade" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#f5f5f5" />
-                  <stop offset="100%" stop-color="#d9d9d9" />
-                </linearGradient>
-                <marker id="acrossArrowHead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 z" fill="#dc2626" />
+              <figcaption class="fw-semibold">Along (Cylinder width)</figcaption>
+              <span class="text-muted small">Measure parallel to the cylinder axis.</span>
+            </figure>
+            <div class="mt-3">
+              <label class="form-label" for="customWidthInput">Along measurement (mm)</label>
+              <input type="number" class="form-control" id="customWidthInput" placeholder="Along (mm)" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+              <svg viewBox="0 0 200 200" width="150" height="140" role="img" aria-labelledby="acrossDiagramTitle acrossDiagramDesc">
+                <title id="acrossDiagramTitle">Across direction illustration</title>
+                <desc id="acrossDiagramDesc">Stylized gravure cylinder setup with vertical measurement arrow representing across dimension.</desc>
+                <defs>
+                  <marker id="acrossDoubleArrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+                  <path d="M0,0 L8,4 L0,8 z" fill="#dc2626" />
                 </marker>
               </defs>
-              <ellipse cx="80" cy="25" rx="18" ry="28" fill="#d0d0d0" />
-              <rect x="52" y="25" width="56" height="54" fill="url(#acrossCylinderShade)" stroke="#9aa0a6" stroke-width="2" />
-              <ellipse cx="80" cy="79" rx="18" ry="28" fill="#e0e0e0" stroke="#9aa0a6" stroke-width="2" />
-              <path d="M40 36 L40 76" stroke="#dc2626" stroke-width="4" marker-end="url(#acrossArrowHead)" marker-start="url(#acrossArrowHead)" />
-              <text x="22" y="58" transform="rotate(-90 22 58)" text-anchor="middle" font-size="12" fill="#dc2626">Across</text>
+              <g fill="none" stroke="#1f2937" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M70 30 c10-18 50-18 60 0 l40 70 c-10 18-50 18-60 0 z" />
+                <path d="M75 32 c9-14 41-14 50 0" stroke-width="3" />
+                <path d="M126 142 l-20 30 -40 -5" stroke-width="3" />
+                <path d="M58 92 l-25 14" />
+                <path d="M50 80 l-25 14" />
+                <path d="M42 68 l-25 14" />
+                <path d="M58 120 l-25 14" />
+                <path d="M150 110 l28 16" />
+                <path d="M142 98 l28 16" />
+                <path d="M134 86 l28 16" />
+                <path d="M110 154 l-28 16" />
+                <path d="M112 156 l24 14" />
+                <path d="M140 154 l26 15" />
+                <path d="M84 156 l-6 28 h80 c4-14 8-24 12-32" />
+                <path d="M92 112 c10 6 28 6 38 0" />
+                <path d="M72 48 c5-8 38-8 46 0" stroke-width="3" />
+                <path d="M100 44 v-15" />
+                <text x="160" y="60" font-size="12" fill="#1f2937" transform="rotate(20 160 60)">Paper</text>
+                <text x="40" y="110" font-size="12" fill="#1f2937" transform="rotate(-25 40 110)">Doctor Blade</text>
+                <text x="145" y="128" font-size="12" fill="#1f2937" transform="rotate(20 145 128)">Printed Side</text>
+                <path d="M30 170 V40" stroke="#dc2626" marker-start="url(#acrossDoubleArrow)" marker-end="url(#acrossDoubleArrow)" />
+                <text x="20" y="110" transform="rotate(-90 20 110)" text-anchor="middle" font-size="12" fill="#dc2626">Across</text>
+              </g>
             </svg>
-            <figcaption class="fw-semibold">Across (Cylinder length)</figcaption>
-            <span class="text-muted small">Measure around the cylinder circumference.</span>
-          </figure>
-        </div>
-        <label class="form-label" for="customWidthInput">Enter required size (Along × Across in mm):</label>
-        <div class="input-group">
-          <input type="number" class="form-control" id="customWidthInput" placeholder="Along (mm)" min="0" step="0.1">
-          <span class="input-group-text">&times;</span>
-          <input type="number" class="form-control" id="customLengthInput" placeholder="Across (mm)" min="0" step="0.1">
+              <figcaption class="fw-semibold">Across (Cylinder length)</figcaption>
+              <span class="text-muted small">Measure around the cylinder circumference.</span>
+            </figure>
+            <div class="mt-3">
+              <label class="form-label" for="customLengthInput">Across measurement (mm)</label>
+              <input type="number" class="form-control" id="customLengthInput" placeholder="Across (mm)" min="0" step="0.1">
+            </div>
+          </div>
         </div>
         <div class="form-text">Use decimal values if needed. Example: Along 540.25 mm × Across 640.5 mm.</div>
         <div class="form-text text-muted" id="customSizeSummary">Awaiting along/across input…</div>
