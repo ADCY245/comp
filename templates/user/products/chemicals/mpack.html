@@ -53,23 +53,25 @@
         <div class="row g-4 align-items-start mb-3">
           <div class="col-md-6">
             <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
-              <svg viewBox="0 0 200 160" width="150" height="120" role="img" aria-labelledby="alongDiagramTitle alongDiagramDesc">
+              <svg viewBox="0 0 220 200" width="170" height="140" role="img" aria-labelledby="alongDiagramTitle alongDiagramDesc">
                 <title id="alongDiagramTitle">Along direction illustration</title>
-                <desc id="alongDiagramDesc">Two parallel cylinders with an arrow above highlighting the along dimension.</desc>
+                <desc id="alongDiagramDesc">Two stacked cylinders with a feed sheet between them and an arrow above indicating the along measurement.</desc>
                 <defs>
                   <marker id="alongArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
                     <path d="M0,0 L8,4 L0,8 z" fill="#111827" />
                   </marker>
                 </defs>
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="30" y1="30" x2="170" y2="30" marker-start="url(#alongArrowHead)" marker-end="url(#alongArrowHead)" />
-                  <text x="100" y="18" text-anchor="middle" font-size="14" fill="#111827">Along</text>
-                  <path d="M40 60 h120" />
-                  <path d="M40 110 h120" />
-                  <ellipse cx="40" cy="60" rx="30" ry="20" />
-                  <ellipse cx="160" cy="60" rx="30" ry="20" />
-                  <ellipse cx="40" cy="110" rx="30" ry="20" />
-                  <ellipse cx="160" cy="110" rx="30" ry="20" />
+                  <line x1="30" y1="25" x2="190" y2="25" marker-start="url(#alongArrowHead)" marker-end="url(#alongArrowHead)" />
+                  <text x="110" y="15" text-anchor="middle" font-size="14" fill="#111827">Along</text>
+                  <rect x="30" y="50" width="110" height="40" rx="20" ry="20" />
+                  <ellipse cx="140" cy="70" rx="20" ry="20" />
+                  <rect x="30" y="115" width="110" height="40" rx="20" ry="20" />
+                  <ellipse cx="140" cy="135" rx="20" ry="20" />
+                  <path d="M95 90 v85 h40 q12 0 12 12 q0 12 -12 12 h-55" />
+                  <line x1="102" y1="108" x2="132" y2="108" />
+                  <line x1="102" y1="123" x2="132" y2="123" />
+                  <line x1="102" y1="138" x2="128" y2="138" />
                 </g>
               </svg>
               <figcaption class="fw-semibold">Along (Cylinder width)</figcaption>
@@ -82,21 +84,19 @@
           </div>
           <div class="col-md-6">
             <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
-              <svg viewBox="0 0 160 200" width="140" height="130" role="img" aria-labelledby="acrossDiagramTitle acrossDiagramDesc">
+              <svg viewBox="0 0 200 200" width="160" height="140" role="img" aria-labelledby="acrossDiagramTitle acrossDiagramDesc">
                 <title id="acrossDiagramTitle">Across direction illustration</title>
-                <desc id="acrossDiagramDesc">Single cylinder with an arrow inside indicating the across dimension.</desc>
+                <desc id="acrossDiagramDesc">Single cylinder cross-section with a curved arrow along the circumference indicating the across measurement.</desc>
                 <defs>
                   <marker id="acrossArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
                     <path d="M0,0 L8,4 L0,8 z" fill="#dc2626" />
                   </marker>
                 </defs>
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="80" cy="80" rx="55" ry="55" />
-                  <line x1="80" y1="25" x2="80" y2="135" stroke="#dc2626" stroke-width="4" marker-start="url(#acrossArrowHead)" marker-end="url(#acrossArrowHead)" />
-                  <path d="M55 85 q25-20 50 0" />
-                  <path d="M55 70 q25-20 50 0" />
+                  <circle cx="100" cy="100" r="70" />
+                  <path d="M52 144 A70 70 0 0 1 148 56" stroke="#dc2626" stroke-width="4" marker-start="url(#acrossArrowHead)" marker-end="url(#acrossArrowHead)" />
                 </g>
-                <text x="30" y="100" transform="rotate(-90 30 100)" text-anchor="middle" font-size="14" fill="#dc2626">Across</text>
+                <text x="100" y="108" text-anchor="middle" font-size="14" fill="#dc2626">Across</text>
               </svg>
               <figcaption class="fw-semibold">Across (Cylinder length)</figcaption>
               <span class="text-muted small">Measure around the cylinder circumference.</span>
