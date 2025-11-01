@@ -808,12 +808,10 @@
 
                                             </div>
                                              <div class="price-row pre-gst-total border-top pt-2 mt-2">
-                                                <div class="d-flex justify-content-between w-100">
-                                                    <span class="price-label fw-medium">Total (Pre-GST):</span>
-                                                    <span class="price-value pre-gst-amount fw-medium">
-                                                        ₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100)) }}
-                                                    </span>
-                                                </div>
+                                                <span class="price-label fw-medium">Total (Pre-GST):</span>
+                                                <span class="price-value pre-gst-amount fw-medium text-start">
+                                                    ₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100)) }}
+                                                </span>
                                             </div>
                                              <div class="price-row gst-row">
                                                   <span class="price-label">GST (<span class="gst-percent">{{ item.gst_percent|default(18) }}</span>%):</span>
