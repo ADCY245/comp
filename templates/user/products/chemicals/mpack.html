@@ -34,22 +34,9 @@
   </div>
 
   <div id="mpackSection" style="display:none;">
-    <!-- Thickness -->
-    <div class="row mb-3 align-items-end">
-      <div class="col-md-4">
-        <label for="thicknessSelect" class="form-label">Select Thickness (micron):</label>
-        <select id="thicknessSelect" class="form-select">
-          <option value="">-- Select Thickness --</option>
-          <option value="100">100</option>
-          <option value="125">125</option>
-          <option value="150">150</option>
-          <option value="200">200</option>
-          <option value="250">250</option>
-          <option value="300">300</option>
-          <option value="400">400</option>
-        </select>
-      </div>
-      <div class="col-md-8">
+    <!-- Size selection first -->
+    <div class="row mb-3 align-items-start">
+      <div class="col-md-6">
         <div class="row g-4 align-items-start mb-3">
           <div class="col-md-6">
             <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
@@ -80,7 +67,7 @@
               </select>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6 mt-4 mt-md-0">
             <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
               <svg viewBox="0 0 320 180" width="300" height="170" role="img" aria-labelledby="aroundDiagramTitle aroundDiagramDesc">
                 <title id="aroundDiagramTitle">Around direction illustration</title>
@@ -114,22 +101,15 @@
           </div>
         </div>
         <div class="form-text">Select preset sizes to populate measurements automatically.</div>
-        <div class="form-text text-muted" id="customSizeSummary">Select thickness and sizes to see sq.m.</div>
+        <div class="form-text text-muted" id="customSizeSummary">Select sizes to see sq.m., then choose a thickness.</div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
       </div>
-    </div>
-
-    <!-- Size with Search -->
-    <div class="row mb-3">
-      <div class="col-12">
-        <label for="sizeInput" class="form-label">Select Chemo standard size:</label>
-        <div class="search-container">
-          <input type="text" id="sizeInput" class="form-control" placeholder="Type to search sizes (e.g., 260x350)">
-          <div id="sizeSuggestions" class="list-group mt-2" style="display:none;max-height:200px;overflow-y:auto;position: absolute;width: 100%;z-index: 1000;"></div>
-        </div>
-        <select id="sizeSelect" style="display:none;">
-          <option value="">-- Select Size --</option>
+      <div class="col-md-6">
+        <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
+        <select id="thicknessSelect" class="form-select" disabled>
+          <option value="">-- Select Thickness --</option>
         </select>
+        <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
       </div>
     </div>
 

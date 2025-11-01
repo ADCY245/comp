@@ -4,11 +4,9 @@ let currentDiscount = 0; // Track current discount percentage
 let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
 let customSize = { across: null, along: null, area: 0 };
-let standardSize = { across: null, along: null, area: 0 };
 let currentRatePerSqm = 0;
+let thicknessOptionsBySize = new Map();
 
-let sizeInputEl;
-let sizeSelectEl;
 let customLengthInputEl;
 let customWidthInputEl;
 let thicknessSelectEl;
@@ -45,9 +43,9 @@ function parseSizeLabel(label) {
   };
 }
 
-const CUT_NOTE_STANDARD = 'Underpacking will be supplied in the selected standard size.';
-const CUT_NOTE_CUSTOM = 'Underpacking will be cut to your entered size. Pricing remains based on the selected standard size to allow for cutting wastage.';
-const CUT_NOTE_WAITING = 'Select whether we should cut to your entered size. Pricing remains based on the selected standard size.';
+const CUT_NOTE_STANDARD = 'Underpacking will be supplied in the selected size.';
+const CUT_NOTE_CUSTOM = 'Underpacking will be cut to your entered size.';
+const CUT_NOTE_WAITING = 'Select whether we should cut to your entered size.';
 
 function formatDimensionValue(value) {
   if (!isPositiveNumber(value)) {
@@ -89,16 +87,8 @@ function populateCustomDropdowns({ widths = [], lengths = [] } = {}) {
   populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
 }
 
-let selectedStandardSizeId = '';
-// Legacy alias kept for backwards compatibility with older handlers
-let selectedSizeId = '';
-
 function hasValidCustomSize() {
   return isPositiveNumber(customSize.across) && isPositiveNumber(customSize.along);
-}
-
-function hasValidStandardSize() {
-  return isPositiveNumber(standardSize.across) && isPositiveNumber(standardSize.along);
 }
 
 function hideCuttingSections() {
@@ -151,33 +141,28 @@ function updateCutDetails() {
     return;
   }
 
-  const hasStandard = hasValidStandardSize();
   const hasCustom = hasValidCustomSize();
 
-  if (!hasStandard) {
+  if (!hasCustom) {
     hideCuttingSections();
     return;
   }
 
-  const standardArea = standardSize.area || mmToSqm(standardSize.across, standardSize.along);
-  standardSize.area = standardArea;
+  const customArea = customSize.area || mmToSqm(customSize.across, customSize.along);
+  customSize.area = customArea;
 
   if (standardAreaDisplayEl) {
-    standardAreaDisplayEl.textContent = standardArea.toFixed(3);
+    standardAreaDisplayEl.textContent = customArea.toFixed(3);
   }
 
   if (cutStandardRowEl) {
     cutStandardRowEl.style.display = 'flex';
   }
 
-  const shouldShowCustomRow = Boolean(cutYesRadio && cutYesRadio.checked && hasCustom);
+  const shouldShowCustomRow = Boolean(cutYesRadio && cutYesRadio.checked);
 
-  if (hasCustom) {
-    const customArea = customSize.area || mmToSqm(customSize.across, customSize.along);
-    customSize.area = customArea;
-    if (customAreaDisplayEl) {
-      customAreaDisplayEl.textContent = customArea.toFixed(3);
-    }
+  if (customAreaDisplayEl) {
+    customAreaDisplayEl.textContent = customArea.toFixed(3);
   }
 
   if (cutCustomRowEl) {
@@ -185,34 +170,10 @@ function updateCutDetails() {
   }
 
   if (cutDetailsNoteEl) {
-    if (!hasCustom) {
-      cutDetailsNoteEl.textContent = CUT_NOTE_STANDARD;
-    } else {
-      cutDetailsNoteEl.textContent = shouldShowCustomRow ? CUT_NOTE_CUSTOM : CUT_NOTE_STANDARD;
-    }
+    cutDetailsNoteEl.textContent = shouldShowCustomRow ? CUT_NOTE_CUSTOM : CUT_NOTE_STANDARD;
   }
 
   cutDetailsSectionEl.style.display = 'block';
-}
-
-function resetStandardSelection({ preserveSearchValue = false, preserveOptions = true } = {}) {
-  selectedStandardSizeId = '';
-  selectedSizeId = '';
-  standardSize = { across: null, along: null, area: 0 };
-
-  if (sizeSelectEl) {
-    sizeSelectEl.value = '';
-    if (!preserveOptions) {
-      sizeSelectEl.innerHTML = '<option value="">-- Select Size --</option>';
-      sizeSelectEl.disabled = true;
-    }
-  }
-
-  if (sizeInputEl && !preserveSearchValue) {
-    sizeInputEl.value = '';
-  }
-
-  hideCuttingSections();
 }
 
 function updateCustomSizeState({ showFeedback = false } = {}) {
@@ -234,13 +195,6 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');
     }
-    if (sizeInputEl) {
-      sizeInputEl.disabled = false;
-      sizeInputEl.classList.remove('is-invalid');
-    }
-    if (sizeSelectEl) {
-      sizeSelectEl.disabled = false;
-    }
     return true;
   }
 
@@ -251,13 +205,6 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   if (customSizeSummaryEl) {
     customSizeSummaryEl.textContent = thicknessSelectEl && thicknessSelectEl.value ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
   }
-  if (sizeInputEl) {
-    sizeInputEl.disabled = true;
-    sizeInputEl.classList.toggle('is-invalid', showFeedback);
-  }
-  if (sizeSelectEl) {
-    sizeSelectEl.disabled = true;
-  }
   if (customSizeFeedbackEl) {
     customSizeFeedbackEl.classList[showFeedback ? 'remove' : 'add']('d-none');
   }
@@ -266,16 +213,12 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
 }
 
 function handleCustomSizeInputChange() {
-  const hadStandardSelection = Boolean(selectedStandardSizeId) || hasValidStandardSize();
   const isValid = updateCustomSizeState();
 
-  if (hadStandardSelection || !isValid) {
-    resetStandardSelection();
-    resetCalculations();
-  }
-
-  if (!isValid && sizeInputEl) {
-    sizeInputEl.value = '';
+  if (isValid) {
+    enableThicknessForSize();
+  } else {
+    disableThicknessSelection();
   }
 
   if (isValid && cutYesRadio && cutYesRadio.checked) {
@@ -287,6 +230,7 @@ function resetCustomSizeInputs() {
   if (customLengthInputEl) customLengthInputEl.value = '';
   if (customWidthInputEl) customWidthInputEl.value = '';
   updateCustomSizeState();
+  disableThicknessSelection();
 }
 
 // Debug function to log element status
@@ -507,7 +451,6 @@ async function updateCartItem(button, itemId) {
 function getFormData() {
   const machineSelect = document.getElementById('machineSelect');
   const thicknessSelect = document.getElementById('thicknessSelect');
-  const sizeSelect = document.getElementById('sizeSelect');
   const sheetInput = document.getElementById('sheetInput');
   const underpackingTypeSelect = document.getElementById('underpackingType');
   const discountSelect = document.getElementById('discountSelect');
@@ -524,7 +467,7 @@ function getFormData() {
   }
   
   const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
-  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const sqmArea = hasValidCustomSize() ? customSize.area : 0;
   const ratePerSqm = 80 * (thicknessValue / 100);
   const sheetCount = Math.max(1, quantity);
   const unitPrice = ratePerSqm * sqmArea;
@@ -536,25 +479,14 @@ function getFormData() {
   const finalPrice = discountedSubtotal + gstAmount;
   
   // Get size details
-  const sizeValue = sizeSelect.value;
-  const sizeOption = sizeSelect.options[sizeSelect.selectedIndex];
-  const selectedSize = sizeOption ? sizeOption.text : '';
-  const metaFromMap = sizeMetaMap[sizeValue];
-  const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
-  const standardAlong = typeof dimensionMeta.along === 'number' ? dimensionMeta.along : (standardSize.along || 0);
-  const standardAcross = typeof dimensionMeta.across === 'number' ? dimensionMeta.across : (standardSize.across || 0);
-  const standardArea = standardSize.area || mmToSqm(standardSize.across, standardSize.along);
-
-  const customAcross = customSize.across || null;
-  const customAlong = customSize.along || null;
-  const customArea = customSize.area || (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
+  const customAcross = isPositiveNumber(customSize.across) ? customSize.across : null;
+  const customAlong = isPositiveNumber(customSize.along) ? customSize.along : null;
+  const customArea = isPositiveNumber(customSize.area) ? customSize.area : (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
-  const standardSizeLabel = selectedSize;
-  const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
-  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
-  const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
-  const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
+  const displayAlong = customAlong || 0;
+  const displayAcross = customAcross || 0;
+  const displaySizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
 
   return {
     id: 'mpack_' + Date.now(),
@@ -573,12 +505,12 @@ function getFormData() {
     custom_along_mm: customAlong,
     custom_across_mm: customAcross,
     custom_area_sqm: customArea,
-    standard_along_mm: standardAlong,
-    standard_across_mm: standardAcross,
-    standard_area_sqm: standardArea,
+    standard_along_mm: null,
+    standard_across_mm: null,
+    standard_area_sqm: 0,
     cut_to_custom_size: cutToCustom,
-    standard_size_label: standardSizeLabel,
-    custom_size_label: customSizeLabel,
+    standard_size_label: '',
+    custom_size_label: displaySizeLabel,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
@@ -844,168 +776,79 @@ function loadMachines() {
     });
 }
 
-function loadSizes() {
-  const thicknessSelect = document.getElementById("thicknessSelect");
-  const sizeSelect = document.getElementById("sizeSelect");
-  
-  if (!thicknessSelect || !sizeSelect) return;
+function disableThicknessSelection() {
+  if (!thicknessSelectEl) return;
+  thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+  thicknessSelectEl.disabled = true;
+  currentThickness = '';
+  resetCalculations();
+}
 
-  const thickness = thicknessSelect.value;
-  if (!thickness) {
-    resetStandardSelection({ preserveOptions: false });
-    resetCalculations();
+function enableThicknessForSize() {
+  if (!thicknessSelectEl) return;
+  const acrossVal = parseFloat(customWidthInputEl?.value || '');
+  const alongVal = parseFloat(customLengthInputEl?.value || '');
+  if (!isPositiveNumber(acrossVal) || !isPositiveNumber(alongVal)) {
+    disableThicknessSelection();
     return;
   }
-  // Show loading state
-  sizeSelect.innerHTML = '<option value="">Loading sizes...</option>';
-  sizeSelect.disabled = true;
-  
-  // Clear any previous errors
-  const existingError = document.getElementById('sizeError');
-  if (existingError) existingError.remove();
-  
-  // Show size section if not already visible
-  const sizeSection = document.getElementById("sizeSection");
-  if (sizeSection) sizeSection.style.display = "block";
-  
-  // Show loading indicator
-  const loadingIndicator = document.createElement('div');
-  loadingIndicator.id = 'loadingIndicator';
-  loadingIndicator.className = 'text-muted small';
-  loadingIndicator.textContent = 'Loading sizes and prices...';
-  sizeSelect.parentNode.insertBefore(loadingIndicator, sizeSelect.nextSibling);
-  
-  // Load data from mpack.json with cache busting
-  fetch(`/static/data/mpack.json?v=${new Date().getTime()}`)
+
+  const key = `${acrossVal}x${alongVal}`;
+  const matchingThicknesses = thicknessOptionsBySize.get(key) || [];
+
+  thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+  matchingThicknesses.forEach(thickness => {
+    const option = document.createElement('option');
+    option.value = thickness;
+    option.textContent = thickness;
+    thicknessSelectEl.appendChild(option);
+  });
+
+  thicknessSelectEl.disabled = matchingThicknesses.length === 0;
+
+  if (matchingThicknesses.length === 1) {
+    thicknessSelectEl.value = matchingThicknesses[0];
+    thicknessSelectEl.dispatchEvent(new Event('change'));
+  }
+}
+
+function loadSizes() {
+  fetch(`/static/data/mpack.json?v=${Date.now()}`)
     .then(res => {
       if (!res.ok) throw new Error('Failed to load MPack data');
       return res.json();
     })
     .then(data => {
-      // Clean up loading indicator
-      const loadingIndicator = document.getElementById('loadingIndicator');
-      if (loadingIndicator) loadingIndicator.remove();
-      
-      // Find the selected thickness data
-      const thicknessData = data.mpack.find(item => item.id === thickness);
-      if (!thicknessData || !thicknessData.sizes) {
-        throw new Error(`No data found for ${thickness} micron`);
-      }
-      
-      // Reset size select
-      sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
-      sizeSelect.disabled = false;
-      
-      // Clear and rebuild size metadata map
-      sizeMetaMap = {};
-      
-      // Populate size dropdown with prices
-      thicknessData.sizes.forEach(item => {
-        const opt = document.createElement("option");
-        opt.value = item.id;
-        opt.textContent = `${item.width} x ${item.length}`;
-        sizeSelect.appendChild(opt);
-        sizeMetaMap[item.id] = { width: item.width, length: item.length, price: item.price };
+      const allSizes = [];
+      thicknessOptionsBySize = new Map();
+
+      data.mpack.forEach(entry => {
+        entry.sizes.forEach(size => {
+          const key = `${size.width}x${size.length}`;
+          const options = thicknessOptionsBySize.get(key) || [];
+          options.push(entry.id);
+          thicknessOptionsBySize.set(key, options);
+          allSizes.push(size);
+        });
       });
 
-      const uniqueWidths = [...new Set(thicknessData.sizes.map(item => item.width))].sort((a, b) => a - b);
-      const uniqueLengths = [...new Set(thicknessData.sizes.map(item => item.length))].sort((a, b) => a - b);
+      const uniqueWidths = [...new Set(allSizes.map(item => item.width))].sort((a, b) => a - b);
+      const uniqueLengths = [...new Set(allSizes.map(item => item.length))].sort((a, b) => a - b);
       populateCustomDropdowns({ widths: uniqueWidths, lengths: uniqueLengths });
 
-      resetStandardSelection({ preserveOptions: true });
+      sizeMetaMap = {};
+      thicknessOptionsBySize.forEach((thicknesses, key) => {
+        const [width, length] = key.split('x').map(Number);
+        sizeMetaMap[key] = { width, length, price: null, thicknesses };
+      });
 
-      if (!hasValidCustomSize()) {
-        sizeSelect.disabled = true;
-        if (sizeInputEl) sizeInputEl.disabled = true;
-      } else {
-        sizeSelect.disabled = false;
-        if (sizeInputEl) sizeInputEl.disabled = false;
-      }
-      
-      // Show UI sections
-      const sizeSection = document.getElementById("sizeSection");
-      const priceSection = document.getElementById("priceSection");
-      const sheetInputSection = document.getElementById("sheetInputSection");
-      
-      if (sizeSection) sizeSection.style.display = "block";
-      if (priceSection) priceSection.style.display = "block";
-      if (sheetInputSection) sheetInputSection.style.display = "block";
-      
-      updatePricingFromSelections();
+      disableThicknessSelection();
     })
     .catch(err => {
-      console.error(`Failed to load data for ${thickness} micron:`, err);
-      
-      // Clean up loading indicator
-      const loadingIndicator = document.getElementById('loadingIndicator');
-      if (loadingIndicator) loadingIndicator.remove();
-      
-      // Reset size select
-      const sizeSelect = document.getElementById("sizeSelect");
-      if (sizeSelect) {
-        sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
-        sizeSelect.disabled = false;
-        
-        // Create or update error message
-        let errorElement = document.getElementById('sizeError');
-        if (!errorElement) {
-          errorElement = document.createElement('div');
-          errorElement.id = 'sizeError';
-          errorElement.className = 'text-danger small mt-1';
-          sizeSelect.parentNode.insertBefore(errorElement, sizeSelect.nextSibling);
-        }
-        errorElement.textContent = `Error: ${err.message || 'Failed to load sizes'}. Please try again.`;
-        
-        // Auto-hide error after 5 seconds
-        if (window.errorTimeout) clearTimeout(window.errorTimeout);
-        window.errorTimeout = setTimeout(() => {
-          if (errorElement && errorElement.parentNode) {
-            errorElement.remove();
-          }
-        }, 5000);
-      }
-
+      console.error('Failed to load MPack sizes:', err);
       populateCustomDropdowns({ widths: [], lengths: [] });
+      disableThicknessSelection();
     });
-}
-
-function handleSizeSelection() {
-  if (!sizeSelectEl) return;
-  const selectedId = sizeSelectEl.value;
-
-  if (!selectedId) {
-    selectedStandardSizeId = '';
-    selectedSizeId = '';
-    standardSize = { length: null, width: null, area: 0 };
-    hideCuttingSections();
-    resetCalculations();
-    return;
-  }
-
-  selectedStandardSizeId = selectedId;
-  selectedSizeId = selectedId;
-
-  const selectedOption = sizeSelectEl.options[sizeSelectEl.selectedIndex];
-  const optionText = selectedOption ? selectedOption.text : '';
-  const dimensionMeta = sizeMetaMap[selectedId] || parseSizeLabel(optionText) || {};
-  if (dimensionMeta) {
-    if (typeof dimensionMeta.width === 'number') {
-      standardSize.width = dimensionMeta.width;
-    }
-    if (typeof dimensionMeta.length === 'number') {
-      standardSize.length = dimensionMeta.length;
-    }
-    standardSize.area = mmToSqm(standardSize.length, standardSize.width);
-  }
-
-  if (hasValidCustomSize()) {
-    showCutQuestion();
-    updateCutDetails();
-  } else {
-    hideCuttingSections();
-  }
-
-  updatePricingFromSelections();
 }
 
 async function loadDiscounts() {
