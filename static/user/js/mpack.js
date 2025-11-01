@@ -8,6 +8,8 @@ let currentRatePerSqm = 0;
 let thicknessOptionsBySize = new Map();
 let lengthsByWidthMap = new Map();
 
+const BASE_RATE_PER_100_MICRON = 80; // ₹ per sq.m at 100 micron
+
 let customLengthInputEl;
 let customWidthInputEl;
 let thicknessSelectEl;
@@ -481,7 +483,7 @@ function getFormData() {
   
   const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
   const sqmArea = hasValidCustomSize() ? customSize.area : 0;
-  const ratePerSqm = 80 * (thicknessValue / 100);
+  const ratePerSqm = BASE_RATE_PER_100_MICRON * (thicknessValue / 100);
   const sheetCount = Math.max(1, quantity);
   const unitPrice = ratePerSqm * sqmArea;
   const subtotal = unitPrice * sheetCount;
@@ -1009,6 +1011,11 @@ function calculateFinalPrice() {
   const effectiveSqm = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
   const sqmLabel = effectiveSqm.toFixed(3);
 
+  const baseRateDisplay = BASE_RATE_PER_100_MICRON.toFixed(2);
+  const thicknessFactor = Number(currentThickness || 0) / 100;
+  const thicknessFactorDisplay = thicknessFactor.toFixed(2);
+  const ratePerSqmDisplay = currentRatePerSqm.toFixed(2);
+
   pricingBreakdown.innerHTML = `
     <div class="pricing-row">
       <span class="pricing-label">Thickness:</span>
@@ -1020,7 +1027,7 @@ function calculateFinalPrice() {
     </div>
     <div class="pricing-row">
       <span class="pricing-label">Rate per sq.m:</span>
-      <span class="pricing-value">₹${currentRatePerSqm.toFixed(2)}</span>
+      <span class="pricing-value">₹${baseRateDisplay} × ${thicknessFactorDisplay} = ₹${ratePerSqmDisplay}</span>
     </div>
     <div class="pricing-row">
       <span class="pricing-label">Sheets:</span>
@@ -1069,7 +1076,7 @@ function updatePricingFromSelections() {
   }
 
   currentThickness = String(activeThickness);
-  currentRatePerSqm = 80 * (activeThickness / 100);
+  currentRatePerSqm = BASE_RATE_PER_100_MICRON * (activeThickness / 100);
   currentNetPrice = currentRatePerSqm * sqmArea;
 
   calculateFinalPrice();
