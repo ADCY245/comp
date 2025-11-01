@@ -1,4 +1,3 @@
-let priceMap = {};
 let sizeMetaMap = {};
 let currentNetPrice = 0;
 let currentDiscount = 0; // Track current discount percentage
@@ -6,11 +5,13 @@ let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
 let customSize = { across: null, along: null, area: 0 };
 let standardSize = { across: null, along: null, area: 0 };
+let currentRatePerSqm = 0;
 
 let sizeInputEl;
 let sizeSelectEl;
 let customLengthInputEl;
 let customWidthInputEl;
+let thicknessSelectEl;
 let customSizeSummaryEl;
 let customSizeFeedbackEl;
 let cutQuestionSectionEl;
@@ -63,6 +64,29 @@ function formatDimensionLabel(acrossMm, alongMm) {
     return '';
   }
   return `${formattedAlong} x ${formattedAcross} mm`;
+}
+
+function populateSelectOptions(selectEl, values = [], placeholder = '-- Select --') {
+  if (!selectEl) return;
+
+  const currentValue = selectEl.value;
+  selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+
+  values.forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    selectEl.appendChild(option);
+  });
+
+  if (currentValue && values.map(String).includes(String(currentValue))) {
+    selectEl.value = currentValue;
+  }
+}
+
+function populateCustomDropdowns({ widths = [], lengths = [] } = {}) {
+  populateSelectOptions(customWidthInputEl, widths.map(String), '-- Select Across --');
+  populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
 }
 
 let selectedStandardSizeId = '';
@@ -194,17 +218,18 @@ function resetStandardSelection({ preserveSearchValue = false, preserveOptions =
 function updateCustomSizeState({ showFeedback = false } = {}) {
   const rawLength = customLengthInputEl ? customLengthInputEl.value : '';
   const rawWidth = customWidthInputEl ? customWidthInputEl.value : '';
-  const acrossVal = parseFloat(rawLength || '');
-  const alongVal = parseFloat(rawWidth || '');
-  const valid = isPositiveNumber(acrossVal) && isPositiveNumber(alongVal);
+  const aroundVal = parseFloat(rawLength || '');
+  const acrossVal = parseFloat(rawWidth || '');
+  const valid = isPositiveNumber(acrossVal) && isPositiveNumber(aroundVal);
 
   if (valid) {
     customSize.across = acrossVal;
-    customSize.along = alongVal;
-    customSize.area = mmToSqm(acrossVal, alongVal);
+    customSize.along = aroundVal;
+    customSize.area = mmToSqm(customSize.across, customSize.along);
 
     if (customSizeSummaryEl) {
-      customSizeSummaryEl.textContent = `${alongVal.toFixed(2)} mm × ${acrossVal.toFixed(2)} mm (${customSize.area.toFixed(3)} sq.m)`;
+      const thicknessLabel = thicknessSelectEl && thicknessSelectEl.value ? `${thicknessSelectEl.value} micron · ` : '';
+      customSizeSummaryEl.textContent = `${thicknessLabel}${aroundVal.toFixed(0)} mm × ${acrossVal.toFixed(0)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');
@@ -224,7 +249,7 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   customSize.area = 0;
 
   if (customSizeSummaryEl) {
-    customSizeSummaryEl.textContent = 'Awaiting input…';
+    customSizeSummaryEl.textContent = thicknessSelectEl && thicknessSelectEl.value ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
   }
   if (sizeInputEl) {
     sizeInputEl.disabled = true;
@@ -498,16 +523,17 @@ function getFormData() {
     underpackingTypeDisplay = underpackingTypeSelect.options[underpackingTypeSelect.selectedIndex].text;
   }
   
-  // Calculate prices
-  let unitPrice = parseFloat(document.getElementById('netPrice').textContent) || 0;
-  let totalPriceBeforeDiscount = unitPrice * quantity;
-  let discountAmount = (totalPriceBeforeDiscount * discount) / 100;
-  let priceAfterDiscount = totalPriceBeforeDiscount - discountAmount;
-  
-  // Add GST (18% as per the form)
-  const gstRate = 0.18;
-  const gstAmount = priceAfterDiscount * gstRate;
-  const finalPrice = priceAfterDiscount + gstAmount;
+  const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
+  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const ratePerSqm = 80 * (thicknessValue / 100);
+  const sheetCount = Math.max(1, quantity);
+  const unitPrice = ratePerSqm * sqmArea;
+  const subtotal = unitPrice * sheetCount;
+  const discountAmount = (subtotal * discount) / 100;
+  const discountedSubtotal = subtotal - discountAmount;
+  const gstRate = parseFloat(document.getElementById('gstSelect').value) || 0;
+  const gstAmount = (discountedSubtotal * gstRate) / 100;
+  const finalPrice = discountedSubtotal + gstAmount;
   
   // Get size details
   const sizeValue = sizeSelect.value;
@@ -543,7 +569,7 @@ function getFormData() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 18,
+    gst_percent: gstRate,
     custom_along_mm: customAlong,
     custom_across_mm: customAcross,
     custom_area_sqm: customArea,
@@ -556,12 +582,15 @@ function getFormData() {
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
+      rate_per_sqm: parseFloat(ratePerSqm.toFixed(2)),
+      sqm_per_sheet: parseFloat((sqmArea || 0).toFixed(3)),
       unit_price: parseFloat(unitPrice.toFixed(2)),
-      quantity: quantity,
-      discounted_subtotal: parseFloat(priceAfterDiscount.toFixed(2)),
+      quantity: sheetCount,
+      subtotal: parseFloat(subtotal.toFixed(2)),
       discount_percent: discount,
       discount_amount: parseFloat(discountAmount.toFixed(2)),
-      gst_percent: 18,
+      discounted_subtotal: parseFloat(discountedSubtotal.toFixed(2)),
+      gst_percent: gstRate,
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
     }
@@ -605,6 +634,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   sizeSelectEl = document.getElementById('sizeSelect');
   customLengthInputEl = document.getElementById('customLengthInput');
   customWidthInputEl = document.getElementById('customWidthInput');
+  thicknessSelectEl = document.getElementById('thicknessSelect');
   customSizeSummaryEl = document.getElementById('customSizeSummary');
   customSizeFeedbackEl = document.getElementById('customSizeFeedback');
   cutQuestionSectionEl = document.getElementById('cutQuestionSection');
@@ -627,10 +657,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Attach listeners for custom size inputs
   if (customLengthInputEl) {
-    customLengthInputEl.addEventListener('input', handleCustomSizeInputChange);
+    customLengthInputEl.addEventListener('change', handleCustomSizeInputChange);
   }
   if (customWidthInputEl) {
-    customWidthInputEl.addEventListener('input', handleCustomSizeInputChange);
+    customWidthInputEl.addEventListener('change', handleCustomSizeInputChange);
   }
 
   if (cutYesRadio) {
@@ -769,6 +799,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         discountSelect.value = '';
       }
       calculateFinalPrice();
+      updateCustomSizeState();
     });
   }
 
@@ -818,13 +849,13 @@ function loadSizes() {
   const sizeSelect = document.getElementById("sizeSelect");
   
   if (!thicknessSelect || !sizeSelect) return;
-  
+
   const thickness = thicknessSelect.value;
-  if (!thickness) return;
-  
-  // Update current thickness
-  currentThickness = thickness;
-  
+  if (!thickness) {
+    resetStandardSelection({ preserveOptions: false });
+    resetCalculations();
+    return;
+  }
   // Show loading state
   sizeSelect.innerHTML = '<option value="">Loading sizes...</option>';
   sizeSelect.disabled = true;
@@ -865,8 +896,7 @@ function loadSizes() {
       sizeSelect.innerHTML = '<option value="">-- Select Size --</option>';
       sizeSelect.disabled = false;
       
-      // Clear and rebuild price map
-      priceMap = {};
+      // Clear and rebuild size metadata map
       sizeMetaMap = {};
       
       // Populate size dropdown with prices
@@ -874,11 +904,13 @@ function loadSizes() {
         const opt = document.createElement("option");
         opt.value = item.id;
         opt.textContent = `${item.width} x ${item.length}`;
-        opt.dataset.price = item.price;
         sizeSelect.appendChild(opt);
-        priceMap[item.id] = item.price;
         sizeMetaMap[item.id] = { width: item.width, length: item.length, price: item.price };
       });
+
+      const uniqueWidths = [...new Set(thicknessData.sizes.map(item => item.width))].sort((a, b) => a - b);
+      const uniqueLengths = [...new Set(thicknessData.sizes.map(item => item.length))].sort((a, b) => a - b);
+      populateCustomDropdowns({ widths: uniqueWidths, lengths: uniqueLengths });
 
       resetStandardSelection({ preserveOptions: true });
 
@@ -899,28 +931,7 @@ function loadSizes() {
       if (priceSection) priceSection.style.display = "block";
       if (sheetInputSection) sheetInputSection.style.display = "block";
       
-      // Reset discount state
-      const discountSelect = document.getElementById("discountSelect");
-      if (discountSelect) {
-        discountSelect.value = "";
-        currentDiscount = 0;
-      }
-      
-      const finalDiscountedPrice = document.getElementById("finalDiscountedPrice");
-      if (finalDiscountedPrice) finalDiscountedPrice.textContent = "0.00";
-      
-      const discountSection = document.getElementById("discountSection");
-      if (discountSection) discountSection.style.display = "block";
-      
-      const discountPromptSection = document.getElementById("discountPromptSection");
-      if (discountPromptSection) {
-        discountPromptSection.style.display = "block";
-        discountPromptSection.innerHTML = `
-          <label class="form-label">Apply Discount?</label>
-          <button class="btn btn-outline-primary btn-sm" onclick="showDiscountSection(true)">Yes</button>
-          <button class="btn btn-outline-secondary btn-sm" onclick="showDiscountSection(false)">No</button>
-        `;
-      }
+      updatePricingFromSelections();
     })
     .catch(err => {
       console.error(`Failed to load data for ${thickness} micron:`, err);
@@ -953,6 +964,8 @@ function loadSizes() {
           }
         }, 5000);
       }
+
+      populateCustomDropdowns({ widths: [], lengths: [] });
     });
 }
 
@@ -992,34 +1005,7 @@ function handleSizeSelection() {
     hideCuttingSections();
   }
 
-  currentNetPrice = parseFloat(priceMap[selectedId] || 0);
-  const netPriceElement = document.getElementById('netPrice');
-  if (netPriceElement) {
-    netPriceElement.textContent = currentNetPrice.toFixed(2);
-  }
-
-  const sheetInput = document.getElementById('sheetInput');
-  if (sheetInput) {
-    sheetInput.value = '1';
-  }
-
-  currentDiscount = 0;
-  const discountSelect = document.getElementById('discountSelect');
-  if (discountSelect) {
-    discountSelect.value = '';
-  }
-
-  const discountDetails = document.getElementById('discountDetails');
-  if (discountDetails) {
-    discountDetails.innerHTML = '';
-  }
-
-  const priceSection = document.getElementById('priceSection');
-  if (priceSection) {
-    priceSection.style.display = 'block';
-  }
-
-  calculateFinalPrice();
+  updatePricingFromSelections();
 }
 
 async function loadDiscounts() {
@@ -1100,203 +1086,119 @@ async function loadDiscounts() {
 function resetCalculations() {
   currentNetPrice = 0;
   currentDiscount = 0;
-  
-  // Reset input fields
-  const sheetInput = document.getElementById("sheetInput");
-  if (sheetInput) sheetInput.value = "1";
-  
-  // Reset discount select
-  const discountSelect = document.getElementById("discountSelect");
-  if (discountSelect) discountSelect.value = "";
-  
-  // Reset price summary
-  const priceSummary = document.getElementById("priceSummary");
-  if (priceSummary) {
-    priceSummary.innerHTML = '<p class="text-muted mb-0">Select options to see pricing</p>';
+
+  const sheetInput = document.getElementById('sheetInput');
+  if (sheetInput) sheetInput.value = '1';
+
+  const pricingBreakdown = document.getElementById('pricingBreakdown');
+  if (pricingBreakdown) {
+    pricingBreakdown.innerHTML = '<p class="text-muted mb-0">Select thickness and sizes to see pricing.</p>';
   }
-  
-  // Reset net price display
-  const netPriceElement = document.getElementById("netPrice");
-  if (netPriceElement) {
-    netPriceElement.textContent = "0.00";
-  }
-  
-  // Clear discount details
-  const discountDetails = document.getElementById("discountDetails");
-  if (discountDetails) {
-    discountDetails.innerHTML = "";
-  }
-  
-  // Hide price section and add to cart button
-  const priceSection = document.getElementById("priceSection");
-  const addToCartBtn = document.getElementById("addToCartBtn");
-  
-  if (priceSection) {
-    priceSection.style.display = "none";
-  }
-  
-  if (addToCartBtn) {
-    addToCartBtn.style.display = "none";
-  }
+
+  const priceSection = document.getElementById('priceSection');
+  if (priceSection) priceSection.style.display = 'none';
+
+  const addToCartBtn = document.getElementById('addToCartBtn');
+  if (addToCartBtn) addToCartBtn.disabled = true;
 }
 
 function calculateFinalPrice() {
-  const sheetInput = document.getElementById("sheetInput");
-  const quantity = parseInt(sheetInput.value) || 0;
-  const gstRate = parseFloat(document.getElementById("gstSelect").value) || 0;
-  
-  if (currentNetPrice <= 0) {
+  const sheetInput = document.getElementById('sheetInput');
+  const quantity = parseInt(sheetInput.value, 10) || 0;
+  const gstRate = parseFloat(document.getElementById('gstSelect').value) || 0;
+  const pricingBreakdown = document.getElementById('pricingBreakdown');
+  const addToCartBtn = document.getElementById('addToCartBtn');
+
+  if (!pricingBreakdown) return;
+
+  const hasSelections = currentNetPrice > 0 && isPositiveNumber(standardSize.area) && currentThickness;
+  if (!hasSelections) {
     resetCalculations();
     return;
   }
-  
-  // If quantity is 0 or negative, set to 1 for calculation but show 0 in the display
-  const displayQuantity = Math.max(0, quantity);
-  const calcQuantity = quantity <= 0 ? 1 : quantity;
-  
-  // Calculate base price without GST
-  const basePrice = currentNetPrice * calcQuantity;
-  
-  // Apply discount if any
-  const discountAmount = (basePrice * currentDiscount) / 100;
-  const discountedPrice = basePrice - discountAmount;
-  
-  // Calculate GST on the discounted price
-  const gstAmount = (discountedPrice * gstRate) / 100;
-  const finalPrice = discountedPrice + gstAmount;
-  
-  // Update the price summary
-  const priceSummary = document.getElementById("priceSummary");
-  const netPriceElement = document.getElementById("netPrice");
-  
-  // Update net price display
-  if (netPriceElement) {
-    netPriceElement.textContent = currentNetPrice.toFixed(2);
-  }
-  
-  if (priceSummary) {
-    let summaryHTML = '';
-    
-    if (currentDiscount > 0) {
-      summaryHTML = `
-        <div class="d-flex justify-content-between">
-          <span>Subtotal (${displayQuantity} sheets):</span>
-          <span>₹${basePrice.toFixed(2)}</span>
-        </div>
-        <div class="d-flex justify-content-between text-danger">
-          <span>Discount (${currentDiscount}%):</span>
-          <span>-₹${discountAmount.toFixed(2)}</span>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span>After Discount:</span>
-          <span>₹${discountedPrice.toFixed(2)}</span>
-        </div>`;
-    } else {
-      summaryHTML = `
-        <div class="d-flex justify-content-between">
-          <span>Subtotal (${displayQuantity} sheets):</span>
-          <span>₹${basePrice.toFixed(2)}</span>
-        </div>`;
-    }
-    
-    // Add GST and total
-    summaryHTML += `
-      <div class="d-flex justify-content-between">
-        <span>GST (${gstRate}%):</span>
-        <span>₹${gstAmount.toFixed(2)}</span>
-      </div>
-      <hr>
-      <div class="d-flex justify-content-between fw-bold">
-        <span>Total Price:</span>
-        <span>₹${finalPrice.toFixed(2)}</span>
-      </div>`;
-    
-    priceSummary.innerHTML = summaryHTML;
-  }
-  
-  // Show add to cart button and price section
-  const addToCartBtn = document.getElementById("addToCartBtn");
-  const priceSection = document.getElementById("priceSection");
-  
-  if (addToCartBtn) {
-    addToCartBtn.style.display = "block";
-  }
-  
-  if (priceSection) {
-    const hasSizeSelection = Boolean(selectedStandardSizeId || (sizeSelectEl && sizeSelectEl.value));
-    priceSection.style.display = hasSizeSelection ? "block" : "none";
-  }
+
+  const sheetCount = Math.max(1, quantity);
+  const subtotal = currentNetPrice * sheetCount;
+  const discountAmount = (subtotal * currentDiscount) / 100;
+  const discountedSubtotal = subtotal - discountAmount;
+  const gstAmount = (discountedSubtotal * gstRate) / 100;
+  const finalTotal = discountedSubtotal + gstAmount;
+
+  const effectiveSqm = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const sqmLabel = effectiveSqm.toFixed(3);
+
+  pricingBreakdown.innerHTML = `
+    <div class="pricing-row">
+      <span class="pricing-label">Thickness:</span>
+      <span class="pricing-value">${currentThickness} micron</span>
+    </div>
+    <div class="pricing-row">
+      <span class="pricing-label">Area per sheet:</span>
+      <span class="pricing-value">${sqmLabel} sq.m</span>
+    </div>
+    <div class="pricing-row">
+      <span class="pricing-label">Rate per sq.m:</span>
+      <span class="pricing-value">₹${currentRatePerSqm.toFixed(2)}</span>
+    </div>
+    <div class="pricing-row">
+      <span class="pricing-label">Sheets:</span>
+      <span class="pricing-value">${sheetCount}</span>
+    </div>
+    <div class="pricing-row">
+      <span class="pricing-label">Subtotal:</span>
+      <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
+    </div>
+    ${currentDiscount > 0 ? `
+    <div class="pricing-row">
+      <span class="pricing-label">Discount (${currentDiscount}%):</span>
+      <span class="pricing-value pricing-discount">-₹${discountAmount.toFixed(2)}</span>
+    </div>` : ''}
+    <div class="pricing-row">
+      <span class="pricing-label">GST (${gstRate}%):</span>
+      <span class="pricing-value">₹${gstAmount.toFixed(2)}</span>
+    </div>
+    <div class="pricing-row">
+      <span class="pricing-label">Total:</span>
+      <span class="pricing-value pricing-total">₹${finalTotal.toFixed(2)}</span>
+    </div>
+  `;
+
+  const priceSection = document.getElementById('priceSection');
+  if (priceSection) priceSection.style.display = 'block';
+
+  if (addToCartBtn) addToCartBtn.disabled = false;
 }
 
-function showDiscountSection(apply) {
-  const discountSection = document.getElementById("discountSection");
-  const finalPrice = document.getElementById("finalPrice").textContent;
-  const finalDiscountedPrice = document.getElementById("finalDiscountedPrice");
+function updatePricingFromSelections() {
+  const sheetInput = document.getElementById('sheetInput');
+  if (sheetInput) sheetInput.value = '1';
 
-  if (!apply) {
-    discountSection.style.display = "none";
-    finalDiscountedPrice.textContent = finalPrice;
+  const discountSelect = document.getElementById('discountSelect');
+  if (discountSelect) discountSelect.value = '';
+  currentDiscount = 0;
+
+  const thicknessValue = parseFloat(thicknessSelectEl && thicknessSelectEl.value ? thicknessSelectEl.value : currentThickness || 0);
+  const activeThickness = Number.isFinite(thicknessValue) && thicknessValue > 0 ? thicknessValue : 0;
+  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area;
+
+  if (!activeThickness || !isPositiveNumber(sqmArea)) {
+    resetCalculations();
     return;
   }
 
-  // Load discount options
-  fetch("/static/data/discount.json")
-    .then(res => res.json())
-    .then(data => {
-      const select = document.getElementById("discountSelect");
-      select.innerHTML = '<option value="">-- Select Discount --</option>';
-      data.discounts.forEach(discountStr => {
-        const percent = parseFloat(discountStr);
-        const opt = document.createElement("option");
-        opt.value = percent;
-        opt.textContent = discountStr;
-        select.appendChild(opt);
-      });
-      discountSection.style.display = "block";
-      finalDiscountedPrice.textContent = finalPrice;
-    });
+  currentThickness = String(activeThickness);
+  currentRatePerSqm = 80 * (activeThickness / 100);
+  currentNetPrice = currentRatePerSqm * sqmArea;
+
+  calculateFinalPrice();
 }
 
 function applyDiscount() {
-  const discountSelect = document.getElementById("discountSelect");
-  const discountPromptSection = document.getElementById("discountPromptSection");
-  
-  if (!discountSelect || !discountPromptSection) return;
-  
+  const discountSelect = document.getElementById('discountSelect');
+  if (!discountSelect) return;
+
   currentDiscount = parseFloat(discountSelect.value) || 0;
-  
-  if (currentDiscount > 0) {
-    // Update the discount prompt
-    discountPromptSection.innerHTML = 
-      `<button class="btn btn-sm btn-outline-primary" onclick="showDiscountSection(true)">
-        Change Discount (${currentDiscount}% applied)
-      </button>`;
-    
-    // Show the discount section and ensure it's visible
-    const discountSection = document.getElementById("discountSection");
-    if (discountSection) {
-      discountSection.style.display = "block";
-    }
-    
-    // Force update the price display
-    calculateFinalPrice();
-  } else {
-    // No discount selected
-    discountPromptSection.innerHTML = `
-      <label class="form-label">Apply Discount?</label>
-      <button class="btn btn-outline-primary btn-sm" onclick="showDiscountSection(true)">Yes</button>
-      <button class="btn btn-outline-secondary btn-sm" onclick="showDiscountSection(false)">No</button>
-    `;
-    
-    // Hide the discount section and clear any discount details
-    const discountSection = document.getElementById("discountSection");
-    if (discountSection) {
-      discountSection.style.display = "none";
-    }
-    
-    // Recalculate without discount
-    calculateFinalPrice();
-  }
+  calculateFinalPrice();
 }
 
 async function addMpackToCart() {
@@ -1338,17 +1240,16 @@ async function addMpackToCart() {
   // Get discount information
   const discountSelect = document.getElementById('discountSelect');
   const discount = discountSelect ? parseFloat(discountSelect.value) || 0 : 0;
-  
-  // Calculate prices
-  let unitPrice = parseFloat(document.getElementById('netPrice').textContent) || 0;
-  let totalPriceBeforeDiscount = unitPrice * quantity;
-  let discountAmount = (totalPriceBeforeDiscount * discount) / 100;
-  let priceAfterDiscount = totalPriceBeforeDiscount - discountAmount;
-  
-  // Add GST (18% as per the form)
-  const gstRate = 0.18;
-  const gstAmount = priceAfterDiscount * gstRate;
-  const finalPrice = priceAfterDiscount + gstAmount;
+  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const thicknessValue = Number(currentThickness || thicknessSelect.value || 0);
+  const ratePerSqm = 80 * (thicknessValue / 100);
+  const unitPrice = ratePerSqm * sqmArea;
+  const subtotal = unitPrice * quantity;
+  const discountAmount = (subtotal * discount) / 100;
+  const discountedSubtotal = subtotal - discountAmount;
+  const gstRate = parseFloat(document.getElementById('gstSelect').value) || 0;
+  const gstAmount = (discountedSubtotal * gstRate) / 100;
+  const finalPrice = discountedSubtotal + gstAmount;
 
   // Get size from dropdown (like thickness)
   const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
@@ -1383,16 +1284,19 @@ async function addMpackToCart() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 18,
+    gst_percent: gstRate,
     image: 'images/mpack-placeholder.jpg',
-    added_at: isEditMode ? new Date().toISOString() : new Date().toISOString(),
+    added_at: new Date().toISOString(),
     calculations: {
+      rate_per_sqm: parseFloat(ratePerSqm.toFixed(2)),
+      sqm_per_sheet: parseFloat(sqmArea.toFixed(3)),
       unit_price: parseFloat(unitPrice.toFixed(2)),
       quantity: quantity,
-      discounted_subtotal: parseFloat(priceAfterDiscount.toFixed(2)),
+      subtotal: parseFloat(subtotal.toFixed(2)),
       discount_percent: discount,
       discount_amount: parseFloat(discountAmount.toFixed(2)),
-      gst_percent: 18,
+      discounted_subtotal: parseFloat(discountedSubtotal.toFixed(2)),
+      gst_percent: gstRate,
       gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_total: parseFloat(finalPrice.toFixed(2))
     },
@@ -1448,22 +1352,34 @@ async function addMpackToCart() {
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
-    gst_percent: 18,
+    gst_percent: gstRate,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
-    calculations: product.calculations,
-    custom_length_mm: customLength,
-    custom_width_mm: customWidth,
+    calculations: {
+      rate_per_sqm: parseFloat(ratePerSqm.toFixed(2)),
+      sqm_per_sheet: parseFloat(sqmArea.toFixed(3)),
+      unit_price: parseFloat(unitPrice.toFixed(2)),
+      quantity: quantity,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discount_percent: discount,
+      discount_amount: parseFloat(discountAmount.toFixed(2)),
+      discounted_subtotal: parseFloat(discountedSubtotal.toFixed(2)),
+      gst_percent: gstRate,
+      gst_amount: parseFloat(gstAmount.toFixed(2)),
+      final_total: parseFloat(finalPrice.toFixed(2))
+    },
+    custom_length_mm: customAlong,
+    custom_width_mm: customAcross,
     custom_area_sqm: customArea,
-    standard_length_mm: standardLength,
-    standard_width_mm: standardWidth,
+    standard_length_mm: standardAlong,
+    standard_width_mm: standardAcross,
     standard_area_sqm: standardArea,
     cut_to_custom_size: cutToCustom,
     standard_size_label: standardSizeLabel,
     custom_size_label: customSizeLabel,
     display_size_label: displaySizeLabel,
-    display_length_mm: displayLength,
-    display_width_mm: displayWidth
+    display_length_mm: displayAlong,
+    display_width_mm: displayAcross
   };
 
   // Add item_id for edit mode

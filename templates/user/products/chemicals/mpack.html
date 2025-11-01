@@ -75,7 +75,9 @@
             </figure>
             <div class="mt-3">
               <label class="form-label" for="customWidthInput">Across (mm)</label>
-              <input type="number" class="form-control" id="customWidthInput" placeholder="Enter width" min="0" step="0.1">
+              <select class="form-select" id="customWidthInput">
+                <option value="">-- Select Across --</option>
+              </select>
             </div>
           </div>
           <div class="col-md-6">
@@ -105,12 +107,14 @@
             </figure>
             <div class="mt-3">
               <label class="form-label" for="customLengthInput">Around (mm)</label>
-              <input type="number" class="form-control" id="customLengthInput" placeholder="Enter circumference" min="0" step="0.1">
+              <select class="form-select" id="customLengthInput">
+                <option value="">-- Select Around --</option>
+              </select>
             </div>
           </div>
         </div>
-        <div class="form-text">Use decimal values if needed. Example: Across 540.25 mm × Around 640.5 mm.</div>
-        <div class="form-text text-muted" id="customSizeSummary">Awaiting across/around input…</div>
+        <div class="form-text">Select preset sizes to populate measurements automatically.</div>
+        <div class="form-text text-muted" id="customSizeSummary">Select thickness and sizes to see sq.m.</div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
       </div>
     </div>
@@ -162,48 +166,38 @@
     </div>
 
     <!-- Price Calculation Section -->
-    <div class="card mb-3" id="priceSection" style="display:none;">
-      <div class="card-body">
-        <h5 class="card-title">Price Calculation</h5>
-        <div class="row">
-          <div class="col-md-6">
-            <p id="netPriceDisplay" class="mb-1"><strong>Net Price Per Sheet:</strong> ₹<span id="netPrice">-</span></p>
+    <section class="pricing-section" id="priceSection" style="display:none;">
+      <div class="pricing-container">
+        <div class="pricing-preview mb-3">
+          <div class="pricing-breakdown" id="pricingBreakdown">
+            <p class="text-muted mb-0">Select thickness and sizes to see pricing.</p>
           </div>
-          <div class="col-md-6">
-            <div class="mb-2">
-              <label for="sheetInput" class="form-label">Quantity (Sheets):</label>
-              <input type="number" id="sheetInput" class="form-control form-control-sm" min="1" value="1" />
+        </div>
+        <div class="pricing-options mb-4">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
+              <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
             </div>
-            <!-- Discount Section -->
-            <div class="mb-3" id="discountSection">
-              <label for="discountSelect" class="form-label">Select Discount:</label>
-              <select id="discountSelect" class="form-select form-select-sm">
+            <div class="col-md-4">
+              <label for="discountSelect" class="form-label">Discount (%) <span class="text-muted">(optional)</span></label>
+              <select id="discountSelect" class="form-select">
                 <option value="">-- Select Discount --</option>
               </select>
-              <div id="discountDetails" class="mt-2 p-2 bg-light rounded"></div>
             </div>
-            <div class="mb-2">
-              <label for="gstSelect" class="form-label">GST Rate: 18%</label>
+            <div class="col-md-4">
+              <label for="gstSelect" class="form-label">GST Rate</label>
+              <input type="text" id="gstDisplay" class="form-control" value="18%" disabled>
               <input type="hidden" id="gstSelect" value="18">
             </div>
           </div>
         </div>
-
-        <!-- Price Summary -->
-        <div class="card mt-3">
-          <div class="card-body p-3">
-            <h5 class="fw-bold mb-3">Price Summary</h5>
-            <div id="priceSummary">
-              <p class="text-muted mb-0">Select options to see pricing</p>
-            </div>
-          </div>
+        <div class="pricing-actions">
+          <button class="btn btn-primary" id="addToCartBtn" disabled>Add to Cart</button>
         </div>
+        <div id="cart-message" class="mt-2"></div>
       </div>
-    </div>
-
-    <!-- Add to Cart Button -->
-    <button id="addToCartBtn" class="btn btn-primary" style="display:none;">Add to Cart</button>
-    <div id="cart-message" class="mt-2"></div>
+    </section>
   </div>
 
   <!-- Scripts -->
