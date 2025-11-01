@@ -1029,36 +1029,57 @@ function calculateFinalPrice() {
 
   pricingBreakdown.innerHTML = `
     <div class="pricing-row">
-      <span class="pricing-label">Thickness:</span>
-      <span class="pricing-value">${currentThickness} micron</span>
+      <div>
+        <span class="pricing-label">Thickness</span>
+        <div class="pricing-subtext">Rate scales from ₹${baseRateDisplay} per 100µ</div>
+      </div>
+      <span class="pricing-value">${currentThickness} µ</span>
     </div>
     <div class="pricing-row">
-      <span class="pricing-label">Area per sheet:</span>
+      <div>
+        <span class="pricing-label">Area per sheet</span>
+        <div class="pricing-subtext">Across × Around (converted to sq.m)</div>
+      </div>
       <span class="pricing-value">${sqmLabel} sq.m</span>
     </div>
     <div class="pricing-row">
-      <span class="pricing-label">Rate per sq.m:</span>
-      <span class="pricing-value">₹${baseRateDisplay} × ${thicknessFactorDisplay} = ₹${ratePerSqmDisplay}</span>
+      <div>
+        <span class="pricing-label">Rate per sq.m</span>
+        <div class="pricing-subtext">₹${baseRateDisplay} × ${thicknessFactorDisplay}</div>
+      </div>
+      <span class="pricing-value">₹${ratePerSqmDisplay}</span>
     </div>
     <div class="pricing-row">
-      <span class="pricing-label">Sheets:</span>
+      <div>
+        <span class="pricing-label">Sheets</span>
+        <div class="pricing-subtext">Quantity entered above</div>
+      </div>
       <span class="pricing-value">${sheetCount}</span>
     </div>
     <div class="pricing-row">
-      <span class="pricing-label">Subtotal:</span>
+      <div>
+        <span class="pricing-label">Subtotal</span>
+        <div class="pricing-subtext">Rate × Area × Sheets</div>
+      </div>
       <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
     </div>
     ${currentDiscount > 0 ? `
     <div class="pricing-row">
-      <span class="pricing-label">Discount (${currentDiscount}%):</span>
+      <div>
+        <span class="pricing-label">Discount (${currentDiscount}%)</span>
+        <div class="pricing-subtext">Applied before GST</div>
+      </div>
       <span class="pricing-value pricing-discount">-₹${discountAmount.toFixed(2)}</span>
     </div>` : ''}
     <div class="pricing-row">
-      <span class="pricing-label">GST (${gstRate}%):</span>
+      <div>
+        <span class="pricing-label">GST (${gstRate}%)</span>
+        <div class="pricing-subtext">Calculated on discounted subtotal</div>
+      </div>
       <span class="pricing-value">₹${gstAmount.toFixed(2)}</span>
     </div>
-    <div class="pricing-row">
-      <span class="pricing-label">Total:</span>
+    <div class="pricing-row pricing-row--total">
+      <span class="pricing-label">Total Payable</span>
       <span class="pricing-value pricing-total">₹${finalTotal.toFixed(2)}</span>
     </div>
   `;
