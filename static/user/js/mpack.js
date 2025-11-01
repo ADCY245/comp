@@ -1028,59 +1028,41 @@ function calculateFinalPrice() {
   const ratePerSqmDisplay = currentRatePerSqm.toFixed(2);
 
   pricingBreakdown.innerHTML = `
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Thickness</span>
-        <div class="pricing-subtext">Rate scales from ₹${baseRateDisplay} per 100µ</div>
-      </div>
-      <span class="pricing-value">${currentThickness} µ</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Thickness (${currentThickness} µ)</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">₹${ratePerSqmDisplay} per sq.m</span>
     </div>
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Area per sheet</span>
-        <div class="pricing-subtext">Across × Around (converted to sq.m)</div>
-      </div>
-      <span class="pricing-value">${sqmLabel} sq.m</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Area per sheet (${sqmLabel} sq.m)</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">${sqmLabel} sq.m</span>
     </div>
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Rate per sq.m</span>
-        <div class="pricing-subtext">₹${baseRateDisplay} × ${thicknessFactorDisplay}</div>
-      </div>
-      <span class="pricing-value">₹${ratePerSqmDisplay}</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Sheets (${sheetCount})</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">${sheetCount}</span>
     </div>
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Sheets</span>
-        <div class="pricing-subtext">Quantity entered above</div>
-      </div>
-      <span class="pricing-value">${sheetCount}</span>
-    </div>
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Subtotal</span>
-        <div class="pricing-subtext">Rate × Area × Sheets</div>
-      </div>
-      <span class="pricing-value">₹${subtotal.toFixed(2)}</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Subtotal (Rate × Area × Sheets)</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">₹${subtotal.toFixed(2)}</span>
     </div>
     ${currentDiscount > 0 ? `
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">Discount (${currentDiscount}%)</span>
-        <div class="pricing-subtext">Applied before GST</div>
-      </div>
-      <span class="pricing-value pricing-discount">-₹${discountAmount.toFixed(2)}</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Discount (${currentDiscount}%)</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value mpack-pricing-value--discount">-₹${discountAmount.toFixed(2)}</span>
     </div>` : ''}
-    <div class="pricing-row">
-      <div>
-        <span class="pricing-label">GST (${gstRate}%)</span>
-        <div class="pricing-subtext">Calculated on discounted subtotal</div>
-      </div>
-      <span class="pricing-value">₹${gstAmount.toFixed(2)}</span>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">GST (${gstRate}%)</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">₹${gstAmount.toFixed(2)}</span>
     </div>
-    <div class="pricing-row pricing-row--total">
-      <span class="pricing-label">Total Payable</span>
-      <span class="pricing-value pricing-total">₹${finalTotal.toFixed(2)}</span>
+    <div class="mpack-pricing-row mpack-pricing-row--total">
+      <span class="mpack-pricing-label">Total Payable</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value mpack-pricing-value--total">₹${finalTotal.toFixed(2)}</span>
     </div>
   `;
 
@@ -1134,6 +1116,9 @@ async function addMpackToCart() {
   const sheetInput = document.getElementById('sheetInput');
   const underpackingTypeSelect = document.getElementById('underpackingType');
   const quantity = parseInt(sheetInput.value) || 1;
+
+  const hasSizeSelect = Boolean(sizeSelect && sizeSelect.value);
+  const hasCustomSize = hasValidCustomSize();
   
   // Get underpacking type display name
   let underpackingType = '';
@@ -1153,7 +1138,7 @@ async function addMpackToCart() {
     return;
   }
 
-  if (!thicknessSelect.value || !sizeSelect.value || !sheetInput.value) {
+  if (!thicknessSelect || !thicknessSelect.value || !sheetInput.value || (!hasSizeSelect && !hasCustomSize)) {
     showToast('Error', 'Please fill in all required fields to calculate pricing.', 'error');
     return;
   }
@@ -1161,7 +1146,7 @@ async function addMpackToCart() {
   // Get discount information
   const discountSelect = document.getElementById('discountSelect');
   const discount = discountSelect ? parseFloat(discountSelect.value) || 0 : 0;
-  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const sqmArea = hasCustomSize ? customSize.area : standardSize.area || 0;
   const thicknessValue = Number(currentThickness || thicknessSelect.value || 0);
   const ratePerSqm = 80 * (thicknessValue / 100);
   const unitPrice = ratePerSqm * sqmArea;
@@ -1173,9 +1158,9 @@ async function addMpackToCart() {
   const finalPrice = discountedSubtotal + gstAmount;
 
   // Get size from dropdown (like thickness)
-  const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+  const selectedOption = hasSizeSelect ? sizeSelect.options[sizeSelect.selectedIndex] : null;
   const selectedSize = selectedOption ? selectedOption.text : '';
-  const metaFromMap = sizeMetaMap[sizeSelect.value];
+  const metaFromMap = hasSizeSelect ? sizeMetaMap[sizeSelect.value] : null;
   const dimensionMeta = metaFromMap || parseSizeLabel(selectedSize) || {};
   const standardAlong = typeof dimensionMeta.along === 'number' ? dimensionMeta.along : (standardSize.along || 0);
   const standardAcross = typeof dimensionMeta.across === 'number' ? dimensionMeta.across : (standardSize.across || 0);
@@ -1186,8 +1171,8 @@ async function addMpackToCart() {
   const customArea = customSize.area || (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
 
-  const standardSizeLabel = selectedSize;
   const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
+  const standardSizeLabel = selectedSize || standardSize.label || customSizeLabel;
   const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
   const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
   const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;

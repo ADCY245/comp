@@ -41,6 +41,63 @@
       flex-direction: column;
       gap: 1rem;
     }
+
+    .mpack-pricing-box {
+      background-color: #f8fafc;
+      border: 1px solid #dbe3f1;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .mpack-pricing-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .mpack-pricing-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      font-size: 0.95rem;
+    }
+
+    .mpack-pricing-row:last-child,
+    .mpack-pricing-row.mpack-pricing-row--total {
+      border-bottom: none;
+      margin-top: 0.25rem;
+      padding-top: 0.75rem;
+      border-top: 2px solid rgba(208, 184, 120, 0.5);
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .mpack-pricing-label {
+      flex: 1;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .mpack-pricing-separator {
+      font-weight: 600;
+      color: #9ca3af;
+    }
+
+    .mpack-pricing-value {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .mpack-pricing-value--discount {
+      color: #047857;
+    }
+
+    .mpack-pricing-value--total {
+      color: #b2872c;
+    }
   </style>
 
   <div class="mb-3">
@@ -153,7 +210,7 @@
             <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
           </div>
           <div>
-            <label for="discountSelect" class="form-label">Discount (%) <span class="text-muted">(optional)</span></label>
+            <label for="discountSelect" class="form-label">Discount (%)</label>
             <select id="discountSelect" class="form-select">
               <option value="">-- Select Discount --</option>
             </select>
@@ -201,8 +258,8 @@
 
     <section class="pricing-section" id="priceSection" style="display:none;">
       <div class="pricing-container">
-        <div class="pricing-preview mb-3">
-          <div class="pricing-breakdown" id="pricingBreakdown">
+        <div class="pricing-preview mb-3 mpack-pricing-box">
+          <div class="pricing-breakdown mpack-pricing-breakdown" id="pricingBreakdown">
             <p class="text-muted mb-0">Select thickness and sizes to see pricing.</p>
           </div>
         </div>
