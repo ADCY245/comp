@@ -1034,9 +1034,14 @@ function calculateFinalPrice() {
       <span class="mpack-pricing-value">${currentThickness} µ</span>
     </div>
     <div class="mpack-pricing-row">
-      <span class="mpack-pricing-label">Area per sheet (${sqmLabel} sq.m)</span>
+      <span class="mpack-pricing-label">Area per sheet</span>
       <span class="mpack-pricing-separator">=</span>
       <span class="mpack-pricing-value">${sqmLabel} sq.m</span>
+    </div>
+    <div class="mpack-pricing-row">
+      <span class="mpack-pricing-label">Sheets</span>
+      <span class="mpack-pricing-separator">=</span>
+      <span class="mpack-pricing-value">${sheetCount}</span>
     </div>
     <div class="mpack-pricing-row">
       <span class="mpack-pricing-label">Subtotal (Rate × Area × Sheets)</span>
