@@ -4,6 +4,7 @@ let currentDiscount = 0; // Track current discount percentage
 let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
 let customSize = { across: null, along: null, area: 0 };
+let standardSize = { across: 0, along: 0, area: 0, label: '' };
 let currentRatePerSqm = 0;
 let thicknessOptionsBySize = new Map();
 let lengthsByWidthMap = new Map();
@@ -202,6 +203,12 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     customSize.across = acrossVal;
     customSize.along = aroundVal;
     customSize.area = mmToSqm(customSize.across, customSize.along);
+    standardSize = {
+      across: customSize.across,
+      along: customSize.along,
+      area: customSize.area,
+      label: formatDimensionLabel(customSize.across, customSize.along)
+    };
 
     if (customSizeSummaryEl) {
       const thicknessLabel = thicknessSelectEl && thicknessSelectEl.value ? `${thicknessSelectEl.value} micron · ` : '';
@@ -216,6 +223,7 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   customSize.across = null;
   customSize.along = null;
   customSize.area = 0;
+  standardSize = { across: 0, along: 0, area: 0, label: '' };
 
   if (customSizeSummaryEl) {
     customSizeSummaryEl.textContent = thicknessSelectEl && thicknessSelectEl.value ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
@@ -232,6 +240,9 @@ function handleCustomSizeInputChange() {
 
   if (isValid) {
     enableThicknessForSize();
+    if (thicknessSelectEl && thicknessSelectEl.value) {
+      updatePricingFromSelections();
+    }
   } else {
     disableThicknessSelection();
   }
@@ -751,8 +762,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (discountSelect) {
         discountSelect.value = '';
       }
-      calculateFinalPrice();
       updateCustomSizeState();
+      updatePricingFromSelections();
     });
   }
 

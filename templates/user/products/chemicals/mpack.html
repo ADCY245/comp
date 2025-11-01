@@ -6,6 +6,36 @@
   <div class="container my-5">
   <h2>MPACK Selection</h2>
 
+  <style>
+    .mpack-diagram-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    @media (min-width: 768px) {
+      .mpack-diagram-column {
+        align-items: flex-start;
+      }
+    }
+
+    .mpack-diagram-figure {
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .mpack-diagram-figure svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .mpack-select-wrapper {
+      width: 100%;
+    }
+  </style>
+
   <div class="mb-3">
     <div class="d-flex align-items-end gap-2">
       <div class="flex-grow-1">
@@ -38,8 +68,8 @@
     <div class="row mb-3 align-items-start">
       <div class="col-md-6">
         <div class="row g-4 align-items-start mb-3">
-          <div class="col-md-6">
-            <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+          <div class="col-md-6 mpack-diagram-column">
+            <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
               <svg viewBox="0 0 300 200" width="300" height="190" role="img" aria-labelledby="acrossDiagramTitle acrossDiagramDesc">
                 <title id="acrossDiagramTitle">Across direction illustration</title>
                 <desc id="acrossDiagramDesc">Cylinder with straight arrow indicating the across measurement.</desc>
@@ -60,15 +90,15 @@
               <figcaption class="fw-semibold">Across (Cylinder width)</figcaption>
               <span class="text-muted small">Measure straight across the cylinder.</span>
             </figure>
-            <div class="mt-3">
+            <div class="mpack-select-wrapper">
               <label class="form-label" for="customWidthInput">Across (mm)</label>
               <select class="form-select" id="customWidthInput">
                 <option value="">-- Select Across --</option>
               </select>
             </div>
           </div>
-          <div class="col-md-6 mt-4 mt-md-0">
-            <figure class="d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+          <div class="col-md-6 mpack-diagram-column">
+            <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
               <svg viewBox="0 0 320 180" width="300" height="170" role="img" aria-labelledby="aroundDiagramTitle aroundDiagramDesc">
                 <title id="aroundDiagramTitle">Around direction illustration</title>
                 <desc id="aroundDiagramDesc">Single cylinder with an exterior wrap arrow indicating the around measurement.</desc>
@@ -92,7 +122,7 @@
               <figcaption class="fw-semibold">Around (Cylinder circumference)</figcaption>
               <span class="text-muted small">Measure around the cylinder.</span>
             </figure>
-            <div class="mt-3">
+            <div class="mpack-select-wrapper">
               <label class="form-label" for="customLengthInput">Around (mm)</label>
               <select class="form-select" id="customLengthInput">
                 <option value="">-- Select Around --</option>
