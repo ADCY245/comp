@@ -611,6 +611,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("Loading machines...");
     loadMachines();
 
+    // Load MPack size data for dropdowns
+    console.log('Loading MPack size metadata...');
+    await loadSizes();
+
     // Load discounts
     console.log("Loading discounts...");
     await loadDiscounts();
@@ -724,7 +728,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const thicknessSelect = document.getElementById('thicknessSelect');
   if (thicknessSelect) {
     thicknessSelect.addEventListener('change', () => {
-      loadSizes();
       currentDiscount = 0;
       const discountSelect = document.getElementById('discountSelect');
       if (discountSelect) {

@@ -52,9 +52,9 @@
     },
     {
       "id": 9,
-      "name": "MTech Active UV",
-      "ratePerSqMt": 6100,
-      "ratePerSqYard": 5100
+      "name": "MTech Active UV K (BLACK)",
+      "ratePerSqMt": 6400,
+      "ratePerSqYard": 5518
     },
     {
       "id": 10,
@@ -64,15 +64,15 @@
     },
     {
       "id": 11,
-      "name": "MTech Magnum UV",
-      "ratePerSqMt": 6600,
-      "ratePerSqYard": 5518
+      "name": "MTech Magnum UV R",
+      "ratePerSqMt": 6800,
+      "ratePerSqYard": 5685
     },
     {
       "id": 12,
       "name": "MTech EZ Peel",
-      "ratePerSqMt": 5057,
-      "ratePerSqYard": 4228
+      "ratePerSqMt": 5500,
+      "ratePerSqYard": 4598
     },
     {
       "id": 13,
@@ -116,8 +116,8 @@
     {
       "id": 19,
       "name": "Sava Privilege",
-      "ratePerSqMt": 7150,
-      "ratePerSqYard": 5978
+      "ratePerSqMt": 8550,
+      "ratePerSqYard": 7149
     },
     {
       "id": 20,
