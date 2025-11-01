@@ -6,6 +6,7 @@ let editingItem = null; // Track the item being edited
 let customSize = { across: null, along: null, area: 0 };
 let currentRatePerSqm = 0;
 let thicknessOptionsBySize = new Map();
+let lengthsByWidthMap = new Map();
 
 let customLengthInputEl;
 let customWidthInputEl;
@@ -84,6 +85,18 @@ function populateSelectOptions(selectEl, values = [], placeholder = '-- Select -
 
 function populateCustomDropdowns({ widths = [], lengths = [] } = {}) {
   populateSelectOptions(customWidthInputEl, widths.map(String), '-- Select Across --');
+  populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
+}
+
+function updateLengthOptionsForWidth(widthValue) {
+  if (!customLengthInputEl) return;
+  const sanitizedWidth = String(widthValue || '').trim();
+  if (!sanitizedWidth) {
+    populateSelectOptions(customLengthInputEl, [], '-- Select Around --');
+    return;
+  }
+
+  const lengths = lengthsByWidthMap.get(sanitizedWidth) || [];
   populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
 }
 
@@ -592,7 +605,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     customLengthInputEl.addEventListener('change', handleCustomSizeInputChange);
   }
   if (customWidthInputEl) {
-    customWidthInputEl.addEventListener('change', handleCustomSizeInputChange);
+    customWidthInputEl.addEventListener('change', event => {
+      updateLengthOptionsForWidth(event.target.value);
+      handleCustomSizeInputChange();
+    });
   }
 
   if (cutYesRadio) {
@@ -799,6 +815,8 @@ function enableThicknessForSize() {
   const key = `${acrossVal}x${alongVal}`;
   const matchingThicknesses = thicknessOptionsBySize.get(key) || [];
 
+  console.debug('Thickness lookup', { key, matchingThicknesses });
+
   thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
   matchingThicknesses.forEach(thickness => {
     const option = document.createElement('option');
@@ -807,7 +825,14 @@ function enableThicknessForSize() {
     thicknessSelectEl.appendChild(option);
   });
 
-  thicknessSelectEl.disabled = matchingThicknesses.length === 0;
+  if (matchingThicknesses.length === 0) {
+    thicknessSelectEl.disabled = true;
+    thicknessSelectEl.title = 'No thickness options available for the selected size';
+  } else {
+    thicknessSelectEl.disabled = false;
+    thicknessSelectEl.removeAttribute('disabled');
+    thicknessSelectEl.title = '';
+  }
 
   if (matchingThicknesses.length === 1) {
     thicknessSelectEl.value = matchingThicknesses[0];
@@ -823,6 +848,7 @@ function loadSizes() {
     })
     .then(data => {
       const allSizes = [];
+      const widthLengthSets = new Map();
       thicknessOptionsBySize = new Map();
 
       data.mpack.forEach(entry => {
@@ -832,12 +858,22 @@ function loadSizes() {
           options.push(entry.id);
           thicknessOptionsBySize.set(key, options);
           allSizes.push(size);
+
+          const widthKey = String(size.width);
+          const lengthSet = widthLengthSets.get(widthKey) || new Set();
+          lengthSet.add(size.length);
+          widthLengthSets.set(widthKey, lengthSet);
         });
       });
 
+      lengthsByWidthMap = new Map();
+      widthLengthSets.forEach((lengthSet, widthKey) => {
+        lengthsByWidthMap.set(widthKey, [...lengthSet].sort((a, b) => a - b));
+      });
+
       const uniqueWidths = [...new Set(allSizes.map(item => item.width))].sort((a, b) => a - b);
-      const uniqueLengths = [...new Set(allSizes.map(item => item.length))].sort((a, b) => a - b);
-      populateCustomDropdowns({ widths: uniqueWidths, lengths: uniqueLengths });
+      populateSelectOptions(customWidthInputEl, uniqueWidths.map(String), '-- Select Across --');
+      populateSelectOptions(customLengthInputEl, [], '-- Select Around --');
 
       sizeMetaMap = {};
       thicknessOptionsBySize.forEach((thicknesses, key) => {
