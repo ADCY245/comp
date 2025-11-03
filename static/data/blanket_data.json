@@ -115,39 +115,39 @@
     },
     {
       "id": 19,
-      "name": "Sava Privilege",
+      "name": "Conti Sava Privilege",
       "ratePerSqMt": 8550,
       "ratePerSqYard": 7149
     },
     {
       "id": 20,
       "unused": true,
-      "name": "Sava Advantage Plus",
+      "name": "Conti Sava Advantage Plus",
       "ratePerSqMt": 7650,
       "ratePerSqYard": 6396
     },
     {
       "id": 21,
-      "name": "Sava Advantage Stripping",
+      "name": "Conti Sava Advantage Stripping",
       "ratePerSqMt": 6668,
       "ratePerSqYard": 5575
     },
     {
       "id": 22,
-      "name": "Sava Topaz",
+      "name": "Conti Sava Topaz",
       "ratePerSqMt": 8382,
       "ratePerSqYard": 7008
     },
     {
       "id": 23,
-      "name": "Sava Privilege UV Black",
+      "name": "Conti Sava Privilege UV Black",
       "ratePerSqMt": 7290,
       "ratePerSqYard": 6095
     },
     {
       "id": 24,
       "unused": true,
-      "name": "Sava Advantage UV Red",
+      "name": "Conti Sava Advantage UV Red",
       "ratePerSqMt": 8785,
       "ratePerSqYard": 7345
     },
