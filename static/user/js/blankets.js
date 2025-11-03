@@ -40,7 +40,7 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   const blanket = blanketData && blanketData.length ? blanketData.find(b => String(b.id) === String(selectedId)) : null;
   const selectedOptionText = blanketSelectEl.options?.[blanketSelectEl.selectedIndex]?.text || '';
   const blanketName = blanket?.name || selectedOptionText;
-  const isSava = /sava/i.test(blanketName || '');
+  const isSava = /conti\s*sava/i.test(blanketName || '');
   const currentValue = discountSelectEl.value;
   const allowedOptions = isSava
     ? generateSavaDiscountOptions()
