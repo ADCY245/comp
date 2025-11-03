@@ -62,6 +62,15 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   });
   console.log('[SAVA] options rebuilt', Array.from(discountSelectEl.options).map(o=>o.value));
 
+  if (currentValue) {
+    const numericCurrent = parseFloat(currentValue);
+    if (!Number.isNaN(numericCurrent) && allowedOptions.includes(numericCurrent)) {
+      discountSelectEl.value = numericCurrent;
+    } else {
+      discountSelectEl.value = '';
+    }
+  }
+
   // Observe external mutations that might add back high discounts
   if (isSava && !discountSelectEl.__savaObserver) {
     const observer = new MutationObserver(() => {
