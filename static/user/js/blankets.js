@@ -1,8 +1,10 @@
-let machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
-let fullDiscountOptions = [];
-let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
-let currentDiscount = 0;
-let currentBarRate = 0;
+var machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
+var fullDiscountOptions = [];
+var basePrice = typeof basePrice !== 'undefined' ? basePrice : 0;
+var priceWithBar = typeof priceWithBar !== 'undefined' ? priceWithBar : 0;
+var finalDiscountedPrice = typeof finalDiscountedPrice !== 'undefined' ? finalDiscountedPrice : 0;
+var currentDiscount = typeof currentDiscount !== 'undefined' ? currentDiscount : 0;
+var currentBarRate = typeof currentBarRate !== 'undefined' ? currentBarRate : 0;
 
 function generateSavaDiscountOptions() {
   const options = [];
@@ -49,10 +51,6 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     discountSelectEl.dispatchEvent(new Event('change'));
   }
 }
-
-let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
-let currentDiscount = 0;
-let currentBarRate = 0;
 
 function getBlanketSections() {
   return {
