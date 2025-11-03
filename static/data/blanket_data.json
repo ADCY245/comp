@@ -123,68 +123,44 @@
       "id": 20,
       "unused": true,
       "name": "Conti Sava Advantage Plus",
-      "ratePerSqMt": 7650,
-      "ratePerSqYard": 6396
+      "ratePerSqMt": 8750,
+      "ratePerSqYard": 7316
     },
     {
       "id": 21,
       "name": "Conti Sava Advantage Stripping",
-      "ratePerSqMt": 6668,
-      "ratePerSqYard": 5575
+      "ratePerSqMt": 6800,
+      "ratePerSqYard": 5685
     },
     {
       "id": 22,
       "name": "Conti Sava Topaz",
-      "ratePerSqMt": 8382,
-      "ratePerSqYard": 7008
+      "ratePerSqMt": 10500,
+      "ratePerSqYard": 8779
     },
     {
       "id": 23,
       "name": "Conti Sava Privilege UV Black",
-      "ratePerSqMt": 7290,
-      "ratePerSqYard": 6095
-    },
-    {
-      "id": 24,
-      "unused": true,
-      "name": "Conti Sava Advantage UV Red",
-      "ratePerSqMt": 8785,
-      "ratePerSqYard": 7345
-    },
-    {
-      "id": 25,
-      "name": "MTech Primo SF",
-      "ratePerSqMt": null,
-      "ratePerSqYard": null,
-      "needsRates": true
-    },
-    {
-      "id": 27,
-      "name": "MTech Web Press",
-      "ratePerSqMt": null,
-      "ratePerSqYard": null,
-      "needsRates": true
+      "ratePerSqMt": 7900,
+      "ratePerSqYard": 6605
     },
     {
       "id": 28,
-      "name": "MTech Web X Press",
-      "ratePerSqMt": null,
-      "ratePerSqYard": null,
-      "needsRates": true
+      "name": "MTech Web X Press G3",
+      "ratePerSqMt": 7900,
+      "ratePerSqYard": 6605
     },
     {
       "id": 29,
-      "name": "MTech Web Primo",
-      "ratePerSqMt": null,
-      "ratePerSqYard": null,
-      "needsRates": true
+      "name": "MTech Web Primo G8",
+      "ratePerSqMt": 8400,
+      "ratePerSqYard": 7023
     },
     {
       "id": 30,
       "name": "MTech Strip Plate PLY",
       "ratePerSqMt": null,
-      "ratePerSqYard": null,
-      "needsRates": true
+      "ratePerSqYard": null
     },
     {
       "id": 31,
