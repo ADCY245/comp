@@ -55,6 +55,18 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     discountSelectEl.appendChild(opt);
   });
 
+  // Observe external mutations that might add back high discounts
+  if (isSava && !discountSelectEl.__savaObserver) {
+    const observer = new MutationObserver(() => {
+      Array.from(discountSelectEl.options).forEach(opt=>{
+        const num = parseFloat(opt.value||'');
+        if(!Number.isNaN(num) && num>5){ opt.remove(); }
+      });
+    });
+    observer.observe(discountSelectEl, {childList:true});
+    discountSelectEl.__savaObserver = observer; // store flag
+  }
+
   if (isSava && parseFloat(discountSelectEl.value || '0') > 5) {
     discountSelectEl.value = '';
     discountSelectEl.dispatchEvent(new Event('change'));
