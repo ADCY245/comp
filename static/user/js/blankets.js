@@ -1,33 +1,53 @@
 let machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
 let fullDiscountOptions = [];
+let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
+let currentDiscount = 0;
+let currentBarRate = 0;
 
-// attach blanket change listener to restrict discounts for Sava items
-const blanketSelectEl = document.getElementById('blanketSelect');
-if (blanketSelectEl) {
-  blanketSelectEl.addEventListener('change', () => {
-    const selectedId = blanketSelectEl.value;
-    const blanket = blanketData.find(b => b.id.toString() === selectedId);
-    const isSava = blanket && /sava/i.test(blanket.name || '');
-    const select = document.getElementById('discountSelect');
-    if (!select) return;
-    // clear current options
-    select.innerHTML = '<option value="">-- Select Discount --</option>';
-    let optionsToUse = [];
-    if (isSava) {
-      // generate 0 to 5 with 0.5 step
-      for (let i = 0; i <= 10; i++) optionsToUse.push(i * 0.5);
-    } else {
-      optionsToUse = fullDiscountOptions;
-    }
-    optionsToUse.forEach(val => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val.toFixed(2);
-      select.appendChild(opt);
-    });
-    // reset currentDiscount if exceeds
-    if (parseFloat(select.value || 0) > 5 && isSava) select.value = '';
+function generateSavaDiscountOptions() {
+  const options = [];
+  for (let step = 0; step <= 10; step += 1) {
+    options.push(Number((step * 0.5).toFixed(2)));
+  }
+  return options;
+}
+
+function populateDiscountSelectOptions(selectEl, options = [], currentValue = '') {
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">-- Select Discount --</option>';
+  const normalizedValue = currentValue !== '' ? Number(currentValue) : null;
+  const normalizedOptions = options
+    .map(val => Number(val))
+    .filter(val => !Number.isNaN(val));
+
+  normalizedOptions.forEach(val => {
+    const option = document.createElement('option');
+    option.value = val;
+    option.textContent = val.toFixed(2);
+    selectEl.appendChild(option);
   });
+
+  if (normalizedValue !== null && normalizedOptions.includes(normalizedValue)) {
+    selectEl.value = normalizedValue;
+  }
+}
+
+function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
+  if (!blanketSelectEl || !discountSelectEl) return;
+  const selectedId = blanketSelectEl.value;
+  const blanket = blanketData.find(b => String(b.id) === String(selectedId));
+  const isSava = blanket && /sava/i.test(blanket.name || '');
+  const currentValue = discountSelectEl.value;
+  const allowedOptions = isSava
+    ? generateSavaDiscountOptions()
+    : (fullDiscountOptions.length ? fullDiscountOptions : generateSavaDiscountOptions());
+
+  populateDiscountSelectOptions(discountSelectEl, allowedOptions, currentValue);
+
+  if (isSava && parseFloat(discountSelectEl.value || '0') > 5) {
+    discountSelectEl.value = '';
+    discountSelectEl.dispatchEvent(new Event('change'));
+  }
 }
 
 let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
@@ -1182,26 +1202,43 @@ function applyGST() {
 document.addEventListener('DOMContentLoaded', function() {
   // Add event listener for discount select
   const discountSelect = document.getElementById('discountSelect');
+  const blanketSelect = document.getElementById('blanketSelect');
+
   if (discountSelect) {
     discountSelect.addEventListener('change', function() {
       currentDiscount = parseFloat(this.value) || 0;
       calculatePrice();
     });
-    
-    // Load discount options
+
     fetch('/static/data/discount.json')
       .then(res => res.json())
       .then(data => {
-        discountSelect.innerHTML = '<option value="">-- Select Discount --</option>';
-        fullDiscountOptions = data.discounts.map(d=>parseFloat(d));
-        fullDiscountOptions.forEach(discountNum=>{
-          const percent = parseFloat(discountStr);
-          const opt = document.createElement('option');
-          opt.value = discountNum;
-          opt.textContent = discountNum.toFixed(2);
-          discountSelect.appendChild(opt);
-        });
+        const parsedOptions = data && Array.isArray(data.discounts) ? data.discounts : [];
+        fullDiscountOptions = parsedOptions
+          .map(value => Number(parseFloat(value).toFixed(2)))
+          .filter(value => !Number.isNaN(value));
+
+        if (!fullDiscountOptions.length) {
+          fullDiscountOptions = generateSavaDiscountOptions();
+        }
+
+        populateDiscountSelectOptions(discountSelect, fullDiscountOptions);
+
+        if (blanketSelect) {
+          applySavaDiscountRestriction(blanketSelect, discountSelect);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading discounts:', error);
+        fullDiscountOptions = generateSavaDiscountOptions();
+        populateDiscountSelectOptions(discountSelect, fullDiscountOptions);
       });
+  }
+
+  if (blanketSelect && discountSelect) {
+    blanketSelect.addEventListener('change', () => {
+      applySavaDiscountRestriction(blanketSelect, discountSelect);
+    });
   }
 });
 
