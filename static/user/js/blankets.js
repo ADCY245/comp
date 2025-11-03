@@ -14,6 +14,14 @@ function generateSavaDiscountOptions() {
   return options;
 }
 
+function generateDefaultDiscountOptions() {
+  const options = [];
+  for (let val = 0; val <= 10; val += 0.5) {
+    options.push(Number(val.toFixed(2)));
+  }
+  return options;
+}
+
 function populateDiscountSelectOptions(selectEl, options = [], currentValue = '') {
   if (!selectEl) return;
   selectEl.innerHTML = '<option value="">-- Select Discount --</option>';
@@ -49,7 +57,7 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   const currentValue = discountSelectEl.value;
   const allowedOptions = isSava
     ? generateSavaDiscountOptions()
-    : (fullDiscountOptions.length ? fullDiscountOptions : generateSavaDiscountOptions());
+    : (fullDiscountOptions.length ? fullDiscountOptions : generateDefaultDiscountOptions());
   console.log('[SAVA] allowed options', allowedOptions);
 
   // Manual rebuild to avoid residual options
@@ -1277,6 +1285,9 @@ document.addEventListener('DOMContentLoaded', function() {
           fullDiscountOptions = generateSavaDiscountOptions();
         }
 
+        if (fullDiscountOptions.every(opt => opt <= 5)) {
+          fullDiscountOptions = generateDefaultDiscountOptions();
+        }
         populateDiscountSelectOptions(discountSelect, fullDiscountOptions);
 
         if (blanketSelect) {
