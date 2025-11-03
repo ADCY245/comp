@@ -1,4 +1,35 @@
 let machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
+let fullDiscountOptions = [];
+
+// attach blanket change listener to restrict discounts for Sava items
+const blanketSelectEl = document.getElementById('blanketSelect');
+if (blanketSelectEl) {
+  blanketSelectEl.addEventListener('change', () => {
+    const selectedId = blanketSelectEl.value;
+    const blanket = blanketData.find(b => b.id.toString() === selectedId);
+    const isSava = blanket && /sava/i.test(blanket.name || '');
+    const select = document.getElementById('discountSelect');
+    if (!select) return;
+    // clear current options
+    select.innerHTML = '<option value="">-- Select Discount --</option>';
+    let optionsToUse = [];
+    if (isSava) {
+      // generate 0 to 5 with 0.5 step
+      for (let i = 0; i <= 10; i++) optionsToUse.push(i * 0.5);
+    } else {
+      optionsToUse = fullDiscountOptions;
+    }
+    optionsToUse.forEach(val => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val.toFixed(2);
+      select.appendChild(opt);
+    });
+    // reset currentDiscount if exceeds
+    if (parseFloat(select.value || 0) > 5 && isSava) select.value = '';
+  });
+}
+
 let basePrice = 0, priceWithBar = 0, finalDiscountedPrice = 0;
 let currentDiscount = 0;
 let currentBarRate = 0;
@@ -1162,11 +1193,12 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(res => res.json())
       .then(data => {
         discountSelect.innerHTML = '<option value="">-- Select Discount --</option>';
-        data.discounts.forEach(discountStr => {
+        fullDiscountOptions = data.discounts.map(d=>parseFloat(d));
+        fullDiscountOptions.forEach(discountNum=>{
           const percent = parseFloat(discountStr);
           const opt = document.createElement('option');
-          opt.value = percent;
-          opt.textContent = discountStr;
+          opt.value = discountNum;
+          opt.textContent = discountNum.toFixed(2);
           discountSelect.appendChild(opt);
         });
       });
