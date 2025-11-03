@@ -34,6 +34,10 @@ function populateDiscountSelectOptions(selectEl, options = [], currentValue = ''
   }
 }
 
+function getBlanketDiscountSelect() {
+  return document.querySelector('#pricingSection #discountSelect');
+}
+
 function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   if (!blanketSelectEl || !discountSelectEl) return;
   const selectedId = blanketSelectEl.value;
@@ -233,7 +237,7 @@ function getFormData() {
     const quantityInput = document.getElementById('quantityInput');
     const barSelect = document.getElementById('barSelect');
     const gstSelect = document.getElementById('gstSelect');
-    const discountSelect = document.getElementById('discountSelect');
+    const discountSelect = getBlanketDiscountSelect();
     
     // Get selected blanket
     const selectedBlanketId = blanketSelect.value;
@@ -474,7 +478,7 @@ function prefillFormWithItem(item) {
                 
                 // Set discount if available
                 if (item.discount_percent) {
-                    const discountSelect = document.getElementById('discountSelect');
+                    const discountSelect = getBlanketDiscountSelect();
                     if (discountSelect) {
                         // Try to find an exact match first
                         let found = false;
@@ -874,7 +878,7 @@ window.onload = () => {
   // Initialize discount section
   function updateDiscountSection() {
     const discountSection = document.getElementById('discountSection');
-    const discountSelect = document.getElementById('discountSelect');
+    const discountSelect = getBlanketDiscountSelect();
     
     if (!discountSection || !discountSelect) {
       console.error('Discount section or select element not found');
@@ -1031,7 +1035,7 @@ function calculatePrice() {
     document.getElementById('netUnitPrice').textContent = `Net Price/PC: ₹${netPricePerPiece.toFixed(2)}`;
     
     // Get discount percentage from select
-    const discountSelect = document.getElementById('discountSelect');
+    const discountSelect = getBlanketDiscountSelect();
     currentDiscount = parseFloat(discountSelect.value) || 0;
     
     // Calculate discount amount and discounted total
@@ -1220,7 +1224,7 @@ function applyGST() {
 // Initialize discount select when the page loads
 document.addEventListener('DOMContentLoaded', function() {
   // Add event listener for discount select
-  const discountSelect = document.getElementById('discountSelect');
+  const discountSelect = getBlanketDiscountSelect();
   const blanketSelect = document.getElementById('blanketSelect');
 
   if (discountSelect) {
@@ -1244,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         populateDiscountSelectOptions(discountSelect, fullDiscountOptions);
 
         if (blanketSelect) {
-          applySavaDiscountRestriction(blanketSelect, discountSelect);
+          applySavaDiscountRestriction(blanketSelect, getBlanketDiscountSelect());
         }
       })
       .catch(error => {
@@ -1257,12 +1261,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (blanketSelect && discountSelect) {
     // Ensure correct list whenever blanket changes
     blanketSelect.addEventListener('change', () => {
-      applySavaDiscountRestriction(blanketSelect, discountSelect);
+      applySavaDiscountRestriction(blanketSelect, getBlanketDiscountSelect());
     });
     // Double-check just before user opens list
     ['focus','click'].forEach(evt=>{
       discountSelect.addEventListener(evt,()=>{
-        applySavaDiscountRestriction(blanketSelect, discountSelect);
+        applySavaDiscountRestriction(blanketSelect, getBlanketDiscountSelect());
       });
     });
   }
