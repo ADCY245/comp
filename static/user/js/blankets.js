@@ -46,20 +46,18 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     ? generateSavaDiscountOptions()
     : (fullDiscountOptions.length ? fullDiscountOptions : generateSavaDiscountOptions());
 
-  populateDiscountSelectOptions(discountSelectEl, allowedOptions, currentValue);
+  // Manual rebuild to avoid residual options
+  discountSelectEl.innerHTML = '<option value="">-- Select Discount --</option>';
+  allowedOptions.forEach(val => {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val.toFixed(2);
+    discountSelectEl.appendChild(opt);
+  });
 
   if (isSava && parseFloat(discountSelectEl.value || '0') > 5) {
     discountSelectEl.value = '';
     discountSelectEl.dispatchEvent(new Event('change'));
-  }
-
-  if (isSava) {
-    Array.from(discountSelectEl.options).forEach(option => {
-      const numericVal = parseFloat(option.value || '');
-      if (!Number.isNaN(numericVal) && numericVal > 5) {
-        option.remove();
-      }
-    });
   }
 }
 
