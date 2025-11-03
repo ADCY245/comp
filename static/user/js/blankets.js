@@ -1306,12 +1306,6 @@ document.addEventListener('DOMContentLoaded', function() {
     blanketSelect.addEventListener('change', () => {
       applySavaDiscountRestriction(blanketSelect, getBlanketDiscountSelect());
     });
-    // Double-check just before user opens list
-    ['focus','click'].forEach(evt=>{
-      discountSelect.addEventListener(evt,()=>{
-        applySavaDiscountRestriction(blanketSelect, getBlanketDiscountSelect());
-      });
-    });
   }
 });
 
