@@ -8,6 +8,11 @@ let standardSize = { across: 0, along: 0, area: 0, label: '' };
 let currentRatePerSqm = 0;
 let thicknessOptionsBySize = new Map();
 let lengthsByWidthMap = new Map();
+let widthsByLengthMap = new Map();
+let allSizeCombos = [];
+let uniqueWidths = [];
+let uniqueLengths = [];
+let uniqueThicknesses = [];
 
 const BASE_RATE_PER_100_MICRON = 80; // ₹ per sq.m at 100 micron
 
@@ -860,22 +865,44 @@ function loadSizes() {
       return res.json();
     })
     .then(data => {
-      const allSizes = [];
       const widthLengthSets = new Map();
+      const lengthWidthSets = new Map();
+      const uniqueWidthSet = new Set();
+      const uniqueLengthSet = new Set();
+      const uniqueThicknessSet = new Set();
+
       thicknessOptionsBySize = new Map();
+      widthsByLengthMap = new Map();
+      lengthsByWidthMap = new Map();
+      allSizeCombos = [];
+      sizeMetaMap = {};
 
       data.mpack.forEach(entry => {
+        uniqueThicknessSet.add(entry.id);
         entry.sizes.forEach(size => {
-          const key = `${size.width}x${size.length}`;
-          const options = thicknessOptionsBySize.get(key) || [];
-          options.push(entry.id);
-          thicknessOptionsBySize.set(key, options);
-          allSizes.push(size);
+          const width = Number(size.width);
+          const length = Number(size.length);
+          const key = `${width}x${length}`;
 
-          const widthKey = String(size.width);
+          uniqueWidthSet.add(width);
+          uniqueLengthSet.add(length);
+
+          const existingThicknesses = thicknessOptionsBySize.get(key) || [];
+          existingThicknesses.push(entry.id);
+          thicknessOptionsBySize.set(key, existingThicknesses);
+
+          const widthKey = String(width);
           const lengthSet = widthLengthSets.get(widthKey) || new Set();
-          lengthSet.add(size.length);
+          lengthSet.add(length);
           widthLengthSets.set(widthKey, lengthSet);
+
+          const lengthKey = String(length);
+          const widthSet = lengthWidthSets.get(lengthKey) || new Set();
+          widthSet.add(width);
+          lengthWidthSets.set(lengthKey, widthSet);
+
+          allSizeCombos.push({ width, length, thicknesses: existingThicknesses });
+          sizeMetaMap[key] = { width, length, price: null, thicknesses: existingThicknesses };
         });
       });
 
@@ -884,15 +911,18 @@ function loadSizes() {
         lengthsByWidthMap.set(widthKey, [...lengthSet].sort((a, b) => a - b));
       });
 
-      const uniqueWidths = [...new Set(allSizes.map(item => item.width))].sort((a, b) => a - b);
-      populateSelectOptions(customWidthInputEl, uniqueWidths.map(String), '-- Select Across --');
-      populateSelectOptions(customLengthInputEl, [], '-- Select Around --');
-
-      sizeMetaMap = {};
-      thicknessOptionsBySize.forEach((thicknesses, key) => {
-        const [width, length] = key.split('x').map(Number);
-        sizeMetaMap[key] = { width, length, price: null, thicknesses };
+      widthsByLengthMap = new Map();
+      lengthWidthSets.forEach((widthSet, lengthKey) => {
+        widthsByLengthMap.set(lengthKey, [...widthSet].sort((a, b) => a - b));
       });
+
+      uniqueWidths = [...uniqueWidthSet].sort((a, b) => a - b);
+      uniqueLengths = [...uniqueLengthSet].sort((a, b) => a - b);
+      uniqueThicknesses = [...uniqueThicknessSet].sort((a, b) => a - b);
+
+      populateSelectOptions(customWidthInputEl, uniqueWidths.map(String), '-- Select Across --');
+      populateSelectOptions(customLengthInputEl, uniqueLengths.map(String), '-- Select Around --');
+      populateSelectOptions(thicknessSelectEl, uniqueThicknesses.map(String), '-- Select Thickness --');
 
       disableThicknessSelection();
     })
