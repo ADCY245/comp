@@ -1234,6 +1234,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   if (blanketSelect && discountSelect) {
+    // Ensure correct list whenever blanket changes
+    blanketSelect.addEventListener('change', () => {
+      applySavaDiscountRestriction(blanketSelect, discountSelect);
+    });
+    // Double-check just before user opens list
+    ['focus','click'].forEach(evt=>{
+      discountSelect.addEventListener(evt,()=>{
+        applySavaDiscountRestriction(blanketSelect, discountSelect);
+      });
+    });
     blanketSelect.addEventListener('change', () => {
       applySavaDiscountRestriction(blanketSelect, discountSelect);
     });
