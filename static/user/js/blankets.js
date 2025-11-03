@@ -83,6 +83,9 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     });
     observer.observe(discountSelectEl, {childList:true});
     discountSelectEl.__savaObserver = observer; // store flag
+  } else if (!isSava && discountSelectEl.__savaObserver) {
+    discountSelectEl.__savaObserver.disconnect();
+    discountSelectEl.__savaObserver = null;
   }
 
   if (isSava && parseFloat(discountSelectEl.value || '0') > 5) {
