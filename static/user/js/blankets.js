@@ -72,7 +72,16 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   }
 
   // Observe external mutations that might add back high discounts
-  if (isSava && !discountSelectEl.__savaObserver) {
+  if (isSava) {
+    // Clean any high options immediately before attaching observer
+    Array.from(discountSelectEl.options).forEach(opt => {
+      const num = parseFloat(opt.value || '');
+      if (!Number.isNaN(num) && num > 5) {
+        opt.remove();
+      }
+    });
+
+    if (!discountSelectEl.__savaObserver) {
     const observer = new MutationObserver(() => {
       console.log('[SAVA] mutation observed, pruning');
       Array.from(discountSelectEl.options).forEach(opt=>{
@@ -83,6 +92,7 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     });
     observer.observe(discountSelectEl, {childList:true});
     discountSelectEl.__savaObserver = observer; // store flag
+    }
   } else if (!isSava && discountSelectEl.__savaObserver) {
     discountSelectEl.__savaObserver.disconnect();
     discountSelectEl.__savaObserver = null;

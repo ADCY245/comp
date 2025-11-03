@@ -1,90 +1,289 @@
 {
   "categories": [
     {
-      "id": "fount",
-      "name": "Fount Solutions",
-      "description": "Solutions that stabilise water balance and maintain optimal pH on press.",
-      "icon": "fas fa-tint",
+      "id": "washing",
+      "name": "Washing Solutions",
+      "description": "Blanket and roller washes that keep press components spotless and ready.",
+      "icon": "fas fa-soap",
       "products": [
         {
-          "id": "fount-101",
-          "name": "Premium Offset Fount Concentrate",
-          "description": "Concentrated solution for sheet-fed presses delivering stable ink/water balance.",
-          "icon": "fas fa-flask",
+          "id": "wash-cs",
+          "name": "WASH CS",
+          "description": "Concentrated blanket wash for conventional sheet-fed presses.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
           "formats": [
-            { "id": "fount-101-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "fount-101-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-101-25l", "label": "25L Can", "size_litre": 25 }
+            { "id": "wash-cs-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-cs-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-cs-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-cs-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         },
         {
-          "id": "fount-102",
-          "name": "Alcohol Substitution Fount",
-          "description": "Reduces IPA usage while keeping plates clean and water receptive.",
-          "icon": "fas fa-water",
+          "id": "wash-fc",
+          "name": "WASH FC",
+          "description": "Fast-cleaning wash formulated for quick turnaround blanket changes.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
           "formats": [
-            { "id": "fount-102-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-102-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-102-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "wash-fc-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-fc-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-fc-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-fc-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-nw",
+          "name": "WASH NW",
+          "description": "Neutral water-miscible wash for daily blanket maintenance.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-nw-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-nw-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-nw-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-nw-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-gp",
+          "name": "WASH GP",
+          "description": "General purpose wash compatible with manual and automatic systems.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-gp-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-gp-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-gp-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-gp-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-auto",
+          "name": "WASH AUTO",
+          "description": "Detergent-balanced wash designed for auto-wash blanket systems.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-auto-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-auto-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-auto-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-auto-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-combi",
+          "name": "WASH COMBI",
+          "description": "Dual-action wash that handles both water-miscible and solvent residues.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-combi-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-combi-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-combi-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-combi-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-uv",
+          "name": "WASH UV",
+          "description": "Specialised wash that breaks down UV ink residues without swelling rubber.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-uv-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-uv-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-uv-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-uv-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-uv-s-plus",
+          "name": "WASH UV S+",
+          "description": "Premium UV wash with added conditioners for high-speed presses.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-uv-s-plus-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-uv-s-plus-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-uv-s-plus-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-uv-s-plus-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "wash-hsw",
+          "name": "WASH HSW",
+          "description": "High-strength wash for stubborn glaze on heavily loaded rollers.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "wash-hsw-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "wash-hsw-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-hsw-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "wash-hsw-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         }
       ]
     },
     {
-      "id": "wash",
-      "name": "Wash & Cleaning",
-      "description": "Dedicated washes to keep rollers, blankets and press components in top condition.",
-      "icon": "fas fa-soap",
+      "id": "fountain",
+      "name": "Fountain Solutions",
+      "description": "Solutions that stabilise water balance and maintain optimal pH on press.",
+      "icon": "fas fa-tint",
       "products": [
         {
-          "id": "wash-201",
-          "name": "Low VOC Blanket Wash",
-          "description": "Fast-acting wash for manual and automatic blanket cleaning systems.",
-          "icon": "fas fa-pump-soap",
+          "id": "fount-az",
+          "name": "FOUNT AZ",
+          "description": "Alcohol-free fount delivering sharp dots with controlled dampening.",
+          "icon": "fas fa-flask",
+          "price_per_litre": null,
           "formats": [
-            { "id": "wash-201-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-201-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-201-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-az-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-az-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-az-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-az-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         },
         {
-          "id": "wash-202",
-          "name": "Deep Clean Roller Wash",
-          "description": "High solvency wash for removing stubborn glaze and dried ink from rollers.",
-          "icon": "fas fa-brush",
+          "id": "fount-ap",
+          "name": "FOUNT AP",
+          "description": "Universal pressroom fount concentrate for sheet-fed and web presses.",
+          "icon": "fas fa-flask",
+          "price_per_litre": null,
           "formats": [
-            { "id": "wash-202-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "wash-202-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-202-25l", "label": "25L Can", "size_litre": 25 }
+            { "id": "fount-ap-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-ap-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-ap-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-ap-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "fount-chem-rol",
+          "name": "CHEM R-OL",
+          "description": "Multi-metal safe fount with enhanced plate-cleaning surfactants.",
+          "icon": "fas fa-vial",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "fount-chem-rol-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-chem-rol-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-chem-rol-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-chem-rol-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "fount-hf",
+          "name": "FOUNT HF",
+          "description": "High-flow fount designed for presses running at elevated speeds.",
+          "icon": "fas fa-tint",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "fount-hf-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-hf-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-hf-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-hf-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "fount-hf-a-plus",
+          "name": "FOUNT HF A+",
+          "description": "Premium variant with boosted buffering and anti-foaming additives.",
+          "icon": "fas fa-tint",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "fount-hf-a-plus-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-hf-a-plus-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-hf-a-plus-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-hf-a-plus-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "fount-nw",
+          "name": "FOUNT NW",
+          "description": "Neutral fountain solution ideal for low-alkaline water zones.",
+          "icon": "fas fa-water",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "fount-nw-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-nw-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-nw-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-nw-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "fount-tr",
+          "name": "FOUNT TR",
+          "description": "Thermal plate friendly fount concentrate with corrosion inhibitors.",
+          "icon": "fas fa-water",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "fount-tr-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "fount-tr-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "fount-tr-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "fount-tr-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plate-care",
+      "name": "Plate Care Products",
+      "description": "Cleaners and finishers that extend plate life and deliver sharper print.",
+      "icon": "fas fa-layer-group",
+      "products": [
+        {
+          "id": "plate-301",
+          "name": "Calcium Remover",
+          "description": "Neutralises calcium build-up on plates, rollers and dampening systems.",
+          "icon": "fas fa-atom",
+          "formats": [
+            { "id": "plate-301-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "plate-301-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "plate-301-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "plate-301-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "plate-302",
+          "name": "Plate Cleaner & Conditioner",
+          "description": "Ready-to-use cleaner that removes oxidation and keeps plates press-ready.",
+          "icon": "fas fa-spray-can-sparkles",
+          "formats": [
+            { "id": "plate-302-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "plate-302-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "plate-302-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "plate-302-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         }
       ]
     },
     {
       "id": "maintenance",
-      "name": "Maintenance Aids",
-      "description": "Housekeeping products that keep presses reliable with minimal downtime.",
+      "name": "Maintenance Solutions",
+      "description": "Housekeeping fluids that keep circulators, tanks and presses running smoothly.",
       "icon": "fas fa-toolbox",
       "products": [
         {
-          "id": "maint-301",
-          "name": "Calcium Remover",
-          "description": "Neutralises calcium build-up on rollers and dampening systems.",
-          "icon": "fas fa-atom",
-          "formats": [
-            { "id": "maint-301-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-301-5l", "label": "5L Bottle", "size_litre": 5 }
-          ]
-        },
-        {
-          "id": "maint-302",
+          "id": "maint-401",
           "name": "Anti-Mould Circulation Cleaner",
           "description": "Keeps recirculation tanks hygienic and prevents algae growth.",
           "icon": "fas fa-bacteria",
           "formats": [
-            { "id": "maint-302-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-302-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-302-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-401-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-401-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-401-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-401-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-402",
+          "name": "Roller Conditioner & Deglazer",
+          "description": "Restores rubber to optimum tack while removing glaze and ink build-up.",
+          "icon": "fas fa-cogs",
+          "formats": [
+            { "id": "maint-402-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-402-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-402-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-402-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         }
       ]
