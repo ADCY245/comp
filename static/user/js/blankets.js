@@ -991,6 +991,12 @@ function calculatePrice() {
   const thickness = document.getElementById("thicknessSelect")?.value || '';
   const quantity = parseInt(document.getElementById("quantityInput")?.value) || 1;
   const blanketSelect = document.getElementById("blanketSelect");
+  const discountSelect = getBlanketDiscountSelect();
+
+  if (discountSelect) {
+    applySavaDiscountRestriction(blanketSelect, discountSelect);
+  }
+  
   
   console.log('Input values:', { length, width, unit, thickness, quantity });
   
@@ -1040,8 +1046,7 @@ function calculatePrice() {
     document.getElementById('netUnitPrice').textContent = `Net Price/PC: ₹${netPricePerPiece.toFixed(2)}`;
     
     // Get discount percentage from select
-    const discountSelect = getBlanketDiscountSelect();
-    currentDiscount = parseFloat(discountSelect.value) || 0;
+    currentDiscount = discountSelect ? (parseFloat(discountSelect.value) || 0) : 0;
     
     // Calculate discount amount and discounted total
     let discountAmount = 0;
