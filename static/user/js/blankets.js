@@ -52,6 +52,15 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     discountSelectEl.value = '';
     discountSelectEl.dispatchEvent(new Event('change'));
   }
+
+  if (isSava) {
+    Array.from(discountSelectEl.options).forEach(option => {
+      const numericVal = parseFloat(option.value || '');
+      if (!Number.isNaN(numericVal) && numericVal > 5) {
+        option.remove();
+      }
+    });
+  }
 }
 
 function getBlanketSections() {
