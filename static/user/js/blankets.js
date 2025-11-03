@@ -22,6 +22,11 @@ function generateDefaultDiscountOptions() {
   return options;
 }
 
+function isRestrictedDiscountBlanket(name = '') {
+  const normalized = String(name).toLowerCase();
+  return /conti\s*sava/.test(normalized) || /web\s*x\s*press\s*g3/.test(normalized);
+}
+
 function populateDiscountSelectOptions(selectEl, options = [], currentValue = '') {
   if (!selectEl) return;
   selectEl.innerHTML = '<option value="">-- Select Discount --</option>';
@@ -52,10 +57,11 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   const blanket = blanketData && blanketData.length ? blanketData.find(b => String(b.id) === String(selectedId)) : null;
   const selectedOptionText = blanketSelectEl.options?.[blanketSelectEl.selectedIndex]?.text || '';
   const blanketName = blanket?.name || selectedOptionText;
-  const isSava = /conti\s*sava/i.test(blanketName || '');
-  console.log('[SAVA] apply restriction', { selectedId, blanketName, isSava, currentValue: discountSelectEl.value });
+  const isRestricted = isRestrictedDiscountBlanket(blanketName || '');
+  const restrictionType = isRestricted ? (/(conti\s*sava)/i.test(blanketName || '') ? 'conti_sava' : 'web_x_press_g3') : 'none';
+  console.log('[SAVA] apply restriction', { selectedId, blanketName, isRestricted, restrictionType, currentValue: discountSelectEl.value });
   const currentValue = discountSelectEl.value;
-  const allowedOptions = isSava
+  const allowedOptions = isRestricted
     ? generateSavaDiscountOptions()
     : (fullDiscountOptions.length ? fullDiscountOptions : generateDefaultDiscountOptions());
   console.log('[SAVA] allowed options', allowedOptions);
@@ -80,7 +86,7 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   }
 
   // Observe external mutations that might add back high discounts
-  if (isSava) {
+  if (isRestricted) {
     // Clean any high options immediately before attaching observer
     Array.from(discountSelectEl.options).forEach(opt => {
       const num = parseFloat(opt.value || '');
@@ -101,12 +107,12 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     observer.observe(discountSelectEl, {childList:true});
     discountSelectEl.__savaObserver = observer; // store flag
     }
-  } else if (!isSava && discountSelectEl.__savaObserver) {
+  } else if (!isRestricted && discountSelectEl.__savaObserver) {
     discountSelectEl.__savaObserver.disconnect();
     discountSelectEl.__savaObserver = null;
   }
 
-  if (isSava && parseFloat(discountSelectEl.value || '0') > 5) {
+  if (isRestricted && parseFloat(discountSelectEl.value || '0') > 5) {
     discountSelectEl.value = '';
     discountSelectEl.dispatchEvent(new Event('change'));
   }
