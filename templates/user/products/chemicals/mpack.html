@@ -12,6 +12,7 @@
       flex-direction: column;
       gap: 1.5rem;
       align-items: stretch;
+      height: 100%;
     }
 
     .mpack-diagram-column > * {
@@ -22,11 +23,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: space-between;
       text-align: center;
       gap: 0.75rem;
       width: 100%;
-      min-height: 230px;
+      flex: 1;
+      min-height: 240px;
       padding: 1rem 1.5rem;
     }
 
@@ -41,7 +43,7 @@
     .mpack-select-wrapper {
       width: 100%;
       max-width: 320px;
-      margin: 0 auto;
+      margin-top: auto;
     }
 
     @media (min-width: 768px) {
@@ -55,7 +57,7 @@
       }
 
       .mpack-select-wrapper {
-        margin: 0;
+        margin-top: auto;
       }
     }
 
@@ -169,7 +171,7 @@
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="35" y1="35" x2="265" y2="35" stroke="#000000" stroke-width="3" marker-start="url(#acrossArrowHead)" marker-end="url(#acrossArrowHead)" />
                   <rect x="50" y="70" width="200" height="60" rx="30" ry="30" />
-                  <circle cx="250" cy="100" r="30" />
+                  <circle cx="210" cy="100" r="30" />
                 </g>
                 <text x="150" y="25" text-anchor="middle" font-size="18" font-weight="bold" fill="#000000" style="font-family: Arial, sans-serif;">Across</text>
               </svg>
