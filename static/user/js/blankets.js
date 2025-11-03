@@ -45,10 +45,12 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   const selectedOptionText = blanketSelectEl.options?.[blanketSelectEl.selectedIndex]?.text || '';
   const blanketName = blanket?.name || selectedOptionText;
   const isSava = /conti\s*sava/i.test(blanketName || '');
+  console.debug('[SAVA] apply restriction', { selectedId, blanketName, isSava, currentValue: discountSelectEl.value });
   const currentValue = discountSelectEl.value;
   const allowedOptions = isSava
     ? generateSavaDiscountOptions()
     : (fullDiscountOptions.length ? fullDiscountOptions : generateSavaDiscountOptions());
+  console.debug('[SAVA] allowed options', allowedOptions);
 
   // Manual rebuild to avoid residual options
   discountSelectEl.innerHTML = '<option value="">-- Select Discount --</option>';
@@ -58,14 +60,17 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     opt.textContent = val.toFixed(2);
     discountSelectEl.appendChild(opt);
   });
+  console.debug('[SAVA] options rebuilt', Array.from(discountSelectEl.options).map(o=>o.value));
 
   // Observe external mutations that might add back high discounts
   if (isSava && !discountSelectEl.__savaObserver) {
     const observer = new MutationObserver(() => {
+      console.debug('[SAVA] mutation observed, pruning');
       Array.from(discountSelectEl.options).forEach(opt=>{
         const num = parseFloat(opt.value||'');
         if(!Number.isNaN(num) && num>5){ opt.remove(); }
       });
+      console.debug('[SAVA] post-prune options', Array.from(discountSelectEl.options).map(o=>o.value));
     });
     observer.observe(discountSelectEl, {childList:true});
     discountSelectEl.__savaObserver = observer; // store flag
