@@ -231,27 +231,29 @@
       "icon": "fas fa-layer-group",
       "products": [
         {
-          "id": "plate-301",
-          "name": "Calcium Remover",
-          "description": "Neutralises calcium build-up on plates, rollers and dampening systems.",
+          "id": "plate-alu-clean",
+          "name": "ALU CLEAN",
+          "description": "Aluminium plate cleaner that removes scum and restores hydrophilic balance.",
           "icon": "fas fa-atom",
+          "price_per_litre": null,
           "formats": [
-            { "id": "plate-301-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "plate-301-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "plate-301-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "plate-301-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "plate-alu-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "plate-alu-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "plate-alu-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "plate-alu-clean-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         },
         {
-          "id": "plate-302",
-          "name": "Plate Cleaner & Conditioner",
-          "description": "Ready-to-use cleaner that removes oxidation and keeps plates press-ready.",
+          "id": "plate-alu-clean-uv",
+          "name": "ALU CLEAN UV",
+          "description": "UV-compatible plate cleaner formulated to protect coatings while deglazing.",
           "icon": "fas fa-spray-can-sparkles",
+          "price_per_litre": null,
           "formats": [
-            { "id": "plate-302-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "plate-302-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "plate-302-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "plate-302-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "plate-alu-clean-uv-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "plate-alu-clean-uv-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "plate-alu-clean-uv-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "plate-alu-clean-uv-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         }
       ]
@@ -263,27 +265,94 @@
       "icon": "fas fa-toolbox",
       "products": [
         {
-          "id": "maint-401",
-          "name": "Anti-Mould Circulation Cleaner",
-          "description": "Keeps recirculation tanks hygienic and prevents algae growth.",
-          "icon": "fas fa-bacteria",
+          "id": "maint-calx-de-glazer",
+          "name": "CALX DE GLAZER",
+          "description": "Powerful deglazer that strips calcium and ink build-up from rollers and blankets.",
+          "icon": "fas fa-cogs",
+          "price_per_litre": null,
           "formats": [
-            { "id": "maint-401-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-401-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-401-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-401-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-calx-de-glazer-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-calx-de-glazer-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-calx-de-glazer-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-calx-de-glazer-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         },
         {
-          "id": "maint-402",
-          "name": "Roller Conditioner & Deglazer",
-          "description": "Restores rubber to optimum tack while removing glaze and ink build-up.",
-          "icon": "fas fa-cogs",
+          "id": "maint-roll-o-clean",
+          "name": "ROLL-O-CLEAN",
+          "description": "Conditioner that refreshes roller surfaces and restores optimum tack.",
+          "icon": "fas fa-sync",
+          "price_per_litre": null,
           "formats": [
-            { "id": "maint-402-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-402-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-402-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-402-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-roll-o-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-roll-o-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-roll-o-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-roll-o-clean-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-mtr-clean",
+          "name": "MT.R CLEAN",
+          "description": "Metering roller cleaner that removes glaze without damaging elastomers.",
+          "icon": "fas fa-pump-soap",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "maint-mtr-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-mtr-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-mtr-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-mtr-clean-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-anilox-clean",
+          "name": "ANILOX CLEAN",
+          "description": "Deep cleaning gel for anilox cells that lifts dried coatings and inks.",
+          "icon": "fas fa-grip-lines-vertical",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "maint-anilox-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-anilox-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-anilox-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-anilox-clean-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-fs-clean",
+          "name": "FS CLEAN",
+          "description": "Circulation system cleaner that sanitises and keeps fountain solution fresh.",
+          "icon": "fas fa-water",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "maint-fs-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-fs-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-fs-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-fs-clean-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-blanket-clean",
+          "name": "BLANKET CLEAN",
+          "description": "Daily blanket cleaner that lifts glaze while conditioning rubber surface.",
+          "icon": "fas fa-eraser",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "maint-blanket-clean-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-blanket-clean-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-blanket-clean-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-blanket-clean-200l", "label": "200L Drum", "size_litre": 200 }
+          ]
+        },
+        {
+          "id": "maint-blanket-clean-uv",
+          "name": "BLANKET CLEAN UV",
+          "description": "UV-compatible blanket cleaner that prevents swelling while removing residues.",
+          "icon": "fas fa-lightbulb",
+          "price_per_litre": null,
+          "formats": [
+            { "id": "maint-blanket-clean-uv-1l", "label": "1L Bottle", "size_litre": 1 },
+            { "id": "maint-blanket-clean-uv-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "maint-blanket-clean-uv-25l", "label": "25L Can", "size_litre": 25 },
+            { "id": "maint-blanket-clean-uv-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         }
       ]
