@@ -5204,14 +5204,29 @@ def quotation_preview():
         item.setdefault('unit_price', 0)
         item.setdefault('base_price', 0)
         item.setdefault('bar_price', 0)
-        
+
+        raw_quantity = item.get('quantity', 1)
+        if item['type'] == 'chemical':
+            try:
+                quantity_value = float(item.get('quantity_litre') or item.get('total_litre') or raw_quantity or 0)
+            except (TypeError, ValueError):
+                quantity_value = 0.0
+            quantity_value = max(quantity_value, 0.0)
+        else:
+            try:
+                quantity_value = float(raw_quantity or 0)
+            except (TypeError, ValueError):
+                quantity_value = 0.0
+            if quantity_value <= 0:
+                quantity_value = 1.0
+
         if item['type'] == 'mpack':
             # Calculate mpack total matching cart template's approach
             price = float(item['unit_price'])
-            quantity = int(item['quantity'])
+            quantity = int(quantity_value) if quantity_value else 1
             discount_percent = float(item['discount_percent'])
             gst_percent = float(item['gst_percent'])
-            
+
             subtotal = price * quantity
             discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
             price_after_discount = subtotal - discount_amount
@@ -5236,10 +5251,10 @@ def quotation_preview():
             # Calculate blanket total matching cart template's approach
             base_price = float(item.get('base_price', 0))
             bar_price = float(item.get('bar_price', 0))
-            quantity = int(item.get('quantity', 1))
+            quantity = int(quantity_value) if quantity_value else 1
             discount_percent = float(item.get('discount_percent', 0))
             gst_percent = float(item.get('gst_percent', 18))
-            
+
             # Calculate unit price as base + bar price
             unit_price = base_price + bar_price
             
@@ -5277,10 +5292,10 @@ def quotation_preview():
         else:
             # Handle other product types
             price = float(item.get('unit_price', 0))
-            quantity = int(item.get('quantity', 1))
+            quantity = quantity_value
             discount_percent = float(item.get('discount_percent', 0))
             gst_percent = float(item.get('gst_percent', 18))
-            
+
             subtotal = price * quantity
             discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
             discounted_subtotal = subtotal - discount_amount

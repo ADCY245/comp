@@ -42,7 +42,7 @@
     .customer-info-section {
         padding: 1.25rem;
     }
-    .card.position-relative .watermark-container {
+    .watermark-card .watermark-container {
         position: absolute;
         inset: 0;
         display: flex;
@@ -58,8 +58,8 @@
         opacity: 0.28;
         filter: saturate(0.85);
     }
-    .card.position-relative .card-body,
-    .card.position-relative .card-header {
+    .watermark-card .card-body,
+    .watermark-card .card-header {
         position: relative;
         z-index: 2;
         background-color: transparent;
@@ -69,11 +69,8 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="card shadow-sm position-relative">
-        <div class="watermark-container">
-            <img src="https://cgi-logo.tiiny.site/CGI_LOGO.svg" alt="CGI watermark" class="watermark-image">
-        </div>
-        <div class="card-body p-4 position-relative">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
     <div class="text-center mb-4">
         <img src="https://cgi-logo.tiiny.site/CGI_LOGO.svg" alt="Chemo Graphic International Logo" class="company-logo">
         <h2 class="mb-0">QUOTATION</h2>
@@ -200,9 +197,9 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mt-4 position-relative">
+    <div class="card shadow-sm mt-4 position-relative watermark-card">
         <div class="watermark-container">
-            <img src="{{ url_for('static', filename='images/CGI_LOGO.svg') }}" alt="CGI watermark" class="watermark-image">
+            <img src="https://cgi-logo.tiiny.site/CGI_LOGO.svg" alt="CGI watermark" class="watermark-image">
         </div>
         <div class="card-header bg-light">
             <h5 class="mb-0">Quotation Details</h5>
