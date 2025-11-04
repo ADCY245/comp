@@ -49,20 +49,20 @@
         align-items: center;
         justify-content: center;
         pointer-events: none;
-        z-index: 0;
+        z-index: 1;
+        mix-blend-mode: multiply;
     }
     .watermark-image {
         max-width: 75%;
         width: 420px;
-        opacity: 0.18;
-        filter: saturate(0.9);
+        opacity: 0.28;
+        filter: saturate(0.85);
     }
     .card.position-relative .card-body,
     .card.position-relative .card-header {
         position: relative;
-        z-index: 1;
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(0.5px);
+        z-index: 2;
+        background-color: transparent;
     }
 </style>
 {% endblock %}
@@ -342,7 +342,14 @@
             {% endif %}
           </td>
           <td>{{ item.get('bar_type', '------') if prod_type == 'blanket' else '------' }}</td>
-          <td>{{ item.get('quantity', 1) }}</td>
+          <td>
+            {% if prod_type == 'chemical' %}
+              {% set litre_qty = item.get('quantity_litre') or item.get('total_litre') or item.get('quantity', 0) %}
+              {% if litre_qty %}{{ '%.2f'|format(litre_qty|float).rstrip('0').rstrip('.') }}L{% else %}0L{% endif %}
+            {% else %}
+              {{ item.get('quantity', 1) }}
+            {% endif %}
+          </td>
           <td>₹{{ '%.2f'|format(item.get('unit_price', item.get('base_price', 0))|float) }}</td>
           <td>{% if item.get('discount_percent', 0) > 0 %}{{ '%.1f'|format(item.discount_percent) }}%{% else %}------{% endif %}</td>
           {% set calc = item.get('calculations', {}) %}

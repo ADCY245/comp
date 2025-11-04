@@ -5578,7 +5578,28 @@ def send_quotation():
         for idx, p in enumerate(products, start=1):
             machine = p.get('machine', '')
             prod_type = p.get('type', '')
-            
+
+            # Quantity handling (use litres for chemical items)
+            raw_qty = p.get('quantity', 1)
+            if prod_type == 'chemical':
+                qty_source = p.get('quantity_litre') or p.get('total_litre') or raw_qty
+            else:
+                qty_source = raw_qty
+
+            try:
+                qty = float(qty_source if qty_source not in (None, '') else 0)
+            except (TypeError, ValueError):
+                qty = 0.0
+
+            if qty <= 0:
+                qty = 0.0 if prod_type == 'chemical' else 1.0
+
+            display_qty_value = f"{qty:.2f}".rstrip('0').rstrip('.')
+            if prod_type == 'chemical':
+                display_qty = f"{display_qty_value}L" if display_qty_value else "0L"
+            else:
+                display_qty = display_qty_value or "0"
+
             # Dimensions
             if p.get('size'):
                 dimensions = p['size']
@@ -5587,8 +5608,6 @@ def send_quotation():
                 width = p.get('width') or ''
                 unit = p.get('unit', '')
                 dimensions = f"{length} x {width} {unit}" if length and width else '----'
-            
-            qty = p.get('quantity', 1)
             
             # Calculate total based on product type
             if prod_type == 'mpack':
@@ -5719,7 +5738,7 @@ def send_quotation():
                     <td style='padding: 8px; border: 1px solid #ddd;'>{thickness_display}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{dimensions}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('bar_type', '----') if prod_type == 'blanket' else '----'}</td>
-                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{qty}</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{display_qty}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{p.get('unit_price', p.get('base_price', 0)):,.2f}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{p.get('discount_percent', 0):.1f}%</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{net_amount:,.2f}</td>
