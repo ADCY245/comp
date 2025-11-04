@@ -345,7 +345,16 @@
           <td>
             {% if prod_type == 'chemical' %}
               {% set litre_qty = item.get('quantity_litre') or item.get('total_litre') or item.get('quantity', 0) %}
-              {% if litre_qty %}{{ '%.2f'|format(litre_qty|float).rstrip('0').rstrip('.') }}L{% else %}0L{% endif %}
+              {% set litre_val = litre_qty|float %}
+              {% if litre_val %}
+                {% if litre_val == litre_val|int %}
+                  {{ litre_val|int }}L
+                {% else %}
+                  {{ '%.2f' % litre_val }}L
+                {% endif %}
+              {% else %}
+                0L
+              {% endif %}
             {% else %}
               {{ item.get('quantity', 1) }}
             {% endif %}

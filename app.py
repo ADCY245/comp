@@ -5591,14 +5591,17 @@ def send_quotation():
             except (TypeError, ValueError):
                 qty = 0.0
 
-            if qty <= 0:
-                qty = 0.0 if prod_type == 'chemical' else 1.0
-
-            display_qty_value = f"{qty:.2f}".rstrip('0').rstrip('.')
             if prod_type == 'chemical':
-                display_qty = f"{display_qty_value}L" if display_qty_value else "0L"
+                if qty <= 0:
+                    display_qty = '0L'
+                elif qty.is_integer():
+                    display_qty = f"{int(qty)}L"
+                else:
+                    display_qty = f"{qty:.2f}L"
             else:
-                display_qty = display_qty_value or "0"
+                if qty <= 0:
+                    qty = 1.0
+                display_qty = f"{qty:.0f}" if qty.is_integer() else f"{qty:.2f}"
 
             # Dimensions
             if p.get('size'):
