@@ -264,10 +264,14 @@
       .map(product => {
         const isActive = state.selectedProduct?.id === product.id;
         const icon = product.icon || state.selectedCategory.icon || 'fas fa-box';
+        const isCustomIcon = typeof icon === 'string' && icon.startsWith('custom:');
+        const iconMarkup = isCustomIcon
+          ? `<span class="chem-icon ${icon.slice(7)}"></span>`
+          : `<i class="${icon}"></i>`;
 
         return `
           <button type="button" class="chem-option ${isActive ? 'chem-option--active' : ''}" data-product-id="${product.id}" aria-pressed="${isActive}">
-            <span class="chem-option__icon" aria-hidden="true"><i class="${icon}"></i></span>
+            <span class="chem-option__icon" aria-hidden="true">${iconMarkup}</span>
             <span>
               <span class="chem-option__title">${sanitize(product.name)}</span>
               <span class="chem-option__subtitle">${sanitize(product.description || 'Description coming soon.')}</span>

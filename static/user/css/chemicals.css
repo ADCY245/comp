@@ -120,6 +120,19 @@
   color: #0f172a;
 }
 
+.chem-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.chem-icon--wash {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%230f172a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 10h16l6 6v34c0 4-3 7-7 7H23c-4 0-7-3-7-7V17c0-3.9 3.1-7 7-7z'/%3E%3Cpath d='M38 10v6H22'/%3E%3Cpath d='M28 4h8v6h-8z'/%3E%3Cpath d='M27 28h10M27 38h10'/%3E%3C/svg%3E");
+}
+
 .chem-options--product .chem-option__icon {
   background: rgba(37, 99, 235, 0.1);
   color: #2563eb;

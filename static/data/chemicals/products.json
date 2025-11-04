@@ -9,8 +9,8 @@
         {
           "id": "wash-cs",
           "name": "WASH CS",
-          "description": "Concentrated blanket wash for conventional sheet-fed presses.",
-          "icon": "fas fa-pump-soap",
+          "description": "An extremely quick drying effective wash for cold-set & sheet-fed applications.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-cs-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -22,8 +22,8 @@
         {
           "id": "wash-fc",
           "name": "WASH FC",
-          "description": "Fast-cleaning wash formulated for quick turnaround blanket changes.",
-          "icon": "fas fa-pump-soap",
+          "description": "A fast clean wash for sheet-fed applications.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-fc-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -35,8 +35,8 @@
         {
           "id": "wash-nw",
           "name": "WASH NW",
-          "description": "Neutral water-miscible wash for daily blanket maintenance.",
-          "icon": "fas fa-pump-soap",
+          "description": "Fast clean litho blanket & roller wash for conventional inks.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-nw-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -48,8 +48,8 @@
         {
           "id": "wash-gp",
           "name": "WASH GP",
-          "description": "General purpose wash compatible with manual and automatic systems.",
-          "icon": "fas fa-pump-soap",
+          "description": "Litho blanket & roller wash for conventional inks.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-gp-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -61,8 +61,8 @@
         {
           "id": "wash-auto",
           "name": "WASH AUTO",
-          "description": "Detergent-balanced wash designed for auto-wash blanket systems.",
-          "icon": "fas fa-pump-soap",
+          "description": "Conventional wash for automated cleaning systems.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-auto-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -74,8 +74,8 @@
         {
           "id": "wash-combi",
           "name": "WASH COMBI",
-          "description": "Dual-action wash that handles both water-miscible and solvent residues.",
-          "icon": "fas fa-pump-soap",
+          "description": "An effective wash for cleaning conventional & UV inks.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-combi-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -87,8 +87,8 @@
         {
           "id": "wash-uv",
           "name": "WASH UV",
-          "description": "Specialised wash that breaks down UV ink residues without swelling rubber.",
-          "icon": "fas fa-pump-soap",
+          "description": "An effective wash for cleaning UV inks off printing blankets & rolls.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-uv-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -100,8 +100,8 @@
         {
           "id": "wash-uv-s-plus",
           "name": "WASH UV S+",
-          "description": "Premium UV wash with added conditioners for high-speed presses.",
-          "icon": "fas fa-pump-soap",
+          "description": "Premium litho blanket & roller wash for UV inks.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-uv-s-plus-1l", "label": "1L Bottle", "size_litre": 1 },
@@ -113,8 +113,8 @@
         {
           "id": "wash-hsw",
           "name": "WASH HSW",
-          "description": "High-strength wash for stubborn glaze on heavily loaded rollers.",
-          "icon": "fas fa-pump-soap",
+          "description": "Premium wash for high speed litho sheet-fed & web presses.",
+          "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
             { "id": "wash-hsw-1l", "label": "1L Bottle", "size_litre": 1 },
