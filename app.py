@@ -27,6 +27,7 @@ import resend
 from openpyxl import Workbook, load_workbook
 from werkzeug.utils import secure_filename
 from markupsafe import Markup, escape
+import base64
 
 # Import MongoDB users module
 try:
@@ -5559,10 +5560,11 @@ def send_quotation():
                     <th style='padding: 10px; text-align: left;'>Type</th>
                     <th style='padding: 10px; text-align: left;'>Thickness</th>
                     <th style='padding: 10px; text-align: left;'>Size</th>
-                    <th style='padding: 10px; text-align: left;'>Barri...</th>
+                    <th style='padding: 10px; text-align: left;'>Barring Type</th>
                     <th style='padding: 10px; text-align: right;'>Qty</th>
                     <th style='padding: 10px; text-align: right;'>Price</th>
                     <th style='padding: 10px; text-align: right;'>Discount</th>
+                    <th style='padding: 10px; text-align: right;'>Net Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -5661,6 +5663,27 @@ def send_quotation():
             subtotal_after_discount += line_taxable
             total_gst += line_gst
             
+            if prod_type == 'chemical':
+                thickness_display = '&nbsp;'
+            elif p.get('thickness'):
+                if prod_type == 'blanket':
+                    thickness_display = f"{str(p.get('thickness')).replace('.0', '')} mm"
+                else:
+                    thickness_value = p.get('thickness')
+                    if thickness_value and not str(thickness_value).endswith(('mm', 'micron', 'in', 'cm')):
+                        try:
+                            thickness_float = float(thickness_value)
+                        except (TypeError, ValueError):
+                            thickness_float = None
+                        thickness_suffix = ' mm' if thickness_float and thickness_float >= 1 else ''
+                    else:
+                        thickness_suffix = ''
+                    thickness_display = f"{thickness_value}{thickness_suffix}" if thickness_value else '----'
+            else:
+                thickness_display = '----'
+
+            net_amount = line_taxable
+
             rows_html += f"""
                 <tr>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{idx}</td>
@@ -5671,12 +5694,13 @@ def send_quotation():
                         else p.get('underpacking_type', '----').replace('_', ' ').title() if prod_type == 'mpack' 
                         else p.get('name', '----')}
                     </td>
-                    <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('thickness', '----')}{' mm' if p.get('type') == 'blanket' and p.get('thickness') else (' mm' if p.get('thickness') and not str(p.get('thickness', '')).endswith(('mm', 'micron', 'in', 'cm')) and float(p.get('thickness', 0)) >= 1 else '')}</td>
+                    <td style='padding: 8px; border: 1px solid #ddd;'>{thickness_display}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{dimensions}</td>
                     <td style='padding: 8px; border: 1px solid #ddd;'>{p.get('bar_type', '----') if prod_type == 'blanket' else '----'}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{qty}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{p.get('unit_price', p.get('base_price', 0)):,.2f}</td>
                     <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>{p.get('discount_percent', 0):.1f}%</td>
+                    <td style='padding: 8px; text-align: right; border: 1px solid #ddd;'>₹{net_amount:,.2f}</td>
                 </tr>
             """
         
@@ -5713,7 +5737,21 @@ def send_quotation():
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
-        # Build email content with improved table layout and consistent white background
+        svg_logo_src = "https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png"
+        watermark_layer_html = ""
+        try:
+            svg_path = os.path.join(app.root_path, 'static', 'images', 'CGI_LOGO.svg')
+            with open(svg_path, 'rb') as svg_file:
+                svg_base64 = base64.b64encode(svg_file.read()).decode('utf-8')
+                svg_logo_src = f"data:image/svg+xml;base64,{svg_base64}"
+                watermark_layer_html = f"""
+                  <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.08; width:320px; max-width:60%; pointer-events:none;'>
+                    <img src='{svg_logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
+                  </div>
+                """
+        except Exception as svg_error:
+            app.logger.error(f"Failed to embed SVG logo for quotation email: {svg_error}")
+
         company_name_display = "Chemo Graphic International (CGI)"
         company_email_html = "<a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a>"
         company_phone_html = "<a href='tel:+919930070755' style='color: #0d6efd; text-decoration: none;'>9930070755</a>"
@@ -5722,18 +5760,20 @@ def send_quotation():
 
         email_content = f"""
         <div style='font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; line-height: 1.6; background-color: #e0caa9; padding: 20px;'>
-          <div style='background-color: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 2rem; margin-bottom: 1.5rem;'>
-            <div style='text-align: center; margin-bottom: 2rem;'>
-              <img src='https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
-              <h2 style='margin: 0 0 0.5rem 0; color: #2c3e50;'>QUOTATION</h2>
-              <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
-            </div>
-            
-            <div style='margin-bottom: 2rem;'>
-              <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-collapse: separate; border-spacing: 24px 0;'>
-                <tr>
-                  <td style='vertical-align: top; width: 50%; padding: 0;'>
-                    <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
+          <div style='position: relative; background-color: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 2rem; margin-bottom: 1.5rem; overflow: hidden;'>
+            {watermark_layer_html}
+            <div style='position: relative; z-index: 1;'>
+              <div style='text-align: center; margin-bottom: 2rem;'>
+                <img src='{svg_logo_src}' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
+                <h2 style='margin: 0 0 0.5rem 0; color: #2c3e50;'>QUOTATION</h2>
+                <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
+              </div>
+              
+              <div style='margin-bottom: 2rem;'>
+                <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-collapse: separate; border-spacing: 24px 0;'>
+                  <tr>
+                    <td style='vertical-align: top; width: 50%; padding: 0;'>
+                      <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden;'>
                       <tr>
                         <td style='background-color: #f8f9fa; padding: 16px 20px;'>
                           <h5 style='margin: 0; font-size: 16px; font-weight: 600;'>Company Information</h5>
