@@ -5647,7 +5647,29 @@ def send_quotation():
                     'gst_amount': round(gst_amount, 2),
                     'final_total': round(total_val, 2)
                 }
-            
+            else:
+                unit_price = float(p.get('unit_price', 0))
+                discount_percent = float(p.get('discount_percent', 0))
+                gst_percent = float(p.get('gst_percent', 18))
+
+                subtotal_val = unit_price * qty
+                discount_amount = (subtotal_val * discount_percent / 100) if discount_percent else 0
+                taxable_amount = subtotal_val - discount_amount
+                gst_amount = taxable_amount * gst_percent / 100
+                total_val = taxable_amount + gst_amount
+
+                p['calculations'] = {
+                    'unit_price': round(unit_price, 2),
+                    'quantity': qty,
+                    'subtotal': round(subtotal_val, 2),
+                    'discount_percent': discount_percent,
+                    'discount_amount': round(discount_amount, 2),
+                    'taxable_amount': round(taxable_amount, 2),
+                    'gst_percent': gst_percent,
+                    'gst_amount': round(gst_amount, 2),
+                    'final_total': round(total_val, 2)
+                }
+
             subtotal += total_val
 
             calc = p.get('calculations', {})
@@ -5737,7 +5759,7 @@ def send_quotation():
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
-        svg_logo_src = "https://i.ibb.co/1GVLnJcc/image-2025-07-04-163516213.png"
+        svg_logo_src = url_for('static', filename='images/CGI_LOGO.svg', _external=True)
         watermark_layer_html = ""
         try:
             svg_path = os.path.join(app.root_path, 'static', 'images', 'CGI_LOGO.svg')
