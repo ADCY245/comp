@@ -264,15 +264,12 @@
       .map(product => {
         const isActive = state.selectedProduct?.id === product.id;
         const icon = product.icon || state.selectedCategory.icon || 'fas fa-box';
-        const formats = Array.isArray(product.formats) ? product.formats : [];
-        const has200L = formats.some(format => format.size_litre === 200);
-        const drumBadge = has200L ? '<span class="badge bg-warning text-dark ms-2">200L Available</span>' : '';
 
         return `
           <button type="button" class="chem-option ${isActive ? 'chem-option--active' : ''}" data-product-id="${product.id}" aria-pressed="${isActive}">
             <span class="chem-option__icon" aria-hidden="true"><i class="${icon}"></i></span>
             <span>
-              <span class="chem-option__title">${sanitize(product.name)} ${drumBadge}</span>
+              <span class="chem-option__title">${sanitize(product.name)}</span>
               <span class="chem-option__subtitle">${sanitize(product.description || 'Description coming soon.')}</span>
             </span>
           </button>
