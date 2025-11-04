@@ -2765,11 +2765,11 @@ function updateItemDisplay(item, data) {
         }
         
         // Update total before GST
-        const totalBeforeGstElement = item.querySelector('.total-before-gst');
+        const totalBeforeGstElement = item.querySelector('.total-before-gst, .pre-gst-total .pre-gst-amount');
         if (totalBeforeGstElement) {
             totalBeforeGstElement.textContent = `₹${totalBeforeGst.toFixed(2)}`;
             // Also update any other elements that might be showing the pre-GST total
-            const preGstElements = item.querySelectorAll('.pre-gst-total, .total-before-gst');
+            const preGstElements = item.querySelectorAll('.pre-gst-total .pre-gst-amount, .total-before-gst');
             preGstElements.forEach(el => {
                 el.textContent = `₹${totalBeforeGst.toFixed(2)}`;
             });
@@ -2925,7 +2925,7 @@ function updateItemDisplay(item, data) {
             });
             
             updatePriceElement('.discount-amount, .item-discount', discountAmount);
-            updatePriceElement('.total-before-gst, .pre-gst-total, .item-total-before-gst', totalBeforeGst);
+            updatePriceElement('.total-before-gst, .pre-gst-total .pre-gst-amount, .item-total-before-gst', totalBeforeGst);
             updatePriceElement('.gst-amount, .item-gst', gstAmount);
             updatePriceElement('.total-amount, .item-total, .total-value', total);
             
@@ -3082,7 +3082,7 @@ function updateItemDisplay(item, data) {
         applyPrice('.unit-price, .item-unit-price', pricePerLitre);
         applyPrice('.subtotal, .item-subtotal, .subtotal-value', subtotal);
         applyPrice('.discount-amount, .item-discount', discountAmount, '-₹');
-        applyPrice('.total-before-gst, .pre-gst-total, .item-total-before-gst', discountedSubtotal);
+        applyPrice('.total-before-gst, .pre-gst-total .pre-gst-amount, .item-total-before-gst', discountedSubtotal);
         applyPrice('.gst-amount, .item-gst', gstAmount);
         applyPrice('.total-amount, .item-total, .total-value', total);
 
