@@ -809,7 +809,7 @@
                                             </div>
                                              <div class="price-row pre-gst-total border-top pt-2 mt-2">
                                                 <span class="price-label fw-medium">Discounted Total:</span>
-                                                <span class="price-value pre-gst-amount fw-medium text-start">
+                                                <span class="price-value pre-gst-amount fw-medium">
                                                     ₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100)) }}
                                                 </span>
                                             </div>
