@@ -100,12 +100,24 @@ function updateLengthOptionsForWidth(widthValue) {
   if (!customLengthInputEl) return;
   const sanitizedWidth = String(widthValue || '').trim();
   if (!sanitizedWidth) {
-    populateSelectOptions(customLengthInputEl, [], '-- Select Around --');
+    populateSelectOptions(customLengthInputEl, uniqueLengths.map(String), '-- Select Around --');
     return;
   }
 
   const lengths = lengthsByWidthMap.get(sanitizedWidth) || [];
   populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
+}
+
+function updateWidthOptionsForLength(lengthValue) {
+  if (!customWidthInputEl) return;
+  const sanitizedLength = String(lengthValue || '').trim();
+  if (!sanitizedLength) {
+    populateSelectOptions(customWidthInputEl, uniqueWidths.map(String), '-- Select Across --');
+    return;
+  }
+
+  const widths = widthsByLengthMap.get(sanitizedLength) || [];
+  populateSelectOptions(customWidthInputEl, widths.map(String), '-- Select Across --');
 }
 
 function hasValidCustomSize() {
@@ -620,7 +632,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Attach listeners for custom size inputs
   if (customLengthInputEl) {
-    customLengthInputEl.addEventListener('change', handleCustomSizeInputChange);
+    customLengthInputEl.addEventListener('change', event => {
+      updateWidthOptionsForLength(event.target.value);
+      handleCustomSizeInputChange();
+    });
   }
   if (customWidthInputEl) {
     customWidthInputEl.addEventListener('change', event => {
