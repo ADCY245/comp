@@ -52,9 +52,9 @@
         z-index: 0;
     }
     .watermark-image {
-        max-width: 70%;
-        width: 360px;
-        opacity: 0.14;
+        max-width: 75%;
+        width: 420px;
+        opacity: 0.18;
         filter: saturate(0.9);
     }
     .card.position-relative .card-body,
@@ -383,20 +383,11 @@
                     <td class="text-end fw-bold">₹{{ '%.2f'|format(calculations.subtotal_after_discount) }}</td>
                 </tr>
                 
-                {% if calculations.gst_breakdown.blankets.subtotal_after_discount > 0 %}
                 <tr>
-                    <td class="text-end">GST (9.0% CGST + 9.0% SGST):</td>
-                    <td class="text-end">₹{{ '%.2f'|format(calculations.gst_breakdown.blankets.gst) }}</td>
+                    <td class="text-end">GST (18%):</td>
+                    <td class="text-end">₹{{ '%.2f'|format(calculations.gst_breakdown.total_gst) }}</td>
                 </tr>
-                {% endif %}
-                
-                {% if calculations.gst_breakdown.mpacks.subtotal_after_discount > 0 %}
-                <tr>
-                    <td class="text-end">GST (18.0% - Underpacking):</td>
-                    <td class="text-end">₹{{ '%.2f'|format(calculations.gst_breakdown.mpacks.gst) }}</td>
-                </tr>
-                {% endif %}
-                
+
                 <tr class="border-top">
                     <td class="text-end fw-bold">Total:</td>
                     <td class="text-end fw-bold">₹{{ '%.2f'|format(calculations.total) }}</td>

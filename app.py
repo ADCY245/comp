@@ -5759,20 +5759,20 @@ def send_quotation():
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
-        svg_logo_src = url_for('static', filename='images/CGI_LOGO.svg', _external=True)
+        logo_src = url_for('static', filename='images/CGI_LOGO_EMAIL.png', _external=True)
         watermark_layer_html = ""
         try:
-            svg_path = os.path.join(app.root_path, 'static', 'images', 'CGI_LOGO.svg')
-            with open(svg_path, 'rb') as svg_file:
-                svg_base64 = base64.b64encode(svg_file.read()).decode('utf-8')
-                svg_logo_src = f"data:image/svg+xml;base64,{svg_base64}"
+            png_path = os.path.join(app.root_path, 'static', 'images', 'CGI_LOGO_EMAIL.png')
+            with open(png_path, 'rb') as png_file:
+                png_base64 = base64.b64encode(png_file.read()).decode('utf-8')
+                logo_src = f"data:image/png;base64,{png_base64}"
                 watermark_layer_html = f"""
-                  <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.08; width:320px; max-width:60%; pointer-events:none;'>
-                    <img src='{svg_logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
+                  <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.12; width:320px; max-width:60%; pointer-events:none;'>
+                    <img src='{logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
                   </div>
                 """
-        except Exception as svg_error:
-            app.logger.error(f"Failed to embed SVG logo for quotation email: {svg_error}")
+        except Exception as img_error:
+            app.logger.error(f"Failed to embed PNG logo for quotation email: {img_error}")
 
         company_name_display = "Chemo Graphic International (CGI)"
         company_email_html = "<a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a>"
@@ -5786,7 +5786,7 @@ def send_quotation():
             {watermark_layer_html}
             <div style='position: relative; z-index: 1;'>
               <div style='text-align: center; margin-bottom: 2rem;'>
-                <img src='{svg_logo_src}' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
+                <img src='{logo_src}' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
                 <h2 style='margin: 0 0 0.5rem 0; color: #2c3e50;'>QUOTATION</h2>
                 <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
               </div>
@@ -5933,19 +5933,10 @@ def send_quotation():
                                             <td style='padding: 8px; text-align: right; font-weight: bold;'>₹{sum(p.get("calculations", {}).get("taxable_amount", p.get("calculations", {}).get("subtotal", 0)) for p in products):,.2f}</td>
                                         </tr>
                                     
-                                        {f'''
                                         <tr>
-                                            <td style='padding: 8px; text-align: right;'>GST (9.0% CGST + 9.0% SGST):</td>
-                                            <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "blanket"):,.2f}</td>
+                                            <td style='padding: 8px; text-align: right;'>GST (18%):</td>
+                                            <td style='padding: 8px; text-align: right;'>₹{total_gst:,.2f}</td>
                                         </tr>
-                                        ''' if any(p.get("type") == "blanket" for p in products) else ''}
-                                        
-                                        {f'''
-                                        <tr>
-                                            <td style='padding: 8px; text-align: right;'>GST (18.0% - Underpacking):</td>
-                                            <td style='padding: 8px; text-align: right;'>₹{sum(p.get("calculations", {}).get("gst_amount", 0) for p in products if p.get("type") == "mpack"):,.2f}</td>
-                                        </tr>
-                                        ''' if any(p.get("type") == "mpack" for p in products) else ''}
                                         
                                         <tr style='border-top: 1px solid #dee2e6;'>
                                             <td style='padding: 8px; text-align: right; font-weight: bold;'>Total (After GST):</td>
