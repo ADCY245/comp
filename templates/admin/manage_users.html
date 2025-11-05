@@ -163,12 +163,14 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label for="role" class="form-label mb-0">Role <span class="text-danger">*</span></label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="manageRolesBtn" onclick="showManageRolesModal()" style="display:none;">
+                                            <i class="fas fa-plus me-1"></i> New Role
+                                        </button>
+                                    </div>
                                     <select class="form-select" id="role" required onchange="toggleAssignmentSections()">
                                         <option value="">Select Role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="sales_admin">Sales Admin</option>
-                                        <option value="user">User</option>
                                     </select>
                                 </div>
                             </div>
@@ -198,7 +200,7 @@
                                 </div>
                                 <!-- Company checkboxes will be inserted here -->
                             </div>
-                            <small class="text-muted">Choose the companies this user should have access to. Admins automatically see all companies.</small>
+                            <small class="text-muted">Choose the companies this user should have access to. Admins and Super Admins automatically see all companies.</small>
                         </div>
                     </form>
                 </div>
@@ -283,6 +285,42 @@
             </div>
         </div>
     </div>
+
+    <!-- Manage Roles Modal -->
+    <div class="modal fade" id="rolesModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manage Roles</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createRoleForm">
+                        <div class="mb-3">
+                            <label for="roleName" class="form-label">Role Key <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="roleName" placeholder="e.g. pricing_manager" required>
+                            <div class="form-text">Letters, numbers, spaces, hyphens and underscores only.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="roleLabel" class="form-label">Display Label</label>
+                            <input type="text" class="form-control" id="roleLabel" placeholder="Optional display name">
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            Custom roles automatically receive user-level permissions. Additional capabilities must be configured separately if needed.
+                        </div>
+                    </form>
+                    <div id="rolesModalFeedback" class="mt-2" aria-live="polite"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn admin-btn" id="saveRoleBtn" onclick="submitRoleCreation()">
+                        <i class="fas fa-save me-1"></i> Create Role
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -295,6 +333,9 @@
             users: []
         };
         let allUsers = [];
+        let roleDefinitions = [];
+        let rolesModalInstance = null;
+
         let currentCompanies = [];
         let currentCompanyPage = 0;
         let currentAlphabetFilter = 'ALL';
@@ -312,7 +353,10 @@
             menu.innerHTML = '';
 
             const filteredUsers = Array.isArray(users)
-                ? users.filter(user => (user.role || '').toLowerCase() !== 'admin')
+                ? users.filter(user => {
+                    const role = (user.role || '').toLowerCase();
+                    return role !== 'admin' && role !== 'superadmin';
+                })
                 : [];
 
             if (salespersonFilterState.activeUserId && !filteredUsers.some(u => String(u.id) === salespersonFilterState.activeUserId)) {
@@ -549,12 +593,133 @@ function getRoleBadgeColor(role) {
 
                 await Promise.all([
                     loadUsers(),
-                    loadCompanies()
+                    loadCompanies(),
+                    fetchRoleDefinitions()
                 ]);
+                evaluateRoleManagementAccess();
             } catch (error) {
                 console.error('Error initializing page:', error);
             }
         });
+        
+        async function fetchRoleDefinitions() {
+            try {
+                const response = await fetch('/api/admin/roles');
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn('Unable to load roles:', data.error);
+                    return;
+                }
+                roleDefinitions = Array.isArray(data.roles) ? data.roles : [];
+                populateRoleSelect();
+            } catch (error) {
+                console.error('Error fetching role definitions:', error);
+            }
+        }
+
+        function populateRoleSelect() {
+            const roleSelect = document.getElementById('role');
+            if (!roleSelect) return;
+
+            const selectedValue = roleSelect.value;
+            roleSelect.innerHTML = '<option value="">Select Role</option>';
+
+            const sortedRoles = Array.isArray(roleDefinitions)
+                ? [...roleDefinitions].sort((a, b) => (a.label || a.name || '').localeCompare(b.label || b.name || ''))
+                : [];
+
+            sortedRoles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.name;
+                option.textContent = role.label || role.name;
+                option.dataset.isCustom = role.is_custom ? '1' : '0';
+                roleSelect.appendChild(option);
+            });
+
+            if (selectedValue) {
+                roleSelect.value = selectedValue;
+            }
+        }
+
+        function showManageRolesModal() {
+            if (!rolesModalInstance) {
+                const modalEl = document.getElementById('rolesModal');
+                rolesModalInstance = modalEl ? new bootstrap.Modal(modalEl) : null;
+            }
+            const feedback = document.getElementById('rolesModalFeedback');
+            if (feedback) feedback.innerHTML = '';
+            const form = document.getElementById('createRoleForm');
+            if (form) form.reset();
+            if (rolesModalInstance) {
+                rolesModalInstance.show();
+            }
+        }
+
+        async function submitRoleCreation() {
+            const form = document.getElementById('createRoleForm');
+            const feedback = document.getElementById('rolesModalFeedback');
+            if (!form) return;
+
+            const nameInput = document.getElementById('roleName');
+            const labelInput = document.getElementById('roleLabel');
+
+            const rawName = nameInput ? nameInput.value.trim() : '';
+            const label = labelInput ? labelInput.value.trim() : '';
+
+            if (!rawName) {
+                feedback.innerHTML = '<div class="alert alert-danger">Role key is required.</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/roles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: rawName, label })
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    feedback.innerHTML = `<div class="alert alert-danger">${data.error || 'Failed to create role'}</div>`;
+                    return;
+                }
+
+                feedback.innerHTML = '<div class="alert alert-success">Role created successfully.</div>';
+                await fetchRoleDefinitions();
+                evaluateRoleManagementAccess();
+                populateRoleSelect();
+                setTimeout(() => {
+                    if (rolesModalInstance) rolesModalInstance.hide();
+                }, 600);
+            } catch (error) {
+                console.error('Error creating role:', error);
+                feedback.innerHTML = '<div class="alert alert-danger">Unexpected error creating role.</div>';
+            }
+        }
+
+        async function evaluateRoleManagementAccess() {
+            try {
+                const response = await fetch('/api/admin/users/me');
+                if (!response.ok) {
+                    document.getElementById('manageRolesBtn').style.display = 'none';
+                    return;
+                }
+                const data = await response.json();
+                const current = data && data.user ? data.user : null;
+                const canManageRoles = current && (current.role || '').toLowerCase() === 'superadmin';
+                const button = document.getElementById('manageRolesBtn');
+                if (button) {
+                    button.style.display = canManageRoles ? 'inline-flex' : 'none';
+                }
+            } catch (error) {
+                console.error('Error evaluating role management access:', error);
+                const button = document.getElementById('manageRolesBtn');
+                if (button) button.style.display = 'none';
+            }
+        }
+
         
         // Load users data
         function loadUsers() {
@@ -927,10 +1092,11 @@ function getRoleBadgeColor(role) {
             const companySection = document.getElementById('companyAssignmentSection');
             
             if (roleSelect && companySection) {
-                const isAdmin = roleSelect.value === 'admin';
-                companySection.style.display = isAdmin ? 'none' : 'block';
+                const roleValue = (roleSelect.value || '').toLowerCase();
+                const isAdminLike = roleValue === 'admin' || roleValue === 'superadmin';
+                companySection.style.display = isAdminLike ? 'none' : 'block';
 
-                if (!isAdmin && allCompaniesForAssignment.length === 0) {
+                if (!isAdminLike && allCompaniesForAssignment.length === 0) {
                     loadAllCompaniesForAssignment();
                 }
             }

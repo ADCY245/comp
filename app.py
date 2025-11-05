@@ -164,6 +164,16 @@ def company_required(view_func):
 
 EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin', 'sales_admin'}
 COMPANY_FULL_ACCESS_ROLES = {'admin', 'superadmin'}
+
+SUPERADMIN_ROLE_NAME = 'superadmin'
+DEFAULT_ROLE_DEFINITIONS = [
+    {'name': SUPERADMIN_ROLE_NAME, 'label': 'Super Admin', 'is_custom': False},
+    {'name': 'admin', 'label': 'Admin', 'is_custom': False},
+    {'name': 'sales_admin', 'label': 'Sales Admin', 'is_custom': False},
+    {'name': 'user', 'label': 'User', 'is_custom': False},
+]
+DEFAULT_ROLE_NAMES = {role['name'] for role in DEFAULT_ROLE_DEFINITIONS}
+CUSTOM_ROLES_FILE = os.path.join(app.root_path, 'data', 'custom_roles.json')
 RESTRICTED_BLANKET_PATTERNS = [
     re.compile(r'conti\s*sava', re.IGNORECASE),
     re.compile(r'web\s*x\s*press\s*g3', re.IGNORECASE),
@@ -210,6 +220,190 @@ def has_extended_discount_access(user) -> bool:
 
 def get_restricted_discount_cap(user) -> float:
     return 10.0 if has_extended_discount_access(user) else 5.0
+
+
+def is_superadmin(user) -> bool:
+    if not user:
+        return False
+    return (getattr(user, 'role', '') or '').strip().lower() == SUPERADMIN_ROLE_NAME
+
+
+def normalize_role_key(raw: str) -> str:
+    if not raw:
+        return ''
+    cleaned = re.sub(r'[^a-zA-Z0-9_\-\s]+', '', str(raw)).strip().lower()
+    cleaned = re.sub(r'[\s\-]+', '_', cleaned)
+    return cleaned.strip('_')
+
+
+def prettify_role_label(raw: str) -> str:
+    if not raw:
+        return ''
+    parts = [part for part in str(raw).replace('-', ' ').replace('_', ' ').split(' ') if part]
+    return ' '.join(part.capitalize() for part in parts) if parts else str(raw)
+
+
+def _load_custom_role_records():
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        try:
+            records = []
+            cursor = mongo_db.roles.find({}, {'_id': 0, 'name': 1, 'label': 1, 'created_by': 1, 'created_at': 1})
+            for doc in cursor:
+                name = normalize_role_key(doc.get('name'))
+                if not name:
+                    continue
+                label = (doc.get('label') or prettify_role_label(name)).strip()
+                created_at = doc.get('created_at')
+                if hasattr(created_at, 'isoformat'):
+                    created_at = created_at.isoformat()
+                records.append({
+                    'name': name,
+                    'label': label,
+                    'created_by': doc.get('created_by'),
+                    'created_at': created_at,
+                })
+            return records
+        except Exception as err:
+            app.logger.error(f"Error loading custom roles from MongoDB: {err}")
+    try:
+        if os.path.exists(CUSTOM_ROLES_FILE):
+            with open(CUSTOM_ROLES_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f) or {}
+            roles_data = data.get('roles', [])
+        else:
+            roles_data = []
+    except Exception as err:
+        app.logger.error(f"Error reading custom roles file: {err}")
+        roles_data = []
+
+    records = []
+    for entry in roles_data:
+        if isinstance(entry, dict):
+            name = normalize_role_key(entry.get('name') or entry.get('label'))
+            if not name:
+                continue
+            label = (entry.get('label') or prettify_role_label(name)).strip()
+            records.append({
+                'name': name,
+                'label': label,
+                'created_by': entry.get('created_by'),
+                'created_at': entry.get('created_at'),
+            })
+        elif isinstance(entry, str):
+            name = normalize_role_key(entry)
+            if name:
+                records.append({
+                    'name': name,
+                    'label': prettify_role_label(entry),
+                    'created_by': None,
+                    'created_at': None,
+                })
+    return records
+
+
+def _save_custom_role_records(records):
+    os.makedirs(os.path.dirname(CUSTOM_ROLES_FILE), exist_ok=True)
+    try:
+        with open(CUSTOM_ROLES_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'roles': records}, f, ensure_ascii=False, indent=2)
+    except Exception as err:
+        app.logger.error(f"Error saving custom roles file: {err}")
+        raise
+
+
+def get_custom_role_definitions():
+    records = _load_custom_role_records()
+    definitions = []
+    for record in records:
+        name = record.get('name')
+        if not name:
+            continue
+        definitions.append({
+            'name': name,
+            'label': (record.get('label') or prettify_role_label(name)).strip(),
+            'is_custom': True
+        })
+    return definitions
+
+
+def get_role_definitions():
+    roles = [dict(role) for role in DEFAULT_ROLE_DEFINITIONS]
+    roles.extend(get_custom_role_definitions())
+    return sorted(roles, key=lambda r: (r.get('is_custom', False), r.get('label', r.get('name', '')).lower()))
+
+
+def get_all_role_names():
+    return {role['name'] for role in get_role_definitions()}
+
+
+def add_custom_role_definition(role_name: str, label: str = None, created_by: str = None):
+    normalized = normalize_role_key(role_name)
+    if not normalized:
+        raise ValueError('Role name is required.')
+    if normalized in DEFAULT_ROLE_NAMES:
+        raise ValueError('Role already exists.')
+
+    existing_custom = {role['name'] for role in get_custom_role_definitions()}
+    if normalized in existing_custom:
+        raise ValueError('Role already exists.')
+
+    final_label = (label or prettify_role_label(normalized)).strip()
+    record = {
+        'name': normalized,
+        'label': final_label,
+        'created_by': created_by,
+        'created_at': datetime.utcnow()
+    }
+
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        try:
+            mongo_db.roles.create_index('name', unique=True)
+        except Exception:
+            pass
+        existing = mongo_db.roles.find_one({'name': normalized})
+        if existing:
+            raise ValueError('Role already exists.')
+        mongo_db.roles.insert_one(record)
+    else:
+        records = _load_custom_role_records()
+        records.append({
+            'name': record['name'],
+            'label': record['label'],
+            'created_by': created_by,
+            'created_at': record['created_at'].isoformat(),
+        })
+        _save_custom_role_records(records)
+
+    return {
+        'name': normalized,
+        'label': final_label,
+        'is_custom': True
+    }
+
+
+def can_assign_role(user, target_role: str) -> bool:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+
+    normalized_role = normalize_role_key(target_role)
+    user_role = (getattr(user, 'role', '') or '').strip().lower()
+
+    if normalized_role not in get_all_role_names():
+        return False
+
+    if normalized_role == SUPERADMIN_ROLE_NAME:
+        return user_role == SUPERADMIN_ROLE_NAME
+
+    custom_roles = {role['name'] for role in get_custom_role_definitions()}
+    if normalized_role in custom_roles:
+        return user_role == SUPERADMIN_ROLE_NAME
+
+    return user_role in {'admin', SUPERADMIN_ROLE_NAME}
+
+
+def is_custom_role(role_name: str) -> bool:
+    normalized = normalize_role_key(role_name)
+    return normalized in {role['name'] for role in get_custom_role_definitions()}
 
 
 def get_user_assigned_company_ids(user):
@@ -412,8 +606,8 @@ def admin_required(view_func):
         if not current_user.is_authenticated:
             return login_manager.unauthorized()
 
-        user_role = getattr(current_user, 'role', 'user')
-        if user_role != 'admin':
+        user_role = (getattr(current_user, 'role', 'user') or '').strip().lower()
+        if user_role not in {'admin', 'superadmin'}:
             return abort(403)
 
         return view_func(*args, **kwargs)
@@ -491,6 +685,28 @@ def admin_list_users():
     except Exception as e:
         app.logger.error(f"Error in admin_list_users: {e}")
         return jsonify({'success': False, 'error': 'Failed to load users'}), 500
+
+
+@app.route('/api/admin/users/me', methods=['GET'])
+@login_required
+def admin_get_current_user():
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+        user_data = serialize_admin_user({
+            '_id': getattr(current_user, 'id', None),
+            'username': getattr(current_user, 'username', ''),
+            'email': getattr(current_user, 'email', ''),
+            'role': getattr(current_user, 'role', 'user'),
+            'assigned_companies': getattr(current_user, 'assigned_companies', []) or [],
+            'created_at': getattr(current_user, 'created_at', datetime.utcnow()),
+            'updated_at': getattr(current_user, 'updated_at', datetime.utcnow()),
+        })
+        return jsonify({'success': True, 'user': user_data})
+    except Exception as err:
+        app.logger.error(f"Error getting current admin user: {err}")
+        return jsonify({'success': False, 'error': 'Failed to load current user'}), 500
 
 
 @app.route('/api/admin/users/<user_id>', methods=['GET'])
@@ -596,7 +812,10 @@ def admin_update_user(user_id):
                 if 'email' in data:
                     update_fields['email'] = data['email'].lower()
                 if 'role' in data:
-                    update_fields['role'] = data['role']
+                    role_value = normalize_role_key(data['role'])
+                    if not can_assign_role(current_user, role_value):
+                        return jsonify({'success': False, 'error': 'You are not allowed to assign that role'}), 403
+                    update_fields['role'] = role_value
                 if 'password' in data and data['password']:
                     update_fields['password_hash'] = generate_password_hash(data['password'])
                 if 'assigned_companies' in data:
@@ -624,7 +843,10 @@ def admin_update_user(user_id):
         if 'email' in data:
             user['email'] = data['email'].lower()
         if 'role' in data:
-            user['role'] = data['role']
+            role_value = normalize_role_key(data['role'])
+            if not can_assign_role(current_user, role_value):
+                return jsonify({'success': False, 'error': 'You are not allowed to assign that role'}), 403
+            user['role'] = role_value
         if 'password' in data and data['password']:
             user['password_hash'] = generate_password_hash(data['password'])
         if 'assigned_companies' in data:
@@ -1341,6 +1563,45 @@ def admin_get_active_sessions():
     except Exception as e:
         app.logger.error(f"Error getting active sessions: {e}")
         return jsonify({'success': False, 'error': 'Failed to load active sessions'}), 500
+
+
+@app.route('/api/admin/roles', methods=['GET'])
+@login_required
+def admin_list_roles():
+    try:
+        if not can_assign_role(current_user, 'admin') and not is_superadmin(current_user):
+            return jsonify({'success': False, 'error': 'Forbidden'}), 403
+
+        return jsonify({
+            'success': True,
+            'roles': get_role_definitions()
+        })
+    except Exception as err:
+        app.logger.error(f"Error listing roles: {err}")
+        return jsonify({'success': False, 'error': 'Failed to load roles'}), 500
+
+
+@app.route('/api/admin/roles', methods=['POST'])
+@login_required
+def admin_create_role():
+    if not is_superadmin(current_user):
+        return jsonify({'success': False, 'error': 'Only superadmins can create roles'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    raw_name = payload.get('name') or payload.get('role')
+    label = payload.get('label')
+
+    if not raw_name:
+        return jsonify({'success': False, 'error': 'Role name is required'}), 400
+
+    try:
+        definition = add_custom_role_definition(raw_name, label=label, created_by=str(current_user.id))
+        return jsonify({'success': True, 'role': definition})
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': str(ve)}), 400
+    except Exception as err:
+        app.logger.error(f"Error creating custom role: {err}")
+        return jsonify({'success': False, 'error': 'Failed to create role'}), 500
 
 
 @app.route('/api/admin/chart-data')
@@ -4055,30 +4316,14 @@ def index():
         if not current_user.is_authenticated:
             companies = []
         else:
-            assigned_ids = []
-            if hasattr(current_user, 'role') and current_user.role != 'admin':
-                refreshed_ids = None
-
-                if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
-                    try:
-                        mongo_db.command('ping')
-                        user_doc = mu_find_user_by_id(str(current_user.id))
-                        if user_doc and user_doc.get('assigned_companies'):
-                            refreshed_ids = normalize_assigned_companies(user_doc.get('assigned_companies'))
-                    except Exception as refresh_error:
-                        app.logger.error(f"Failed to refresh assigned companies from MongoDB: {refresh_error}")
-
-                if refreshed_ids is None:
-                    refreshed_ids = normalize_assigned_companies(getattr(current_user, 'assigned_companies', []))
-
-                current_user.assigned_companies = refreshed_ids
-                assigned_ids = [str(cid) for cid in refreshed_ids if cid]
-
+            assigned_ids = get_user_assigned_company_ids(current_user)
+            if assigned_ids is not None:
                 if assigned_ids:
-                    companies = [company for company in companies if str(company.get('id')) in assigned_ids]
+                    assigned_set = {str(cid) for cid in assigned_ids}
+                    companies = [company for company in companies if str(company.get('id')) in assigned_set]
                 else:
                     companies = []
-        
+
         # Ensure companies is a list before passing to template
         if not isinstance(companies, list):
             companies = []
@@ -4281,12 +4526,20 @@ def api_get_companies():
         companies = load_companies_data()  # Use the helper function directly
         if not companies:
             return jsonify({'error': 'No companies found'}), 404
-            
+
         # Convert to list of dicts if it's a dict
         if isinstance(companies, dict):
-            companies = [{'id': k, 'name': v.get('name'), 'email': v.get('email')} 
-                        for k, v in companies.items()]
-            
+            companies = [{'id': k, 'name': v.get('name'), 'email': v.get('email')}
+                         for k, v in companies.items()]
+
+        assigned_ids = get_user_assigned_company_ids(current_user)
+        if assigned_ids is not None:
+            if assigned_ids:
+                assigned_set = {str(cid) for cid in assigned_ids}
+                companies = [company for company in companies if str(company.get('id')) in assigned_set]
+            else:
+                companies = []
+
         return jsonify(companies)
     except Exception as e:
         app.logger.error(f"Error getting companies: {str(e)}")

@@ -384,13 +384,39 @@
                 `;
                 
                 quotation.products.forEach(product => {
+                    const productType = String(product.type || product.product_type || '').toLowerCase();
                     const baseSize = product.size || (
                         product.length && product.width
                             ? `${product.length} x ${product.width} ${product.unit || ''}`.trim()
                             : 'N/A'
                     );
+                    const formatLabel = product.format_label || product.formatLabel || product.format;
+                    const packSizeRaw = product.pack_size_litre ?? product.pack_size_liter ?? product.pack_size ?? product.packSizeLitre;
+                    let packSizeText = '';
+                    if (packSizeRaw !== undefined && packSizeRaw !== null && packSizeRaw !== '') {
+                        const packSizeNumber = Number(packSizeRaw);
+                        if (Number.isFinite(packSizeNumber) && packSizeNumber > 0) {
+                            const formattedPack = packSizeNumber % 1 === 0 ? packSizeNumber : packSizeNumber.toFixed(2);
+                            packSizeText = `${formattedPack}L pack`;
+                        } else if (typeof packSizeRaw === 'string') {
+                            const trimmed = packSizeRaw.trim();
+                            if (trimmed) {
+                                packSizeText = trimmed;
+                            }
+                        }
+                    }
                     const thicknessRaw = product.thickness ?? (product.calculations && product.calculations.thickness);
                     let size = baseSize || 'N/A';
+                    if (['chemical', 'maintenance'].includes(productType)) {
+                        const parts = [];
+                        if (formatLabel) {
+                            parts.push(formatLabel);
+                        }
+                        if (packSizeText && (!formatLabel || packSizeText.toLowerCase() !== formatLabel.toLowerCase())) {
+                            parts.push(packSizeText);
+                        }
+                        size = parts.length ? parts.join(' • ') : (baseSize || 'N/A');
+                    }
                     if (thicknessRaw) {
                         const thicknessStr = thicknessRaw.toString();
                         const hasUnit = /[a-zA-Z]/.test(thicknessStr);
