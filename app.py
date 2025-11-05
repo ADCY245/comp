@@ -163,6 +163,7 @@ def company_required(view_func):
 
 
 EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin', 'sales_admin'}
+COMPANY_FULL_ACCESS_ROLES = {'admin', 'superadmin'}
 RESTRICTED_BLANKET_PATTERNS = [
     re.compile(r'conti\s*sava', re.IGNORECASE),
     re.compile(r'web\s*x\s*press\s*g3', re.IGNORECASE),
@@ -209,6 +210,35 @@ def has_extended_discount_access(user) -> bool:
 
 def get_restricted_discount_cap(user) -> float:
     return 10.0 if has_extended_discount_access(user) else 5.0
+
+
+def get_user_assigned_company_ids(user):
+    """Return list of company IDs the user may access.
+
+    Returns None if the user has full access (admin-like roles)."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return []
+
+    role = (getattr(user, 'role', '') or '').strip().lower()
+    if role in COMPANY_FULL_ACCESS_ROLES:
+        return None
+
+    assigned_ids = None
+
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
+        try:
+            mongo_db.command('ping')
+            user_doc = mu_find_user_by_id(str(user.id))
+            if user_doc and user_doc.get('assigned_companies'):
+                assigned_ids = normalize_assigned_companies(user_doc.get('assigned_companies'))
+        except Exception as refresh_error:
+            app.logger.error(f"Failed to refresh assigned companies from MongoDB: {refresh_error}")
+
+    if assigned_ids is None:
+        assigned_ids = normalize_assigned_companies(getattr(user, 'assigned_companies', []))
+
+    user.assigned_companies = assigned_ids
+    return [str(cid) for cid in assigned_ids if cid]
 
 # -----------------------------------------------------------------------
 
