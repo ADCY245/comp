@@ -13,8 +13,6 @@ import uuid
 import hashlib
 import secrets
 import re
-from functools import wraps
-from flask_login import current_user
 import random
 import time
 import threading
@@ -162,6 +160,55 @@ def company_required(view_func):
         flash('Please select a company first.', 'warning')
         return redirect(url_for('company_selection'))
     return wrapped_view
+
+
+EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin'}
+RESTRICTED_BLANKET_PATTERNS = [
+    re.compile(r'conti\s*sava', re.IGNORECASE),
+    re.compile(r'web\s*x\s*press\s*g3', re.IGNORECASE),
+]
+
+
+def _extended_discount_user_set():
+    raw = os.getenv('SAVA_EXTENDED_DISCOUNT_USERS', '')
+    return {
+        entry.strip().lower()
+        for entry in raw.split(',')
+        if entry and entry.strip()
+    }
+
+
+def is_restricted_blanket(name: str) -> bool:
+    if not name:
+        return False
+    for pattern in RESTRICTED_BLANKET_PATTERNS:
+        if pattern.search(str(name)):
+            return True
+    return False
+
+
+def has_extended_discount_access(user) -> bool:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+
+    role = (getattr(user, 'role', '') or '').strip().lower()
+    if role in EXTENDED_DISCOUNT_ADMIN_ROLES:
+        return True
+
+    extended_users = _extended_discount_user_set()
+    email = (getattr(user, 'email', '') or '').strip().lower()
+    if email and email in extended_users:
+        return True
+
+    user_id = str(getattr(user, 'id', '') or '').strip().lower()
+    if user_id and user_id in extended_users:
+        return True
+
+    return False
+
+
+def get_restricted_discount_cap(user) -> float:
+    return 10.0 if has_extended_discount_access(user) else 5.0
 
 # -----------------------------------------------------------------------
 
@@ -3013,6 +3060,11 @@ def add_to_cart():
             bar_price = float(data.get('bar_price', 0))
             quantity = int(data.get('quantity', 1))
             discount_percent = float(data.get('discount_percent', 0))
+            blanket_name = data.get('name') or data.get('blanket_name')
+            if is_restricted_blanket(blanket_name):
+                cap = get_restricted_discount_cap(current_user)
+                if discount_percent > cap:
+                    discount_percent = cap
             gst_percent = float(data.get('gst_percent', 18))
             
             # Calculate prices
@@ -3668,7 +3720,11 @@ def update_cart_discount():
                 
                 # Recalculate prices based on product type
                 if item.get('type') == 'blanket':
-                    # Recalculate blanket prices
+                    blanket_name = item.get('blanket_name') or item.get('name')
+                    if is_restricted_blanket(blanket_name):
+                        cap = get_restricted_discount_cap(current_user)
+                        if discount_percent > cap:
+                            discount_percent = cap
                     base_price = item.get('base_price', 0)
                     bar_price = item.get('bar_price', 0)
                     quantity = item.get('quantity', 1)
@@ -3731,7 +3787,8 @@ def update_cart_discount():
                 'success': True,
                 'message': 'Cart discount updated',
                 'cart_count': len(products),
-                'updated_item': updated_item
+                'updated_item': updated_item,
+                'applied_discount_percent': discount_percent
             })
         else:
             return jsonify({
@@ -6765,10 +6822,14 @@ def blankets():
     app.logger.info(f"Rendering blankets with company: {company_name}, email: {company_email}")
     
     # Create response and set company data in the session cookie
+    extended_discount_allowed = has_extended_discount_access(current_user)
+
     response = make_response(render_template('products/blankets/blankets.html',
+                         current_discount_cap=get_restricted_discount_cap(current_user),
                          company_name=company_name,
                          company_email=company_email,
                          company_id=company_id,
+                         extended_discount_allowed=extended_discount_allowed,
                          current_company={
                              'id': company_id,
                              'name': company_name,

@@ -1,15 +1,38 @@
 var machineData = [], blanketData = [], blanketCategoriesData = {}, barData = [], discountData = [], thicknessData = [];
 var fullDiscountOptions = [];
+var discountPrivileges = (function resolveDiscountPrivileges() {
+  if (typeof window !== 'undefined' && window.__discountPrivileges) {
+    return window.__discountPrivileges;
+  }
+
+  if (typeof document !== 'undefined') {
+    var rootEl = document.getElementById('blanketsPageRoot');
+    if (rootEl && rootEl.dataset && rootEl.dataset.discountPrivileges) {
+      try {
+        return JSON.parse(rootEl.dataset.discountPrivileges);
+      } catch (error) {
+        console.warn('[SAVA] Failed to parse discount privileges dataset', error);
+      }
+    }
+  }
+
+  return {};
+})();
 var basePrice = typeof basePrice !== 'undefined' ? basePrice : 0;
 var priceWithBar = typeof priceWithBar !== 'undefined' ? priceWithBar : 0;
 var finalDiscountedPrice = typeof finalDiscountedPrice !== 'undefined' ? finalDiscountedPrice : 0;
 var currentDiscount = typeof currentDiscount !== 'undefined' ? currentDiscount : 0;
 var currentBarRate = typeof currentBarRate !== 'undefined' ? currentBarRate : 0;
 
-function generateSavaDiscountOptions() {
+function generateSavaDiscountOptions(maxCap = 5) {
   const options = [];
-  for (let step = 0; step <= 10; step += 1) {
-    options.push(Number((step * 0.5).toFixed(2)));
+  const capped = Number(maxCap);
+  const stepCount = Number.isFinite(capped) && capped > 0 ? Math.round(capped / 0.5) : 10;
+  for (let step = 0; step <= stepCount; step += 1) {
+    const value = Number((step * 0.5).toFixed(2));
+    if (value <= capped + 1e-9) {
+      options.push(value);
+    }
   }
   return options;
 }
@@ -25,6 +48,14 @@ function generateDefaultDiscountOptions() {
 function isRestrictedDiscountBlanket(name = '') {
   const normalized = String(name).toLowerCase();
   return /conti\s*sava/.test(normalized) || /web\s*x\s*press\s*g3/.test(normalized);
+}
+
+function getRestrictedDiscountCap() {
+  const cap = discountPrivileges && Number(discountPrivileges.restricted_cap);
+  if (!Number.isNaN(cap) && cap > 0) {
+    return cap;
+  }
+  return discountPrivileges && discountPrivileges.extended_discount_allowed ? 10 : 5;
 }
 
 function populateDiscountSelectOptions(selectEl, options = [], currentValue = '') {
@@ -61,8 +92,9 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   const restrictionType = isRestricted ? (/(conti\s*sava)/i.test(blanketName || '') ? 'conti_sava' : 'web_x_press_g3') : 'none';
   console.log('[SAVA] apply restriction', { selectedId, blanketName, isRestricted, restrictionType, currentValue: discountSelectEl.value });
   const currentValue = discountSelectEl.value;
+  const restrictedCap = getRestrictedDiscountCap();
   const allowedOptions = isRestricted
-    ? generateSavaDiscountOptions()
+    ? generateSavaDiscountOptions(restrictedCap)
     : (fullDiscountOptions.length ? fullDiscountOptions : generateDefaultDiscountOptions());
   console.log('[SAVA] allowed options', allowedOptions);
 
@@ -87,10 +119,11 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
 
   // Observe external mutations that might add back high discounts
   if (isRestricted) {
+    discountSelectEl.__restrictedCap = restrictedCap;
     // Clean any high options immediately before attaching observer
     Array.from(discountSelectEl.options).forEach(opt => {
       const num = parseFloat(opt.value || '');
-      if (!Number.isNaN(num) && num > 5) {
+      if (!Number.isNaN(num) && num > restrictedCap) {
         opt.remove();
       }
     });
@@ -98,9 +131,10 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
     if (!discountSelectEl.__savaObserver) {
     const observer = new MutationObserver(() => {
       console.log('[SAVA] mutation observed, pruning');
+      const cap = typeof discountSelectEl.__restrictedCap === 'number' ? discountSelectEl.__restrictedCap : 5;
       Array.from(discountSelectEl.options).forEach(opt=>{
         const num = parseFloat(opt.value||'');
-        if(!Number.isNaN(num) && num>5){ opt.remove(); }
+        if(!Number.isNaN(num) && num>cap){ opt.remove(); }
       });
       console.log('[SAVA] post-prune options', Array.from(discountSelectEl.options).map(o=>o.value));
     });
@@ -110,9 +144,10 @@ function applySavaDiscountRestriction(blanketSelectEl, discountSelectEl) {
   } else if (!isRestricted && discountSelectEl.__savaObserver) {
     discountSelectEl.__savaObserver.disconnect();
     discountSelectEl.__savaObserver = null;
+    discountSelectEl.__restrictedCap = null;
   }
 
-  if (isRestricted && parseFloat(discountSelectEl.value || '0') > 5) {
+  if (isRestricted && parseFloat(discountSelectEl.value || '0') > restrictedCap) {
     discountSelectEl.value = '';
     discountSelectEl.dispatchEvent(new Event('change'));
   }

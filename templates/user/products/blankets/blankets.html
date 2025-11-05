@@ -3,15 +3,14 @@
 {% block title %}Blanket Selection - Product Calculator{% endblock %}
 
 {% block content %}
-  <div class="container">
-    <div id="blanketCompanySummary" class="mb-4"></div>
-  </div>
+  {% set discount_privileges = {
+    'extended_discount_allowed': extended_discount_allowed,
+    'restricted_cap': current_discount_cap|default(5)|float
+  } %}
 
-  <h2>Blanket Selection</h2>
-
-  <div class="mb-3">
-    <div class="d-flex align-items-end gap-2">
-      <div class="flex-grow-1">
+  <div id="blanketsPageRoot" data-discount-privileges='{{ discount_privileges|tojson|e }}'>
+    <div class="container">
+      <div id="blanketCompanySummary" class="mb-4"></div>
         <label for="machineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
         <select id="machineSelect" class="form-select">
           <option value="">-- Select Machine --</option>
@@ -134,6 +133,9 @@
   </div>
 
   <!-- Scripts -->
+  <script>
+    window.__discountPrivileges = {{ discount_privileges|tojson }};
+  </script>
   <script src="{{ url_for('static', filename='user/js/blankets.js') }}"></script>
   <script src="{{ url_for('static', filename='user/js/cart.js') }}"></script>
   <script>
@@ -142,4 +144,5 @@
       updateCartCount();
     });
   </script>
+  </div>
 {% endblock %}
