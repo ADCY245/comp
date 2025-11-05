@@ -149,6 +149,17 @@ button.admin-btn,
   letter-spacing: 0.03em;
 }
 
+.admin-navbar .navbar-brand {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.admin-navbar .navbar-brand span {
+  color: var(--color-gold);
+}
+
 .admin-badge.gold {
   background: rgba(173, 151, 79, 0.25);
   color: var(--color-gold);
