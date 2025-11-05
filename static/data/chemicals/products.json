@@ -13,8 +13,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-cs-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-cs-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-cs-10l", "label": "10L Can", "size_litre": 10 },
             { "id": "wash-cs-25l", "label": "25L Can", "size_litre": 25 },
             { "id": "wash-cs-200l", "label": "200L Drum", "size_litre": 200 }
           ]
@@ -26,8 +26,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-fc-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-fc-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-fc-10l", "label": "10L Can", "size_litre": 10 },
             { "id": "wash-fc-25l", "label": "25L Can", "size_litre": 25 },
             { "id": "wash-fc-200l", "label": "200L Drum", "size_litre": 200 }
           ]
@@ -39,8 +39,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-nw-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-nw-5l", "label": "5L Bottle", "size_litre": 5 },
+            { "id": "wash-nw-10l", "label": "10L Can", "size_litre": 10 },
             { "id": "wash-nw-25l", "label": "25L Can", "size_litre": 25 },
             { "id": "wash-nw-200l", "label": "200L Drum", "size_litre": 200 }
           ]
@@ -52,23 +52,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-gp-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "wash-gp-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "wash-gp-25l", "label": "25L Can", "size_litre": 25 },
             { "id": "wash-gp-200l", "label": "200L Drum", "size_litre": 200 }
-          ]
-        },
-        {
-          "id": "wash-auto",
-          "name": "WASH AUTO",
-          "description": "Conventional wash for automated cleaning systems.",
-          "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
-          "formats": [
-            { "id": "wash-auto-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "wash-auto-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-auto-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-auto-200l", "label": "200L Drum", "size_litre": 200 }
           ]
         },
         {
@@ -78,10 +63,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-combi-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-combi-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-combi-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-combi-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "wash-combi-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -91,10 +74,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-uv-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-uv-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-uv-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-uv-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "wash-uv-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -104,23 +85,8 @@
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
-            { "id": "wash-uv-s-plus-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "wash-uv-s-plus-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-uv-s-plus-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-uv-s-plus-200l", "label": "200L Drum", "size_litre": 200 }
-          ]
-        },
-        {
-          "id": "wash-hsw",
-          "name": "WASH HSW",
-          "description": "Premium wash for high speed litho sheet-fed & web presses.",
-          "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
-          "formats": [
-            { "id": "wash-hsw-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "wash-hsw-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "wash-hsw-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "wash-hsw-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "wash-uv-s-plus-25l", "label": "25L Can", "size_litre": 25 }
           ]
         }
       ]
@@ -138,10 +104,8 @@
           "icon": "fas fa-flask",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-az-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-az-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-az-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-az-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-az-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -151,10 +115,8 @@
           "icon": "fas fa-flask",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-ap-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-ap-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-ap-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-ap-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-ap-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -164,10 +126,8 @@
           "icon": "fas fa-vial",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-chem-rol-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-chem-rol-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-chem-rol-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-chem-rol-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-chem-rol-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -177,10 +137,8 @@
           "icon": "fas fa-tint",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-hf-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-hf-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-hf-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-hf-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-hf-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -190,10 +148,8 @@
           "icon": "fas fa-tint",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-hf-a-plus-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-hf-a-plus-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-hf-a-plus-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-hf-a-plus-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "fount-hf-a-plus-25l", "label": "25L Can", "size_litre": 25 }
           ]
         },
         {
@@ -203,24 +159,11 @@
           "icon": "fas fa-water",
           "price_per_litre": null,
           "formats": [
-            { "id": "fount-nw-1l", "label": "1L Bottle", "size_litre": 1 },
             { "id": "fount-nw-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-nw-25l", "label": "25L Can", "size_litre": 25 },
             { "id": "fount-nw-200l", "label": "200L Drum", "size_litre": 200 }
           ]
-        },
-        {
-          "id": "fount-tr",
-          "name": "FOUNT TR",
-          "description": "Thermal plate friendly fount concentrate with corrosion inhibitors.",
-          "icon": "fas fa-water",
-          "price_per_litre": null,
-          "formats": [
-            { "id": "fount-tr-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "fount-tr-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "fount-tr-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "fount-tr-200l", "label": "200L Drum", "size_litre": 200 }
-          ]
+ 
         }
       ]
     },
@@ -237,10 +180,7 @@
           "icon": "fas fa-atom",
           "price_per_litre": null,
           "formats": [
-            { "id": "plate-alu-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "plate-alu-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "plate-alu-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "plate-alu-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "plate-alu-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         },
         {
@@ -250,10 +190,7 @@
           "icon": "fas fa-spray-can-sparkles",
           "price_per_litre": null,
           "formats": [
-            { "id": "plate-alu-clean-uv-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "plate-alu-clean-uv-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "plate-alu-clean-uv-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "plate-alu-clean-uv-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "plate-alu-clean-uv-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         }
       ]
@@ -271,10 +208,7 @@
           "icon": "fas fa-cogs",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-calx-de-glazer-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-calx-de-glazer-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-calx-de-glazer-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-calx-de-glazer-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-calx-de-glazer-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         },
         {
@@ -284,10 +218,7 @@
           "icon": "fas fa-sync",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-roll-o-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-roll-o-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-roll-o-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-roll-o-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-roll-o-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         },
         {
@@ -297,10 +228,7 @@
           "icon": "fas fa-pump-soap",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-mtr-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-mtr-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-mtr-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-mtr-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-mtr-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         },
         {
@@ -310,10 +238,8 @@
           "icon": "fas fa-grip-lines-vertical",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-anilox-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-anilox-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-anilox-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-anilox-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-anilox-clean-5kg", "label": "5 kg Pack", "size_litre": 5 },
+            { "id": "maint-anilox-clean-25kg", "label": "25 kg Pack", "size_litre": 25 }
           ]
         },
         {
@@ -323,10 +249,7 @@
           "icon": "fas fa-water",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-fs-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-fs-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-fs-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-fs-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-fs-clean-25kg", "label": "25 kg Pack", "size_litre": 25 }
           ]
         },
         {
@@ -336,10 +259,7 @@
           "icon": "fas fa-eraser",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-blanket-clean-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-blanket-clean-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-blanket-clean-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-blanket-clean-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-blanket-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         },
         {
@@ -349,10 +269,7 @@
           "icon": "fas fa-lightbulb",
           "price_per_litre": null,
           "formats": [
-            { "id": "maint-blanket-clean-uv-1l", "label": "1L Bottle", "size_litre": 1 },
-            { "id": "maint-blanket-clean-uv-5l", "label": "5L Bottle", "size_litre": 5 },
-            { "id": "maint-blanket-clean-uv-25l", "label": "25L Can", "size_litre": 25 },
-            { "id": "maint-blanket-clean-uv-200l", "label": "200L Drum", "size_litre": 200 }
+            { "id": "maint-blanket-clean-uv-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
         }
       ]
