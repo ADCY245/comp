@@ -167,6 +167,7 @@
                                     <select class="form-select" id="role" required onchange="toggleAssignmentSections()">
                                         <option value="">Select Role</option>
                                         <option value="admin">Admin</option>
+                                        <option value="sales_admin">Sales Admin</option>
                                         <option value="user">User</option>
                                     </select>
                                 </div>
@@ -461,6 +462,8 @@ function getRoleBadgeColor(role) {
             return 'success';   // green
         case 'superadmin':
             return 'danger';    // red
+        case 'sales_admin':
+            return 'warning';
         case 'user':
         default:
             return 'secondary'; // gray

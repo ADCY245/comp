@@ -162,7 +162,7 @@ def company_required(view_func):
     return wrapped_view
 
 
-EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin'}
+EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin', 'sales_admin'}
 RESTRICTED_BLANKET_PATTERNS = [
     re.compile(r'conti\s*sava', re.IGNORECASE),
     re.compile(r'web\s*x\s*press\s*g3', re.IGNORECASE),
