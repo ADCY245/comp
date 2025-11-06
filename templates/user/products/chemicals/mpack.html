@@ -64,7 +64,7 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
     }
 
     .mpack-thickness-row {
@@ -78,6 +78,17 @@
     .mpack-pricing-controls .form-control {
       width: 100%;
       max-width: 220px;
+    }
+
+    .mpack-thickness-primary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 220px;
+    }
+
+    .mpack-thickness-primary .form-text {
+      margin-bottom: 0.25rem;
     }
 
     .mpack-standard-column {
@@ -306,14 +317,31 @@
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
       </div>
       <div class="col-md-6">
-        <div class="mpack-pricing-controls mt-4" id="mpackPricingControls">
+        <div class="mpack-pricing-controls mt-2" id="mpackPricingControls">
           <div class="mpack-thickness-row">
-            <div>
-              <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
-              <select id="thicknessSelect" class="form-select" disabled>
-                <option value="">-- Select Thickness --</option>
-              </select>
-              <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
+            <div class="mpack-thickness-primary">
+              <div>
+                <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
+                <select id="thicknessSelect" class="form-select" disabled>
+                  <option value="">-- Select Thickness --</option>
+                </select>
+                <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
+              </div>
+              <div>
+                <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
+                <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
+              </div>
+              <div>
+                <label for="discountSelect" class="form-label">Discount (%)</label>
+                <select id="discountSelect" class="form-select">
+                  <option value="">-- Select Discount --</option>
+                </select>
+              </div>
+              <div>
+                <label for="gstSelect" class="form-label">GST Rate</label>
+                <input type="text" id="gstDisplay" class="form-control" value="18%" disabled>
+                <input type="hidden" id="gstSelect" value="18">
+              </div>
             </div>
             <div class="mpack-standard-column">
               <div class="mpack-standard-sizes">
@@ -329,6 +357,7 @@
               <div class="mpack-standard-note">Cut from size (roll)</div>
               <label for="cutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
               <select id="cutFromSizeSelect" class="form-select" disabled>
+                <option value="" selected>----</option>
                 <option value="795">795 mm</option>
                 <option value="1150">1150 mm</option>
                 <option value="1240">1240 mm</option>
@@ -336,21 +365,6 @@
                 <option value="1540">1540 mm</option>
               </select>
             </div>
-          </div>
-          <div>
-            <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
-            <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
-          </div>
-          <div>
-            <label for="discountSelect" class="form-label">Discount (%)</label>
-            <select id="discountSelect" class="form-select">
-              <option value="">-- Select Discount --</option>
-            </select>
-          </div>
-          <div>
-            <label for="gstSelect" class="form-label">GST Rate</label>
-            <input type="text" id="gstDisplay" class="form-control" value="18%" disabled>
-            <input type="hidden" id="gstSelect" value="18">
           </div>
         </div>
       </div>
