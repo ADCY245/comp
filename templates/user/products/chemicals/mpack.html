@@ -78,11 +78,17 @@
       font-size: 1rem;
       font-weight: 600;
       color: #0f172a;
-      background: #f1f5f9;
-      border: 1px solid #dbe3f1;
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      max-width: 320px;
+      align-self: flex-start;
+    }
+
+    .mpack-standard-sizes ol {
+      margin: 0.5rem 0 0;
+      padding-left: 1.25rem;
+      font-weight: 500;
+    }
+
+    .mpack-standard-sizes li + li {
+      margin-top: 0.35rem;
     }
 
     .mpack-pricing-box {
@@ -264,7 +270,14 @@
         <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
         <div class="mpack-pricing-controls mt-4" id="mpackPricingControls">
           <div class="mpack-standard-sizes">
-            These are our standard around sizes: <span class="fw-bold">795, 1150, 1240, 1320, 1540</span>
+            <p class="mb-2">These are our standard around sizes:</p>
+            <ol class="mb-0">
+              <li>795</li>
+              <li>1150</li>
+              <li>1240</li>
+              <li>1320</li>
+              <li>1540</li>
+            </ol>
           </div>
           <div>
             <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
