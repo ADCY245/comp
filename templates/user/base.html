@@ -142,25 +142,32 @@
                             <i class="bi bi-brightness-high"></i> Blankets
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="sprayPowderLink" href="{{ url_for('spray_powder') }}" data-route="{{ url_for('spray_powder') }}">
-                            <i class="bi bi-cloud-fog2"></i> Spray Powder
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="otherProductsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-app-indicator"></i> Other Products
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="creasingRuleLink" href="{{ url_for('creasing_rule') }}" data-route="{{ url_for('creasing_rule') }}">
-                            <i class="bi bi-diagram-3"></i> Creasing Rule
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="cuttingRuleLink" href="{{ url_for('cutting_rule') }}" data-route="{{ url_for('cutting_rule') }}">
-                            <i class="bi bi-scissors"></i> Cutting Rule
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="creasingMatrixLink" href="{{ url_for('creasing_matrix') }}" data-route="{{ url_for('creasing_matrix') }}">
-                            <i class="bi bi-grid-3x3-gap"></i> Creasing Matrix
-                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="otherProductsDropdown">
+                            <li>
+                                <a class="dropdown-item" id="sprayPowderLink" href="{{ url_for('spray_powder') }}" data-route="{{ url_for('spray_powder') }}">
+                                    <i class="bi bi-cloud-fog2 me-2"></i>Spray Powder
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="creasingRuleLink" href="{{ url_for('creasing_rule') }}" data-route="{{ url_for('creasing_rule') }}">
+                                    <i class="bi bi-diagram-3 me-2"></i>Creasing Rule
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="cuttingRuleLink" href="{{ url_for('cutting_rule') }}" data-route="{{ url_for('cutting_rule') }}">
+                                    <i class="bi bi-scissors me-2"></i>Cutting Rule
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="creasingMatrixLink" href="{{ url_for('creasing_matrix') }}" data-route="{{ url_for('creasing_matrix') }}">
+                                    <i class="bi bi-grid-3x3-gap me-2"></i>Creasing Matrix
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
@@ -410,7 +417,11 @@
         // Map of route patterns to navigation item IDs
         const routeMap = {
             'mpacks': 'mpacksLink',
-            'blankets': 'blanketsLink'
+            'blankets': 'blanketsLink',
+            'spray-powder': 'sprayPowderLink',
+            'creasing-rule': 'creasingRuleLink',
+            'cutting-rule': 'cuttingRuleLink',
+            'creasing-matrix': 'creasingMatrixLink'
         };
         
         // Check if current path matches any route pattern
@@ -434,6 +445,10 @@
             
             if (currentPath === linkPath) {
                 link.classList.add('active');
+                const dropdownToggle = link.closest('.dropdown')?.querySelector('.dropdown-toggle');
+                if (dropdownToggle) {
+                    dropdownToggle.classList.add('active');
+                }
                 break; // Only highlight one item
             }
         }
@@ -826,6 +841,21 @@
         
         // Initialize all Bootstrap dropdowns
         initializeDropdowns();
+
+        // Enable hover for Other Products dropdown
+        const otherProductsToggle = document.getElementById('otherProductsDropdown');
+        if (otherProductsToggle) {
+            const otherDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(otherProductsToggle);
+            const otherDropdown = otherProductsToggle.closest('.dropdown');
+            if (otherDropdown) {
+                otherDropdown.addEventListener('mouseenter', () => {
+                    otherDropdownInstance.show();
+                });
+                otherDropdown.addEventListener('mouseleave', () => {
+                    otherDropdownInstance.hide();
+                });
+            }
+        }
         
         // Explicit handler for user profile dropdown (ensures it works on all pages)
         const userDropdownToggle = document.getElementById('userDropdown');
