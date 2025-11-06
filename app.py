@@ -7000,6 +7000,206 @@ def mpacks():
     app.logger.info("Template rendered successfully")
     return response
 
+
+@app.route('/spray-powder')
+@login_required
+@company_required
+def spray_powder():
+    company_id = request.args.get('company_id')
+    company_name = ''
+    company_email = ''
+
+    if company_id:
+        company_name = get_company_name_by_id(company_id)
+        company_email = get_company_email_by_id(company_id)
+
+        session['selected_company'] = {
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        session['company_id'] = company_id
+        session.modified = True
+    else:
+        selected_company = session.get('selected_company', {})
+        company_name = selected_company.get('name') or session.get('company_name')
+        company_email = selected_company.get('email') or session.get('company_email')
+        company_id = selected_company.get('id') or session.get('company_id')
+
+        if not company_name and hasattr(current_user, 'company_name'):
+            company_name = current_user.company_name
+        if not company_email and hasattr(current_user, 'company_email'):
+            company_email = current_user.company_email
+        if not company_id and hasattr(current_user, 'company_id'):
+            company_id = current_user.company_id
+
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    session['company_id'] = company_id
+
+    app.logger.info(f"Rendering spray powder with company: {company_name}, email: {company_email}")
+
+    return render_template(
+        'products/spray_powder/spray_powder.html',
+        current_company={
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+    )
+
+
+@app.route('/creasing-rule')
+@login_required
+@company_required
+def creasing_rule():
+    company_id = request.args.get('company_id')
+    company_name = ''
+    company_email = ''
+
+    if company_id:
+        company_name = get_company_name_by_id(company_id)
+        company_email = get_company_email_by_id(company_id)
+
+        session['selected_company'] = {
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        session['company_id'] = company_id
+        session.modified = True
+    else:
+        selected_company = session.get('selected_company', {})
+        company_name = selected_company.get('name') or session.get('company_name')
+        company_email = selected_company.get('email') or session.get('company_email')
+        company_id = selected_company.get('id') or session.get('company_id')
+
+        if not company_name and hasattr(current_user, 'company_name'):
+            company_name = current_user.company_name
+        if not company_email and hasattr(current_user, 'company_email'):
+            company_email = current_user.company_email
+        if not company_id and hasattr(current_user, 'company_id'):
+            company_id = current_user.company_id
+
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    session['company_id'] = company_id
+
+    app.logger.info(f"Rendering creasing rule with company: {company_name}, email: {company_email}")
+
+    return render_template(
+        'products/creasing_rule/creasing_rule.html',
+        current_company={
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+    )
+
+
+@app.route('/cutting-rule')
+@login_required
+@company_required
+def cutting_rule():
+    company_id = request.args.get('company_id')
+    company_name = ''
+    company_email = ''
+
+    if company_id:
+        company_name = get_company_name_by_id(company_id)
+        company_email = get_company_email_by_id(company_id)
+
+        session['selected_company'] = {
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        session['company_id'] = company_id
+        session.modified = True
+    else:
+        selected_company = session.get('selected_company', {})
+        company_name = selected_company.get('name') or session.get('company_name')
+        company_email = selected_company.get('email') or session.get('company_email')
+        company_id = selected_company.get('id') or session.get('company_id')
+
+        if not company_name and hasattr(current_user, 'company_name'):
+            company_name = current_user.company_name
+        if not company_email and hasattr(current_user, 'company_email'):
+            company_email = current_user.company_email
+        if not company_id and hasattr(current_user, 'company_id'):
+            company_id = current_user.company_id
+
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    session['company_id'] = company_id
+
+    app.logger.info(f"Rendering cutting rule with company: {company_name}, email: {company_email}")
+
+    return render_template(
+        'products/cutting_rule/cutting_rule.html',
+        current_company={
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+    )
+
+
+@app.route('/creasing-matrix')
+@login_required
+@company_required
+def creasing_matrix():
+    company_id = request.args.get('company_id')
+    company_name = ''
+    company_email = ''
+
+    if company_id:
+        company_name = get_company_name_by_id(company_id)
+        company_email = get_company_email_by_id(company_id)
+
+        session['selected_company'] = {
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+        session['company_name'] = company_name
+        session['company_email'] = company_email
+        session['company_id'] = company_id
+        session.modified = True
+    else:
+        selected_company = session.get('selected_company', {})
+        company_name = selected_company.get('name') or session.get('company_name')
+        company_email = selected_company.get('email') or session.get('company_email')
+        company_id = selected_company.get('id') or session.get('company_id')
+
+        if not company_name and hasattr(current_user, 'company_name'):
+            company_name = current_user.company_name
+        if not company_email and hasattr(current_user, 'company_email'):
+            company_email = current_user.company_email
+        if not company_id and hasattr(current_user, 'company_id'):
+            company_id = current_user.company_id
+
+    session['company_name'] = company_name
+    session['company_email'] = company_email
+    session['company_id'] = company_id
+
+    app.logger.info(f"Rendering creasing matrix with company: {company_name}, email: {company_email}")
+
+    return render_template(
+        'products/creasing_matrix/creasing_matrix.html',
+        current_company={
+            'id': company_id,
+            'name': company_name,
+            'email': company_email
+        }
+    )
+
 @app.route('/chemicals-maintenance')
 @login_required
 @company_required

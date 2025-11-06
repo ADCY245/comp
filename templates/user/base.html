@@ -143,6 +143,26 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" id="sprayPowderLink" href="{{ url_for('spray_powder') }}" data-route="{{ url_for('spray_powder') }}">
+                            <i class="bi bi-cloud-fog2"></i> Spray Powder
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="creasingRuleLink" href="{{ url_for('creasing_rule') }}" data-route="{{ url_for('creasing_rule') }}">
+                            <i class="bi bi-diagram-3"></i> Creasing Rule
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="cuttingRuleLink" href="{{ url_for('cutting_rule') }}" data-route="{{ url_for('cutting_rule') }}">
+                            <i class="bi bi-scissors"></i> Cutting Rule
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="creasingMatrixLink" href="{{ url_for('creasing_matrix') }}" data-route="{{ url_for('creasing_matrix') }}">
+                            <i class="bi bi-grid-3x3-gap"></i> Creasing Matrix
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
                             <svg class="icon-barrel icon-barrel--single" width="28" height="28" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <ellipse cx="24" cy="9" rx="11" ry="5" />
@@ -152,11 +172,6 @@
                                 <line x1="13" y1="23" x2="35" y2="23" />
                                 <line x1="13" y1="30" x2="35" y2="30" />
                             </svg> Chemicals &amp; Maintenance
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
-                            <i class="bi bi-basket"></i> Cart
                         </a>
                     </li>
                 </ul>
@@ -172,6 +187,7 @@
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><a class="dropdown-item{% if request.endpoint == 'cart' %} active{% endif %}" href="{{ url_for('cart') }}"><i class="bi bi-basket"></i> Cart</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('api_logout') }}" id="logoutButton"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
                         </ul>
