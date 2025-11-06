@@ -167,19 +167,19 @@
                                     <i class="bi bi-grid-3x3-gap me-2"></i>Creasing Matrix
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
+                                    <svg class="icon-barrel icon-barrel--single me-2" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <ellipse cx="24" cy="9" rx="11" ry="5" />
+                                        <ellipse cx="24" cy="39" rx="11" ry="5" />
+                                        <path d="M13 9v21c0 4.5 5.3 9 11 9s11-4.5 11-9V9" />
+                                        <line x1="13" y1="16" x2="35" y2="16" />
+                                        <line x1="13" y1="23" x2="35" y2="23" />
+                                        <line x1="13" y1="30" x2="35" y2="30" />
+                                    </svg>Chemicals &amp; Maintenance
+                                </a>
+                            </li>
                         </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
-                            <svg class="icon-barrel icon-barrel--single" width="28" height="28" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <ellipse cx="24" cy="9" rx="11" ry="5" />
-                                <ellipse cx="24" cy="39" rx="11" ry="5" />
-                                <path d="M13 9v21c0 4.5 5.3 9 11 9s11-4.5 11-9V9" />
-                                <line x1="13" y1="16" x2="35" y2="16" />
-                                <line x1="13" y1="23" x2="35" y2="23" />
-                                <line x1="13" y1="30" x2="35" y2="30" />
-                            </svg> Chemicals &amp; Maintenance
-                        </a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -421,7 +421,8 @@
             'spray-powder': 'sprayPowderLink',
             'creasing-rule': 'creasingRuleLink',
             'cutting-rule': 'cuttingRuleLink',
-            'creasing-matrix': 'creasingMatrixLink'
+            'creasing-matrix': 'creasingMatrixLink',
+            'chemicals-maintenance': 'chemMaintLink'
         };
         
         // Check if current path matches any route pattern

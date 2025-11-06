@@ -30,6 +30,12 @@ let customAreaDisplayEl;
 let cutStandardRowEl;
 let cutCustomRowEl;
 let cutDetailsNoteEl;
+let manualWidthInputEl;
+let manualLengthInputEl;
+let manualSizeContainerEl;
+let toggleManualSizeBtn;
+
+let manualEntryEnabled = false;
 
 function isPositiveNumber(value) {
   return typeof value === 'number' && !Number.isNaN(value) && value > 0;
@@ -92,11 +98,14 @@ function populateSelectOptions(selectEl, values = [], placeholder = '-- Select -
 }
 
 function populateCustomDropdowns({ widths = [], lengths = [] } = {}) {
-  populateSelectOptions(customWidthInputEl, widths.map(String), '-- Select Across --');
-  populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
+  if (!manualEntryEnabled) {
+    populateSelectOptions(customWidthInputEl, widths.map(String), '-- Select Across --');
+    populateSelectOptions(customLengthInputEl, lengths.map(String), '-- Select Around --');
+  }
 }
 
 function updateLengthOptionsForWidth(widthValue) {
+  if (manualEntryEnabled) return;
   if (!customLengthInputEl) return;
   const sanitizedWidth = String(widthValue || '').trim();
   if (!sanitizedWidth) {
@@ -109,6 +118,7 @@ function updateLengthOptionsForWidth(widthValue) {
 }
 
 function updateWidthOptionsForLength(lengthValue) {
+  if (manualEntryEnabled) return;
   if (!customWidthInputEl) return;
   const sanitizedLength = String(lengthValue || '').trim();
   if (!sanitizedLength) {
@@ -209,11 +219,28 @@ function updateCutDetails() {
   cutDetailsSectionEl.style.display = 'block';
 }
 
-function updateCustomSizeState({ showFeedback = false } = {}) {
+function getActiveSizeValues() {
+  if (manualEntryEnabled && manualWidthInputEl && manualLengthInputEl) {
+    return {
+      across: parseFloat(manualWidthInputEl.value || ''),
+      along: parseFloat(manualLengthInputEl.value || ''),
+      source: 'manual'
+    };
+  }
+
   const rawLength = customLengthInputEl ? customLengthInputEl.value : '';
   const rawWidth = customWidthInputEl ? customWidthInputEl.value : '';
-  const aroundVal = parseFloat(rawLength || '');
-  const acrossVal = parseFloat(rawWidth || '');
+  return {
+    across: parseFloat(rawWidth || ''),
+    along: parseFloat(rawLength || ''),
+    source: 'preset'
+  };
+}
+
+function updateCustomSizeState({ showFeedback = false } = {}) {
+  const { across, along, source } = getActiveSizeValues();
+  const aroundVal = along;
+  const acrossVal = across;
   const valid = isPositiveNumber(acrossVal) && isPositiveNumber(aroundVal);
 
   if (valid) {
@@ -229,7 +256,8 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
 
     if (customSizeSummaryEl) {
       const thicknessLabel = thicknessSelectEl && thicknessSelectEl.value ? `${thicknessSelectEl.value} micron · ` : '';
-      customSizeSummaryEl.textContent = `${thicknessLabel}${aroundVal.toFixed(0)} mm × ${acrossVal.toFixed(0)} mm (${customSize.area.toFixed(3)} sq.m)`;
+      const descriptionPrefix = source === 'manual' ? 'Manual size: ' : '';
+      customSizeSummaryEl.textContent = `${descriptionPrefix}${thicknessLabel}${aroundVal.toFixed(0)} mm × ${acrossVal.toFixed(0)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');
@@ -256,7 +284,11 @@ function handleCustomSizeInputChange() {
   const isValid = updateCustomSizeState();
 
   if (isValid) {
-    enableThicknessForSize();
+    if (manualEntryEnabled) {
+      enableManualThicknessSelection();
+    } else {
+      enableThicknessForSize();
+    }
     if (thicknessSelectEl && thicknessSelectEl.value) {
       updatePricingFromSelections();
     }
@@ -272,8 +304,57 @@ function handleCustomSizeInputChange() {
 function resetCustomSizeInputs() {
   if (customLengthInputEl) customLengthInputEl.value = '';
   if (customWidthInputEl) customWidthInputEl.value = '';
+  if (manualWidthInputEl) manualWidthInputEl.value = '';
+  if (manualLengthInputEl) manualLengthInputEl.value = '';
   updateCustomSizeState();
   disableThicknessSelection();
+}
+
+function toggleManualSizeEntry(forceState = null) {
+  if (!manualSizeContainerEl || !toggleManualSizeBtn) return;
+
+  manualEntryEnabled = forceState !== null ? forceState : !manualEntryEnabled;
+
+  if (manualEntryEnabled) {
+    manualSizeContainerEl.classList.remove('d-none');
+    toggleManualSizeBtn.textContent = 'Use preset sizes';
+    if (customWidthInputEl) {
+      customWidthInputEl.value = '';
+      customWidthInputEl.disabled = true;
+    }
+    if (customLengthInputEl) {
+      customLengthInputEl.value = '';
+      customLengthInputEl.disabled = true;
+    }
+    disableThicknessSelection();
+  } else {
+    manualSizeContainerEl.classList.add('d-none');
+    toggleManualSizeBtn.textContent = "Can't find your sizes?";
+    if (customWidthInputEl) {
+      customWidthInputEl.disabled = false;
+    }
+    if (customLengthInputEl) {
+      customLengthInputEl.disabled = false;
+    }
+    resetCustomSizeInputs();
+    populateCustomDropdowns({ widths: uniqueWidths, lengths: uniqueLengths });
+  }
+
+  updateCustomSizeState();
+}
+
+function enableManualThicknessSelection() {
+  if (!thicknessSelectEl) return;
+  if (!uniqueThicknesses.length) return;
+
+  thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+  uniqueThicknesses.forEach(thickness => {
+    const option = document.createElement('option');
+    option.value = thickness;
+    option.textContent = thickness;
+    thicknessSelectEl.appendChild(option);
+  });
+  thicknessSelectEl.disabled = false;
 }
 
 // Debug function to log element status
@@ -621,6 +702,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   cutStandardRowEl = document.getElementById('cutStandardRow');
   cutCustomRowEl = document.getElementById('cutCustomRow');
   cutDetailsNoteEl = document.getElementById('cutDetailsNote');
+  manualSizeContainerEl = document.getElementById('manualSizeContainer');
+  manualWidthInputEl = document.getElementById('manualWidthInput');
+  manualLengthInputEl = document.getElementById('manualLengthInput');
+  toggleManualSizeBtn = document.getElementById('toggleManualSizeBtn');
 
   // Disable standard size search until custom size captured
   if (sizeInputEl) {
@@ -641,6 +726,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     customWidthInputEl.addEventListener('change', event => {
       updateLengthOptionsForWidth(event.target.value);
       handleCustomSizeInputChange();
+    });
+  }
+
+  if (manualWidthInputEl) {
+    manualWidthInputEl.addEventListener('input', () => {
+      handleCustomSizeInputChange();
+    });
+  }
+
+  if (manualLengthInputEl) {
+    manualLengthInputEl.addEventListener('input', () => {
+      handleCustomSizeInputChange();
+    });
+  }
+
+  if (toggleManualSizeBtn) {
+    toggleManualSizeBtn.addEventListener('click', () => {
+      toggleManualSizeEntry();
     });
   }
 
