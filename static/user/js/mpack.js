@@ -34,6 +34,7 @@ let manualWidthInputEl;
 let manualLengthInputEl;
 let manualSizeContainerEl;
 let toggleManualSizeBtn;
+let manualThicknessSelectEl;
 
 let manualEntryEnabled = false;
 
@@ -255,7 +256,8 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     };
 
     if (customSizeSummaryEl) {
-      const thicknessLabel = thicknessSelectEl && thicknessSelectEl.value ? `${thicknessSelectEl.value} micron · ` : '';
+      const activeThicknessValue = getSelectedThicknessValue();
+      const thicknessLabel = activeThicknessValue ? `${activeThicknessValue} micron · ` : '';
       const descriptionPrefix = source === 'manual' ? 'Manual size: ' : '';
       customSizeSummaryEl.textContent = `${descriptionPrefix}${thicknessLabel}${aroundVal.toFixed(0)} mm × ${acrossVal.toFixed(0)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
@@ -271,7 +273,8 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   standardSize = { across: 0, along: 0, area: 0, label: '' };
 
   if (customSizeSummaryEl) {
-    customSizeSummaryEl.textContent = thicknessSelectEl && thicknessSelectEl.value ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
+    const activeThicknessValue = getSelectedThicknessValue();
+    customSizeSummaryEl.textContent = activeThicknessValue ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
   }
   if (customSizeFeedbackEl) {
     customSizeFeedbackEl.classList[showFeedback ? 'remove' : 'add']('d-none');
@@ -344,17 +347,26 @@ function toggleManualSizeEntry(forceState = null) {
 }
 
 function enableManualThicknessSelection() {
-  if (!thicknessSelectEl) return;
+  if (!manualThicknessSelectEl) return;
   if (!uniqueThicknesses.length) return;
 
-  thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+  manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
   uniqueThicknesses.forEach(thickness => {
     const option = document.createElement('option');
     option.value = thickness;
     option.textContent = thickness;
-    thicknessSelectEl.appendChild(option);
+    manualThicknessSelectEl.appendChild(option);
   });
-  thicknessSelectEl.disabled = false;
+  manualThicknessSelectEl.disabled = false;
+}
+
+function getActiveThicknessSelect() {
+  return manualEntryEnabled ? manualThicknessSelectEl : thicknessSelectEl;
+}
+
+function getSelectedThicknessValue() {
+  const select = getActiveThicknessSelect();
+  return select ? select.value : '';
 }
 
 // Debug function to log element status
@@ -706,6 +718,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualWidthInputEl = document.getElementById('manualWidthInput');
   manualLengthInputEl = document.getElementById('manualLengthInput');
   toggleManualSizeBtn = document.getElementById('toggleManualSizeBtn');
+  manualThicknessSelectEl = document.getElementById('manualThicknessSelect');
 
   // Disable standard size search until custom size captured
   if (sizeInputEl) {
@@ -738,6 +751,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (manualLengthInputEl) {
     manualLengthInputEl.addEventListener('input', () => {
       handleCustomSizeInputChange();
+    });
+  }
+
+  if (manualThicknessSelectEl) {
+    manualThicknessSelectEl.addEventListener('change', () => {
+      currentDiscount = 0;
+      const discountSelect = document.getElementById('discountSelect');
+      if (discountSelect) {
+        discountSelect.value = '';
+      }
+      updateCustomSizeState();
+      updatePricingFromSelections();
     });
   }
 
@@ -936,6 +961,10 @@ function disableThicknessSelection() {
   thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
   thicknessSelectEl.disabled = true;
   currentThickness = '';
+  if (manualThicknessSelectEl) {
+    manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+    manualThicknessSelectEl.disabled = true;
+  }
   resetCalculations();
 }
 
@@ -1228,7 +1257,8 @@ function updatePricingFromSelections() {
   if (discountSelect) discountSelect.value = '';
   currentDiscount = 0;
 
-  const thicknessValue = parseFloat(thicknessSelectEl && thicknessSelectEl.value ? thicknessSelectEl.value : currentThickness || 0);
+  const activeThicknessSelect = getActiveThicknessSelect();
+  const thicknessValue = parseFloat(activeThicknessSelect && activeThicknessSelect.value ? activeThicknessSelect.value : currentThickness || 0);
   const activeThickness = Number.isFinite(thicknessValue) && thicknessValue > 0 ? thicknessValue : 0;
   const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area;
 
