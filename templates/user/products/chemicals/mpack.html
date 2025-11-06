@@ -8,9 +8,9 @@
 
   <style>
     .mpack-diagram-column {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      row-gap: 1.5rem;
       align-items: stretch;
       height: 100%;
     }
@@ -43,7 +43,6 @@
     .mpack-select-wrapper {
       width: 100%;
       max-width: 320px;
-      margin-top: auto;
     }
 
     @media (min-width: 768px) {
@@ -65,30 +64,51 @@
       width: 100%;
       display: flex;
       flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .mpack-thickness-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 1rem;
+      align-items: start;
     }
 
     .mpack-pricing-controls .form-select,
     .mpack-pricing-controls .form-control {
       width: 100%;
-      max-width: 260px;
+      max-width: 220px;
     }
 
     .mpack-standard-sizes {
       font-size: 1rem;
       font-weight: 600;
       color: #0f172a;
-      align-self: flex-start;
+      background: #f8fafc;
+      border: 1px solid #dbe3f1;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      max-width: 220px;
+    }
+
+    .mpack-standard-sizes p {
+      margin-bottom: 0.5rem;
     }
 
     .mpack-standard-sizes ol {
-      margin: 0.5rem 0 0;
+      margin: 0;
       padding-left: 1.25rem;
       font-weight: 500;
     }
 
     .mpack-standard-sizes li + li {
       margin-top: 0.35rem;
+    }
+
+    @media (min-width: 992px) {
+      .mpack-thickness-row {
+        grid-template-columns: auto auto;
+      }
     }
 
     .mpack-pricing-box {
@@ -263,21 +283,25 @@
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
       </div>
       <div class="col-md-6">
-        <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
-        <select id="thicknessSelect" class="form-select" disabled>
-          <option value="">-- Select Thickness --</option>
-        </select>
-        <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
         <div class="mpack-pricing-controls mt-4" id="mpackPricingControls">
-          <div class="mpack-standard-sizes">
-            <p class="mb-2">These are our standard around sizes:</p>
-            <ol class="mb-0">
-              <li>795</li>
-              <li>1150</li>
-              <li>1240</li>
-              <li>1320</li>
-              <li>1540</li>
-            </ol>
+          <div class="mpack-thickness-row">
+            <div>
+              <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
+              <select id="thicknessSelect" class="form-select" disabled>
+                <option value="">-- Select Thickness --</option>
+              </select>
+              <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
+            </div>
+            <div class="mpack-standard-sizes">
+              <p class="mb-2">These are our standard around sizes:</p>
+              <ol class="mb-0">
+                <li>795</li>
+                <li>1150</li>
+                <li>1240</li>
+                <li>1320</li>
+                <li>1540</li>
+              </ol>
+            </div>
           </div>
           <div>
             <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
