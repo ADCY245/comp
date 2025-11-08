@@ -268,9 +268,12 @@
             <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
               <svg viewBox="0 0 320 180" width="300" height="170" role="img" aria-labelledby="aroundDiagramTitle aroundDiagramDesc">
                 <title id="aroundDiagramTitle">Around direction illustration</title>
-                <desc id="aroundDiagramDesc">Wrap arrow indicating the around measurement without cylinder.</desc>
+                <desc id="aroundDiagramDesc">Single cylinder with an exterior wrap arrow indicating the around measurement.</desc>
                 <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M86 150 C48 108 66 64 128 48 C196 30 242 96 218 144 C200 178 144 194 104 178" />
+                  <path d="M86 60 A30 30 0 0 0 86 120" />
+                  <path d="M86 60 H234" />
+                  <path d="M86 120 H234" />
+                  <circle cx="234" cy="90" r="30" />
                 </g>
                 <g fill="#111827" stroke="#111827" stroke-linejoin="round" stroke-width="1.5">
                   <path d="M186 44 L210 32 L206 58 Z" />
