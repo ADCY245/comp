@@ -4,7 +4,7 @@ let currentDiscount = 0; // Track current discount percentage
 let currentThickness = ''; // Track current thickness
 let editingItem = null; // Track the item being edited
 let customSize = { across: null, along: null, area: 0 };
-let standardSize = { across: 0, along: 0, area: 0, label: '' };
+let standardSize = { across: 0, along: 0, area: 0, label: '', rollLength: 0, usesHalfRoll: false, halfLength: 0 };
 let currentRatePerSqm = 0;
 let thicknessOptionsBySize = new Map();
 let lengthsByWidthMap = new Map();
@@ -20,9 +20,30 @@ const STANDARD_AROUND_SIZES = [795, 1150, 1240, 1320, 1540];
 const STANDARD_AROUND_HALF_SIZES = STANDARD_AROUND_SIZES
   .map(size => Math.floor(size / 2))
   .filter(size => size > 0);
+const FULL_ROLL_SIZES = [...STANDARD_AROUND_SIZES];
+const HALF_ROLL_SIZES = [...STANDARD_AROUND_HALF_SIZES];
 const CANDIDATE_AROUND_SIZES = Array.from(
-  new Set([...STANDARD_AROUND_HALF_SIZES, ...STANDARD_AROUND_SIZES])
+  new Set([...HALF_ROLL_SIZES, ...FULL_ROLL_SIZES])
 ).sort((a, b) => a - b);
+
+function resolveRollForLength(inputAround) {
+  let selectedRoll = FULL_ROLL_SIZES[FULL_ROLL_SIZES.length - 1];
+  for (const roll of FULL_ROLL_SIZES) {
+    if (inputAround <= roll) {
+      selectedRoll = roll;
+      break;
+    }
+  }
+
+  const halfForRoll = Math.floor(selectedRoll / 2);
+  const usesHalf = inputAround <= halfForRoll;
+
+  return {
+    rollLength: selectedRoll,
+    effectiveLength: usesHalf ? halfForRoll : selectedRoll,
+    usesHalfRoll: usesHalf && HALF_ROLL_SIZES.includes(halfForRoll)
+  };
+}
 
 // Determine the roll or half-roll size that should be considered for pricing based on the
 // user-entered around length. It always returns the smallest candidate size that is
@@ -32,14 +53,8 @@ function getStandardAroundSize(inputAround) {
     return 0;
   }
 
-  // Return the first candidate that can cover the requested length
-  for (const candidate of CANDIDATE_AROUND_SIZES) {
-    if (inputAround <= candidate) {
-      return candidate;
-    }
-  }
-  // Fallback to the largest roll if the requested length exceeds all candidates
-  return CANDIDATE_AROUND_SIZES[CANDIDATE_AROUND_SIZES.length - 1];
+  const { effectiveLength } = resolveRollForLength(inputAround);
+  return effectiveLength;
 }
 
 function populateCutSizeDropdown() {
@@ -51,14 +66,14 @@ function populateCutSizeDropdown() {
   const previousValue = cutSelect.value;
   cutSelect.innerHTML = '<option value="">----</option>';
 
-  CANDIDATE_AROUND_SIZES.forEach(size => {
+  FULL_ROLL_SIZES.forEach(size => {
     const option = document.createElement('option');
     option.value = String(size);
     option.textContent = `${size} mm`;
     cutSelect.appendChild(option);
   });
 
-  if (previousValue && CANDIDATE_AROUND_SIZES.includes(Number(previousValue))) {
+  if (previousValue && FULL_ROLL_SIZES.includes(Number(previousValue))) {
     cutSelect.value = previousValue;
   }
 }
@@ -297,19 +312,23 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     customSize.along = aroundVal;
     customSize.area = mmToSqm(customSize.across, customSize.along);
     // Determine the appropriate roll/half-roll length to be used for pricing
-    const pricingAlong = getStandardAroundSize(customSize.along);
+    const rollMeta = resolveRollForLength(customSize.along);
+    const pricingAlong = rollMeta.effectiveLength;
 
     standardSize = {
       across: customSize.across,
       along: pricingAlong,
       area: mmToSqm(customSize.across, pricingAlong),
-      label: formatDimensionLabel(customSize.across, pricingAlong)
+      label: formatDimensionLabel(customSize.across, rollMeta.rollLength),
+      rollLength: rollMeta.rollLength,
+      usesHalfRoll: rollMeta.usesHalfRoll,
+      halfLength: Math.floor(rollMeta.rollLength / 2)
     };
 
     // Reflect the chosen roll size in the disabled dropdown for user clarity
     const cutSelect = document.getElementById('cutFromSizeSelect');
     if (cutSelect) {
-      cutSelect.value = String(pricingAlong);
+      cutSelect.value = String(rollMeta.rollLength);
     }
 
     if (customSizeSummaryEl) {
@@ -321,8 +340,10 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     if (cutRollSummaryEl) {
       if (manualEntryEnabled) {
         const manualLabel = formatDimensionLabel(customSize.across, customSize.along);
-        const cutLabel = formatDimensionLabel(customSize.across, pricingAlong);
-        cutRollSummaryEl.innerHTML = `<strong>Manual size:</strong> ${manualLabel}<br><strong>Cut from size:</strong> ${cutLabel}`;
+        const rollLabel = formatDimensionLabel(customSize.across, rollMeta.rollLength);
+        const suffix = rollMeta.usesHalfRoll ? ' <small>(½ roll)</small>' : '';
+        const cutAreaSqm = mmToSqm(customSize.across, pricingAlong);
+        cutRollSummaryEl.innerHTML = `<strong>Manual size:</strong> ${manualLabel}<br><strong>Cut from size:</strong> ${rollLabel}${suffix} · ${cutAreaSqm.toFixed(3)} sq.m`;
         cutRollSummaryEl.classList.remove('d-none');
       } else {
         cutRollSummaryEl.classList.add('d-none');
@@ -338,7 +359,7 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   customSize.across = null;
   customSize.along = null;
   customSize.area = 0;
-  standardSize = { across: 0, along: 0, area: 0, label: '' };
+  standardSize = { across: 0, along: 0, area: 0, label: '', rollLength: 0, usesHalfRoll: false, halfLength: 0 };
 
   if (customSizeSummaryEl) {
     const activeThicknessValue = getSelectedThicknessValue();
@@ -1271,7 +1292,7 @@ function calculateFinalPrice() {
   const gstAmount = (discountedSubtotal * gstRate) / 100;
   const finalTotal = discountedSubtotal + gstAmount;
 
-  const effectiveSqm = hasValidCustomSize() ? customSize.area : standardSize.area || 0;
+  const effectiveSqm = isPositiveNumber(standardSize.area) ? standardSize.area : (customSize.area || 0);
   const sqmLabel = effectiveSqm.toFixed(3);
 
   const baseRateDisplay = BASE_RATE_PER_100_MICRON.toFixed(2);
