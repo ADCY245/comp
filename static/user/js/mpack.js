@@ -17,6 +17,12 @@ let uniqueThicknesses = [];
 const BASE_RATE_PER_100_MICRON = 80; // ₹ per sq.m at 100 micron
 // Standard MPack around sizes (full rolls)
 const STANDARD_AROUND_SIZES = [795, 1150, 1240, 1320, 1540];
+const STANDARD_AROUND_HALF_SIZES = STANDARD_AROUND_SIZES
+  .map(size => Math.floor(size / 2))
+  .filter(size => size > 0);
+const CANDIDATE_AROUND_SIZES = Array.from(
+  new Set([...STANDARD_AROUND_HALF_SIZES, ...STANDARD_AROUND_SIZES])
+).sort((a, b) => a - b);
 
 // Determine the roll or half-roll size that should be considered for pricing based on the
 // user-entered around length. It always returns the smallest candidate size that is
@@ -26,25 +32,35 @@ function getStandardAroundSize(inputAround) {
     return 0;
   }
 
-  // Build a sorted candidate list that contains each full roll size and its half-roll size
-  const candidates = [];
-  STANDARD_AROUND_SIZES.forEach(size => {
-    const half = Math.round(size / 2);
-    if (!candidates.includes(half)) {
-      candidates.push(half);
-    }
-    candidates.push(size);
-  });
-  candidates.sort((a, b) => a - b);
-
   // Return the first candidate that can cover the requested length
-  for (const candidate of candidates) {
+  for (const candidate of CANDIDATE_AROUND_SIZES) {
     if (inputAround <= candidate) {
       return candidate;
     }
   }
   // Fallback to the largest roll if the requested length exceeds all candidates
-  return candidates[candidates.length - 1];
+  return CANDIDATE_AROUND_SIZES[CANDIDATE_AROUND_SIZES.length - 1];
+}
+
+function populateCutSizeDropdown() {
+  const cutSelect = document.getElementById('cutFromSizeSelect');
+  if (!cutSelect) {
+    return;
+  }
+
+  const previousValue = cutSelect.value;
+  cutSelect.innerHTML = '<option value="">----</option>';
+
+  CANDIDATE_AROUND_SIZES.forEach(size => {
+    const option = document.createElement('option');
+    option.value = String(size);
+    option.textContent = `${size} mm`;
+    cutSelect.appendChild(option);
+  });
+
+  if (previousValue && CANDIDATE_AROUND_SIZES.includes(Number(previousValue))) {
+    cutSelect.value = previousValue;
+  }
 }
 
 let customLengthInputEl;
@@ -66,6 +82,7 @@ let manualLengthInputEl;
 let manualSizeContainerEl;
 let toggleManualSizeBtn;
 let manualThicknessSelectEl;
+let cutRollSummaryEl;
 
 let manualEntryEnabled = false;
 
@@ -301,6 +318,17 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
       const descriptionPrefix = source === 'manual' ? 'Manual size: ' : '';
       customSizeSummaryEl.textContent = `${descriptionPrefix}${thicknessLabel}${aroundVal.toFixed(0)} mm × ${acrossVal.toFixed(0)} mm (${customSize.area.toFixed(3)} sq.m)`;
     }
+    if (cutRollSummaryEl) {
+      if (manualEntryEnabled) {
+        const manualLabel = formatDimensionLabel(customSize.across, customSize.along);
+        const cutLabel = formatDimensionLabel(customSize.across, pricingAlong);
+        cutRollSummaryEl.innerHTML = `<strong>Manual size:</strong> ${manualLabel}<br><strong>Cut from size:</strong> ${cutLabel}`;
+        cutRollSummaryEl.classList.remove('d-none');
+      } else {
+        cutRollSummaryEl.classList.add('d-none');
+        cutRollSummaryEl.textContent = '';
+      }
+    }
     if (customSizeFeedbackEl) {
       customSizeFeedbackEl.classList.add('d-none');
     }
@@ -315,6 +343,10 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   if (customSizeSummaryEl) {
     const activeThicknessValue = getSelectedThicknessValue();
     customSizeSummaryEl.textContent = activeThicknessValue ? 'Select across and around to see sq.m.' : 'Select thickness and sizes to see sq.m.';
+  }
+  if (cutRollSummaryEl) {
+    cutRollSummaryEl.classList.add('d-none');
+    cutRollSummaryEl.textContent = '';
   }
   if (customSizeFeedbackEl) {
     customSizeFeedbackEl.classList[showFeedback ? 'remove' : 'add']('d-none');
@@ -759,6 +791,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualLengthInputEl = document.getElementById('manualLengthInput');
   toggleManualSizeBtn = document.getElementById('toggleManualSizeBtn');
   manualThicknessSelectEl = document.getElementById('manualThicknessSelect');
+  cutRollSummaryEl = document.getElementById('cutRollSummary');
+
+  populateCutSizeDropdown();
 
   // Disable standard size search until custom size captured
   if (sizeInputEl) {
