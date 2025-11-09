@@ -27,21 +27,22 @@ const CANDIDATE_AROUND_SIZES = Array.from(
 ).sort((a, b) => a - b);
 
 function resolveRollForLength(inputAround) {
-  let selectedRoll = FULL_ROLL_SIZES[FULL_ROLL_SIZES.length - 1];
-  for (const roll of FULL_ROLL_SIZES) {
-    if (inputAround <= roll) {
-      selectedRoll = roll;
+  // Pick the first candidate (half or full) >= requested length
+  let selectedCandidate = CANDIDATE_AROUND_SIZES[CANDIDATE_AROUND_SIZES.length - 1];
+  for (const cand of CANDIDATE_AROUND_SIZES) {
+    if (inputAround <= cand) {
+      selectedCandidate = cand;
       break;
     }
   }
 
-  const halfForRoll = Math.floor(selectedRoll / 2);
-  const usesHalf = inputAround <= halfForRoll;
+  const usesHalfRoll = HALF_ROLL_SIZES.includes(selectedCandidate);
+  const rollLength = usesHalfRoll ? selectedCandidate * 2 : selectedCandidate;
 
   return {
-    rollLength: selectedRoll,
-    effectiveLength: usesHalf ? halfForRoll : selectedRoll,
-    usesHalfRoll: usesHalf && HALF_ROLL_SIZES.includes(halfForRoll)
+    rollLength,
+    effectiveLength: selectedCandidate,
+    usesHalfRoll
   };
 }
 
