@@ -15,6 +15,37 @@ let uniqueLengths = [];
 let uniqueThicknesses = [];
 
 const BASE_RATE_PER_100_MICRON = 80; // ₹ per sq.m at 100 micron
+// Standard MPack around sizes (full rolls)
+const STANDARD_AROUND_SIZES = [795, 1150, 1240, 1320, 1540];
+
+// Determine the roll or half-roll size that should be considered for pricing based on the
+// user-entered around length. It always returns the smallest candidate size that is
+// greater than or equal to the requested length.
+function getStandardAroundSize(inputAround) {
+  if (!isPositiveNumber(inputAround)) {
+    return 0;
+  }
+
+  // Build a sorted candidate list that contains each full roll size and its half-roll size
+  const candidates = [];
+  STANDARD_AROUND_SIZES.forEach(size => {
+    const half = Math.round(size / 2);
+    if (!candidates.includes(half)) {
+      candidates.push(half);
+    }
+    candidates.push(size);
+  });
+  candidates.sort((a, b) => a - b);
+
+  // Return the first candidate that can cover the requested length
+  for (const candidate of candidates) {
+    if (inputAround <= candidate) {
+      return candidate;
+    }
+  }
+  // Fallback to the largest roll if the requested length exceeds all candidates
+  return candidates[candidates.length - 1];
+}
 
 let customLengthInputEl;
 let customWidthInputEl;
@@ -248,12 +279,21 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     customSize.across = acrossVal;
     customSize.along = aroundVal;
     customSize.area = mmToSqm(customSize.across, customSize.along);
+    // Determine the appropriate roll/half-roll length to be used for pricing
+    const pricingAlong = getStandardAroundSize(customSize.along);
+
     standardSize = {
       across: customSize.across,
-      along: customSize.along,
-      area: customSize.area,
-      label: formatDimensionLabel(customSize.across, customSize.along)
+      along: pricingAlong,
+      area: mmToSqm(customSize.across, pricingAlong),
+      label: formatDimensionLabel(customSize.across, pricingAlong)
     };
+
+    // Reflect the chosen roll size in the disabled dropdown for user clarity
+    const cutSelect = document.getElementById('cutFromSizeSelect');
+    if (cutSelect) {
+      cutSelect.value = String(pricingAlong);
+    }
 
     if (customSizeSummaryEl) {
       const activeThicknessValue = getSelectedThicknessValue();
@@ -1260,7 +1300,7 @@ function updatePricingFromSelections() {
   const activeThicknessSelect = getActiveThicknessSelect();
   const thicknessValue = parseFloat(activeThicknessSelect && activeThicknessSelect.value ? activeThicknessSelect.value : currentThickness || 0);
   const activeThickness = Number.isFinite(thicknessValue) && thicknessValue > 0 ? thicknessValue : 0;
-  const sqmArea = hasValidCustomSize() ? customSize.area : standardSize.area;
+  const sqmArea = isPositiveNumber(standardSize.area) ? standardSize.area : customSize.area;
 
   if (!activeThickness || !isPositiveNumber(sqmArea)) {
     resetCalculations();
@@ -1324,7 +1364,7 @@ async function addMpackToCart() {
   // Get discount information
   const discountSelect = document.getElementById('discountSelect');
   const discount = discountSelect ? parseFloat(discountSelect.value) || 0 : 0;
-  const sqmArea = hasCustomSize ? customSize.area : standardSize.area || 0;
+  const sqmArea = standardSize.area || customSize.area || 0;
   const thicknessValue = Number(currentThickness || thicknessSelect.value || 0);
   const ratePerSqm = 80 * (thicknessValue / 100);
   const unitPrice = ratePerSqm * sqmArea;
