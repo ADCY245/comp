@@ -14,7 +14,7 @@ let uniqueWidths = [];
 let uniqueLengths = [];
 let uniqueThicknesses = [];
 
-const BASE_RATE_PER_100_MICRON = 80; // ₹ per sq.m at 100 micron
+const BASE_RATE_PER_100_MICRON = 75; // ₹ per sq.m at 100 micron
 // Standard MPack around sizes (full rolls)
 const STANDARD_AROUND_SIZES = [795, 1150, 1240, 1320, 1540];
 const STANDARD_AROUND_HALF_SIZES = STANDARD_AROUND_SIZES
@@ -102,6 +102,10 @@ let cutRollSummaryEl;
 let manualInlineSummaryRowEl;
 let manualInlineSizeSummaryEl;
 let manualInlineDiscountSummaryEl;
+let manualStandardColumnEl;
+let manualCutFromSizeSelectEl;
+let manualCutFromHalfNoteEl;
+let presetStandardColumnEl;
 
 let manualEntryEnabled = false;
 
@@ -378,12 +382,18 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
       }
 
       if (cutRollSummaryEl) {
-        const manualLabel = formatDimensionLabel(customSize.across, customSize.along);
-        const rollLabel = formatDimensionLabel(customSize.across, rollMeta.rollLength);
-        const suffix = rollMeta.usesHalfRoll ? ' <small>(½ roll)</small>' : '';
-        const cutAreaSqm = mmToSqm(customSize.across, pricingAlong);
-        cutRollSummaryEl.innerHTML = `<strong>Manual size:</strong> ${manualLabel}<br><strong>Cut from size:</strong> ${rollLabel}${suffix} · ${cutAreaSqm.toFixed(3)} sq.m`;
-        cutRollSummaryEl.classList.remove('d-none');
+        cutRollSummaryEl.classList.add('d-none');
+        cutRollSummaryEl.textContent = '';
+      }
+
+      if (manualStandardColumnEl) {
+        manualStandardColumnEl.classList.remove('d-none');
+      }
+      if (manualCutFromSizeSelectEl) {
+        manualCutFromSizeSelectEl.value = String(rollMeta.rollLength);
+      }
+      if (manualCutFromHalfNoteEl) {
+        manualCutFromHalfNoteEl.classList[rollMeta.usesHalfRoll ? 'remove' : 'add']('d-none');
       }
     } else {
       standardSize = {
@@ -403,6 +413,16 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
       if (cutRollSummaryEl) {
         cutRollSummaryEl.classList.add('d-none');
         cutRollSummaryEl.textContent = '';
+      }
+
+      if (manualStandardColumnEl) {
+        manualStandardColumnEl.classList.add('d-none');
+      }
+      if (manualCutFromSizeSelectEl) {
+        manualCutFromSizeSelectEl.value = '';
+      }
+      if (manualCutFromHalfNoteEl) {
+        manualCutFromHalfNoteEl.classList.add('d-none');
       }
     }
 
@@ -434,6 +454,15 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   if (cutRollSummaryEl) {
     cutRollSummaryEl.classList.add('d-none');
     cutRollSummaryEl.textContent = '';
+  }
+  if (manualStandardColumnEl) {
+    manualStandardColumnEl.classList[manualEntryEnabled ? 'remove' : 'add']('d-none');
+  }
+  if (manualCutFromSizeSelectEl) {
+    manualCutFromSizeSelectEl.value = '';
+  }
+  if (manualCutFromHalfNoteEl) {
+    manualCutFromHalfNoteEl.classList.add('d-none');
   }
   if (customSizeFeedbackEl) {
     customSizeFeedbackEl.classList[showFeedback ? 'remove' : 'add']('d-none');
@@ -877,6 +906,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualWidthInputEl = document.getElementById('manualWidthInput');
   manualLengthInputEl = document.getElementById('manualLengthInput');
   toggleManualSizeBtn = document.getElementById('toggleManualSizeBtn');
+  manualStandardColumnEl = document.getElementById('manualStandardColumn');
+  manualCutFromSizeSelectEl = document.getElementById('manualCutFromSizeSelect');
+  manualCutFromHalfNoteEl = document.getElementById('manualCutFromHalfNote');
+  presetStandardColumnEl = document.getElementById('presetStandardColumn');
   manualThicknessSelectEl = document.getElementById('manualThicknessSelect');
   cutRollSummaryEl = document.getElementById('cutRollSummary');
   manualInlineSummaryRowEl = document.getElementById('manualInlineSummaryRow');
