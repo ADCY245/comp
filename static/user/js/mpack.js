@@ -106,7 +106,14 @@ let manualStandardColumnEl;
 let manualCutFromSizeSelectEl;
 let manualCutFromHalfNoteEl;
 let manualDetailsRowEl;
+let manualPrimaryColumnEl;
+let presetQuantityGroupEl;
+let presetDiscountGroupEl;
+let presetPrimaryColumnEl;
 let presetStandardColumnEl;
+
+let manualQuantitySlotEl;
+let manualDiscountSlotEl;
 
 let manualEntryEnabled = false;
 
@@ -249,6 +256,7 @@ function updateManualInlineSummary({ show = false } = {}) {
     if (manualDetailsRowEl) {
       manualDetailsRowEl.classList.add('d-none');
     }
+    relocateManualControlGroups('preset');
     return;
   }
 
@@ -275,6 +283,20 @@ function updateManualInlineSummary({ show = false } = {}) {
 
   updateManualDiscountSummary();
   manualInlineSummaryRowEl.classList.remove('d-none');
+}
+
+function relocateManualControlGroups(target) {
+  if (!manualPrimaryColumnEl || !presetPrimaryColumnEl) return;
+  if (!presetQuantityGroupEl || !presetDiscountGroupEl) return;
+  if (!manualQuantitySlotEl || !manualDiscountSlotEl) return;
+
+  if (target === 'manual') {
+    manualQuantitySlotEl.appendChild(presetQuantityGroupEl);
+    manualDiscountSlotEl.appendChild(presetDiscountGroupEl);
+  } else {
+    presetPrimaryColumnEl.appendChild(presetQuantityGroupEl);
+    presetPrimaryColumnEl.appendChild(presetDiscountGroupEl);
+  }
 }
 
 function updateManualDiscountSummary() {
@@ -545,6 +567,7 @@ function toggleManualSizeEntry(forceState = null) {
     if (manualCutFromHalfNoteEl) {
       manualCutFromHalfNoteEl.classList.add('d-none');
     }
+    relocateManualControlGroups('manual');
   } else {
     manualSizeContainerEl.classList.add('d-none');
     toggleManualSizeBtn.textContent = "Can't find your sizes?";
@@ -562,6 +585,7 @@ function toggleManualSizeEntry(forceState = null) {
     if (manualStandardColumnEl) {
       manualStandardColumnEl.classList.add('d-none');
     }
+    relocateManualControlGroups('preset');
   }
 
   updateCustomSizeState();
@@ -943,6 +967,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualCutFromSizeSelectEl = document.getElementById('manualCutFromSizeSelect');
   manualCutFromHalfNoteEl = document.getElementById('manualCutFromHalfNote');
   manualDetailsRowEl = document.getElementById('manualDetailsRow');
+  manualPrimaryColumnEl = document.getElementById('manualPrimaryColumn');
+  manualQuantitySlotEl = document.getElementById('manualQuantitySlot');
+  manualDiscountSlotEl = document.getElementById('manualDiscountSlot');
+  presetPrimaryColumnEl = document.getElementById('presetPrimaryColumn');
+  presetQuantityGroupEl = document.getElementById('presetQuantityGroup');
+  presetDiscountGroupEl = document.getElementById('presetDiscountGroup');
   presetStandardColumnEl = document.getElementById('presetStandardColumn');
   manualThicknessSelectEl = document.getElementById('manualThicknessSelect');
   cutRollSummaryEl = document.getElementById('cutRollSummary');
