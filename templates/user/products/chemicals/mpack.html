@@ -219,7 +219,22 @@
       align-items: center;
       justify-content: center;
     }
-  </style>
+    /* Align manual manualDetailsRow two columns beside each other from md breakpoint */
+  @media (min-width: 768px) {
+    #manualDetailsRow {
+      display: flex;
+      flex-direction: row;
+      gap: 1.5rem;
+    }
+    #manualPrimaryColumn {
+      flex: 1 1 0;
+    }
+    #manualStandardColumn {
+      flex: 0 0 240px;
+    }
+  }
+
+</style>
 
   <div class="mb-3">
     <div class="d-flex align-items-end gap-2">
