@@ -102,14 +102,8 @@ let cutRollSummaryEl;
 let manualInlineSummaryRowEl;
 let manualInlineSizeSummaryEl;
 let manualInlineDiscountSummaryEl;
-let manualStandardColumnEl;
-let manualCutFromSizeSelectEl;
-let manualCutFromHalfNoteEl;
-let manualDetailsRowEl;
-let manualPrimaryColumnEl;
 let presetQuantityGroupEl;
 let presetDiscountGroupEl;
-let presetPrimaryColumnEl;
 let presetStandardColumnEl;
 
 let manualQuantitySlotEl;
@@ -286,7 +280,7 @@ function updateManualInlineSummary({ show = false } = {}) {
 }
 
 function relocateManualControlGroups(target) {
-  if (!manualPrimaryColumnEl || !presetPrimaryColumnEl) return;
+  if (!presetPrimaryColumnEl) return;
   if (!presetQuantityGroupEl || !presetDiscountGroupEl) return;
   if (!manualQuantitySlotEl || !manualDiscountSlotEl) return;
 

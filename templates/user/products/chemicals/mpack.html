@@ -68,16 +68,23 @@
     }
 
     .mpack-thickness-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 1rem;
-      align-items: start;
-    }
-
-    .mpack-thickness-row {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .mpack-inputs-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mpack-controls-column {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 260px;
     }
 
     .mpack-pricing-controls .form-select,
@@ -90,7 +97,6 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      max-width: 220px;
     }
 
     .mpack-thickness-primary .form-text {
@@ -147,11 +153,21 @@
 
     @media (min-width: 992px) {
       .mpack-thickness-row {
-        grid-template-columns: auto auto;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 2rem;
       }
 
-      .mpack-thickness-row {
-        grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr);
+      .mpack-inputs-column {
+        flex: 1 1 0;
+      }
+
+      .mpack-controls-column {
+        flex: 0 0 260px;
+      }
+
+      .mpack-standard-column {
+        flex: 0 0 240px;
       }
     }
 
@@ -265,8 +281,8 @@
 
   <div id="mpackSection" style="display:none;">
     <!-- Size selection first -->
-    <div class="row mb-4 align-items-start">
-      <div class="col-md-6">
+    <div class="mpack-thickness-row mpack-config-row mb-4">
+      <div class="mpack-inputs-column" id="presetInputsColumn">
         <div class="row g-4 align-items-stretch mb-3">
           <div class="col-12 col-lg-6 mpack-diagram-column">
             <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
@@ -320,7 +336,7 @@
         <div class="card card-body mt-3 d-none" id="manualSizeContainer">
           <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
           <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
-            <div class="mpack-thickness-primary" id="manualPrimaryColumn">
+            <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
               <div class="row g-3 align-items-end manual-input-row" id="manualInputRow">
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="manualWidthInput">Across (mm)</label>
@@ -335,6 +351,8 @@
                 <div class="form-text text-muted mb-1" id="manualInlineSizeSummary">Enter measurements to see sq.m.</div>
                 <div class="form-text text-muted" id="manualInlineDiscountSummary">Discount: --</div>
               </div>
+            </div>
+            <div class="mpack-controls-column mpack-thickness-primary" id="manualControlsColumn">
               <div class="mt-2" id="manualThicknessGroup">
                 <label class="form-label" for="manualThicknessSelect">Thickness (micron)</label>
                 <select id="manualThicknessSelect" class="form-select" disabled>
@@ -345,7 +363,7 @@
               <div id="manualQuantitySlot" class="mt-3"></div>
               <div id="manualDiscountSlot" class="mt-3"></div>
             </div>
-            <div class="mpack-standard-column" id="manualStandardColumn">
+            <div class="mpack-standard-column manual d-none" id="manualStandardColumn">
               <div class="mpack-standard-sizes">
                 <p class="mb-2">These are our standard (around) sizes:</p>
                 <ol class="mb-0">
@@ -374,57 +392,55 @@
         <div class="form-text text-muted d-none" id="cutRollSummary"></div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
       </div>
-      <div class="col-md-6">
+      <div class="mpack-controls-column">
         <div class="mpack-pricing-controls mt-2" id="mpackPricingControls">
-          <div class="mpack-thickness-row">
-            <div class="mpack-thickness-primary" id="presetPrimaryColumn">
-              <div>
-                <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
-                <select id="thicknessSelect" class="form-select" disabled>
-                  <option value="">-- Select Thickness --</option>
-                </select>
-                <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
-              </div>
-              <div id="presetQuantityGroup" class="mt-3">
-                <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
-                <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
-              </div>
-              <div id="presetDiscountGroup" class="mt-3">
-                <label for="discountSelect" class="form-label">Discount (%)</label>
-                <select id="discountSelect" class="form-select">
-                  <option value="">-- Select Discount --</option>
-                </select>
-              </div>
-              <div id="presetGstGroup" class="mt-3">
-                <label for="gstSelect" class="form-label">GST Rate</label>
-                <input type="text" id="gstDisplay" class="form-control" value="18%" disabled>
-                <input type="hidden" id="gstSelect" value="18">
-              </div>
-            </div>
-            <div class="mpack-standard-column" id="presetStandardColumn">
-              <div class="mpack-standard-sizes">
-                <p class="mb-2">These are our standard (around) sizes:</p>
-                <ol class="mb-0">
-                  <li>795</li>
-                  <li>1150</li>
-                  <li>1240</li>
-                  <li>1320</li>
-                  <li>1540</li>
-                </ol>
-              </div>
-              <div class="mpack-standard-note">Cut from size (roll)</div>
-              <label for="cutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
-              <select id="cutFromSizeSelect" class="form-select" disabled>
-                <option value="" selected>----</option>
-                <option value="795">795 mm</option>
-                <option value="1150">1150 mm</option>
-                <option value="1240">1240 mm</option>
-                <option value="1320">1320 mm</option>
-                <option value="1540">1540 mm</option>
+          <div class="mpack-thickness-primary" id="presetPrimaryColumn">
+            <div>
+              <label for="thicknessSelect" class="form-label">Select Thickness (micron)</label>
+              <select id="thicknessSelect" class="form-select" disabled>
+                <option value="">-- Select Thickness --</option>
               </select>
+              <div class="form-text text-muted mt-2">Thickness options become available once a size is selected.</div>
+            </div>
+            <div id="presetQuantityGroup" class="mt-3">
+              <label for="sheetInput" class="form-label">Quantity (Sheets)</label>
+              <input type="number" id="sheetInput" class="form-control" min="1" value="1" />
+            </div>
+            <div id="presetDiscountGroup" class="mt-3">
+              <label for="discountSelect" class="form-label">Discount (%)</label>
+              <select id="discountSelect" class="form-select">
+                <option value="">-- Select Discount --</option>
+              </select>
+            </div>
+            <div id="presetGstGroup" class="mt-3">
+              <label for="gstSelect" class="form-label">GST Rate</label>
+              <input type="text" id="gstDisplay" class="form-control" value="18%" disabled>
+              <input type="hidden" id="gstSelect" value="18">
             </div>
           </div>
         </div>
+      </div>
+      <div class="mpack-standard-column" id="presetStandardColumn">
+        <div class="mpack-standard-sizes">
+          <p class="mb-2">These are our standard (around) sizes:</p>
+          <ol class="mb-0">
+            <li>795</li>
+            <li>1150</li>
+            <li>1240</li>
+            <li>1320</li>
+            <li>1540</li>
+          </ol>
+        </div>
+        <div class="mpack-standard-note">Cut from size (roll)</div>
+        <label for="cutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
+        <select id="cutFromSizeSelect" class="form-select" disabled>
+          <option value="" selected>----</option>
+          <option value="795">795 mm</option>
+          <option value="1150">1150 mm</option>
+          <option value="1240">1240 mm</option>
+          <option value="1320">1320 mm</option>
+          <option value="1540">1540 mm</option>
+        </select>
       </div>
     </div>
 
