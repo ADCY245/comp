@@ -87,10 +87,6 @@
       max-width: 260px;
     }
 
-    #manualSizeContainer {
-      width: 100%;
-    }
-
     .mpack-pricing-controls .form-select,
     .mpack-pricing-controls .form-control {
       width: 100%;
@@ -239,6 +235,25 @@
       align-items: center;
       justify-content: center;
     }
+    /* Align manual manualDetailsRow two columns beside each other from md breakpoint */
+  @media (min-width: 768px) {
+    #manualSizeContainer {
+      width: 100%;
+    }
+
+    #manualDetailsRow {
+      display: flex;
+      flex-direction: row;
+      gap: 1.5rem;
+    }
+    #manualPrimaryColumn {
+      flex: 1 1 0;
+    }
+    #manualStandardColumn {
+      flex: 0 0 240px;
+    }
+  }
+
 </style>
 
   <div class="mb-3">
@@ -322,6 +337,61 @@
         </div>
         <div class="form-text">Select preset sizes to populate measurements automatically.</div>
         <button type="button" class="btn btn-outline-gold btn-sm mt-2" id="toggleManualSizeBtn">Can't find your sizes?</button>
+        <div class="card card-body mt-3 d-none" id="manualSizeContainer">
+          <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
+          <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
+            <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
+              <div class="row g-3 align-items-end manual-input-row" id="manualInputRow">
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="manualWidthInput">Across (mm)</label>
+                  <input type="number" min="0" step="0.5" class="form-control" id="manualWidthInput" placeholder="Enter across width">
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="manualLengthInput">Around (mm)</label>
+                  <input type="number" min="0" step="0.5" class="form-control" id="manualLengthInput" placeholder="Enter around length">
+                </div>
+              </div>
+              <div class="d-none mt-2" id="manualInlineSummaryRow">
+                <div class="form-text text-muted mb-1" id="manualInlineSizeSummary">Enter measurements to see sq.m.</div>
+                <div class="form-text text-muted" id="manualInlineDiscountSummary">Discount: --</div>
+              </div>
+            </div>
+            <div class="mpack-controls-column mpack-thickness-primary" id="manualControlsColumn">
+              <div class="mt-2" id="manualThicknessGroup">
+                <label class="form-label" for="manualThicknessSelect">Thickness (micron)</label>
+                <select id="manualThicknessSelect" class="form-select" disabled>
+                  <option value="">-- Select Thickness --</option>
+                </select>
+                <div class="form-text text-muted mt-2">Thickness will remain selectable from the dropdown above.</div>
+              </div>
+              <div id="manualQuantitySlot" class="mt-3"></div>
+              <div id="manualDiscountSlot" class="mt-3"></div>
+            </div>
+            <div class="mpack-standard-column manual d-none" id="manualStandardColumn">
+              <div class="mpack-standard-sizes">
+                <p class="mb-2">These are our standard (around) sizes:</p>
+                <ol class="mb-0">
+                  <li>795</li>
+                  <li>1150</li>
+                  <li>1240</li>
+                  <li>1320</li>
+                  <li>1540</li>
+                </ol>
+              </div>
+              <div class="mpack-standard-note">Cut from size (roll)</div>
+              <label for="manualCutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
+              <select id="manualCutFromSizeSelect" class="form-select" disabled>
+                <option value="" selected>----</option>
+                <option value="795">795 mm</option>
+                <option value="1150">1150 mm</option>
+                <option value="1240">1240 mm</option>
+                <option value="1320">1320 mm</option>
+                <option value="1540">1540 mm</option>
+              </select>
+              <div class="form-text text-muted d-none" id="manualCutFromHalfNote">½ roll</div>
+            </div>
+          </div>
+        </div>
         <div class="form-text text-muted" id="customSizeSummary">Select sizes to see sq.m., then choose a thickness.</div>
         <div class="form-text text-muted d-none" id="cutRollSummary"></div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
