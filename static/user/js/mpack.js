@@ -105,6 +105,7 @@ let manualInlineDiscountSummaryEl;
 let manualStandardColumnEl;
 let manualCutFromSizeSelectEl;
 let manualCutFromHalfNoteEl;
+let manualDetailsRowEl;
 let presetStandardColumnEl;
 
 let manualEntryEnabled = false;
@@ -241,8 +242,22 @@ function updateManualInlineSummary({ show = false } = {}) {
     return;
   }
 
-  if (!show) {
+  if (!manualEntryEnabled) {
     manualInlineSummaryRowEl.classList.add('d-none');
+    manualInlineSizeSummaryEl.textContent = 'Enter measurements to see sq.m.';
+    manualInlineDiscountSummaryEl.textContent = 'Discount: --';
+    if (manualDetailsRowEl) {
+      manualDetailsRowEl.classList.add('d-none');
+    }
+    return;
+  }
+
+  if (manualDetailsRowEl) {
+    manualDetailsRowEl.classList.remove('d-none');
+  }
+
+  if (!show) {
+    manualInlineSummaryRowEl.classList.remove('d-none');
     manualInlineSizeSummaryEl.textContent = 'Enter measurements to see sq.m.';
     manualInlineDiscountSummaryEl.textContent = 'Discount: --';
     return;
@@ -518,6 +533,18 @@ function toggleManualSizeEntry(forceState = null) {
       customLengthInputEl.disabled = true;
     }
     disableThicknessSelection();
+    if (manualDetailsRowEl) {
+      manualDetailsRowEl.classList.remove('d-none');
+    }
+    if (manualStandardColumnEl) {
+      manualStandardColumnEl.classList.remove('d-none');
+    }
+    if (manualCutFromSizeSelectEl) {
+      manualCutFromSizeSelectEl.value = '';
+    }
+    if (manualCutFromHalfNoteEl) {
+      manualCutFromHalfNoteEl.classList.add('d-none');
+    }
   } else {
     manualSizeContainerEl.classList.add('d-none');
     toggleManualSizeBtn.textContent = "Can't find your sizes?";
@@ -529,6 +556,12 @@ function toggleManualSizeEntry(forceState = null) {
     }
     resetCustomSizeInputs();
     populateCustomDropdowns({ widths: uniqueWidths, lengths: uniqueLengths });
+    if (manualDetailsRowEl) {
+      manualDetailsRowEl.classList.add('d-none');
+    }
+    if (manualStandardColumnEl) {
+      manualStandardColumnEl.classList.add('d-none');
+    }
   }
 
   updateCustomSizeState();
@@ -909,6 +942,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualStandardColumnEl = document.getElementById('manualStandardColumn');
   manualCutFromSizeSelectEl = document.getElementById('manualCutFromSizeSelect');
   manualCutFromHalfNoteEl = document.getElementById('manualCutFromHalfNote');
+  manualDetailsRowEl = document.getElementById('manualDetailsRow');
   presetStandardColumnEl = document.getElementById('presetStandardColumn');
   manualThicknessSelectEl = document.getElementById('manualThicknessSelect');
   cutRollSummaryEl = document.getElementById('cutRollSummary');
