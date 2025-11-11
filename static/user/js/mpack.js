@@ -869,7 +869,8 @@ function getFormData() {
   }
   
   const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
-  const sqmArea = hasValidCustomSize() ? customSize.area : 0;
+  // Use effective roll-based area for manual entries to honor half-roll pricing
+  const sqmArea = manualEntryEnabled ? (standardSize.area || customSize.area || 0) : (standardSize.area || customSize.area || 0);
   const ratePerSqm = BASE_RATE_PER_100_MICRON * (thicknessValue / 100);
   const sheetCount = Math.max(1, quantity);
   const unitPrice = ratePerSqm * sqmArea;
@@ -886,7 +887,8 @@ function getFormData() {
   const customArea = isPositiveNumber(customSize.area) ? customSize.area : (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = manualEntryEnabled ? true : Boolean(cutYesRadio && cutYesRadio.checked);
 
-  const displayAlong = customAlong || 0;
+  const aroundRollLength = standardSize.rollLength || (customAlong || 0);
+  const displayAlong = aroundRollLength;
   const displayAcross = customAcross || 0;
   const displaySizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
 
@@ -1684,7 +1686,8 @@ async function addMpackToCart() {
     custom_size_label: customSizeLabel,
     display_size_label: displaySizeLabel,
     display_across_mm: displayAcross,
-    display_along_mm: displayAlong
+    display_along_mm: displayAlong,
+    uses_half_roll: standardSize.usesHalfRoll || false,
   };
 
   // Show loading state
