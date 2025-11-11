@@ -1274,15 +1274,25 @@ function loadMachines() {
     });
 }
 
-function disableThicknessSelection() {
-  if (!thicknessSelectEl) return;
-  thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
-  thicknessSelectEl.disabled = true;
-  currentThickness = '';
-  if (manualThicknessSelectEl) {
-    manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
-    manualThicknessSelectEl.disabled = true;
+function disableThicknessSelection({ preserveManual = false } = {}) {
+  if (thicknessSelectEl) {
+    thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+    thicknessSelectEl.disabled = true;
   }
+
+  if (!preserveManual) {
+    currentThickness = '';
+  }
+
+  if (manualThicknessSelectEl) {
+    if (manualEntryEnabled && preserveManual) {
+      manualThicknessSelectEl.disabled = true;
+    } else {
+      manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+      manualThicknessSelectEl.disabled = true;
+    }
+  }
+
   resetCalculations();
 }
 
@@ -1291,7 +1301,7 @@ function enableThicknessForSize() {
   const acrossVal = parseFloat(customWidthInputEl?.value || '');
   const alongVal = parseFloat(customLengthInputEl?.value || '');
   if (!isPositiveNumber(acrossVal) || !isPositiveNumber(alongVal)) {
-    disableThicknessSelection();
+    disableThicknessSelection({ preserveManual: manualEntryEnabled });
     return;
   }
 
