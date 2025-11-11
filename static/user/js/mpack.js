@@ -737,7 +737,7 @@ function prefillFormWithItem(item) {
     setTimeout(() => {
       if (item.thickness) {
         const thicknessValue = item.thickness.replace(' micron', '');
-        const thicknessSelect = document.getElementById('thicknessSelect');
+        const thicknessSelect = getActiveThicknessSelect();
         if (thicknessSelect) {
           thicknessSelect.value = thicknessValue;
           thicknessSelect.dispatchEvent(new Event('change'));
@@ -852,7 +852,7 @@ async function updateCartItem(button, itemId) {
 // Helper function to get form data
 function getFormData() {
   const machineSelect = document.getElementById('machineSelect');
-  const thicknessSelect = document.getElementById('thicknessSelect');
+  const thicknessSelect = getActiveThicknessSelect();
   const sheetInput = document.getElementById('sheetInput');
   const underpackingTypeSelect = document.getElementById('underpackingType');
   const discountSelect = document.getElementById('discountSelect');
@@ -1578,7 +1578,7 @@ async function addMpackToCart() {
   const itemId = urlParams.get('item_id');
   
   const machineSelect = document.getElementById('machineSelect');
-  const thicknessSelect = document.getElementById('thicknessSelect');
+  const thicknessSelect = getActiveThicknessSelect();
   const sizeSelect = document.getElementById('sizeSelect');
   const sheetInput = document.getElementById('sheetInput');
   const underpackingTypeSelect = document.getElementById('underpackingType');
