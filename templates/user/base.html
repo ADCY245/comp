@@ -182,8 +182,15 @@
                         </ul>
                     </li>
                 </ul>
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
                     {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link position-relative{% if request.endpoint == 'cart' %} active{% endif %}" href="{{ url_for('cart') }}" aria-label="View Cart">
+                            <i class="bi bi-basket"></i>
+                            <span>Cart</span>
+                            <span class="badge rounded-pill bg-gold ms-1" id="navbarCartCount" hidden>0</span>
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-person-circle"></i> {{ current_user.username if current_user.is_authenticated else 'User' }}
@@ -194,7 +201,6 @@
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person"></i> Profile</a></li>
-                            <li><a class="dropdown-item{% if request.endpoint == 'cart' %} active{% endif %}" href="{{ url_for('cart') }}"><i class="bi bi-basket"></i> Cart</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('api_logout') }}" id="logoutButton"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
                         </ul>
