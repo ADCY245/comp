@@ -550,7 +550,10 @@ function handleCustomSizeInputChange({ preserveManualThickness, existingValidity
       updatePricingFromSelections();
     }
   } else {
-    disableThicknessSelection({ preserveManual: manualEntryEnabled });
+    disableThicknessSelection({
+      preserveManual: manualEntryEnabled,
+      skipReset: manualEntryEnabled
+    });
   }
 
   if (isValid && cutYesRadio && cutYesRadio.checked) {
@@ -1274,7 +1277,7 @@ function loadMachines() {
     });
 }
 
-function disableThicknessSelection({ preserveManual = false } = {}) {
+function disableThicknessSelection({ preserveManual = false, skipReset = false } = {}) {
   if (thicknessSelectEl) {
     thicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
     thicknessSelectEl.disabled = true;
@@ -1293,7 +1296,9 @@ function disableThicknessSelection({ preserveManual = false } = {}) {
     }
   }
 
-  resetCalculations();
+  if (!skipReset) {
+    resetCalculations();
+  }
 }
 
 function enableThicknessForSize() {
