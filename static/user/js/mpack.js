@@ -529,16 +529,24 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
   return false;
 }
 
-function handleCustomSizeInputChange() {
-  const isValid = updateCustomSizeState();
+function handleCustomSizeInputChange({ preserveManualThickness, existingValidity } = {}) {
+  const previousManualThickness = preserveManualThickness !== undefined
+    ? preserveManualThickness
+    : (manualThicknessSelectEl ? manualThicknessSelectEl.value : '');
+
+  const isValid = typeof existingValidity === 'boolean'
+    ? existingValidity
+    : updateCustomSizeState();
 
   if (isValid) {
     if (manualEntryEnabled) {
-      enableManualThicknessSelection();
+      enableManualThicknessSelection({ preserveValue: previousManualThickness });
     } else {
       enableThicknessForSize();
     }
-    if (thicknessSelectEl && thicknessSelectEl.value) {
+
+    const activeThicknessValue = getSelectedThicknessValue();
+    if (activeThicknessValue) {
       updatePricingFromSelections();
     }
   } else {
@@ -548,6 +556,8 @@ function handleCustomSizeInputChange() {
   if (isValid && cutYesRadio && cutYesRadio.checked) {
     updateCutDetails();
   }
+
+  return isValid;
 }
 
 function resetCustomSizeInputs() {
@@ -612,18 +622,37 @@ function toggleManualSizeEntry(forceState = null) {
   updateCustomSizeState();
 }
 
-function enableManualThicknessSelection() {
+function enableManualThicknessSelection({ preserveValue } = {}) {
   if (!manualThicknessSelectEl) return;
   if (!uniqueThicknesses.length) return;
 
-  manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
-  uniqueThicknesses.forEach(thickness => {
-    const option = document.createElement('option');
-    option.value = thickness;
-    option.textContent = thickness;
-    manualThicknessSelectEl.appendChild(option);
-  });
+  const previousValue = preserveValue !== undefined
+    ? preserveValue
+    : manualThicknessSelectEl.value;
+
+  const existingValues = Array.from(manualThicknessSelectEl.options, option => option.value);
+  const needsRebuild = existingValues.length - 1 !== uniqueThicknesses.length
+    || uniqueThicknesses.some((value, index) => existingValues[index + 1] !== String(value));
+
+  if (needsRebuild) {
+    manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+    uniqueThicknesses.forEach(thickness => {
+      const option = document.createElement('option');
+      option.value = thickness;
+      option.textContent = thickness;
+      manualThicknessSelectEl.appendChild(option);
+    });
+  }
+
   manualThicknessSelectEl.disabled = false;
+
+  if (previousValue) {
+    const matchingOption = Array.from(manualThicknessSelectEl.options)
+      .find(option => option.value === previousValue);
+    if (matchingOption) {
+      manualThicknessSelectEl.value = previousValue;
+    }
+  }
 }
 
 function getActiveThicknessSelect() {
@@ -1029,18 +1058,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (manualWidthInputEl) {
     manualWidthInputEl.addEventListener('input', () => {
-      const hasSize = updateCustomSizeState();
-      if (!manualEntryEnabled && hasSize) {
-        toggleManualSizeEntry(true);
-      }
-      updateManualInlineSummary({ show: manualEntryEnabled && hasSize });
+      const isValid = handleCustomSizeInputChange({ preserveManualThickness: manualThicknessSelectEl ? manualThicknessSelectEl.value : '' });
+      updateManualInlineSummary({ show: manualEntryEnabled && isValid });
     });
   }
 
   if (manualLengthInputEl) {
     manualLengthInputEl.addEventListener('input', () => {
-      handleCustomSizeInputChange();
-      updateManualInlineSummary({ show: manualEntryEnabled && hasValidCustomSize() });
+      const isValid = handleCustomSizeInputChange();
+      updateManualInlineSummary({ show: manualEntryEnabled && isValid });
     });
   }
 
@@ -1053,6 +1079,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       updateCustomSizeState();
       updatePricingFromSelections();
+      updateManualInlineSummary({ show: manualEntryEnabled && hasValidCustomSize() });
     });
   }
 
