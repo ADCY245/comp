@@ -1617,7 +1617,7 @@ async function addMpackToCart() {
   const discount = discountSelect ? parseFloat(discountSelect.value) || 0 : 0;
   const sqmArea = standardSize.area || customSize.area || 0;
   const thicknessValue = Number(currentThickness || thicknessSelect.value || 0);
-  const ratePerSqm = 80 * (thicknessValue / 100);
+  const ratePerSqm = BASE_RATE_PER_100_MICRON * (thicknessValue / 100);
   const unitPrice = ratePerSqm * sqmArea;
   const subtotal = unitPrice * quantity;
   const discountAmount = (subtotal * discount) / 100;
