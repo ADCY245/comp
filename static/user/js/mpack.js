@@ -550,7 +550,7 @@ function handleCustomSizeInputChange({ preserveManualThickness, existingValidity
       updatePricingFromSelections();
     }
   } else {
-    disableThicknessSelection();
+    disableThicknessSelection({ preserveManual: manualEntryEnabled });
   }
 
   if (isValid && cutYesRadio && cutYesRadio.checked) {
