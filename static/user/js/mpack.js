@@ -18,7 +18,7 @@ const BASE_RATE_PER_100_MICRON = 75; // ₹ per sq.m at 100 micron
 // Standard MPack around sizes (full rolls)
 const STANDARD_AROUND_SIZES = [795, 1150, 1240, 1320, 1540];
 const STANDARD_AROUND_HALF_SIZES = STANDARD_AROUND_SIZES
-  .map(size => Math.floor(size / 2))
+  .map(size => size / 2)
   .filter(size => size > 0);
 const FULL_ROLL_SIZES = [...STANDARD_AROUND_SIZES];
 const HALF_ROLL_SIZES = [...STANDARD_AROUND_HALF_SIZES];
@@ -395,16 +395,16 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     if (isManualSource) {
       // Determine the appropriate roll/half-roll length to be used for pricing
       const rollMeta = resolveRollForLength(customSize.along);
-      const pricingAlong = rollMeta.effectiveLength;
+      const pricingAlong = rollMeta.rollLength;
 
       standardSize = {
         across: customSize.across,
-        along: pricingAlong,
+        along: rollMeta.rollLength,
         area: mmToSqm(customSize.across, pricingAlong),
         label: formatDimensionLabel(customSize.across, rollMeta.rollLength),
         rollLength: rollMeta.rollLength,
         usesHalfRoll: rollMeta.usesHalfRoll,
-        halfLength: Math.floor(rollMeta.rollLength / 2)
+        halfLength: rollMeta.rollLength / 2
       };
 
       // Reflect the chosen roll size in the disabled dropdown for user clarity
@@ -425,6 +425,25 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
       }
       if (manualCutFromHalfNoteEl) {
         manualCutFromHalfNoteEl.classList[rollMeta.usesHalfRoll ? 'remove' : 'add']('d-none');
+        if (rollMeta.usesHalfRoll) {
+          manualCutFromHalfNoteEl.textContent = '½ roll';
+        } else {
+          manualCutFromHalfNoteEl.textContent = '';
+        }
+      }
+
+      if (cutStandardRowEl) {
+        cutStandardRowEl.style.display = 'flex';
+        if (standardAreaDisplayEl) {
+          standardAreaDisplayEl.textContent = mmToSqm(customSize.across, pricingAlong).toFixed(3);
+        }
+      }
+
+      if (cutCustomRowEl) {
+        cutCustomRowEl.style.display = 'flex';
+        if (customAreaDisplayEl) {
+          customAreaDisplayEl.textContent = mmToSqm(customSize.across, customSize.along).toFixed(3);
+        }
       }
     } else {
       standardSize = {
@@ -434,7 +453,7 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
         label: formatDimensionLabel(customSize.across, customSize.along),
         rollLength: customSize.along,
         usesHalfRoll: false,
-        halfLength: Math.floor(customSize.along / 2)
+        halfLength: customSize.along / 2
       };
 
       if (cutSelect) {
