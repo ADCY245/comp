@@ -884,7 +884,7 @@ function getFormData() {
   const customAcross = isPositiveNumber(customSize.across) ? customSize.across : null;
   const customAlong = isPositiveNumber(customSize.along) ? customSize.along : null;
   const customArea = isPositiveNumber(customSize.area) ? customSize.area : (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
-  const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
+  const cutToCustom = manualEntryEnabled ? true : Boolean(cutYesRadio && cutYesRadio.checked);
 
   const displayAlong = customAlong || 0;
   const displayAcross = customAcross || 0;
@@ -1636,7 +1636,7 @@ async function addMpackToCart() {
   const customAcross = customSize.across || null;
   const customAlong = customSize.along || null;
   const customArea = customSize.area || (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
-  const cutToCustom = Boolean(cutYesRadio && cutYesRadio.checked);
+  const cutToCustom = manualEntryEnabled ? true : Boolean(cutYesRadio && cutYesRadio.checked);
 
   const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
   const standardSizeLabel = selectedSize || standardSize.label || customSizeLabel;
