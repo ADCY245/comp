@@ -395,11 +395,12 @@ function updateCustomSizeState({ showFeedback = false } = {}) {
     if (isManualSource) {
       // Determine the appropriate roll/half-roll length to be used for pricing
       const rollMeta = resolveRollForLength(customSize.along);
-      const pricingAlong = rollMeta.rollLength;
+      const pricingAlong = rollMeta.effectiveLength;
 
       standardSize = {
         across: customSize.across,
         along: rollMeta.rollLength,
+        effectiveAlong: rollMeta.effectiveLength,
         area: mmToSqm(customSize.across, pricingAlong),
         label: formatDimensionLabel(customSize.across, rollMeta.rollLength),
         rollLength: rollMeta.rollLength,
