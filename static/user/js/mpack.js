@@ -295,14 +295,21 @@ function relocateManualControlGroups(target) {
 
 function updateManualDiscountSummary() {
   if (!manualInlineDiscountSummaryEl) return;
-  const discountSelect = document.getElementById('discountSelect');
-  let discountLabel = 'Discount: --';
-  if (discountSelect && discountSelect.value) {
-    const selectedOption = discountSelect.options[discountSelect.selectedIndex];
-    const optionText = selectedOption ? selectedOption.textContent.trim() : `${discountSelect.value}%`;
-    discountLabel = `Discount: ${optionText}`;
+
+  // Hide element by default
+  manualInlineDiscountSummaryEl.classList.add('d-none');
+
+  if (!manualEntryEnabled || !hasValidCustomSize()) {
+    manualInlineDiscountSummaryEl.textContent = '';
+    return;
   }
-  manualInlineDiscountSummaryEl.textContent = discountLabel;
+
+  // Determine the roll/half-roll that will be cut from
+  const rollMeta = resolveRollForLength(customSize.along);
+  const effectiveArea = mmToSqm(customSize.across, rollMeta.effectiveLength);
+  const cutLabel = `Cut from size: ${rollMeta.rollLength} mm${rollMeta.usesHalfRoll ? ' (½ roll)' : ''} · ${effectiveArea.toFixed(3)} sq.m`;
+  manualInlineDiscountSummaryEl.textContent = cutLabel;
+  manualInlineDiscountSummaryEl.classList.remove('d-none');
 }
 
 function showCutQuestion(resetRadios = true) {
