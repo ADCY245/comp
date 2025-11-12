@@ -64,6 +64,27 @@
   margin-top: 0.25rem;
 }
 
+.chem-step__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.chem-step--collapsed > :not(.chem-step__header) {
+  display: none !important;
+}
+
+.chem-step--collapsed .chem-step__header {
+  cursor: pointer;
+}
+
+.chem-step--collapsed .chem-step__title {
+  margin-bottom: 0;
+}
+
 .chem-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
