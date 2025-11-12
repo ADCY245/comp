@@ -42,7 +42,10 @@
     return 50; // Fallback placeholder until catalogue provides per-litre pricing
   }
 
-  document.addEventListener('DOMContentLoaded', initializeConfigurator);
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeConfigurator();
+    initCollapsibleSteps();
+  });
 
   async function initializeConfigurator() {
     try {
@@ -480,6 +483,21 @@
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by choosing a chemical category.</p>';
     } else {
       summaryBody.innerHTML = items.join('');
+
+      // Auto-collapse completed steps
+      if (state.selectedCategory) {
+        collapseStep(document.getElementById('chemStepCategory'), state.selectedCategory.name);
+      }
+      if (state.selectedProduct) {
+        collapseStep(document.getElementById('chemStepProduct'), state.selectedProduct.name);
+      }
+      if (state.selectedFormat) {
+        const fmtLabel = state.selectedFormat.label || `${state.selectedFormat.size_litre || ''}L pack`;
+        collapseStep(document.getElementById('chemStepFormat'), fmtLabel);
+      }
+      if (state.selectedFormat && Number(state.quantityLitres) > 0) {
+        collapseStep(document.getElementById('chemStepQuantity'), `${formatNumber(state.quantityLitres)} L`);
+      }
     }
   }
 
@@ -787,4 +805,57 @@
       maximumFractionDigits: 2
     });
   }
+  /* ---------------- Collapsible Steps Helpers ---------------- */
+  function collapseStep(stepEl, summaryText) {
+    if (!stepEl) return;
+    stepEl.classList.add('chem-step--collapsed');
+    const summary = stepEl.querySelector('.chem-step__summary');
+    if (summary) summary.textContent = summaryText || '';
+    const updateBtn = stepEl.querySelector('.chem-step__update');
+    if (updateBtn) updateBtn.classList.remove('d-none');
+  }
+
+  function expandStep(stepEl) {
+    if (!stepEl) return;
+    stepEl.classList.remove('chem-step--collapsed');
+    const updateBtn = stepEl.querySelector('.chem-step__update');
+    if (updateBtn) updateBtn.classList.add('d-none');
+  }
+
+  function initCollapsibleSteps() {
+    document.querySelectorAll('.chem-step').forEach(stepEl => {
+      const header = stepEl.querySelector('.chem-step__header');
+      if (!header) return;
+
+      // Add summary span if missing
+      let summarySpan = header.querySelector('.chem-step__summary');
+      if (!summarySpan) {
+        summarySpan = document.createElement('span');
+        summarySpan.className = 'chem-step__summary ms-2';
+        header.appendChild(summarySpan);
+      }
+
+      // Add update button if missing
+      let updateBtn = header.querySelector('.chem-step__update');
+      if (!updateBtn) {
+        updateBtn = document.createElement('button');
+        updateBtn.type = 'button';
+        updateBtn.className = 'btn btn-sm btn-outline-secondary chem-step__update ms-2 d-none';
+        updateBtn.textContent = 'Update';
+        header.appendChild(updateBtn);
+      }
+
+      updateBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        expandStep(stepEl);
+      });
+
+      // Clicking header also expands unless clicking update btn
+      header.addEventListener('click', e => {
+        if (e.target.closest('.chem-step__update')) return;
+        expandStep(stepEl);
+      });
+    });
+  }
+
 })();

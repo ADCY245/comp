@@ -283,9 +283,6 @@
 .chem-summary__empty {
   background: rgba(248, 250, 252, 0.08);
   border-radius: 12px;
-  padding: 1rem;
-  font-size: 0.9rem;
-  color: rgba(248, 250, 252, 0.75);
 }
 
 /* Add to Cart Section - beside machine selection */
