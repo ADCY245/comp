@@ -7,6 +7,8 @@
   const formatOptionsEl = document.getElementById('formatOptions');
   const quantityInput = document.getElementById('quantityLitres');
   const quantityHelper = document.getElementById('quantityHelper');
+  const confirmQuantityBtn = document.getElementById('confirmQuantityBtn');
+  const quantityStepEl = document.getElementById('chemStepQuantity');
   const summaryBody = document.getElementById('chemSummaryBody');
   const pricingSection = document.getElementById('pricingSection');
   const discountInput = document.getElementById('discountPercent');
@@ -25,7 +27,8 @@
     selectedCategory: null,
     selectedProduct: null,
     selectedFormat: null,
-    quantityLitres: null
+    quantityLitres: null,
+    quantityConfirmed: false
   };
 
   function getBasePricePerLitre(product = state.selectedProduct, format = state.selectedFormat) {
@@ -141,16 +144,53 @@
         if (!state.selectedFormat) {
           quantityInput.value = '';
           state.quantityLitres = null;
+          state.quantityConfirmed = false;
+          if (confirmQuantityBtn) {
+            confirmQuantityBtn.disabled = true;
+          }
+          if (quantityStepEl) {
+            expandStep(quantityStepEl);
+          }
+          updateSummary();
           return;
         }
 
         const value = parseFloat(quantityInput.value);
-        if (Number.isNaN(value) || value < 0) {
+        const hasValidQuantity = Number.isFinite(value) && value > 0;
+        if (!hasValidQuantity) {
           state.quantityLitres = null;
         } else {
           state.quantityLitres = value;
         }
 
+        state.quantityConfirmed = false;
+        if (confirmQuantityBtn) {
+          confirmQuantityBtn.disabled = !hasValidQuantity;
+        }
+        if (quantityStepEl) {
+          expandStep(quantityStepEl);
+        }
+
+        updateSummary();
+      });
+    }
+
+    if (confirmQuantityBtn) {
+      confirmQuantityBtn.addEventListener('click', () => {
+        if (!state.selectedFormat) {
+          showToast('Error', 'Please select a packaging format before confirming volume.', 'error');
+          return;
+        }
+
+        const value = parseFloat(quantityInput.value);
+        if (!Number.isFinite(value) || value <= 0) {
+          showToast('Error', 'Enter a valid volume before confirming.', 'error');
+          return;
+        }
+
+        state.quantityLitres = value;
+        state.quantityConfirmed = true;
+        confirmQuantityBtn.blur();
         updateSummary();
       });
     }
@@ -174,6 +214,7 @@
     state.selectedProduct = null;
     state.selectedFormat = null;
     state.quantityLitres = null;
+    state.quantityConfirmed = false;
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = true;
@@ -181,6 +222,9 @@
     }
     if (quantityHelper) {
       quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
+    }
+    if (confirmQuantityBtn) {
+      confirmQuantityBtn.disabled = true;
     }
 
     renderProducts();
@@ -233,6 +277,7 @@
     state.selectedProduct = null;
     state.selectedFormat = null;
     state.quantityLitres = null;
+    state.quantityConfirmed = false;
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = true;
@@ -241,6 +286,10 @@
     if (quantityHelper) {
       quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
     }
+
+    resetStep('chemStepProduct', 'Select a product');
+    resetStep('chemStepFormat');
+    resetStep('chemStepQuantity');
 
     renderCategories();
     renderProducts();
@@ -305,6 +354,7 @@
     state.selectedProduct = product;
     state.selectedFormat = null;
     state.quantityLitres = null;
+    state.quantityConfirmed = false;
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = true;
@@ -367,6 +417,7 @@
 
     state.selectedFormat = format;
     state.quantityLitres = null;
+    state.quantityConfirmed = false;
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = false;
@@ -379,6 +430,9 @@
       } else {
         quantityHelper.textContent = 'Enter litres and we will record them as-is for this packaging.';
       }
+    }
+    if (confirmQuantityBtn) {
+      confirmQuantityBtn.disabled = true;
     }
 
     renderFormats();
@@ -409,7 +463,9 @@
     const quantityLitresValue = Number(state.quantityLitres);
     const hasValidQuantity = Number.isFinite(quantityLitresValue) && quantityLitresValue > 0;
 
-    if (state.selectedFormat && hasValidQuantity) {
+    const quantityIsReady = state.quantityConfirmed && hasValidQuantity;
+
+    if (state.selectedFormat && quantityIsReady) {
       const size = Number(state.selectedFormat.size_litre) || 0;
       let detail = `${formatNumber(quantityLitresValue)} L requested`;
 
@@ -430,7 +486,7 @@
       state.selectedCategory &&
       state.selectedProduct &&
       state.selectedFormat &&
-      hasValidQuantity
+      quantityIsReady
     );
 
     if (hasCompleteSelection) {
@@ -495,14 +551,14 @@
         const fmtLabel = state.selectedFormat.label || `${state.selectedFormat.size_litre || ''}L pack`;
         collapseStep(document.getElementById('chemStepFormat'), fmtLabel);
       }
-      if (state.selectedFormat && Number(state.quantityLitres) > 0) {
+      if (quantityIsReady) {
         collapseStep(document.getElementById('chemStepQuantity'), `${formatNumber(state.quantityLitres)} L`);
       }
     }
   }
 
   function updatePricingBreakdown() {
-    if (!pricingSection || !pricingBreakdown || !state.selectedFormat) {
+    if (!pricingSection || !pricingBreakdown || !state.selectedFormat || !state.quantityConfirmed) {
       return;
     }
 
@@ -606,7 +662,7 @@
       return;
     }
 
-    if (!state.quantityLitres || state.quantityLitres <= 0) {
+    if (!state.quantityConfirmed || !state.quantityLitres || state.quantityLitres <= 0) {
       showToast('Error', 'Please enter a valid quantity.', 'error');
       return;
     }
@@ -717,6 +773,7 @@
     state.selectedProduct = null;
     state.selectedFormat = null;
     state.quantityLitres = null;
+    state.quantityConfirmed = false;
     state.machineName = '';
 
     // Reset UI elements
@@ -822,6 +879,14 @@
     if (updateBtn) updateBtn.classList.add('d-none');
   }
 
+  function resetStep(stepRef, summaryText = '') {
+    const stepEl = typeof stepRef === 'string' ? document.getElementById(stepRef) : stepRef;
+    if (!stepEl) return;
+    expandStep(stepEl);
+    const summary = stepEl.querySelector('.chem-step__summary');
+    if (summary) summary.textContent = summaryText;
+  }
+
   function initCollapsibleSteps() {
     document.querySelectorAll('.chem-step').forEach(stepEl => {
       const header = stepEl.querySelector('.chem-step__header');
@@ -848,12 +913,30 @@
       updateBtn.addEventListener('click', e => {
         e.stopPropagation();
         expandStep(stepEl);
+        if (stepEl === quantityStepEl) {
+          state.quantityConfirmed = false;
+          if (confirmQuantityBtn) {
+            const currentValue = parseFloat(quantityInput.value);
+            const hasValidQuantity = Number.isFinite(currentValue) && currentValue > 0;
+            confirmQuantityBtn.disabled = !hasValidQuantity;
+          }
+          updateSummary();
+        }
       });
 
       // Clicking header also expands unless clicking update btn
       header.addEventListener('click', e => {
         if (e.target.closest('.chem-step__update')) return;
         expandStep(stepEl);
+        if (stepEl === quantityStepEl) {
+          state.quantityConfirmed = false;
+          if (confirmQuantityBtn) {
+            const currentValue = parseFloat(quantityInput.value);
+            const hasValidQuantity = Number.isFinite(currentValue) && currentValue > 0;
+            confirmQuantityBtn.disabled = !hasValidQuantity;
+          }
+          updateSummary();
+        }
       });
     });
   }

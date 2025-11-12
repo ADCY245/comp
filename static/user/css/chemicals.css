@@ -73,12 +73,18 @@
   color: #475569;
 }
 
+.chem-step--collapsed {
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
 .chem-step--collapsed > :not(.chem-step__header) {
   display: none !important;
 }
 
 .chem-step--collapsed .chem-step__header {
   cursor: pointer;
+  margin-bottom: 0;
 }
 
 .chem-step--collapsed .chem-step__title {
@@ -248,6 +254,25 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.chem-quantity__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+}
+
+.chem-quantity__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+}
+
+.chem-quantity__confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .chem-quantity input[disabled] {
