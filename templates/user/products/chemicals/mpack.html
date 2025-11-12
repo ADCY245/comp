@@ -398,14 +398,49 @@
       <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
       <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
         <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
-          <div class="row g-3 align-items-end manual-input-row" id="manualInputRow">
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="manualWidthInput">Across (mm)</label>
-              <input type="number" min="0" step="0.5" class="form-control" id="manualWidthInput" placeholder="Enter across width">
+          <div class="row g-4 align-items-stretch manual-input-row" id="manualInputRow">
+            <div class="col-12 col-md-6 mpack-diagram-column">
+              <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+                <div class="mpack-diagram-visual">
+                  <svg viewBox="0 0 300 200" width="300" height="190" role="img" aria-labelledby="manualAcrossDiagramTitle manualAcrossDiagramDesc">
+                    <title id="manualAcrossDiagramTitle">Across direction illustration</title>
+                    <desc id="manualAcrossDiagramDesc">Cylinder with straight arrow indicating the across measurement.</desc>
+                    <defs>
+                      <marker id="manualAcrossArrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 z" fill="#000000" />
+                      </marker>
+                    </defs>
+                    <path d="M70 70 H230 A30 30 0 0 1 260 100 A30 30 0 0 1 230 130 H70 A30 30 0 0 1 40 100 A30 30 0 0 1 70 70 Z" fill="#9CA3AF" opacity="0.6"></path>
+                    <g fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="35" y1="35" x2="265" y2="35" stroke="#000000" stroke-width="3" marker-start="url(#manualAcrossArrowHead)" marker-end="url(#manualAcrossArrowHead)" />
+                      <path d="M70 70 A30 30 0 0 0 70 130" />
+                      <path d="M70 70 H230" />
+                      <path d="M70 130 H230" />
+                      <circle cx="230" cy="100" r="30" />
+                    </g>
+                    <text x="150" y="25" text-anchor="middle" font-size="18" font-weight="bold" fill="#000000" style="font-family: Arial, sans-serif;">Across</text>
+                  </svg>
+                </div>
+                <figcaption class="fw-semibold">Across (Cylinder width)</figcaption>
+                <span class="text-muted small">Measure straight across the cylinder.</span>
+              </figure>
+              <div class="mpack-select-wrapper">
+                <label class="form-label" for="manualWidthInput">Across (mm)</label>
+                <input type="number" min="0" step="0.5" class="form-control" id="manualWidthInput" placeholder="Enter across width">
+              </div>
             </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="manualLengthInput">Around (mm)</label>
-              <input type="number" min="0" step="0.5" class="form-control" id="manualLengthInput" placeholder="Enter around length">
+            <div class="col-12 col-md-6 mpack-diagram-column">
+              <figure class="mpack-diagram-figure d-flex flex-column align-items-center align-items-md-start text-center text-md-start gap-1 mb-0">
+                <div class="mpack-diagram-visual">
+                  <img src="/static/images/Cylinder%20around.png" alt="Around cylinder wrap illustration" width="220" height="105" />
+                </div>
+                <figcaption class="fw-semibold">Around (Cylinder circumference)</figcaption>
+                <span class="text-muted small">Measure around the cylinder.</span>
+              </figure>
+              <div class="mpack-select-wrapper">
+                <label class="form-label" for="manualLengthInput">Around (mm)</label>
+                <input type="number" min="0" step="0.5" class="form-control" id="manualLengthInput" placeholder="Enter around length">
+              </div>
             </div>
           </div>
           <div class="d-none mt-2" id="manualInlineSummaryRow">
