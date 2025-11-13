@@ -179,6 +179,10 @@
   gap: 0.5rem;
 }
 
+.chem-step--collapsed .chem-step__helper {
+  display: none;
+}
+
 .chem-step--collapsed .chem-step__title {
   margin-bottom: 0;
 }
