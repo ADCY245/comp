@@ -13,8 +13,14 @@
   // Deprecated pricing section removed
 const pricingSection = null;
 const summaryActions = document.getElementById('summaryActions');
-  const discountInput = document.getElementById('discountPercent');
-  const updateDiscountBtn = document.getElementById('updateDiscountBtn');
+  // Discount dropdown is injected dynamically into the summary
+  // Helper to fetch the current discount percent from DOM
+  function getDiscountPercent() {
+    const el = document.getElementById('discountPercent');
+    const v = parseFloat(el && el.value);
+    return Number.isFinite(v) ? v : 0;
+  }
+  // removed updateDiscountBtn (discount now inside summary)
   const pricingBreakdown = document.getElementById('pricingBreakdown');
   const addToCartBtn = document.getElementById('addToCartBtn');
 
@@ -53,7 +59,7 @@ const summaryActions = document.getElementById('summaryActions');
   });
 
   async function initializeConfigurator() {
-    populateDiscountOptions();
+    /* discount options generated dynamically */
     try {
       // Load machines first
       await loadMachines();
@@ -103,18 +109,6 @@ const summaryActions = document.getElementById('summaryActions');
       machineSelect.addEventListener('change', event => {
         const selectedOption = event.target.options[event.target.selectedIndex];
         state.machineName = selectedOption && selectedOption.value ? selectedOption.textContent : '';
-        updateSummary();
-      });
-    }
-
-    if (updateDiscountBtn) {
-      updateDiscountBtn.addEventListener('click', () => {
-        updateSummary();
-      });
-    }
-
-    if (discountInput) {
-      discountInput.addEventListener('change', () => {
         updateSummary();
       });
     }
@@ -186,53 +180,6 @@ const summaryActions = document.getElementById('summaryActions');
         updateSummary();
       });
     }
-  }
-
-  function populateDiscountOptions() {
-    if (discountInput) {
-      for (let i = 0; i <= 10; i += 0.5) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = `${i}%`;
-        discountInput.appendChild(option);
-      }
-    }
-  }
-
-  function toggle200LFilter() {
-    state.filter200LActive = !state.filter200LActive;
-
-    // Update button styling
-    if (filter200LButton) {
-      if (state.filter200LActive) {
-        filter200LButton.classList.add('active');
-        filter200LButton.setAttribute('aria-pressed', 'true');
-      } else {
-        filter200LButton.classList.remove('active');
-        filter200LButton.setAttribute('aria-pressed', 'false');
-      }
-    }
-
-    // Clear selections and re-render
-    state.selectedProduct = null;
-    state.selectedFormat = null;
-    state.quantityLitres = null;
-    state.quantityConfirmed = false;
-    if (quantityInput) {
-      quantityInput.value = '';
-      quantityInput.disabled = true;
-      quantityInput.placeholder = 'Select a packaging format first';
-    }
-    if (quantityHelper) {
-      quantityHelper.textContent = 'Choose a packaging format to enable quantity entry.';
-    }
-    if (confirmQuantityBtn) {
-      confirmQuantityBtn.disabled = true;
-    }
-
-    renderProducts();
-    renderFormats();
-    updateSummary();
   }
 
   function renderCategories() {
@@ -480,7 +427,7 @@ const summaryActions = document.getElementById('summaryActions');
     );
 
     if (hasCompleteSelection) {
-      const discountValue = discountInput ? parseFloat(discountInput.value) : 0;
+      const discountValue = getDiscountPercent();
       const discountPercent = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
       const discountLabel = discountPercent > 0 ? ` (${discountPercent}% discount)` : '';
 
@@ -501,7 +448,11 @@ const summaryActions = document.getElementById('summaryActions');
         `₹${priceForLitres.toFixed(2)}`,
         `₹${basePricePerLitre.toFixed(2)} × ${formatNumber(quantityLitresValue)} L`
       ));
-      items.push(summaryItem('Discount', discountPercent > 0 ? `-₹${discountAmount.toFixed(2)} (${discountPercent}%)` : 'None'));
+      // Build discount select
+      const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5).map(p => `<option value="${p}" ${p === discountPercent ? 'selected' : ''}>${p}%</option>`).join('');
+      const discountSelectHtml = `<select id="discountPercent" class="form-select form-select-sm w-100">${discountOptions}</select>`;
+      items.push(`<div class="chem-summary__item"> <span class="chem-summary__label">Discount</span> ${discountSelectHtml} </div>`);
+
       items.push(summaryItem('GST', `₹${gstAmount.toFixed(2)} (${gstPercent}%)`));
       items.push(summaryItem('Total', `₹${finalTotal.toFixed(2)}`));
     }
@@ -524,6 +475,13 @@ const summaryActions = document.getElementById('summaryActions');
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by choosing a chemical category.</p>';
     } else {
       summaryBody.innerHTML = items.join('');
+      // Rewire discount listener on freshly rendered select
+      const discountSelectEl = document.getElementById('discountPercent');
+      if (discountSelectEl) {
+        discountSelectEl.addEventListener('change', () => {
+          updateSummary();
+        });
+      }
 
       // Auto-collapse completed steps
       if (state.selectedCategory) {
@@ -564,7 +522,7 @@ const summaryActions = document.getElementById('summaryActions');
     const priceForRequestedLitres = basePricePerLitre * quantityLitresValue;
 
     // Get current discount from DOM
-    const discountValue = discountInput ? parseFloat(discountInput.value) : 0;
+    const discountValue = getDiscountPercent();
     const currentDiscount = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
 
     // Calculate discount and final pricing
@@ -653,7 +611,7 @@ const summaryActions = document.getElementById('summaryActions');
     }
 
     // Calculate pricing using current form values
-    const currentDiscount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+    const currentDiscount = getDiscountPercent();
 
     const format = state.selectedFormat;
     const quantityLitres = state.quantityLitres;
@@ -774,9 +732,6 @@ const summaryActions = document.getElementById('summaryActions');
     if (pricingSection) {
       pricingSection.style.display = 'none';
     }
-    if (discountInput) {
-      discountInput.value = '0';
-    }
     if (pricingBreakdown) {
       pricingBreakdown.innerHTML = '';
     }
@@ -851,7 +806,15 @@ const summaryActions = document.getElementById('summaryActions');
   function collapseStep(stepEl, summaryText) {
     if (!stepEl) return;
     stepEl.classList.add('chem-step--collapsed');
-    const summary = stepEl.querySelector('.chem-step__summary');
+    let summary = stepEl.querySelector('.chem-step__summary');
+    if (!summary) {
+      const header = stepEl.querySelector('.chem-step__header');
+      if (header) {
+        summary = document.createElement('span');
+        summary.className = 'chem-step__summary ms-auto';
+        header.appendChild(summary);
+      }
+    }
     if (summary) summary.textContent = summaryText || '';
     const updateBtn = stepEl.querySelector('.chem-step__update');
     if (updateBtn) updateBtn.classList.remove('d-none');

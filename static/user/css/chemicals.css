@@ -106,6 +106,38 @@
   font-size: 0.86rem;
 }
 
+#chemStepMachine {
+  padding: 0.45rem 0.7rem;
+}
+
+#chemStepMachine .chem-step__header {
+  margin-bottom: 0.35rem;
+}
+
+#chemStepMachine .chem-step__title {
+  font-size: 0.95rem;
+}
+
+#chemStepMachine .chem-step__helper {
+  font-size: 0.78rem;
+  margin-top: 0.08rem;
+}
+
+#chemStepMachine .chem-machine-controls {
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
+}
+
+#chemStepMachine .chem-machine-controls .form-select {
+  padding: 0.38rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+#chemStepMachine .chem-machine-controls .btn {
+  padding: 0.28rem 0.6rem;
+  font-size: 0.82rem;
+}
+
 .chem-step--quantity .chem-quantity {
   gap: 0.25rem;
 }
