@@ -54,12 +54,9 @@
   border-radius: 18px;
   padding: 1.5rem;
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.08);
-  margin: 0;
+  margin-bottom: 1.25rem;
 }
 
-.chem-step + .chem-step {
-  margin-top: 1.25rem;
-}
 
 .chem-step__header {
   margin-bottom: 1rem;
