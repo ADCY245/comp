@@ -48,6 +48,10 @@
   margin-bottom: 0; 
 }
 
+.chem-step:first-of-type {
+  margin-top: 1rem;
+}
+
 .chem-step {
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: #ffffff;
