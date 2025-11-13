@@ -484,6 +484,9 @@ const summaryActions = document.getElementById('summaryActions');
 
     if (!items.length) {
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by choosing a chemical category.</p>';
+      if (summaryActions) {
+        summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Your cart button will appear after you complete the selections.</p>';
+      }
     } else {
       summaryBody.innerHTML = items.join('');
       // Rewire discount listener on freshly rendered select
@@ -492,6 +495,32 @@ const summaryActions = document.getElementById('summaryActions');
         discountSelectEl.addEventListener('change', () => {
           updateSummary();
         });
+      }
+
+      if (summaryActions) {
+        if (hasCompleteSelection) {
+          summaryActions.innerHTML = `
+            <button type="button" class="chem-summary__cta-btn add-to-cart-btn">
+              <i class="fas fa-cart-plus"></i>
+              <span>Add to cart</span>
+            </button>
+          `;
+
+          const summaryCartBtn = summaryActions.querySelector('.add-to-cart-btn');
+          if (summaryCartBtn) {
+            summaryCartBtn.addEventListener('click', async (event) => {
+              event.preventDefault();
+              try {
+                await addChemicalToCart();
+              } catch (error) {
+                console.error('chemicals.js: failed to add to cart from summary', error);
+                showToast('Error', 'Failed to add chemical to cart. Please try again.', 'error');
+              }
+            });
+          }
+        } else {
+          summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Confirm volume to enable the cart button.</p>';
+        }
       }
 
       // Auto-collapse completed steps
