@@ -10,7 +10,9 @@
   const confirmQuantityBtn = document.getElementById('confirmQuantityBtn');
   const quantityStepEl = document.getElementById('chemStepQuantity');
   const summaryBody = document.getElementById('chemSummaryBody');
-  const pricingSection = document.getElementById('pricingSection');
+  // Deprecated pricing section removed
+const pricingSection = null;
+const summaryActions = document.getElementById('summaryActions');
   const discountInput = document.getElementById('discountPercent');
   const updateDiscountBtn = document.getElementById('updateDiscountBtn');
   const pricingBreakdown = document.getElementById('pricingBreakdown');
@@ -51,6 +53,7 @@
   });
 
   async function initializeConfigurator() {
+    populateDiscountOptions();
     try {
       // Load machines first
       await loadMachines();
@@ -113,13 +116,6 @@
     if (discountInput) {
       discountInput.addEventListener('change', () => {
         updateSummary();
-      });
-
-      discountInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          updateDiscountBtn.click();
-        }
       });
     }
 
@@ -189,6 +185,17 @@
         confirmQuantityBtn.blur();
         updateSummary();
       });
+    }
+  }
+
+  function populateDiscountOptions() {
+    if (discountInput) {
+      for (let i = 0; i <= 10; i += 0.5) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `${i}%`;
+        discountInput.appendChild(option);
+      }
     }
   }
 
@@ -437,6 +444,7 @@
   }
 
   function updateSummary() {
+    if (summaryActions) summaryActions.innerHTML = '';
     const items = [];
 
     // Combine category and product together in one card
