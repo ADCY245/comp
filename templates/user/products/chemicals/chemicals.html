@@ -19,24 +19,20 @@
   <div class="chemicals-page__content">
     <div class="chem-layout">
       <form class="chem-configurator" id="chemicalsConfigurator" novalidate>
-        <section class="chem-step chem-step--compact" id="chemStepMachine">
-          <div class="chem-step__header">
-            <h3 class="chem-step__title">Machine (optional)</h3>
-            <p class="chem-step__helper">Select the press you&rsquo;re planning for, or leave it blank if you aren&rsquo;t sure.</p>
-          </div>
-          <div class="chem-machine">
-            <label for="machineSelect" class="chem-machine__label">
-              Select Machine / Model <span class="chem-machine__label-optional">(optional)</span>
-            </label>
-            <div class="chem-machine__control">
-              <select class="form-select chem-machine__select" id="machineSelect" aria-label="Select Machine">
+        <div class="mb-3" id="machineControls">
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="machineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
+              <select id="machineSelect" class="form-select" aria-label="Select Machine">
                 <option value="">-- Select Machine --</option>
+                <option value="">-- Select Machine (optional) --</option>
               </select>
-              <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold chem-machine__new">
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold">
                 <i class="fas fa-plus"></i> New Machine
               </a>
             </div>
-            <p class="chem-machine__helper mb-0">Leave blank if the machine is unknown. The summary will display “--”.</p>
           </div>
         </section>
 
