@@ -28,16 +28,24 @@
   align-items: flex-start;
 }
 
-@media (max-width: 991.98px) {
-  .chem-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.chem-configurator { 
+  grid-column: 1/2; 
+}
+
+.chem-summary { 
+  grid-column: 2/3; 
+  align-self: start; 
+}
+
+#machineControls { 
+  margin-bottom: 1.75rem; 
 }
 
 .chem-configurator {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.75rem;
+  margin-bottom: 0; 
 }
 
 .chem-step {
