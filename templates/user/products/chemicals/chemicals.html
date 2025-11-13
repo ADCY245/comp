@@ -110,15 +110,15 @@
               <div class="col-12">
                 <label class="form-label" for="discountPercent">Discount (%)</label>
                 <div class="input-group">
-                  <input type="number"
-                         class="form-control discount-input text-center"
-                         id="discountPercent"
-                         min="0"
-                         max="100"
-                         step="0.5"
-                         value="0"
-                         placeholder="Enter discount percentage">
-                  <span class="input-group-text">%</span>
+                  <select class="form-select text-center" id="discountPercent">
+                    <option value="0" selected>No discount</option>
+                    <option value="5">5&nbsp;%</option>
+                    <option value="10">10&nbsp;%</option>
+                    <option value="15">15&nbsp;%</option>
+                    <option value="20">20&nbsp;%</option>
+                    <option value="25">25&nbsp;%</option>
+                    <option value="30">30&nbsp;%</option>
+                  </select>
                   <button class="btn btn-outline-success update-discount-btn"
                           type="button"
                           id="updateDiscountBtn">

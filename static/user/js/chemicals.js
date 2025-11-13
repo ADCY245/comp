@@ -111,11 +111,7 @@
     }
 
     if (discountInput) {
-      discountInput.addEventListener('input', () => {
-        const rawValue = parseFloat(discountInput.value);
-        const finiteValue = Number.isFinite(rawValue) ? rawValue : 0;
-        const clampedValue = Math.max(0, Math.min(100, finiteValue));
-        discountInput.value = clampedValue;
+      discountInput.addEventListener('change', () => {
         updateSummary();
       });
 
@@ -442,22 +438,15 @@
   function updateSummary() {
     const items = [];
 
-    if (state.machineName) {
-      items.push(summaryItem('Machine', state.machineName));
-    }
-
-    if (state.selectedCategory) {
-      items.push(summaryItem('Category', state.selectedCategory.name));
-    }
-
-    if (state.selectedProduct) {
-      items.push(summaryItem('Product', state.selectedProduct.name, state.selectedProduct.description));
-    }
-
-    if (state.selectedFormat) {
-      const size = state.selectedFormat.size_litre ? `${state.selectedFormat.size_litre} litre pack` : 'Pack size not specified';
-      const detail = state.selectedFormat.label || 'Selected format';
-      items.push(summaryItem('Packaging', detail, size));
+    // Combine category and product together in one card
+    if (state.selectedCategory && state.selectedProduct) {
+      items.push(
+        summaryItem(
+          'Product',
+          state.selectedProduct.name,
+          state.selectedCategory.name
+        )
+      );
     }
 
     const quantityLitresValue = Number(state.quantityLitres);
@@ -467,19 +456,11 @@
 
     if (state.selectedFormat && quantityIsReady) {
       const size = Number(state.selectedFormat.size_litre) || 0;
-      let detail = `${formatNumber(quantityLitresValue)} L requested`;
-
-      if (size > 0) {
-        const containers = Math.ceil(quantityLitresValue / size);
-        const achievedLitres = containers * size;
-        const surplus = achievedLitres - quantityLitresValue;
-        detail = `${formatNumber(quantityLitresValue)} L → ${containers} × ${state.selectedFormat.label}`;
-        if (surplus > 0) {
-          detail += ` (covers ${formatNumber(achievedLitres)} L, ${formatNumber(surplus)} L surplus)`;
-        }
-      }
-
-      items.push(summaryItem('Quantity', detail));
+      const formatLabel = state.selectedFormat.label || (size ? `${size}L pack` : 'Pack');
+      const containers = size > 0 ? Math.ceil(quantityLitresValue / size) : 1;
+      const totalLitres = size > 0 ? containers * size : quantityLitresValue;
+      const packagingDisplay = `${formatLabel} × ${containers} = ${formatNumber(totalLitres)} L`;
+      items.push(summaryItem('Packaging', packagingDisplay));
     }
 
     const hasCompleteSelection = Boolean(
@@ -506,19 +487,14 @@
       const gstAmount = (discountedSubtotal * gstPercent) / 100;
       const finalTotal = discountedSubtotal + gstAmount;
 
-      items.push(summaryItem('Containers Needed', `${packsNeeded} × ${sanitize(format.label || 'container')}`));
-      items.push(summaryItem('Litres Required', `${formatNumber(quantityLitresValue)} L`));
       items.push(summaryItem(
         'Base Price',
         `₹${priceForLitres.toFixed(2)}`,
         `₹${basePricePerLitre.toFixed(2)} × ${formatNumber(quantityLitresValue)} L`
       ));
-      items.push(summaryItem('Pricing', `Standard Pricing${discountLabel}`));
-      if (discountPercent > 0) {
-        items.push(summaryItem('Discount', `-₹${discountAmount.toFixed(2)}`));
-      }
+      items.push(summaryItem('Discount', discountPercent > 0 ? `-₹${discountAmount.toFixed(2)} (${discountPercent}%)` : 'None'));
       items.push(summaryItem('GST', `₹${gstAmount.toFixed(2)} (${gstPercent}%)`));
-      items.push(summaryItem('Estimated Total', `₹${finalTotal.toFixed(2)}`));
+      items.push(summaryItem('Total', `₹${finalTotal.toFixed(2)}`));
     }
 
     if (pricingSection && pricingBreakdown) {
