@@ -78,6 +78,46 @@
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
 }
 
+.chem-step--compact {
+  padding: 1rem 1.25rem;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.07);
+}
+
+.chem-step--compact .chem-step__header {
+  margin-bottom: 0.75rem;
+}
+
+.chem-machine-controls {
+  column-gap: 0.75rem;
+  row-gap: 0.5rem;
+}
+
+.chem-machine-controls .btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.chem-step--quantity .chem-quantity {
+  gap: 0.35rem;
+}
+
+.chem-step--quantity .chem-step__helper {
+  margin-top: 0.15rem;
+}
+
+.chem-step--quantity .form-label {
+  margin-bottom: 0.35rem;
+}
+
+.chem-step--quantity .chem-quantity__confirm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.chem-step--quantity .form-control {
+  padding: 0.55rem 0.75rem;
+}
+
 .chem-step--collapsed > :not(.chem-step__header) {
   display: none !important;
 }

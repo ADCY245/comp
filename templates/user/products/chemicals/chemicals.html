@@ -19,12 +19,12 @@
   <div class="chemicals-page__content">
     <div class="chem-layout">
       <form class="chem-configurator" id="chemicalsConfigurator" novalidate>
-        <section class="chem-step" id="chemStepMachine">
+        <section class="chem-step chem-step--compact" id="chemStepMachine">
           <div class="chem-step__header">
             <h3 class="chem-step__title">Machine (optional)</h3>
             <p class="chem-step__helper">Share the press this order is for and we&rsquo;ll include it in the summary.</p>
           </div>
-          <div class="d-flex align-items-end gap-2">
+          <div class="chem-machine-controls d-flex align-items-center flex-wrap gap-2">
             <div class="flex-grow-1">
               <select class="form-select" id="machineSelect" aria-label="Select Machine">
                 <option value="">-- Select Machine (optional) --</option>
@@ -68,7 +68,7 @@
           </div>
         </section>
 
-        <section class="chem-step" id="chemStepQuantity">
+        <section class="chem-step chem-step--compact chem-step--quantity" id="chemStepQuantity">
           <div class="chem-step__header">
             <h3 class="chem-step__title">4. Enter required volume</h3>
             <p class="chem-step__helper">Tell us how many litres you want &mdash; we&rsquo;ll convert it into whole packs.</p>

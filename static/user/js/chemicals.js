@@ -291,6 +291,7 @@
     renderProducts();
     renderFormats();
     updateSummary();
+    collapseStep(document.getElementById('chemStepCategory'), state.selectedCategory.name);
   }
 
   function renderProducts() {
