@@ -450,8 +450,19 @@ const summaryActions = document.getElementById('summaryActions');
       ));
       // Build discount select
       const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5).map(p => `<option value="${p}" ${p === discountPercent ? 'selected' : ''}>${p}%</option>`).join('');
-      const discountSelectHtml = `<select id="discountPercent" class="form-select form-select-sm w-100">${discountOptions}</select>`;
-      items.push(`<div class="chem-summary__item"> <span class="chem-summary__label">Discount</span> ${discountSelectHtml} </div>`);
+      const discountSelectHtml = `<select id="discountPercent" class="form-select form-select-sm chem-summary__discount-select">${discountOptions}</select>`;
+      const discountSummaryText = discountPercent > 0
+        ? `Saving: ₹${discountAmount.toFixed(2)}<br>Subtotal after discount: ₹${discountedSubtotal.toFixed(2)}`
+        : 'No discount applied yet.';
+      items.push(`
+        <div class="chem-summary__item chem-summary__item--discount">
+          <div class="chem-summary__discount-control">
+            <span class="chem-summary__label">Discount</span>
+            ${discountSelectHtml}
+          </div>
+          <div class="chem-summary__note chem-summary__note--muted">${discountSummaryText}</div>
+        </div>
+      `);
 
       items.push(summaryItem('GST', `₹${gstAmount.toFixed(2)} (${gstPercent}%)`));
       items.push(summaryItem('Total', `₹${finalTotal.toFixed(2)}`));

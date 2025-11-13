@@ -22,19 +22,21 @@
         <section class="chem-step chem-step--compact" id="chemStepMachine">
           <div class="chem-step__header">
             <h3 class="chem-step__title">Machine (optional)</h3>
-            <p class="chem-step__helper">Share the press this order is for and we&rsquo;ll include it in the summary.</p>
+            <p class="chem-step__helper">Select the press you&rsquo;re planning for, or leave it blank if you aren&rsquo;t sure.</p>
           </div>
-          <div class="chem-machine-controls d-flex align-items-center flex-wrap gap-2">
-            <div class="flex-grow-1">
-              <select class="form-select" id="machineSelect" aria-label="Select Machine">
-                <option value="">-- Select Machine (optional) --</option>
+          <div class="chem-machine">
+            <label for="machineSelect" class="chem-machine__label">
+              Select Machine / Model <span class="chem-machine__label-optional">(optional)</span>
+            </label>
+            <div class="chem-machine__control">
+              <select class="form-select chem-machine__select" id="machineSelect" aria-label="Select Machine">
+                <option value="">-- Select Machine --</option>
               </select>
-            </div>
-            <div class="d-flex gap-2">
-              <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold">
+              <a href="{{ url_for('add_machine', next=url_for('chemicals_maintenance')) }}" class="btn btn-outline-gold chem-machine__new">
                 <i class="fas fa-plus"></i> New Machine
               </a>
             </div>
+            <p class="chem-machine__helper mb-0">Leave blank if the machine is unknown. The summary will display “--”.</p>
           </div>
         </section>
 
@@ -97,7 +99,6 @@
 
       <section class="chem-summary" id="chemSummary" aria-live="polite">
         <h3 class="chem-summary__title">Selection summary</h3>
->
         <div class="chem-summary__body" id="chemSummaryBody">
           <p class="chem-placeholder mb-0">Start by choosing a chemical category.</p>
         </div>
