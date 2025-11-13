@@ -79,12 +79,21 @@
 }
 
 .chem-step--compact {
-  padding: 1rem 1.25rem;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.07);
+  padding: 0.75rem 1rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
 }
 
 .chem-step--compact .chem-step__header {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.chem-step--compact .chem-step__title {
+  font-size: 1.02rem;
+}
+
+.chem-step--compact .chem-step__helper {
+  font-size: 0.82rem;
+  margin-top: 0.15rem;
 }
 
 .chem-machine-controls {
@@ -93,8 +102,8 @@
 }
 
 .chem-machine-controls .btn {
-  padding: 0.45rem 0.85rem;
-  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.88rem;
 }
 
 .chem-step--quantity .chem-quantity {
@@ -109,13 +118,14 @@
   margin-bottom: 0.35rem;
 }
 
+
 .chem-step--quantity .chem-quantity__confirm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.88rem;
 }
 
 .chem-step--quantity .form-control {
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.7rem;
 }
 
 .chem-step--collapsed > :not(.chem-step__header) {
