@@ -309,6 +309,8 @@ const summaryActions = document.getElementById('summaryActions');
     state.selectedFormat = null;
     state.quantityLitres = null;
     state.quantityConfirmed = false;
+    resetStep('chemStepFormat');
+    resetStep('chemStepQuantity');
     if (quantityInput) {
       quantityInput.value = '';
       quantityInput.disabled = true;
