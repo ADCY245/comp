@@ -271,13 +271,16 @@ const summaryActions = document.getElementById('summaryActions');
         const iconMarkup = isCustomIcon
           ? `<span class="chem-icon ${icon.slice(7)}"></span>`
           : `<i class="${icon}"></i>`;
+        const subtitle = typeof product.description === 'string' && product.description.trim().length
+          ? `<span class="chem-option__subtitle">${sanitize(product.description)}</span>`
+          : '';
 
         return `
           <button type="button" class="chem-option ${isActive ? 'chem-option--active' : ''}" data-product-id="${product.id}" aria-pressed="${isActive}">
             <span class="chem-option__icon" aria-hidden="true">${iconMarkup}</span>
             <span>
               <span class="chem-option__title">${sanitize(product.name)}</span>
-              <span class="chem-option__subtitle">${sanitize(product.description || 'Description coming soon.')}</span>
+              ${subtitle}
             </span>
           </button>
         `;
