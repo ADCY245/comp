@@ -30,7 +30,9 @@
 
 .app-navbar .nav-link:hover,
 .app-navbar .nav-link:focus,
-.app-navbar .nav-link.active {
+.app-navbar .nav-link.active,
+.app-navbar .nav-link.nav-link--hover,
+.app-navbar .nav-link.nav-link--pinned {
   color: var(--navbar-gold) !important;
   background: rgba(173, 151, 79, 0.18) !important;
   box-shadow: 0 12px 26px rgba(173, 151, 79, 0.25);
