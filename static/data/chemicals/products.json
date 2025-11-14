@@ -3,13 +3,12 @@
     {
       "id": "washing",
       "name": "Washing Solutions",
-      "description": "Blanket and roller washes that keep press components spotless and ready.",
+      "description": "Blanket and roller washes.",
       "icon": "fas fa-soap",
       "products": [
         {
           "id": "wash-cs",
           "name": "WASH CS",
-          "description": "An extremely quick drying effective wash for cold-set & sheet-fed applications.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -22,7 +21,6 @@
         {
           "id": "wash-fc",
           "name": "WASH FC",
-          "description": "A fast clean wash for sheet-fed applications.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -35,7 +33,6 @@
         {
           "id": "wash-nw",
           "name": "WASH NW",
-          "description": "Fast clean litho blanket & roller wash for conventional inks.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -48,7 +45,6 @@
         {
           "id": "wash-gp",
           "name": "WASH GP",
-          "description": "Litho blanket & roller wash for conventional inks.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -59,7 +55,6 @@
         {
           "id": "wash-combi",
           "name": "WASH COMBI",
-          "description": "An effective wash for cleaning conventional & UV inks.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -70,7 +65,6 @@
         {
           "id": "wash-uv",
           "name": "WASH UV",
-          "description": "An effective wash for cleaning UV inks off printing blankets & rolls.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -81,7 +75,6 @@
         {
           "id": "wash-uv-s-plus",
           "name": "WASH UV S+",
-          "description": "Premium litho blanket & roller wash for UV inks.",
           "icon": "custom:chem-icon--wash",
           "price_per_litre": null,
           "formats": [
@@ -100,7 +93,6 @@
         {
           "id": "fount-az",
           "name": "FOUNT AZ",
-          "description": "Alcohol-free fount delivering sharp dots with controlled dampening.",
           "icon": "fas fa-flask",
           "price_per_litre": null,
           "formats": [
@@ -111,7 +103,6 @@
         {
           "id": "fount-ap",
           "name": "FOUNT AP",
-          "description": "Universal pressroom fount concentrate for sheet-fed and web presses.",
           "icon": "fas fa-flask",
           "price_per_litre": null,
           "formats": [
@@ -122,7 +113,6 @@
         {
           "id": "fount-chem-rol",
           "name": "CHEM R-OL",
-          "description": "Multi-metal safe fount with enhanced plate-cleaning surfactants.",
           "icon": "fas fa-vial",
           "price_per_litre": null,
           "formats": [
@@ -133,7 +123,6 @@
         {
           "id": "fount-hf",
           "name": "FOUNT HF",
-          "description": "High-flow fount designed for presses running at elevated speeds.",
           "icon": "fas fa-tint",
           "price_per_litre": null,
           "formats": [
@@ -144,7 +133,6 @@
         {
           "id": "fount-hf-a-plus",
           "name": "FOUNT HF A+",
-          "description": "Premium variant with boosted buffering and anti-foaming additives.",
           "icon": "fas fa-tint",
           "price_per_litre": null,
           "formats": [
@@ -155,7 +143,6 @@
         {
           "id": "fount-nw",
           "name": "FOUNT NW",
-          "description": "Neutral fountain solution ideal for low-alkaline water zones.",
           "icon": "fas fa-water",
           "price_per_litre": null,
           "formats": [
@@ -170,13 +157,12 @@
     {
       "id": "plate-care",
       "name": "Plate Care Products",
-      "description": "Cleaners and finishers that extend plate life and deliver sharper print.",
+      "description": "Cleaners and finishers that extend plate life.",
       "icon": "fas fa-layer-group",
       "products": [
         {
           "id": "plate-alu-clean",
           "name": "ALU CLEAN",
-          "description": "Aluminium plate cleaner that removes scum and restores hydrophilic balance.",
           "icon": "fas fa-atom",
           "price_per_litre": null,
           "formats": [
@@ -186,7 +172,6 @@
         {
           "id": "plate-alu-clean-uv",
           "name": "ALU CLEAN UV",
-          "description": "UV-compatible plate cleaner formulated to protect coatings while deglazing.",
           "icon": "fas fa-spray-can-sparkles",
           "price_per_litre": null,
           "formats": [
@@ -204,7 +189,6 @@
         {
           "id": "maint-calx-de-glazer",
           "name": "CALX DE GLAZER",
-          "description": "Powerful deglazer that strips calcium and ink build-up from rollers and blankets.",
           "icon": "fas fa-cogs",
           "price_per_litre": null,
           "formats": [
@@ -214,7 +198,6 @@
         {
           "id": "maint-roll-o-clean",
           "name": "ROLL-O-CLEAN",
-          "description": "Conditioner that refreshes roller surfaces and restores optimum tack.",
           "icon": "fas fa-sync",
           "price_per_litre": null,
           "formats": [
@@ -224,7 +207,6 @@
         {
           "id": "maint-mtr-clean",
           "name": "MT.R CLEAN",
-          "description": "Metering roller cleaner that removes glaze without damaging elastomers.",
           "icon": "fas fa-pump-soap",
           "price_per_litre": null,
           "formats": [
@@ -234,7 +216,6 @@
         {
           "id": "maint-anilox-clean",
           "name": "ANILOX CLEAN",
-          "description": "Deep cleaning gel for anilox cells that lifts dried coatings and inks.",
           "icon": "fas fa-grip-lines-vertical",
           "price_per_litre": null,
           "formats": [
@@ -245,7 +226,6 @@
         {
           "id": "maint-fs-clean",
           "name": "FS CLEAN",
-          "description": "Circulation system cleaner that sanitises and keeps fountain solution fresh.",
           "icon": "fas fa-water",
           "price_per_litre": null,
           "formats": [
@@ -255,7 +235,6 @@
         {
           "id": "maint-blanket-clean",
           "name": "BLANKET CLEAN",
-          "description": "Daily blanket cleaner that lifts glaze while conditioning rubber surface.",
           "icon": "fas fa-eraser",
           "price_per_litre": null,
           "formats": [
@@ -265,7 +244,6 @@
         {
           "id": "maint-blanket-clean-uv",
           "name": "BLANKET CLEAN UV",
-          "description": "UV-compatible blanket cleaner that prevents swelling while removing residues.",
           "icon": "fas fa-lightbulb",
           "price_per_litre": null,
           "formats": [
