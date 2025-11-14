@@ -851,24 +851,43 @@
             const otherDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(otherProductsToggle);
             const otherDropdown = otherProductsToggle.closest('.dropdown');
             if (otherDropdown) {
+                let isHoveringOther = false;
+                let isPinnedOther = false;
+                let otherClicked = false;
+
                 otherDropdown.addEventListener('mouseenter', () => {
-                    otherDropdownInstance.show();
+                    isHoveringOther = true;
                     otherProductsToggle.classList.add('nav-link--hover');
+                    if (!isPinnedOther) {
+                        otherDropdownInstance.show();
+                    }
                 });
+
                 otherDropdown.addEventListener('mouseleave', () => {
-                    if (!otherProductsToggle.classList.contains('nav-link--pinned')) {
+                    isHoveringOther = false;
+                    if (!isPinnedOther) {
                         otherDropdownInstance.hide();
                         otherProductsToggle.classList.remove('nav-link--hover');
                     }
                 });
-                otherProductsToggle.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const isPinned = otherProductsToggle.classList.toggle('nav-link--pinned');
-                    if (isPinned) {
-                        otherDropdownInstance.show();
-                        otherProductsToggle.classList.add('nav-link--hover');
-                    } else {
-                        otherDropdownInstance.hide();
+
+                otherProductsToggle.addEventListener('click', () => {
+                    otherClicked = true;
+                });
+
+                otherProductsToggle.addEventListener('show.bs.dropdown', () => {
+                    otherProductsToggle.classList.add('nav-link--hover');
+                    if (otherClicked) {
+                        isPinnedOther = true;
+                        otherProductsToggle.classList.add('nav-link--pinned');
+                    }
+                    otherClicked = false;
+                });
+
+                otherProductsToggle.addEventListener('hide.bs.dropdown', () => {
+                    otherProductsToggle.classList.remove('nav-link--pinned');
+                    isPinnedOther = false;
+                    if (!isHoveringOther) {
                         otherProductsToggle.classList.remove('nav-link--hover');
                     }
                 });
