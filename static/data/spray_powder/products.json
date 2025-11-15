@@ -1,0 +1,48 @@
+{
+  "categories": [
+    {
+      "id": "px-series",
+      "name": "PX Series Spray Powders",
+      "description": "Anti-setoff powders optimised for different substrates and press speeds.",
+      "icon": "fas fa-cloud",
+      "products": [
+        {
+          "id": "px-100",
+          "name": "PX 100",
+          "description": "Fine particle powder suited for lightweight papers and standard press speeds.",
+          "icon": "fas fa-cloud-sun",
+          "price_per_kg": null,
+          "formats": [
+            { "id": "px-100-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-100-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-100-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        },
+        {
+          "id": "px-200",
+          "name": "PX 200",
+          "description": "Medium-grade powder for high coverage jobs and faster presses.",
+          "icon": "fas fa-wind",
+          "price_per_kg": null,
+          "formats": [
+            { "id": "px-200-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-200-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-200-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        },
+        {
+          "id": "px-300",
+          "name": "PX 300",
+          "description": "Coarse powder designed for heavy stock and UV applications.",
+          "icon": "fas fa-grip-lines",
+          "price_per_kg": null,
+          "formats": [
+            { "id": "px-300-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-300-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-300-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        }
+      ]
+    }
+  ]
+}
