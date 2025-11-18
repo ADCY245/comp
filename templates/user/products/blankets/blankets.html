@@ -134,7 +134,10 @@
 
   <!-- Scripts -->
   <script>
-    window.__discountPrivileges = JSON.parse('{{ discount_privileges|tojson|escapejs }}');
+    const blanketsRoot = document.getElementById('blanketsPageRoot');
+    if (blanketsRoot) {
+      window.__discountPrivileges = JSON.parse(blanketsRoot.dataset.discountPrivileges || '{}');
+    }
   </script>
   <script src="{{ url_for('static', filename='user/js/blankets.js') }}"></script>
   <script src="{{ url_for('static', filename='user/js/cart.js') }}"></script>
