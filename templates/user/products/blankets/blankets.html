@@ -10,131 +10,131 @@
 
   <div id="blanketsPageRoot" data-discount-privileges='{{ discount_privileges|tojson|e }}'>
     <div class="container">
-      <div id="blanketCompanySummary" class="mb-4"></div>
+      <div class="mb-4">
+        <div id="blanketCompanySummary" class="mb-3"></div>
         <label for="machineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
         <select id="machineSelect" class="form-select">
           <option value="">-- Select Machine --</option>
         </select>
         <div class="form-text text-muted">Leave blank if the machine is unknown. The quotation will display `--`.</div>
+        <div class="mt-3">
+          <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-gold">
+            <i class="fas fa-plus"></i> New Machine
+          </a>
+        </div>
       </div>
-      <div>
-        <a href="{{ url_for('add_machine', next=url_for('blankets')) }}" class="btn btn-outline-gold">
-          <i class="fas fa-plus"></i> New Machine
-        </a>
-      </div>
-    </div>
-  </div>
 
-  <div class="mb-3" id="categorySection">
-    <label for="categorySelect" class="form-label">Select Blanket Category:</label>
-    <select id="categorySelect" class="form-select">
-      <option value="" selected disabled>-- Select Category --</option>
-      <option value="All">All Categories</option>
-    </select>
-  </div>
-
-  <div id="blanketSection" style="display:none;">
-    <div class="mb-3" id="blanketTypeSection">
-      <label for="blanketSelect" class="form-label">Select Blanket Type:</label>
-      <select id="blanketSelect" class="form-select">
-        <option value="">-- Select Blanket --</option>
-      </select>
-    </div>
-    <div id="measurementSection" style="display:none;">
-      <div class="mb-3">
-        <label for="unitSelect" class="form-label">Select Unit:</label>
-        <select id="unitSelect" class="form-select">
-          <option value="mm">Millimeters</option>
-          <option value="m">Meters</option>
-          <option value="in">Inches</option>
+      <div class="mb-3" id="categorySection">
+        <label for="categorySelect" class="form-label">Select Blanket Category:</label>
+        <select id="categorySelect" class="form-select">
+          <option value="" selected disabled>-- Select Category --</option>
+          <option value="All">All Categories</option>
         </select>
       </div>
 
-      <div class="row mb-3">
-        <div class="col">
-          <label for="lengthInput" class="form-label">Length (across):</label>
-          <input type="number" id="lengthInput" class="form-control" />
-        </div>
-        <div class="col">
-          <label for="widthInput" class="form-label">Width (around):</label>
-          <input type="number" id="widthInput" class="form-control" />
-        </div>
-        <div class="col">
-          <label for="thicknessSelect" class="form-label">Select Thickness:</label>
-          <select id="thicknessSelect" class="form-select">
-            <option value="">-- Select Thickness --</option>
+      <div id="blanketSection" style="display:none;">
+        <div class="mb-3" id="blanketTypeSection">
+          <label for="blanketSelect" class="form-label">Select Blanket Type:</label>
+          <select id="blanketSelect" class="form-select">
+            <option value="">-- Select Blanket --</option>
           </select>
         </div>
-      </div>
-    </div>
 
-    <div id="pricingSection" style="display:none;">
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5 class="card-title">Price Calculation</h5>
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <p id="calculatedArea" class="mb-1"></p>
-              <p id="basePrice" class="mb-1"></p>
-              <p id="netUnitPrice" class="mb-1"></p>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-2">
-                <label for="barSelect" class="form-label">Barring Type:</label>
-                <select id="barSelect" class="form-select form-select-sm">
-                  <option value="">-- Select --</option>
-                </select>
-                <p id="barRate" class="small text-muted mb-1"></p>
-                <p id="netUnitPrice" class="fw-bold mb-2"></p>
-              </div>
-              <div class="mb-2">
-                <label for="quantityInput" class="form-label">Quantity:</label>
-                <input type="number" id="quantityInput" class="form-control form-control-sm" min="1" value="1" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Discount Section -->
-          <div class="mb-3" id="discountSection">
-            <div class="mb-2">
-              <label for="discountSelect" class="form-label">Select Discount:</label>
-              <select id="discountSelect" class="form-select form-select-sm mb-1">
-                <option value="">-- Select Discount --</option>
-              </select>
-              <p id="discountedValue" class="small text-muted mb-0"></p>
-            </div>
-          </div>
-
-          <div class="mb-2">
-            <label for="gstSelect" class="form-label">GST Rate:</label>
-            <select id="gstSelect" class="form-select form-select-sm">
-              <option value="18">18%</option>
+        <div id="measurementSection" style="display:none;">
+          <div class="mb-3">
+            <label for="unitSelect" class="form-label">Select Unit:</label>
+            <select id="unitSelect" class="form-select">
+              <option value="mm">Millimeters</option>
+              <option value="m">Meters</option>
+              <option value="in">Inches</option>
             </select>
           </div>
 
-          <div class="card mt-3">
-            <div class="card-body p-3">
-              <h5 class="fw-bold mb-3">Price Summary</h5>
-              <div id="finalPrice">
-                <!-- Price breakdown will be inserted here by JavaScript -->
-                <p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>
-              </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label for="lengthInput" class="form-label">Length (across):</label>
+              <input type="number" id="lengthInput" class="form-control" />
+            </div>
+            <div class="col">
+              <label for="widthInput" class="form-label">Width (around):</label>
+              <input type="number" id="widthInput" class="form-control" />
+            </div>
+            <div class="col">
+              <label for="thicknessSelect" class="form-label">Select Thickness:</label>
+              <select id="thicknessSelect" class="form-select">
+                <option value="">-- Select Thickness --</option>
+              </select>
             </div>
           </div>
         </div>
+
+        <div id="pricingSection" style="display:none;">
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Price Calculation</h5>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <p id="calculatedArea" class="mb-1"></p>
+                  <p id="basePrice" class="mb-1"></p>
+                  <p id="netUnitPrice" class="mb-1"></p>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-2">
+                    <label for="barSelect" class="form-label">Barring Type:</label>
+                    <select id="barSelect" class="form-select form-select-sm">
+                      <option value="">-- Select --</option>
+                    </select>
+                    <p id="barRate" class="small text-muted mb-1"></p>
+                    <p id="netUnitPriceMirror" class="fw-bold mb-2"></p>
+                  </div>
+                  <div class="mb-2">
+                    <label for="quantityInput" class="form-label">Quantity:</label>
+                    <input type="number" id="quantityInput" class="form-control form-control-sm" min="1" value="1" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Discount Section -->
+              <div class="mb-3" id="discountSection">
+                <div class="mb-2">
+                  <label for="discountSelect" class="form-label">Select Discount:</label>
+                  <select id="discountSelect" class="form-select form-select-sm mb-1">
+                    <option value="">-- Select Discount --</option>
+                  </select>
+                  <p id="discountedValue" class="small text-muted mb-0"></p>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label for="gstSelect" class="form-label">GST Rate:</label>
+                <select id="gstSelect" class="form-select form-select-sm">
+                  <option value="18">18%</option>
+                </select>
+              </div>
+
+              <div class="card mt-3">
+                <div class="card-body p-3">
+                  <h5 class="fw-bold mb-3">Price Summary</h5>
+                  <div id="finalPrice">
+                    <!-- Price breakdown will be inserted here by JavaScript -->
+                    <p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADD TO CART BUTTON -->
+          <button id="addToCartBtn" class="btn btn-primary">Add to Cart</button>
+          <div id="cart-message" class="mt-2"></div>
+        </div>
       </div>
-
-      <!-- ADD TO CART BUTTON -->
-      <button id="addToCartBtn" class="btn btn-primary">Add to Cart</button>
-      <div id="cart-message" class="mt-2"></div>
-
-      <div id="cart-message" class="mt-2"></div>
     </div>
   </div>
 
   <!-- Scripts -->
   <script>
-    window.__discountPrivileges = {{ discount_privileges|tojson }};
+    window.__discountPrivileges = JSON.parse('{{ discount_privileges|tojson|escapejs }}');
   </script>
   <script src="{{ url_for('static', filename='user/js/blankets.js') }}"></script>
   <script src="{{ url_for('static', filename='user/js/cart.js') }}"></script>
@@ -144,5 +144,4 @@
       updateCartCount();
     });
   </script>
-  </div>
 {% endblock %}

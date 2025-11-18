@@ -178,6 +178,7 @@ function resetPricing() {
   const finalPriceElement = document.getElementById('finalPrice');
   const basePriceEl = document.getElementById('basePrice');
   const netUnitPriceEl = document.getElementById('netUnitPrice');
+  const netUnitPriceMirrorEl = document.getElementById('netUnitPriceMirror');
   const areaElement = document.getElementById('calculatedArea');
   const discountValue = document.getElementById('discountedValue');
   if (barSelect) barSelect.value = '';
@@ -185,6 +186,7 @@ function resetPricing() {
   if (areaElement) areaElement.innerText = '';
   if (basePriceEl) basePriceEl.innerText = '';
   if (netUnitPriceEl) netUnitPriceEl.innerText = '';
+  if (netUnitPriceMirrorEl) netUnitPriceMirrorEl.innerText = '';
   if (discountValue) discountValue.style.display = 'none';
   if (finalPriceElement) {
     finalPriceElement.innerHTML = '<p class="text-muted mb-0">Enter dimensions and select options to see pricing</p>';
@@ -898,25 +900,32 @@ window.onload = () => {
   // Function to populate blanket select dropdown
   function populateBlanketSelect(blankets) {
     const blanketSelect = document.getElementById("blanketSelect");
-    blanketSelect.innerHTML = '<option value="">--Select Blanket--</option>';
-    
+    if (!blanketSelect) {
+      console.warn('populateBlanketSelect: blanketSelect not found');
+      return;
+    }
+
+    blanketSelect.innerHTML = '<option value="">-- Select Blanket --</option>';
+
     blankets.forEach(blanket => {
       const opt = document.createElement("option");
       opt.value = blanket.id;
       opt.text = blanket.name;
       blanketSelect.appendChild(opt);
     });
-    
-    // Reset any previous event listeners and add new one
-    const newSelect = blanketSelect.cloneNode(true);
-    blanketSelect.parentNode.replaceChild(newSelect, blanketSelect);
-    
-    newSelect.addEventListener("change", () => {
+
+    if (blanketSelect.__blanketChangeHandler) {
+      blanketSelect.removeEventListener('change', blanketSelect.__blanketChangeHandler);
+    }
+
+    blanketSelect.__blanketChangeHandler = () => {
       displayRates();
       calculatePrice();
       updateMeasurementVisibility();
       updatePricingVisibility();
-    });
+    };
+
+    blanketSelect.addEventListener('change', blanketSelect.__blanketChangeHandler);
 
     updateMeasurementVisibility();
   }
