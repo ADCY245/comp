@@ -21,10 +21,36 @@ const STANDARD_AROUND_HALF_SIZES = STANDARD_AROUND_SIZES
   .map(size => size / 2)
   .filter(size => size > 0);
 const FULL_ROLL_SIZES = [...STANDARD_AROUND_SIZES];
+const DEFAULT_FULL_ROLL_SIZES = [...FULL_ROLL_SIZES];
+const POLIPACK_STANDARD_ROLLS = [600, 1300];
 const HALF_ROLL_SIZES = [...STANDARD_AROUND_HALF_SIZES];
 const CANDIDATE_AROUND_SIZES = Array.from(
   new Set([...HALF_ROLL_SIZES, ...FULL_ROLL_SIZES])
 ).sort((a, b) => a - b);
+
+// ----------------------- Polipack AA overrides -----------------------
+const POLIPACK_AA_THICKNESSES = [100, 120, 140, 160, 180, 200, 230, 250, 280, 300, 350, 400, 420, 450, 500, 550, 600];
+const POLIPACK_AA_BASE_RATE = 925; // ₹ per sq.m at 100 micron
+const POLIPACK_WA_THICKNESSES = [100, 125, 150, 175, 200, 230, 250, 280, 300, 350, 400, 420, 450, 500, 550, 600];
+const POLIPACK_WA_BASE_RATE = 425; // ₹ per sq.m at 100 micron
+
+function isPolipackAASelected() {
+  const underSel = document.getElementById('underpackingType');
+  const fmtSel = document.getElementById('productFormatSelect');
+  return underSel && fmtSel && underSel.value === 'polipack' && fmtSel.value === 'polipack_aa';
+}
+function isPolipackWASelected() {
+  const underSel = document.getElementById('underpackingType');
+  const fmtSel = document.getElementById('productFormatSelect');
+  return underSel && fmtSel && underSel.value === 'polipack' && fmtSel.value === 'polipack_wa';
+}
+
+function getActivePolipackConfig() {
+  if (isPolipackAASelected()) return { list: POLIPACK_AA_THICKNESSES, base: POLIPACK_AA_BASE_RATE };
+  if (isPolipackWASelected()) return { list: POLIPACK_WA_THICKNESSES, base: POLIPACK_WA_BASE_RATE };
+  return null;
+}
+// --------------------------------------------------------------------
 
 function resolveRollForLength(inputAround) {
   // Pick the first candidate (half or full) >= requested length
@@ -58,7 +84,7 @@ function getStandardAroundSize(inputAround) {
   return effectiveLength;
 }
 
-function populateCutSizeDropdown() {
+function populateCutSizeDropdown(rollArray = FULL_ROLL_SIZES) {
   const cutSelect = document.getElementById('cutFromSizeSelect');
   if (!cutSelect) {
     return;
@@ -67,14 +93,14 @@ function populateCutSizeDropdown() {
   const previousValue = cutSelect.value;
   cutSelect.innerHTML = '<option value="">----</option>';
 
-  FULL_ROLL_SIZES.forEach(size => {
+  rollArray.forEach(size => {
     const option = document.createElement('option');
     option.value = String(size);
     option.textContent = `${size} mm`;
     cutSelect.appendChild(option);
   });
 
-  if (previousValue && FULL_ROLL_SIZES.includes(Number(previousValue))) {
+  if (previousValue && rollArray.includes(Number(previousValue))) {
     cutSelect.value = previousValue;
   }
 }
@@ -626,6 +652,23 @@ function toggleManualSizeEntry(forceState = null) {
 }
 
 function enableManualThicknessSelection({ preserveValue } = {}) {
+  if (!manualThicknessSelectEl) return;
+
+  // Polipack manual entry mode (AA/WA)
+  const polCfg = getActivePolipackConfig();
+  if (polCfg) {
+    const previousValue = preserveValue !== undefined ? preserveValue : manualThicknessSelectEl.value;
+    manualThicknessSelectEl.innerHTML = '<option value="">-- Select Thickness --</option>';
+    polCfg.list.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      manualThicknessSelectEl.appendChild(opt);
+    });
+    manualThicknessSelectEl.disabled = false;
+    if (previousValue) manualThicknessSelectEl.value = previousValue;
+    return;
+  }
   if (!manualThicknessSelectEl) return;
   if (!uniqueThicknesses.length) return;
 
@@ -1206,19 +1249,62 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (underpackingTypeSelect && mpackSection) {
-    console.log('Setting up underpacking type change handler...');
-    underpackingTypeSelect.addEventListener('change', () => {
-      const hasSelection = !!underpackingTypeSelect.value;
-      mpackSection.style.display = hasSelection ? 'block' : 'none';
-      if (!hasSelection) {
-        if (machineSelect) {
-          machineSelect.value = '';
-        }
-        resetCustomSizeInputs();
-        resetStandardSelection({ preserveOptions: false });
-        resetCalculations();
+    const productFormatColumn = document.getElementById('productFormatColumn');
+    const productFormatSelect = document.getElementById('productFormatSelect');
+
+    function updateStandardSizeDisplays(sizes) {
+      const presetList = document.getElementById('presetStandardList');
+      const manualList = document.getElementById('manualStandardList');
+      const cutSelect = document.getElementById('cutFromSizeSelect');
+      const manualCutSelect = document.getElementById('manualCutFromSizeSelect');
+
+      const rebuildList = (listEl, values) => {
+        if (!listEl) return;
+        listEl.innerHTML = values.map(v => `<li>${v}</li>`).join('');
+      };
+
+      const rebuildSelect = (selectEl, values) => {
+        if (!selectEl) return;
+        const options = values.map(v => `<option value="${v}">${v} mm</option>`).join('');
+        selectEl.innerHTML = `<option value="" selected>----</option>${options}`;
+      };
+
+      rebuildList(presetList, sizes);
+      rebuildList(manualList, sizes);
+      rebuildSelect(cutSelect, sizes);
+      rebuildSelect(manualCutSelect, sizes);
+    }
+
+    const handleUnderpackingChange = () => {
+      const isPolipack = underpackingTypeSelect.value === 'polipack';
+      const currentSizes = isPolipack ? POLIPACK_STANDARD_ROLLS : DEFAULT_FULL_ROLL_SIZES;
+      populateCutSizeDropdown(currentSizes);
+      updateStandardSizeDisplays(currentSizes);
+
+      mpackSection.style.display = underpackingTypeSelect.value ? 'block' : 'none';
+      if (productFormatColumn) {
+        productFormatColumn.classList[isPolipack ? 'remove' : 'add']('d-none');
       }
-    });
+      if (!isPolipack && productFormatSelect) {
+        productFormatSelect.value = '';
+      }
+      disableThicknessSelection();
+    };
+
+    underpackingTypeSelect.addEventListener('change', handleUnderpackingChange);
+    // run once on load
+    handleUnderpackingChange();
+
+    if (productFormatSelect) {
+      productFormatSelect.addEventListener('change', () => {
+        disableThicknessSelection();
+        const pCfg = getActivePolipackConfig();
+        if (pCfg) {
+          populateSelectOptions(thicknessSelectEl, pCfg.list.map(String), '-- Select Thickness --');
+          thicknessSelectEl.disabled = false;
+        }
+      });
+    }
   }
 
   // Update thickness change handler to recalculate prices
@@ -1302,6 +1388,15 @@ function disableThicknessSelection({ preserveManual = false, skipReset = false }
 }
 
 function enableThicknessForSize() {
+  if (!thicknessSelectEl) return;
+
+  // Polipack (AA or WA): fixed list independent of size
+  const cfg = getActivePolipackConfig();
+  if (cfg) {
+    populateSelectOptions(thicknessSelectEl, cfg.list.map(String), '-- Select Thickness --');
+    thicknessSelectEl.disabled = false;
+    return;
+  }
   if (!thicknessSelectEl) return;
   const acrossVal = parseFloat(customWidthInputEl?.value || '');
   const alongVal = parseFloat(customLengthInputEl?.value || '');
@@ -1601,7 +1696,9 @@ function updatePricingFromSelections() {
   }
 
   currentThickness = String(activeThickness);
-  currentRatePerSqm = BASE_RATE_PER_100_MICRON * (activeThickness / 100);
+  const polCfg = getActivePolipackConfig();
+  const baseRate = polCfg ? polCfg.base : BASE_RATE_PER_100_MICRON;
+  currentRatePerSqm = baseRate * (activeThickness / 100);
   currentNetPrice = currentRatePerSqm * sqmArea;
 
   calculateFinalPrice();

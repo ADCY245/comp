@@ -151,6 +151,12 @@
       padding: 0.65rem 1rem;
     }
 
+    .mpack-card-transparent {
+      background-color: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
     @media (min-width: 992px) {
       .mpack-thickness-row {
         flex-direction: row;
@@ -275,12 +281,26 @@
 
   <!-- Underpacking Type Selection -->
   <div class="mb-3">
-    <label for="underpackingType" class="form-label">Select Underpacking Type:</label>
-    <select id="underpackingType" class="form-select">
-      <option value="">-- Select Underpacking Type --</option>
-      <option value="mtech_mpack">Mtech Mpack</option>
-      <option value="mark3zet">Mark3zet</option>
-    </select>
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-lg-8">
+        <label for="underpackingType" class="form-label">Select Underpacking Type:</label>
+        <select id="underpackingType" class="form-select">
+          <option value="">-- Select Underpacking Type --</option>
+          <option value="mtech_mpack">Mtech Mpack</option>
+          <option value="mark3zet">Mark3zet</option>
+          <option value="polipack">Polipack</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-4 d-none" id="productFormatColumn">
+        <label for="productFormatSelect" class="form-label">Product Format <span class="text-muted small">(Polipack)</span>:</label>
+        <select id="productFormatSelect" class="form-select">
+          <option value="">-- Select Format --</option>
+          <option value="polipack_aa">Self-Adhesive (AA)</option>
+          <option value="polipack_wa">Non-Adhesive (WA)</option>
+        </select>
+        <div class="form-text text-muted">Displayed only when Polipack is selected.</div>
+      </div>
+    </div>
   </div>
 
   <div id="mpackSection" style="display:none;">
@@ -338,6 +358,7 @@
         </div>
         <div class="form-text">Select preset sizes to populate measurements automatically.</div>
         <button type="button" class="btn btn-outline-gold btn-sm mt-2" id="toggleManualSizeBtn">Can't find your sizes?</button>
+        <div class="form-text text-muted d-none" id="manualOnlyNotice">Manual entry only for the selected underpacking.</div>
         <div class="form-text text-muted" id="customSizeSummary">Select sizes to see sq.m., then choose a thickness.</div>
         <div class="form-text text-muted d-none" id="cutRollSummary"></div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
@@ -373,7 +394,7 @@
       <div class="mpack-standard-column d-none" id="presetStandardColumn">
         <div class="mpack-standard-sizes">
           <p class="mb-2">These are our standard (around) sizes:</p>
-          <ol class="mb-0">
+          <ol class="mb-0" id="presetStandardList">
             <li>795</li>
             <li>1150</li>
             <li>1240</li>
@@ -381,7 +402,7 @@
             <li>1540</li>
           </ol>
         </div>
-        <div class="mpack-standard-note">Cut from size (roll)</div>
+        <div class="mpack-standard-note" id="presetStandardNote">Cut from size (roll)</div>
         <label for="cutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
         <select id="cutFromSizeSelect" class="form-select" disabled>
           <option value="" selected>----</option>
@@ -394,7 +415,7 @@
       </div>
     </div>
 
-    <div class="card card-body mt-3 d-none" id="manualSizeContainer">
+    <div class="card card-body mt-3 d-none mpack-card-transparent" id="manualSizeContainer">
       <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
       <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
         <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
@@ -462,7 +483,7 @@
         <div class="mpack-standard-column manual d-none" id="manualStandardColumn">
           <div class="mpack-standard-sizes">
             <p class="mb-2">These are our standard (around) sizes:</p>
-            <ol class="mb-0">
+            <ol class="mb-0" id="manualStandardList">
               <li>795</li>
               <li>1150</li>
               <li>1240</li>
@@ -470,7 +491,7 @@
               <li>1540</li>
             </ol>
           </div>
-          <div class="mpack-standard-note">Cut from size (roll)</div>
+          <div class="mpack-standard-note" id="manualStandardNote">Cut from size (roll)</div>
           <label for="manualCutFromSizeSelect" class="form-label mb-1">Cut size (auto)</label>
           <select id="manualCutFromSizeSelect" class="form-select" disabled>
             <option value="" selected>----</option>
