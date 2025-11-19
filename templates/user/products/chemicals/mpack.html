@@ -157,6 +157,36 @@
       box-shadow: none;
     }
 
+    #manualSizeContainer {
+      background: #fff;
+      border: 1px solid #dbe3f1;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    #manualDetailsRow.manual-config-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      #manualDetailsRow.manual-config-grid {
+        gap: 2rem;
+      }
+    }
+
+    @media (min-width: 992px) {
+      #manualDetailsRow.manual-config-grid {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(240px, 1fr);
+        align-items: stretch;
+      }
+    }
+
+    #manualControlsColumn .form-select,
+    #manualControlsColumn .form-control {
+      max-width: none;
+    }
+
     @media (min-width: 992px) {
       .mpack-thickness-row {
         flex-direction: row;
@@ -417,7 +447,7 @@
     <div class="card card-body mt-3 d-none mpack-card-transparent" id="manualSizeContainer">
       <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
       <div class="form-text text-muted d-none" id="manualOnlyNotice">Manual entry only for the selected underpacking.</div>
-      <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
+      <div class="mpack-thickness-row mt-1 d-none manual-config-grid" id="manualDetailsRow">
         <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
           <div class="row g-4 align-items-stretch manual-input-row" id="manualInputRow">
             <div class="col-12 col-md-6 mpack-diagram-column">
