@@ -54,7 +54,46 @@ function getActivePolipackConfig() {
 
 function resolveRollForLength(inputAround) {
   const polCfg = getActivePolipackConfig();
-  const sizeCatalog = polCfg ? POLIPACK_STANDARD_ROLLS : CANDIDATE_AROUND_SIZES;
+  if (polCfg) {
+    if (!POLIPACK_STANDARD_ROLLS.length) {
+      return { rollLength: 0, effectiveLength: 0, usesHalfRoll: false };
+    }
+
+    let fallbackRoll = POLIPACK_STANDARD_ROLLS[POLIPACK_STANDARD_ROLLS.length - 1];
+
+    for (const rollLength of POLIPACK_STANDARD_ROLLS) {
+      const halfLength = rollLength / 2;
+
+      if (inputAround <= halfLength) {
+        const closerToHalf = Math.abs(inputAround - halfLength) <= Math.abs(inputAround - rollLength);
+        if (closerToHalf) {
+          return {
+            rollLength,
+            effectiveLength: halfLength,
+            usesHalfRoll: true
+          };
+        }
+      }
+
+      if (inputAround <= rollLength) {
+        return {
+          rollLength,
+          effectiveLength: rollLength,
+          usesHalfRoll: false
+        };
+      }
+
+      fallbackRoll = rollLength;
+    }
+
+    return {
+      rollLength: fallbackRoll,
+      effectiveLength: fallbackRoll,
+      usesHalfRoll: false
+    };
+  }
+
+  const sizeCatalog = CANDIDATE_AROUND_SIZES;
   if (!sizeCatalog.length) {
     return {
       rollLength: 0,
@@ -70,14 +109,6 @@ function resolveRollForLength(inputAround) {
       selectedCandidate = cand;
       break;
     }
-  }
-
-  if (polCfg) {
-    return {
-      rollLength: selectedCandidate,
-      effectiveLength: selectedCandidate,
-      usesHalfRoll: false
-    };
   }
 
   const usesHalfRoll = HALF_ROLL_SIZES.includes(selectedCandidate);
