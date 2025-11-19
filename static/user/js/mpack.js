@@ -1350,7 +1350,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const handleUnderpackingChange = () => {
-      const isPolipack = underpackingTypeSelect.value === 'polipack';
+      const selectedType = underpackingTypeSelect.value;
+      const isPolipack = selectedType === 'polipack';
       const hasPolipackFormat = isPolipack && getPolipackFormatSelected();
       const currentSizes = isPolipack ? POLIPACK_STANDARD_ROLLS : DEFAULT_FULL_ROLL_SIZES;
 
@@ -1364,12 +1365,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         productFormatSelect.value = '';
       }
 
-      const shouldShowConfigurator = hasPolipackFormat;
+      const shouldShowConfigurator = Boolean(selectedType) && (!isPolipack || hasPolipackFormat);
       if (mpackSection) {
         mpackSection.style.display = shouldShowConfigurator ? 'block' : 'none';
       }
 
-      applyManualOnlyLayout(shouldShowConfigurator);
+      const manualMode = isPolipack && hasPolipackFormat;
+      applyManualOnlyLayout(manualMode);
+
+      if (!manualMode) {
+        toggleManualSizeEntry(false);
+      }
+
       if (!shouldShowConfigurator) {
         disableThicknessSelection();
       }
