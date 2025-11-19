@@ -158,23 +158,21 @@
     }
 
     .underpacking-row {
-      flex-wrap: wrap;
-      align-items: flex-end;
-      gap: 1rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+      align-items: end;
+      gap: 1rem 2rem;
     }
 
-    .underpacking-type-col {
-      flex: 1 1 320px;
-    }
-
-    .product-format-col {
-      flex: 0 0 280px;
+    .underpacking-row .underpacking-type-col,
+    .underpacking-row .product-format-col {
+      padding-left: 0;
+      padding-right: 0;
     }
 
     @media (max-width: 767.98px) {
-      .underpacking-type-col,
-      .product-format-col {
-        flex: 1 1 100%;
+      .underpacking-row {
+        grid-template-columns: 1fr;
       }
     }
 
