@@ -323,8 +323,8 @@
 
   <!-- Underpacking Type Selection -->
   <div class="mb-3">
-    <div class="row g-3 align-items-end underpacking-row">
-      <div class="col-12 col-lg-8 underpacking-type-col">
+    <div class="row g-3 underpacking-row">
+      <div class="col-12 col-lg-6 underpacking-type-col">
         <label for="underpackingType" class="form-label">Select Underpacking Type:</label>
         <select id="underpackingType" class="form-select">
           <option value="">-- Select Underpacking Type --</option>
@@ -333,14 +333,13 @@
           <option value="polipack">Polipack</option>
         </select>
       </div>
-      <div class="col-12 col-lg-4 d-none product-format-col" id="productFormatColumn">
+      <div class="col-12 col-lg-6 d-none product-format-col" id="productFormatColumn">
         <label for="productFormatSelect" class="form-label">Product Format <span class="text-muted small">(Polipack)</span>:</label>
         <select id="productFormatSelect" class="form-select">
           <option value="">-- Select Format --</option>
           <option value="polipack_aa">Self-Adhesive (AA)</option>
           <option value="polipack_wa">Non-Adhesive (WA)</option>
         </select>
-        <div class="form-text text-muted">Displayed only when Polipack is selected.</div>
       </div>
     </div>
   </div>
