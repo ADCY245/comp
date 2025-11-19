@@ -53,13 +53,31 @@ function getActivePolipackConfig() {
 // --------------------------------------------------------------------
 
 function resolveRollForLength(inputAround) {
+  const polCfg = getActivePolipackConfig();
+  const sizeCatalog = polCfg ? POLIPACK_STANDARD_ROLLS : CANDIDATE_AROUND_SIZES;
+  if (!sizeCatalog.length) {
+    return {
+      rollLength: 0,
+      effectiveLength: 0,
+      usesHalfRoll: false
+    };
+  }
+
   // Pick the first candidate (half or full) >= requested length
-  let selectedCandidate = CANDIDATE_AROUND_SIZES[CANDIDATE_AROUND_SIZES.length - 1];
-  for (const cand of CANDIDATE_AROUND_SIZES) {
+  let selectedCandidate = sizeCatalog[sizeCatalog.length - 1];
+  for (const cand of sizeCatalog) {
     if (inputAround <= cand) {
       selectedCandidate = cand;
       break;
     }
+  }
+
+  if (polCfg) {
+    return {
+      rollLength: selectedCandidate,
+      effectiveLength: selectedCandidate,
+      usesHalfRoll: false
+    };
   }
 
   const usesHalfRoll = HALF_ROLL_SIZES.includes(selectedCandidate);
