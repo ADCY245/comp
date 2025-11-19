@@ -10,7 +10,7 @@
           "id": "wash-cs",
           "name": "WASH CS",
           "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
+          "price_per_litre": 135,
           "formats": [
             { "id": "wash-cs-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "wash-cs-10l", "label": "10L Can", "size_litre": 10 },
@@ -22,7 +22,7 @@
           "id": "wash-fc",
           "name": "WASH FC",
           "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
+          "price_per_litre": 140,
           "formats": [
             { "id": "wash-fc-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "wash-fc-10l", "label": "10L Can", "size_litre": 10 },
@@ -34,7 +34,7 @@
           "id": "wash-nw",
           "name": "WASH NW",
           "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
+          "price_per_litre": 175,
           "formats": [
             { "id": "wash-nw-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "wash-nw-10l", "label": "10L Can", "size_litre": 10 },
@@ -76,7 +76,7 @@
           "id": "wash-uv-s-plus",
           "name": "WASH UV S+",
           "icon": "custom:chem-icon--wash",
-          "price_per_litre": null,
+          "price_per_litre": 315,
           "formats": [
             { "id": "wash-uv-s-plus-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "wash-uv-s-plus-25l", "label": "25L Can", "size_litre": 25 }
@@ -94,7 +94,7 @@
           "id": "fount-az",
           "name": "FOUNT AZ",
           "icon": "fas fa-flask",
-          "price_per_litre": null,
+          "price_per_litre": 375,
           "formats": [
             { "id": "fount-az-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-az-25l", "label": "25L Can", "size_litre": 25 }
@@ -104,7 +104,7 @@
           "id": "fount-ap",
           "name": "FOUNT AP",
           "icon": "fas fa-flask",
-          "price_per_litre": null,
+          "price_per_litre": 225,
           "formats": [
             { "id": "fount-ap-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-ap-25l", "label": "25L Can", "size_litre": 25 }
@@ -114,7 +114,7 @@
           "id": "fount-chem-rol",
           "name": "CHEM R-OL",
           "icon": "fas fa-vial",
-          "price_per_litre": null,
+          "price_per_litre": 480,
           "formats": [
             { "id": "fount-chem-rol-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-chem-rol-25l", "label": "25L Can", "size_litre": 25 }
@@ -124,7 +124,7 @@
           "id": "fount-hf",
           "name": "FOUNT HF",
           "icon": "fas fa-tint",
-          "price_per_litre": null,
+          "price_per_litre": 285,
           "formats": [
             { "id": "fount-hf-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-hf-25l", "label": "25L Can", "size_litre": 25 }
@@ -134,7 +134,7 @@
           "id": "fount-hf-a-plus",
           "name": "FOUNT HF A+",
           "icon": "fas fa-tint",
-          "price_per_litre": null,
+          "price_per_litre": 290,
           "formats": [
             { "id": "fount-hf-a-plus-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-hf-a-plus-25l", "label": "25L Can", "size_litre": 25 }
@@ -144,7 +144,7 @@
           "id": "fount-nw",
           "name": "FOUNT NW",
           "icon": "fas fa-water",
-          "price_per_litre": null,
+          "price_per_litre": 160,
           "formats": [
             { "id": "fount-nw-5l", "label": "5L Bottle", "size_litre": 5 },
             { "id": "fount-nw-25l", "label": "25L Can", "size_litre": 25 },
@@ -164,7 +164,7 @@
           "id": "plate-alu-clean",
           "name": "ALU CLEAN",
           "icon": "fas fa-atom",
-          "price_per_litre": null,
+          "price_per_litre": 335,
           "formats": [
             { "id": "plate-alu-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -173,7 +173,7 @@
           "id": "plate-alu-clean-uv",
           "name": "ALU CLEAN UV",
           "icon": "fas fa-spray-can-sparkles",
-          "price_per_litre": null,
+          "price_per_litre": 335,
           "formats": [
             { "id": "plate-alu-clean-uv-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -190,7 +190,7 @@
           "id": "maint-calx-de-glazer",
           "name": "CALX DE GLAZER",
           "icon": "fas fa-cogs",
-          "price_per_litre": null,
+          "price_per_litre": 455,
           "formats": [
             { "id": "maint-calx-de-glazer-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -198,8 +198,8 @@
         {
           "id": "maint-roll-o-clean",
           "name": "ROLL-O-CLEAN",
-          "icon": "fas fa-sync",
-          "price_per_litre": null,
+          "icon": "fas fa-roller",
+          "price_per_kg": 980,
           "formats": [
             { "id": "maint-roll-o-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -207,8 +207,8 @@
         {
           "id": "maint-mtr-clean",
           "name": "MT.R CLEAN",
-          "icon": "fas fa-pump-soap",
-          "price_per_litre": null,
+          "icon": "fas fa-broom",
+          "price_per_litre": 362,
           "formats": [
             { "id": "maint-mtr-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -226,8 +226,8 @@
         {
           "id": "maint-fs-clean",
           "name": "FS CLEAN",
-          "icon": "fas fa-water",
-          "price_per_litre": null,
+          "icon": "fas fa-broom",
+          "price_per_litre": 245,
           "formats": [
             { "id": "maint-fs-clean-25kg", "label": "25 kg Pack", "size_litre": 25 }
           ]
@@ -235,8 +235,8 @@
         {
           "id": "maint-blanket-clean",
           "name": "BLANKET CLEAN",
-          "icon": "fas fa-eraser",
-          "price_per_litre": null,
+          "icon": "fas fa-broom",
+          "price_per_litre": 430,
           "formats": [
             { "id": "maint-blanket-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -244,8 +244,8 @@
         {
           "id": "maint-blanket-clean-uv",
           "name": "BLANKET CLEAN UV",
-          "icon": "fas fa-lightbulb",
-          "price_per_litre": null,
+          "icon": "fas fa-broom",
+          "price_per_litre": 500,
           "formats": [
             { "id": "maint-blanket-clean-uv-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
