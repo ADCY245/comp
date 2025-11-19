@@ -199,7 +199,7 @@
           "id": "maint-roll-o-clean",
           "name": "ROLL-O-CLEAN",
           "icon": "fas fa-roller",
-          "price_per_kg": 980,
+          "price_per_litre": 980,
           "formats": [
             { "id": "maint-roll-o-clean-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
@@ -245,7 +245,7 @@
           "id": "maint-blanket-clean-uv",
           "name": "BLANKET CLEAN UV",
           "icon": "fas fa-broom",
-          "price_per_litre": 500,
+          "price_per_litre": 0,
           "formats": [
             { "id": "maint-blanket-clean-uv-1kg", "label": "1 kg Pack", "size_litre": 1 }
           ]
