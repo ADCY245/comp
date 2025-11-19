@@ -305,7 +305,7 @@
 
   <div id="mpackSection" style="display:none;">
     <!-- Size selection first -->
-    <div class="mpack-thickness-row mpack-config-row mb-4">
+    <div class="mpack-thickness-row mpack-config-row mb-4" id="presetConfigRow">
       <div class="mpack-inputs-column" id="presetInputsColumn">
         <div class="row g-4 align-items-stretch mb-3">
           <div class="col-12 col-lg-6 mpack-diagram-column">
@@ -358,7 +358,6 @@
         </div>
         <div class="form-text">Select preset sizes to populate measurements automatically.</div>
         <button type="button" class="btn btn-outline-gold btn-sm mt-2" id="toggleManualSizeBtn">Can't find your sizes?</button>
-        <div class="form-text text-muted d-none" id="manualOnlyNotice">Manual entry only for the selected underpacking.</div>
         <div class="form-text text-muted" id="customSizeSummary">Select sizes to see sq.m., then choose a thickness.</div>
         <div class="form-text text-muted d-none" id="cutRollSummary"></div>
         <div class="text-danger small mt-1 d-none" id="customSizeFeedback">Please enter both across and around measurements to continue.</div>
@@ -417,6 +416,7 @@
 
     <div class="card card-body mt-3 d-none mpack-card-transparent" id="manualSizeContainer">
       <p class="mb-3 text-muted" id="manualSizeHint">Tell us your required size and we will calculate the square meter and pricing from the nearest standard roll.</p>
+      <div class="form-text text-muted d-none" id="manualOnlyNotice">Manual entry only for the selected underpacking.</div>
       <div class="mpack-thickness-row mt-1 d-none" id="manualDetailsRow">
         <div class="mpack-inputs-column mpack-thickness-primary" id="manualPrimaryColumn">
           <div class="row g-4 align-items-stretch manual-input-row" id="manualInputRow">

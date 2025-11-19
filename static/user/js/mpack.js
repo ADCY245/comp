@@ -134,6 +134,8 @@ let presetStandardColumnEl;
 
 let manualQuantitySlotEl;
 let manualDiscountSlotEl;
+let manualOnlyNoticeEl;
+let presetConfigRowEl;
 
 let manualEntryEnabled = false;
 
@@ -1077,6 +1079,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   manualInlineSummaryRowEl = document.getElementById('manualInlineSummaryRow');
   manualInlineSizeSummaryEl = document.getElementById('manualInlineSizeSummary');
   manualInlineDiscountSummaryEl = document.getElementById('manualInlineDiscountSummary');
+  manualOnlyNoticeEl = document.getElementById('manualOnlyNotice');
+  presetConfigRowEl = document.getElementById('presetConfigRow');
 
   populateCutSizeDropdown();
 
@@ -1275,20 +1279,51 @@ document.addEventListener("DOMContentLoaded", async () => {
       rebuildSelect(manualCutSelect, sizes);
     }
 
+    const getPolipackFormatSelected = () => {
+      const value = productFormatSelect ? productFormatSelect.value : '';
+      return value === 'polipack_aa' || value === 'polipack_wa';
+    };
+
+    const applyManualOnlyLayout = shouldEnable => {
+      if (presetConfigRowEl) {
+        presetConfigRowEl.classList[shouldEnable ? 'add' : 'remove']('d-none');
+      }
+      if (toggleManualSizeBtn) {
+        toggleManualSizeBtn.classList[shouldEnable ? 'add' : 'remove']('d-none');
+      }
+      if (manualSizeContainerEl) {
+        manualSizeContainerEl.classList[shouldEnable ? 'remove' : 'add']('d-none');
+      }
+      if (manualOnlyNoticeEl) {
+        manualOnlyNoticeEl.classList[shouldEnable ? 'remove' : 'add']('d-none');
+      }
+      toggleManualSizeEntry(shouldEnable);
+    };
+
     const handleUnderpackingChange = () => {
       const isPolipack = underpackingTypeSelect.value === 'polipack';
+      const hasPolipackFormat = isPolipack && getPolipackFormatSelected();
       const currentSizes = isPolipack ? POLIPACK_STANDARD_ROLLS : DEFAULT_FULL_ROLL_SIZES;
+
       populateCutSizeDropdown(currentSizes);
       updateStandardSizeDisplays(currentSizes);
 
-      mpackSection.style.display = underpackingTypeSelect.value ? 'block' : 'none';
       if (productFormatColumn) {
         productFormatColumn.classList[isPolipack ? 'remove' : 'add']('d-none');
       }
       if (!isPolipack && productFormatSelect) {
         productFormatSelect.value = '';
       }
-      disableThicknessSelection();
+
+      const shouldShowConfigurator = hasPolipackFormat;
+      if (mpackSection) {
+        mpackSection.style.display = shouldShowConfigurator ? 'block' : 'none';
+      }
+
+      applyManualOnlyLayout(shouldShowConfigurator);
+      if (!shouldShowConfigurator) {
+        disableThicknessSelection();
+      }
     };
 
     underpackingTypeSelect.addEventListener('change', handleUnderpackingChange);
@@ -1303,6 +1338,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           populateSelectOptions(thicknessSelectEl, pCfg.list.map(String), '-- Select Thickness --');
           thicknessSelectEl.disabled = false;
         }
+        handleUnderpackingChange();
       });
     }
   }
