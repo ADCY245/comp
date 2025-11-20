@@ -2,66 +2,77 @@
 
 {% block title %}Creasing Matrix - Product Calculator{% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='user/css/chemicals.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container my-5" id="creasingMatrixPageRoot">
-  <div class="d-flex align-items-end gap-2 flex-wrap flex-md-nowrap">
-    <div class="flex-grow-1">
-      <label for="creasingMatrixMachineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
-      <select id="creasingMatrixMachineSelect" class="form-select">
-        <option value="">-- Select Machine --</option>
-      </select>
-      <div class="form-text text-muted">Leave blank if the machine is unknown. The quotation will display `--`.</div>
-    </div>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('add_machine', next=url_for('creasing_matrix')) }}" class="btn btn-outline-gold">
-        <i class="fas fa-plus"></i> New Machine
-      </a>
+<div class="chemicals-page chemicals-page--matrix" id="creasingMatrixPageRoot">
+  <div class="chemicals-page__header">
+    <div class="chemicals-page__title">
+      <h2>Creasing Matrix Configurator</h2>
+      <p class="text-muted mb-0">Match the right matrix thickness and size, then confirm the rolls you need for a quick quotation.</p>
     </div>
   </div>
 
-  <form class="mt-4" id="creasingMatrixConfigurator" novalidate>
-    <section class="card mb-4" id="creasingMatrixStepCategory">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">1. Choose a sub-category</h3>
-        <p class="text-muted mb-3">Identify the right creasing matrix family to continue.</p>
-        <div id="creasingMatrixCategoryOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Loading categories…</p>
+  <div class="chemicals-page__content">
+    <div class="chem-layout">
+      <form class="chem-configurator" id="creasingMatrixConfigurator" novalidate>
+        <section class="chem-step chem-step--compact" id="creasingMatrixStepMachine">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">1. Select machine (optional)</h3>
+            <p class="chem-step__helper">Use this to tag the quote against a specific press.</p>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card mb-4" id="creasingMatrixStepProduct">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">2. Pick a profile</h3>
-        <p class="text-muted mb-3">Profiles matching your selection will appear here.</p>
-        <div id="creasingMatrixProductOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Select a sub-category to view profiles.</p>
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="creasingMatrixMachineSelect" class="form-label">Machine / Model</label>
+              <select id="creasingMatrixMachineSelect" class="form-select" aria-label="Select Machine">
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=url_for('creasing_matrix')) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
           </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <section class="card mb-4" id="creasingMatrixStepFormat">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">3. Choose specification</h3>
-        <p class="text-muted mb-3">Once a profile is selected, thickness, width, and channel options will be shown.</p>
-        <div id="creasingMatrixFormatOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Select a profile to see specification options.</p>
+        <section class="chem-step" id="creasingMatrixStepThickness">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">2. Select matrix thickness (mm)</h3>
+            <p class="chem-step__helper">Pick between 9 mm, 11 mm or 13 mm rails based on board caliper.</p>
           </div>
-        </div>
-      </div>
-    </section>
+          <div>
+            <label for="creasingMatrixThicknessSelect" class="form-label">Thickness</label>
+            <select id="creasingMatrixThicknessSelect" class="form-select" aria-label="Select thickness" disabled>
+              <option value="">Loading thickness options…</option>
+            </select>
+            <div class="chem-step__helper" id="creasingMatrixThicknessHelper">Thickness list is loading…</div>
+          </div>
+        </section>
 
-    <section class="card" id="creasingMatrixStepQuantity">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">4. Enter required rolls</h3>
-        <p class="text-muted mb-3">Specify how many rolls are required, we&rsquo;ll ensure lengths align with pack sizes.</p>
-        <div class="row g-3 align-items-end">
-          <div class="col-12 col-md-4">
+        <section class="chem-step" id="creasingMatrixStepSize">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">3. Choose size / channel</h3>
+            <p class="chem-step__helper">Sizes are filtered automatically once you choose a thickness.</p>
+          </div>
+          <div>
+            <label for="creasingMatrixSizeSelect" class="form-label">Available sizes</label>
+            <select id="creasingMatrixSizeSelect" class="form-select" aria-label="Select size" disabled>
+              <option value="">Select a thickness first</option>
+            </select>
+            <div class="chem-step__helper" id="creasingMatrixSizeHelper">Choose a thickness to view compatible sizes.</div>
+          </div>
+        </section>
+
+        <section class="chem-step chem-step--compact chem-step--quantity" id="creasingMatrixStepQuantity">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">4. Enter required rolls</h3>
+            <p class="chem-step__helper">Let us know how many rolls you need &mdash; we&rsquo;ll handle the pricing math.</p>
+          </div>
+          <div class="chem-quantity">
             <label class="form-label" for="creasingMatrixQuantityInput">Required rolls</label>
             <input type="number"
                    class="form-control"
@@ -69,42 +80,34 @@
                    name="quantity"
                    min="0"
                    step="1"
-                   placeholder="Select a specification first"
+                   placeholder="Select a size first"
+                   inputmode="numeric"
                    disabled>
-            <div class="form-text" id="creasingMatrixQuantityHelper">Choose a specification to enable quantity entry.</div>
+            <div class="chem-step__helper" id="creasingMatrixQuantityHelper">Choose a size to enable quantity entry.</div>
+            <div class="chem-quantity__actions">
+              <button type="button" class="btn btn-outline-gold chem-quantity__confirm" id="creasingMatrixConfirmQuantityBtn" disabled>
+                <i class="fas fa-check"></i>
+                <span>Done</span>
+              </button>
+            </div>
           </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="creasingMatrixDiscountSelect">Discount (%)</label>
-            <select id="creasingMatrixDiscountSelect" class="form-select" disabled>
-              <option value="">-- Select Discount --</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="creasingMatrixGstSelect">GST Rate</label>
-            <select id="creasingMatrixGstSelect" class="form-select" disabled>
-              <option value="18">18%</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </section>
+        </section>
+      </form>
 
-    <div class="card mt-4">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-3">Price Summary</h3>
-        <div id="creasingMatrixPriceSummary" class="text-muted">
-          Select quantity to see pricing breakdown.
+      <section class="chem-summary" id="creasingMatrixSummary" aria-live="polite">
+        <h3 class="chem-summary__title">Selection summary</h3>
+        <div class="chem-summary__body" id="creasingMatrixSummaryBody">
+          <p class="chem-placeholder mb-0">Start by selecting a thickness.</p>
         </div>
-        <div class="mt-3 d-flex flex-wrap gap-2">
-          <button type="button" id="creasingMatrixAddToCartBtn" class="btn btn-primary" disabled>Add to Cart</button>
-          <div id="creasingMatrixCartMessage" class="align-self-center text-success small"></div>
-        </div>
-      </div>
+        <div class="chem-summary__actions pt-3" id="creasingMatrixSummaryActions"></div>
+      </section>
     </div>
-  </form>
+  </div>
 </div>
+{% endblock %}
 
-<!-- Scripts -->
+{% block extra_js %}
+{{ super() }}
 <script src="{{ url_for('static', filename='user/js/creasing_matrix.js') }}"></script>
 <script src="{{ url_for('static', filename='user/js/cart.js') }}"></script>
 <script>

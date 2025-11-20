@@ -2,7 +2,6 @@
   const dataUrl = '/static/data/spray_powder/products.json';
 
   const machineSelect = document.getElementById('sprayPowderMachineSelect');
-  const categoryOptionsEl = document.getElementById('sprayPowderCategoryOptions');
   const productOptionsEl = document.getElementById('sprayPowderProductOptions');
   const formatOptionsEl = document.getElementById('sprayPowderFormatOptions');
   const quantityInput = document.getElementById('sprayPowderQuantityInput');
@@ -11,7 +10,7 @@
   const summaryBody = document.getElementById('sprayPowderSummaryBody');
   const summaryActions = document.getElementById('sprayPowderSummaryActions');
 
-  if (!categoryOptionsEl || !productOptionsEl || !formatOptionsEl || !summaryBody) {
+  if (!productOptionsEl || !formatOptionsEl || !summaryBody) {
     return;
   }
 
@@ -19,6 +18,7 @@
     machineName: '',
     machines: [],
     categories: [],
+    catalogProducts: [],
     selectedCategory: null,
     selectedProduct: null,
     selectedFormat: null,
@@ -48,7 +48,7 @@
   async function initializeConfigurator() {
     try {
       await loadMachines();
-      renderCategoryPlaceholder('Loading PX lines…');
+      renderProductPlaceholder('Loading spray powder catalogue…');
 
       const response = await fetch(dataUrl, { cache: 'no-store' });
       if (!response.ok) {
@@ -56,10 +56,14 @@
       }
       const payload = await response.json();
       state.categories = Array.isArray(payload?.categories) ? payload.categories : [];
-      renderCategories();
+      state.catalogProducts = state.categories.flatMap(category => {
+        const products = Array.isArray(category.products) ? category.products : [];
+        return products.map(product => ({ product, category }));
+      });
+      renderProducts();
     } catch (error) {
       console.error('spray_powder.js: unable to load catalogue', error);
-      renderCategoryPlaceholder('Unable to load PX catalogue. Please refresh.');
+      renderProductPlaceholder('Unable to load PX catalogue. Please refresh.');
     }
 
     setupEventListeners();
@@ -145,79 +149,34 @@
     }
   }
 
-  function renderCategoryPlaceholder(message) {
-    categoryOptionsEl.innerHTML = `<p class="chem-placeholder mb-0">${sanitize(message)}</p>`;
-  }
-
-  function renderCategories() {
-    if (!state.categories.length) {
-      renderCategoryPlaceholder('No PX lines available yet.');
-      return;
-    }
-
-    categoryOptionsEl.innerHTML = state.categories
-      .map(category => {
-        const isActive = state.selectedCategory?.id === category.id;
-        const icon = category.icon || 'fas fa-cloud';
-        return `
-          <button type="button" class="chem-option ${isActive ? 'chem-option--active' : ''}" data-category-id="${category.id}" aria-pressed="${isActive}">
-            <span class="chem-option__icon" aria-hidden="true"><i class="${icon}"></i></span>
-            <span>
-              <span class="chem-option__title">${sanitize(category.name)}</span>
-              <span class="chem-option__subtitle">${sanitize(category.description || '')}</span>
-            </span>
-          </button>
-        `;
-      })
-      .join('');
-
-    categoryOptionsEl.querySelectorAll('.chem-option').forEach(button => {
-      button.addEventListener('click', () => {
-        const { categoryId } = button.dataset;
-        if (!categoryId) return;
-        selectCategory(categoryId);
-      });
-    });
-  }
-
-  function selectCategory(categoryId) {
-    if (state.selectedCategory?.id === categoryId) return;
-
-    const category = state.categories.find(cat => String(cat.id) === String(categoryId));
-    if (!category) return;
-
-    state.selectedCategory = category;
-    state.selectedProduct = null;
-    state.selectedFormat = null;
-    state.quantityKg = null;
-    state.quantityConfirmed = false;
-    resetQuantityInput();
-
-    renderCategories();
-    renderProducts();
-    renderFormats();
-    updateSummary();
-    collapseStep(document.getElementById('sprayPowderStepCategory'), state.selectedCategory.name);
+  function renderProductPlaceholder(message) {
+    productOptionsEl.innerHTML = `<p class="chem-placeholder mb-0">${sanitize(message)}</p>`;
   }
 
   function renderProducts() {
-    if (!state.selectedCategory) {
-      productOptionsEl.innerHTML = '<p class="chem-placeholder mb-0">Select a PX line to view available products.</p>';
-      return;
-    }
-
-    const products = Array.isArray(state.selectedCategory.products) ? state.selectedCategory.products : [];
+    const products = Array.isArray(state.catalogProducts) ? state.catalogProducts : [];
     if (!products.length) {
-      productOptionsEl.innerHTML = '<p class="chem-placeholder mb-0">No products found for this PX line.</p>';
+      renderProductPlaceholder('No PX products available yet.');
       return;
     }
 
     productOptionsEl.innerHTML = products
-      .map(product => {
+      .map(entry => {
+        const { product, category } = entry;
         const isActive = state.selectedProduct?.id === product.id;
-        const icon = product.icon || state.selectedCategory.icon || 'fas fa-box';
-        const subtitle = typeof product.description === 'string' && product.description.trim().length
-          ? `<span class="chem-option__subtitle">${sanitize(product.description)}</span>`
+        const icon = sanitize(product.icon || category?.icon || 'fas fa-box');
+        const productDescription = typeof product.description === 'string' && product.description.trim().length
+          ? sanitize(product.description)
+          : '';
+        const subtitleParts = [];
+        if (productDescription) {
+          subtitleParts.push(productDescription);
+        }
+        if (category?.name) {
+          subtitleParts.push(`PX line: ${sanitize(category.name)}`);
+        }
+        const subtitle = subtitleParts.length
+          ? `<span class="chem-option__subtitle">${subtitleParts.join(' &middot; ')}</span>`
           : '';
 
         return `
@@ -241,13 +200,13 @@
   }
 
   function selectProduct(productId) {
-    if (!state.selectedCategory) return;
-    if (state.selectedProduct?.id === productId) return;
+    const entry = state.catalogProducts.find(({ product }) => String(product.id) === String(productId));
+    if (!entry) return;
 
-    const products = Array.isArray(state.selectedCategory.products) ? state.selectedCategory.products : [];
-    const product = products.find(item => String(item.id) === String(productId));
-    if (!product) return;
+    const { product, category } = entry;
+    if (state.selectedProduct?.id === product.id) return;
 
+    state.selectedCategory = category || null;
     state.selectedProduct = product;
     state.selectedFormat = null;
     state.quantityKg = null;
@@ -345,7 +304,7 @@
     const items = [];
 
     if (state.selectedCategory && state.selectedProduct) {
-      items.push(summaryItem('Product', state.selectedProduct.name, state.selectedCategory.name));
+      items.push(summaryItem('Product', state.selectedProduct.name, state.selectedCategory?.name));
     }
 
     const quantityValue = Number(state.quantityKg);
@@ -396,7 +355,7 @@
     }
 
     if (!items.length) {
-      summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by choosing a PX line.</p>';
+      summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by picking a product.</p>';
       if (summaryActions) {
         summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Your cart button appears after you confirm kilograms.</p>';
       }
@@ -430,9 +389,6 @@
         }
       }
 
-      if (state.selectedCategory) {
-        collapseStep(document.getElementById('sprayPowderStepCategory'), state.selectedCategory.name);
-      }
       if (state.selectedProduct) {
         collapseStep(document.getElementById('sprayPowderStepProduct'), state.selectedProduct.name);
       }
@@ -580,7 +536,6 @@
     if (machineSelect) machineSelect.value = '';
     resetQuantityInput();
 
-    renderCategories();
     renderProducts();
     renderFormats();
     updateSummary();
