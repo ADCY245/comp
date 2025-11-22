@@ -2,107 +2,68 @@
   "thicknesses": [
     {
       "id": "9mm",
-      "label": "9 mm Matrix",
+      "label": "9 mm",
       "value": 9,
-      "description": "Entry rail for carton board up to 0.45 mm.",
       "sizes": [
-        {
-          "id": "9mm-230",
-          "label": "Size 230",
-          "channel_mm": 0.30,
-          "shoulder_mm": 2.30,
-          "width_mm": 4.2,
-          "length_m": 40,
-          "price_per_roll": 1850
-        },
-        {
-          "id": "9mm-250",
-          "label": "Size 250",
-          "channel_mm": 0.35,
-          "shoulder_mm": 2.50,
-          "width_mm": 4.5,
-          "length_m": 40,
-          "price_per_roll": 1925
-        },
-        {
-          "id": "9mm-270",
-          "label": "Size 270",
-          "channel_mm": 0.40,
-          "shoulder_mm": 2.70,
-          "width_mm": 4.8,
-          "length_m": 40,
-          "price_per_roll": 2050
-        }
+        { "id": "9mm-c03-s10", "label": "0.3 x 1.0 mm", "channel_mm": 0.3, "shoulder_mm": 1.0, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c03-s11", "label": "0.3 x 1.1 mm", "channel_mm": 0.3, "shoulder_mm": 1.1, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c03-s12", "label": "0.3 x 1.2 mm", "channel_mm": 0.3, "shoulder_mm": 1.2, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c03-s13", "label": "0.3 x 1.3 mm", "channel_mm": 0.3, "shoulder_mm": 1.3, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c03-s15", "label": "0.3 x 1.5 mm", "channel_mm": 0.3, "shoulder_mm": 1.5, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s10", "label": "0.4 x 1.0 mm", "channel_mm": 0.4, "shoulder_mm": 1.0, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s11", "label": "0.4 x 1.1 mm", "channel_mm": 0.4, "shoulder_mm": 1.1, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s12", "label": "0.4 x 1.2 mm", "channel_mm": 0.4, "shoulder_mm": 1.2, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s13", "label": "0.4 x 1.3 mm", "channel_mm": 0.4, "shoulder_mm": 1.3, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s14", "label": "0.4 x 1.4 mm", "channel_mm": 0.4, "shoulder_mm": 1.4, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s15", "label": "0.4 x 1.5 mm", "channel_mm": 0.4, "shoulder_mm": 1.5, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s16", "label": "0.4 x 1.6 mm", "channel_mm": 0.4, "shoulder_mm": 1.6, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c04-s17", "label": "0.4 x 1.7 mm", "channel_mm": 0.4, "shoulder_mm": 1.7, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s12", "label": "0.5 x 1.2 mm", "channel_mm": 0.5, "shoulder_mm": 1.2, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s13", "label": "0.5 x 1.3 mm", "channel_mm": 0.5, "shoulder_mm": 1.3, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s14", "label": "0.5 x 1.4 mm", "channel_mm": 0.5, "shoulder_mm": 1.4, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s15", "label": "0.5 x 1.5 mm", "channel_mm": 0.5, "shoulder_mm": 1.5, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s16", "label": "0.5 x 1.6 mm", "channel_mm": 0.5, "shoulder_mm": 1.6, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s17", "label": "0.5 x 1.7 mm", "channel_mm": 0.5, "shoulder_mm": 1.7, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s18", "label": "0.5 x 1.8 mm", "channel_mm": 0.5, "shoulder_mm": 1.8, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c05-s19", "label": "0.5 x 1.9 mm", "channel_mm": 0.5, "shoulder_mm": 1.9, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s11", "label": "0.6 x 1.1 mm", "channel_mm": 0.6, "shoulder_mm": 1.1, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s15", "label": "0.6 x 1.5 mm", "channel_mm": 0.6, "shoulder_mm": 1.5, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s16", "label": "0.6 x 1.6 mm", "channel_mm": 0.6, "shoulder_mm": 1.6, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s17", "label": "0.6 x 1.7 mm", "channel_mm": 0.6, "shoulder_mm": 1.7, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s19", "label": "0.6 x 1.9 mm", "channel_mm": 0.6, "shoulder_mm": 1.9, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s21", "label": "0.6 x 2.1 mm", "channel_mm": 0.6, "shoulder_mm": 2.1, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s23", "label": "0.6 x 2.3 mm", "channel_mm": 0.6, "shoulder_mm": 2.3, "length_m": 40, "price_per_roll": null },
+        { "id": "9mm-c06-s25", "label": "0.6 x 2.5 mm", "channel_mm": 0.6, "shoulder_mm": 2.5, "length_m": 40, "price_per_roll": null }
       ]
     },
     {
       "id": "11mm",
-      "label": "11 mm Matrix",
+      "label": "11 mm",
       "value": 11,
-      "description": "Balanced option for board between 0.45 mm – 0.65 mm.",
       "sizes": [
-        {
-          "id": "11mm-270",
-          "label": "Size 270",
-          "channel_mm": 0.40,
-          "shoulder_mm": 2.70,
-          "width_mm": 5.5,
-          "length_m": 40,
-          "price_per_roll": 2150
-        },
-        {
-          "id": "11mm-290",
-          "label": "Size 290",
-          "channel_mm": 0.45,
-          "shoulder_mm": 2.90,
-          "width_mm": 5.8,
-          "length_m": 40,
-          "price_per_roll": 2290
-        },
-        {
-          "id": "11mm-320",
-          "label": "Size 320",
-          "channel_mm": 0.50,
-          "shoulder_mm": 3.20,
-          "width_mm": 6.2,
-          "length_m": 40,
-          "price_per_roll": 2425
-        }
+        { "id": "11mm-c07-s11", "label": "0.7 x 1.1 mm", "channel_mm": 0.7, "shoulder_mm": 1.1, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c07-s15", "label": "0.7 x 1.5 mm", "channel_mm": 0.7, "shoulder_mm": 1.5, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c07-s21", "label": "0.7 x 2.1 mm", "channel_mm": 0.7, "shoulder_mm": 2.1, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c07-s23", "label": "0.7 x 2.3 mm", "channel_mm": 0.7, "shoulder_mm": 2.3, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c07-s25", "label": "0.7 x 2.5 mm", "channel_mm": 0.7, "shoulder_mm": 2.5, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c07-s27", "label": "0.7 x 2.7 mm", "channel_mm": 0.7, "shoulder_mm": 2.7, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c08-s21", "label": "0.8 x 2.1 mm", "channel_mm": 0.8, "shoulder_mm": 2.1, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c08-s23", "label": "0.8 x 2.3 mm", "channel_mm": 0.8, "shoulder_mm": 2.3, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c08-s25", "label": "0.8 x 2.5 mm", "channel_mm": 0.8, "shoulder_mm": 2.5, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c08-s27", "label": "0.8 x 2.7 mm", "channel_mm": 0.8, "shoulder_mm": 2.7, "length_m": 40, "price_per_roll": null },
+        { "id": "11mm-c08-s30", "label": "0.8 x 3.0 mm", "channel_mm": 0.8, "shoulder_mm": 3.0, "length_m": 40, "price_per_roll": null }
       ]
     },
     {
       "id": "13mm",
-      "label": "13 mm Matrix",
+      "label": "13 mm",
       "value": 13,
-      "description": "Heavy-duty rail for corrugated or >0.65 mm board.",
       "sizes": [
-        {
-          "id": "13mm-320",
-          "label": "Size 320",
-          "channel_mm": 0.50,
-          "shoulder_mm": 3.20,
-          "width_mm": 6.8,
-          "length_m": 38,
-          "price_per_roll": 2580
-        },
-        {
-          "id": "13mm-350",
-          "label": "Size 350",
-          "channel_mm": 0.55,
-          "shoulder_mm": 3.50,
-          "width_mm": 7.1,
-          "length_m": 38,
-          "price_per_roll": 2740
-        },
-        {
-          "id": "13mm-380",
-          "label": "Size 380",
-          "channel_mm": 0.60,
-          "shoulder_mm": 3.80,
-          "width_mm": 7.5,
-          "length_m": 38,
-          "price_per_roll": 2890
-        }
+        { "id": "13mm-c10-s30", "label": "1.0 x 3.0 mm", "channel_mm": 1.0, "shoulder_mm": 3.0, "length_m": 38, "price_per_roll": null },
+        { "id": "13mm-c10-s32", "label": "1.0 x 3.2 mm", "channel_mm": 1.0, "shoulder_mm": 3.2, "length_m": 38, "price_per_roll": null },
+        { "id": "13mm-c10-s35", "label": "1.0 x 3.5 mm", "channel_mm": 1.0, "shoulder_mm": 3.5, "length_m": 38, "price_per_roll": null },
+        { "id": "13mm-c10-s40", "label": "1.0 x 4.0 mm", "channel_mm": 1.0, "shoulder_mm": 4.0, "length_m": 38, "price_per_roll": null },
+        { "id": "13mm-c14-s50", "label": "1.4 x 5.0 mm", "channel_mm": 1.4, "shoulder_mm": 5.0, "length_m": 38, "price_per_roll": null }
       ]
     }
   ]

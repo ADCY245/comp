@@ -1,111 +1,146 @@
 {% extends "base.html" %}
 
-{% block title %}Cutting Rule - Product Calculator{% endblock %}
+{% block title %}Cutting &amp; Creasing Rules - Product Configurator{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='user/css/chemicals.css') }}">
+{% endblock %}
 
 {% block content %}
-<div class="container my-5" id="cuttingRulePageRoot">
-  <div class="d-flex align-items-end gap-2 flex-wrap flex-md-nowrap">
-    <div class="flex-grow-1">
-      <label for="cuttingRuleMachineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
-      <select id="cuttingRuleMachineSelect" class="form-select">
-        <option value="">-- Select Machine --</option>
-      </select>
-      <div class="form-text text-muted">Leave blank if the machine is unknown. The quotation will display `--`.</div>
-    </div>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('add_machine', next=url_for('cutting_rule')) }}" class="btn btn-outline-gold">
-        <i class="fas fa-plus"></i> New Machine
-      </a>
+<div class="chemicals-page" id="ruleConfiguratorPage">
+  <div class="chemicals-page__header">
+    <div class="chemicals-page__title">
+      <h2>Cutting &amp; Creasing Rule Configurator</h2>
+      <p class="text-muted mb-0">Work through the machine, rule selection, thickness/size and packaging to build a quick quotation.</p>
     </div>
   </div>
 
-  <form class="mt-4" id="cuttingRuleConfigurator" novalidate>
-    <section class="card mb-4" id="cuttingRuleStepCategory">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">1. Choose a sub-category</h3>
-        <p class="text-muted mb-3">Select the appropriate cutting rule line to continue.</p>
-        <div id="cuttingRuleCategoryOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Loading categories…</p>
+  <div class="chemicals-page__content">
+    <div class="chem-layout">
+      <form class="chem-configurator" id="ruleConfiguratorForm" novalidate>
+        <section class="chem-step chem-step--compact" id="ruleStepMachine">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">1. Select machine (optional)</h3>
+            <p class="chem-step__helper">Tag this quote to a press or leave it blank.</p>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card mb-4" id="cuttingRuleStepProduct">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">2. Pick a product</h3>
-        <p class="text-muted mb-3">Products matching your selection will appear here.</p>
-        <div id="cuttingRuleProductOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Select a sub-category to view products.</p>
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="ruleMachineSelect" class="form-label">Machine / Model</label>
+              <select id="ruleMachineSelect" class="form-select" aria-label="Select Machine">
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=url_for('cutting_rule')) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
           </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <section a="card mb-4" id="cuttingRuleStepFormat">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">3. Choose specification</h3>
-        <p class="text-muted mb-3">Available options (hardness, bevel, edge etc.) will appear once a product is selected.</p>
-        <div id="cuttingRuleFormatOptions" class="row g-3">
-          <div class="col-12">
-            <p class="text-muted mb-0">Select a product to see specification options.</p>
+        <section class="chem-step" id="ruleStepSelection">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">2. Choose rule type</h3>
+            <p class="chem-step__helper">Switch between cutting and creasing rule workflows.</p>
           </div>
-        </div>
-      </div>
-    </section>
+          <div>
+            <label for="ruleTypeSelect" class="form-label">Rule selection</label>
+            <select id="ruleTypeSelect" class="form-select" aria-label="Select rule type">
+              <option value="">-- Select Rule --</option>
+              <option value="cutting">Cutting Rule</option>
+              <option value="creasing">Creasing Rule</option>
+            </select>
+            <div class="chem-step__helper" id="ruleTypeHelper">Pick a rule to unlock the rest of the form.</div>
+          </div>
+        </section>
 
-    <section class="card" id="cuttingRuleStepQuantity">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-2">4. Enter required quantity</h3>
-        <p class="text-muted mb-3">Tell us how many lengths you need &mdash; we&rsquo;ll check bundle consistency.</p>
-        <div class="row g-3 align-items-end">
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="cuttingRuleQuantityInput">Required quantity</label>
+        <section class="chem-step" id="ruleStepThickness" hidden>
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">3. Select thickness (cutting only)</h3>
+            <p class="chem-step__helper">Choose between 2pt and 3pt blades.</p>
+          </div>
+          <div>
+            <label for="ruleThicknessSelect" class="form-label">Thickness</label>
+            <select id="ruleThicknessSelect" class="form-select" aria-label="Select thickness" disabled>
+              <option value="">Select rule type first</option>
+            </select>
+            <div class="chem-step__helper" id="ruleThicknessHelper">Thickness is required for cutting rule selections.</div>
+          </div>
+        </section>
+
+        <section class="chem-step" id="ruleStepSize" hidden>
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">4. Choose size / profile</h3>
+            <p class="chem-step__helper">Sizes are filtered automatically once prerequisites are selected.</p>
+          </div>
+          <div>
+            <label for="ruleSizeSelect" class="form-label">Available sizes</label>
+            <select id="ruleSizeSelect" class="form-select" aria-label="Select size" disabled>
+              <option value="">Select a rule to continue</option>
+            </select>
+            <div class="chem-step__helper" id="ruleSizeHelper">Select thickness (for cutting) or continue for creasing.</div>
+          </div>
+        </section>
+
+        <section class="chem-step" id="ruleStepPackaging" hidden>
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">5. Packaging preference</h3>
+            <p class="chem-step__helper">Specify whether you need packets or coils.</p>
+          </div>
+          <div>
+            <label for="rulePackagingSelect" class="form-label">Packaging type</label>
+            <select id="rulePackagingSelect" class="form-select" aria-label="Select packaging" disabled>
+              <option value="">Select a size first</option>
+            </select>
+            <div class="chem-step__helper" id="rulePackagingHelper">Packet/coil selection becomes available after size.</div>
+          </div>
+        </section>
+
+        <section class="chem-step chem-step--compact chem-step--quantity" id="ruleStepQuantity" hidden>
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">6. Enter quantity</h3>
+            <p class="chem-step__helper">Tell us how many lengths you require.</p>
+          </div>
+          <div class="chem-quantity">
+            <label class="form-label" for="ruleQuantityInput">Required quantity</label>
             <input type="number"
                    class="form-control"
-                   id="cuttingRuleQuantityInput"
+                   id="ruleQuantityInput"
                    name="quantity"
                    min="0"
                    step="1"
-                   placeholder="Select a specification first"
+                   placeholder="Select packaging first"
                    disabled>
-            <div class="form-text" id="cuttingRuleQuantityHelper">Choose a specification to enable quantity entry.</div>
+            <div class="chem-step__helper" id="ruleQuantityHelper">Choose a packaging type to enable quantity entry.</div>
+            <div class="chem-quantity__actions">
+              <button type="button" class="btn btn-outline-gold chem-quantity__confirm" id="ruleQuantityConfirmBtn" disabled>
+                <i class="fas fa-check"></i>
+                <span>Done</span>
+              </button>
+            </div>
           </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="cuttingRuleDiscountSelect">Discount (%)</label>
-            <select id="cuttingRuleDiscountSelect" class="form-select" disabled>
-              <option value="">-- Select Discount --</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="cuttingRuleGstSelect">GST Rate</label>
-            <select id="cuttingRuleGstSelect" class="form-select" disabled>
-              <option value="18">18%</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </section>
+        </section>
+      </form>
 
-    <div class="card mt-4">
-      <div class="card-body">
-        <h3 class="card-title h5 mb-3">Price Summary</h3>
-        <div id="cuttingRulePriceSummary" class="text-muted">
-          Select quantity to see pricing breakdown.
+      <section class="chem-summary" id="ruleSummary" aria-live="polite">
+        <h3 class="chem-summary__title">Selection summary</h3>
+        <div class="chem-summary__body" id="ruleSummaryBody">
+          <p class="chem-placeholder mb-0">Start by selecting a rule type.</p>
         </div>
-        <div class="mt-3 d-flex flex-wrap gap-2">
-          <button type="button" id="cuttingRuleAddToCartBtn" class="btn btn-primary" disabled>Add to Cart</button>
-          <div id="cuttingRuleCartMessage" class="align-self-center text-success small"></div>
+        <div class="chem-summary__actions pt-3 d-flex flex-column gap-2">
+          <button type="button" class="btn btn-primary" id="ruleAddToCartBtn" disabled>Add to Cart</button>
+          <div id="ruleCartMessage" class="small text-success"></div>
         </div>
-      </div>
+      </section>
     </div>
-  </form>
+  </div>
 </div>
+{% endblock %}
 
-<!-- Scripts -->
-<script src="{{ url_for('static', filename='user/js/cutting_rule.js') }}"></script>
+{% block extra_js %}
+{{ super() }}
+<script src="{{ url_for('static', filename='user/js/cutting_creasing_rule.js') }}"></script>
 <script src="{{ url_for('static', filename='user/js/cart.js') }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
