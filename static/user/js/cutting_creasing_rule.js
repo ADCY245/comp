@@ -4,6 +4,61 @@
     return;
   }
 
+  function buildCatalogEntries(catalog = {}, context = 'cutting') {
+    const grouped = new Map();
+    Object.entries(catalog || {}).forEach(([packagingId, entries]) => {
+      if (!Array.isArray(entries)) {
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const label = (entry.label || `Option ${index + 1}`).trim();
+        const normalizedKey = `${context}|${normalizeCode(entry.code || label)}|${label.toLowerCase()}`;
+        const existing = grouped.get(normalizedKey) || {
+          id: `${context}-${slugify(label)}-${normalizeCode(entry.code || label) || index}`,
+          label,
+          code: entry.code || '',
+          packagingOptions: []
+        };
+
+        existing.packagingOptions.push({
+          id: `${entry.profile_id || existing.id}-${packagingId}`,
+          packagingId,
+          label: PACKAGING_PRESETS[packagingId]?.label || capitalize(packagingId),
+          profileId: entry.profile_id,
+          code: entry.code || '',
+          description: PACKAGING_PRESETS[packagingId]?.description || '',
+          finish: entry.finish || ''
+        });
+
+        grouped.set(normalizedKey, existing);
+      });
+    });
+
+    return Array.from(grouped.values()).map(option => ({
+      ...option,
+      packagingOptions: option.packagingOptions.sort((a, b) => a.label.localeCompare(b.label))
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  function normalizeCode(code = '') {
+    return code
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/-C-CW$/i, '')
+      .replace(/-C$/i, '')
+      .replace(/-CW$/i, '')
+      .toLowerCase();
+  }
+
+  function slugify(value = '') {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      || 'option';
+  }
+
   const machineSelect = document.getElementById('ruleMachineSelect');
   const ruleTypeSelect = document.getElementById('ruleTypeSelect');
   const thicknessSelect = document.getElementById('ruleThicknessSelect');
@@ -25,11 +80,12 @@
   const packagingHelper = document.getElementById('rulePackagingHelper');
   const typeHelper = document.getElementById('ruleTypeHelper');
 
-  const packagingOptions = [
-    { id: 'packets', label: 'Packets (25 lengths)', description: 'Supplied in ready packs' },
-    { id: 'coils', label: 'Coils', description: 'Supplied as continuous coils' },
-    { id: 'custom', label: 'Custom Packaging', description: 'Specify requirements in the quotation' }
-  ];
+  const DATA_SOURCE = '/static/data/Creasing_cutting_rule/cutting_creasing_rules.json';
+
+  const PACKAGING_PRESETS = {
+    packets: { id: 'packets', label: 'Packets (PKT)', description: 'Supplied in standard bundles.' },
+    coils: { id: 'coils', label: 'Coils (CW/B)', description: 'Supplied as continuous coils.' }
+  };
 
   const baseRates = {
     cutting: {
@@ -42,13 +98,14 @@
 
   const state = {
     machines: [],
-    rawSizes: {},
+    rawSizes: { cutting: {}, creasing: [] },
     flattenedSizes: [],
     selectedMachine: '',
     selectedRuleType: '',
     selectedThickness: '',
     selectedSize: null,
     selectedPackaging: null,
+    availablePackagingOptions: [],
     quantity: null,
     quantityConfirmed: false
   };
@@ -103,17 +160,20 @@
       sizeSelect.addEventListener('change', event => {
         const selectedId = event.target.value;
         const collection = state.selectedRuleType === 'cutting'
-          ? (state.rawSizes[state.selectedThickness] || [])
-          : state.flattenedSizes;
+          ? (state.rawSizes.cutting?.[state.selectedThickness] || [])
+          : state.rawSizes.creasing;
         state.selectedSize = collection.find(option => option.id === selectedId) || null;
         state.selectedPackaging = null;
         packagingSelect.value = '';
         disableSection(packagingSection, packagingSelect, 'Select a size first');
 
         if (state.selectedSize) {
+          state.availablePackagingOptions = state.selectedSize.packagingOptions || [];
           showSection(packagingSection, packagingSelect);
           populatePackagingOptions();
           packagingHelper.textContent = 'Select the desired packaging format.';
+        } else {
+          state.availablePackagingOptions = [];
         }
         updateSummary();
       });
@@ -121,7 +181,8 @@
 
     if (packagingSelect) {
       packagingSelect.addEventListener('change', event => {
-        state.selectedPackaging = packagingOptions.find(option => option.id === event.target.value) || null;
+        const options = state.availablePackagingOptions || [];
+        state.selectedPackaging = options.find(option => option.id === event.target.value) || null;
         if (state.selectedPackaging) {
           showSection(quantitySection, quantityInput);
           quantityInput.disabled = false;
@@ -180,6 +241,7 @@
     state.selectedThickness = '';
     state.selectedSize = null;
     state.selectedPackaging = null;
+    state.availablePackagingOptions = [];
     state.quantity = null;
     state.quantityConfirmed = false;
 
@@ -232,14 +294,14 @@
   }
 
   function populateThicknessOptions() {
-    const keys = Object.keys(state.rawSizes);
+    const keys = Object.keys(state.rawSizes.cutting || {});
     thicknessSelect.innerHTML = '<option value="">Select thickness</option>' +
       keys.map(key => `<option value="${key}">${key.toUpperCase()}</option>`).join('');
     thicknessSelect.disabled = keys.length === 0;
   }
 
   function populateSizeOptions(thickness) {
-    const options = state.rawSizes[thickness] || [];
+    const options = state.rawSizes.cutting?.[thickness] || [];
     if (!options.length) {
       sizeSelect.innerHTML = '<option value="">No sizes configured for this thickness</option>';
       sizeSelect.disabled = true;
@@ -249,30 +311,37 @@
     sizeSelect.innerHTML = '<option value="">Select size/profile</option>' +
       options.map(option => `
         <option value="${option.id}">
-          ${option.label}
+          ${option.label}${option.code ? ` - ${option.code}` : ''}
         </option>
       `).join('');
     sizeSelect.disabled = false;
   }
 
   function populateCreasingSizes() {
-    if (!state.flattenedSizes.length) {
+    if (!state.rawSizes.creasing.length) {
       sizeSelect.innerHTML = '<option value="">No creasing specifications available</option>';
       sizeSelect.disabled = true;
       return;
     }
 
     sizeSelect.innerHTML = '<option value="">Select specification</option>' +
-      state.flattenedSizes.map(option => `
-        <option value="${option.id}">${option.label}</option>
+      state.rawSizes.creasing.map(option => `
+        <option value="${option.id}">${option.label}${option.code ? ` - ${option.code}` : ''}</option>
       `).join('');
     sizeSelect.disabled = false;
   }
 
   function populatePackagingOptions() {
+    const options = state.availablePackagingOptions || [];
+    if (!options.length) {
+      packagingSelect.innerHTML = '<option value="">Packaging unavailable for this profile</option>';
+      packagingSelect.disabled = true;
+      return;
+    }
+
     packagingSelect.innerHTML = '<option value="">Select packaging</option>' +
-      packagingOptions.map(option => `
-        <option value="${option.id}">${option.label}</option>
+      options.map(option => `
+        <option value="${option.id}">${option.label}${option.code ? ` - ${option.code}` : ''}</option>
       `).join('');
     packagingSelect.disabled = false;
   }
@@ -295,18 +364,26 @@
 
   async function loadRuleSizes() {
     try {
-      const response = await fetch('/static/data/cutting_rule_sizes.json', { cache: 'no-store' });
+      const response = await fetch(DATA_SOURCE, { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error(`Failed to fetch cutting rule sizes (${response.status})`);
+        throw new Error(`Failed to fetch rule catalog (${response.status})`);
       }
       const payload = await response.json();
-      state.rawSizes = payload || {};
-      state.flattenedSizes = Object.values(state.rawSizes)
-        .flat()
-        .map(entry => ({ ...entry, group: 'cutting' }));
+      const cuttingCatalog = payload?.cutting || {};
+      const creasingCatalog = payload?.creasing?.['2pt'] || {};
+
+      state.rawSizes.cutting = Object.entries(cuttingCatalog)
+        .reduce((acc, [thickness, catalog]) => {
+          acc[thickness] = buildCatalogEntries(catalog, `cut-${thickness}`);
+          return acc;
+        }, {});
+
+      state.rawSizes.creasing = buildCatalogEntries(creasingCatalog, 'crease-2pt');
+      state.flattenedSizes = state.rawSizes.creasing;
     } catch (error) {
       console.error('cutting_creasing_rule.js: unable to load size data', error);
-      state.rawSizes = {};
+      state.rawSizes.cutting = {};
+      state.rawSizes.creasing = [];
       state.flattenedSizes = [];
     }
   }
@@ -353,6 +430,9 @@
     }
     if (state.selectedSize) {
       summaryItems.push(`<li><strong>Profile:</strong> ${state.selectedSize.label}</li>`);
+      if (state.selectedPackaging?.code || state.selectedSize.code) {
+        summaryItems.push(`<li><strong>Code:</strong> ${state.selectedPackaging?.code || state.selectedSize.code}</li>`);
+      }
     }
     if (state.selectedPackaging) {
       summaryItems.push(`<li><strong>Packaging:</strong> ${state.selectedPackaging.label}</li>`);
@@ -403,9 +483,9 @@
     }
 
     let packagingFactor = 1;
-    if (state.selectedPackaging?.id === 'coils') {
+    if (state.selectedPackaging?.packagingId === 'coils') {
       packagingFactor = 1.08;
-    } else if (state.selectedPackaging?.id === 'custom') {
+    } else if (state.selectedPackaging?.packagingId === 'custom') {
       packagingFactor = 1.15;
     }
 
@@ -434,9 +514,11 @@
       machine: state.selectedMachine || '',
       rule_category: state.selectedRuleType,
       thickness: state.selectedThickness || '',
-      profile_id: state.selectedSize?.id,
+      profile_id: state.selectedPackaging?.profileId || state.selectedSize?.id,
       profile_label: state.selectedSize?.label,
+      profile_code: state.selectedPackaging?.code || state.selectedSize?.code || '',
       packaging: state.selectedPackaging?.label,
+      packaging_type: state.selectedPackaging?.packagingId,
       quantity,
       unit_price: round(unitPrice, 2),
       discount_percent: discountPercent,
