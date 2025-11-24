@@ -148,21 +148,6 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="otherProductsDropdown">
                             <li>
-                                <a class="dropdown-item" id="sprayPowderLink" href="{{ url_for('spray_powder') }}" data-route="{{ url_for('spray_powder') }}">
-                                    <i class="bi bi-cloud-fog2 me-2"></i>Spray Powder
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" id="cuttingRuleLink" href="{{ url_for('cutting_rule') }}" data-route="{{ url_for('cutting_rule') }}">
-                                    <i class="bi bi-scissors me-2"></i>Cutting &amp; Creasing Rule
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" id="creasingMatrixLink" href="{{ url_for('creasing_matrix') }}" data-route="{{ url_for('creasing_matrix') }}">
-                                    <i class="bi bi-grid-3x3-gap me-2"></i>Creasing Matrix
-                                </a>
-                            </li>
-                            <li>
                                 <a class="dropdown-item" id="chemMaintLink" href="{{ url_for('chemicals_maintenance') }}" data-route="{{ url_for('chemicals_maintenance') }}">
                                     <svg class="icon-barrel icon-barrel--single me-2" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <ellipse cx="24" cy="9" rx="11" ry="5" />
@@ -172,6 +157,21 @@
                                         <line x1="13" y1="23" x2="35" y2="23" />
                                         <line x1="13" y1="30" x2="35" y2="30" />
                                     </svg>Chemicals &amp; Maintenance
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="sprayPowderLink" href="{{ url_for('spray_powder') }}" data-route="{{ url_for('spray_powder') }}">
+                                    <i class="bi bi-cloud-fog2 me-2"></i>Spray Powder
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="creasingMatrixLink" href="{{ url_for('creasing_matrix') }}" data-route="{{ url_for('creasing_matrix') }}">
+                                    <i class="bi bi-grid-3x3-gap me-2"></i>Creasing Matrix
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="cuttingRuleLink" href="{{ url_for('cutting_rule') }}" data-route="{{ url_for('cutting_rule') }}">
+                                    <i class="bi bi-scissors me-2"></i>Cutting &amp; Creasing Rule
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>

@@ -1,57 +1,76 @@
 {% extends "base.html" %}
 {% block title %}Litho Perforation Rules - Product Calculator{% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='user/css/chemicals.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container my-5" id="lithoPerforationPage">
-  <div class="mb-4">
-    <h1 class="h3 mb-1">Litho Perforation Rules</h1>
-    <p class="text-muted mb-0">Engineered perforation rules curated for litho die cutting teams. Full configurator arriving shortly—share your specs and we will prepare a tailored quotation.</p>
-  </div>
-
-  <div class="row g-4">
-    <div class="col-lg-8">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h2 class="h5 mb-3">What we are preparing</h2>
-          <ul class="list-unstyled mb-4">
-            <li class="d-flex align-items-start mb-2">
-              <i class="bi bi-check2-circle text-success me-2"></i>
-              <span>Profile-aware pricing (fine, medium, heavy) with material &amp; manufacturer filters.</span>
-            </li>
-            <li class="d-flex align-items-start mb-2">
-              <i class="bi bi-check2-circle text-success me-2"></i>
-              <span>Support for nicking plans, bundle sizes, and ready-to-ship coil/packet formats.</span>
-            </li>
-            <li class="d-flex alignments-start mb-2">
-              <i class="bi bi-check2-circle text-success me-2"></i>
-              <span>Fast cart handoff into quotation workflows with GST-ready breakdowns.</span>
-            </li>
-          </ul>
-
-          <div class="alert alert-info mb-0">
-            <strong>Need it sooner?</strong> Send us your current perforation specification (profile, pitch, material, length) and we will prioritise onboarding those SKUs. Email <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or reach your CGIPL representative.
-          </div>
+<div class="chemicals-page" id="lithoPerforationPage">
+  <div class="chemicals-page__header">
+    <div class="chemicals-page__title">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <h2 class="mb-1">Litho Perforation Rules</h2>
+          <p class="text-muted mb-0">Engineered perforation rules curated for litho die-cutting teams. Digital workflows are coming soon—share your specs so we can quote immediately.</p>
         </div>
+        <span class="badge bg-secondary text-uppercase">Coming soon</span>
       </div>
     </div>
+  </div>
 
-    <div class="col-lg-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex flex-column">
-          <h3 class="h6 text-uppercase text-muted">Quick links</h3>
-          <ul class="list-group list-group-flush mb-4">
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>Share requirements</span>
-              <a href="mailto:support@chemo.in" class="btn btn-sm btn-outline-gold">Email team</a>
-            </li>
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>View other die-cutting tools</span>
-              <a href="{{ url_for('cutting_rule') }}" class="btn btn-sm btn-outline-secondary">Cutting &amp; Creasing</a>
-            </li>
+  <div class="chemicals-page__content">
+    <div class="chem-layout">
+      <form class="chem-configurator" aria-disabled="true">
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">1. Share your perforation profile</h3>
+            <p class="chem-step__helper">Pitch, TPI, bevel style and manufacturer (STAR, CITO, Diamond etc.).</p>
+          </div>
+          <div class="chem-placeholder mb-0">
+            Configurator view is being finalised. Email your present rule specs—labels, codes or CAD extracts.
+          </div>
+        </section>
+
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">2. Pick packaging expectations</h3>
+            <p class="chem-step__helper">Packet vs coil, bundle sizes, and preferred nicking plans.</p>
+          </div>
+          <div class="chem-placeholder mb-0">
+            We&rsquo;re onboarding packet/coil matrices. Mention your default quantities and we&rsquo;ll mirror them.
+          </div>
+        </section>
+
+        <section class="chem-step chem-step--compact">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">3. Quantities &amp; shipping</h3>
+            <p class="chem-step__helper">Tell us lengths and dispatch city—we&rsquo;ll build the proforma.</p>
+          </div>
+          <div class="chem-placeholder mb-0">
+            We&rsquo;ll translate your quantity plan into whole packets/coils and add GST-ready pricing.</div>
+        </section>
+      </form>
+
+      <section class="chem-summary" aria-live="polite">
+        <h3 class="chem-summary__title">What we&rsquo;re preparing</h3>
+        <div class="chem-summary__body">
+          <ul class="list-unstyled mb-3">
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>Profile-aware pricing (fine, medium, heavy) with material &amp; manufacturer filters.</span></li>
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>Support for nicking plans, bundle sizes and ready-to-ship coil/packet formats.</span></li>
+            <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2"></i><span>Fast cart handoff into quotation workflows with GST-ready breakdowns.</span></li>
           </ul>
-          <a href="{{ url_for('index') }}" class="btn btn-dark mt-auto"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+          <div class="alert alert-info mb-0">
+            <strong>Need it sooner?</strong> Send perforation profile, material, thickness and run length to <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or your CGIPL contact.
+          </div>
         </div>
-      </div>
+        <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
+          <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Email team</a>
+          <a href="{{ url_for('cutting_rule') }}" class="btn btn-outline-secondary"><i class="bi bi-scissors me-1"></i>Cutting &amp; Creasing</a>
+          <a href="{{ url_for('index') }}" class="btn btn-dark"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+        </div>
+      </section>
     </div>
   </div>
 </div>

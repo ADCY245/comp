@@ -1,47 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Autowash Cloth - Product Calculator{% endblock %}
 
-{% block content %}
-<div class="container my-5" id="autowashClothPage">
-  <div class="mb-4">
-    <h1 class="h3 mb-1">Autowash Cloth</h1>
-    <p class="text-muted mb-0">Automatic blanket wash cloth rolls for heatset and sheetfed presses. Digital quoting is almost ready; until then, share your press specs and wash cycle needs so we can map stock availability.</p>
-  </div>
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='user/css/chemicals.css') }}">
+{% endblock %}
 
-  <div class="row g-4">
-    <div class="col-lg-8">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h2 class="h5 mb-3">In the upcoming release</h2>
-          <ul class="mb-4">
-            <li class="mb-2">OEM/press model presets covering Komori, Heidelberg, Manroland, and customized trims.</li>
-            <li class="mb-2">Material selector (polyester, viscose blends) with solvent compatibility guidance.</li>
-            <li>Roll calculator that pairs core IDs, length, and packaging for accurate MOQ visibility.</li>
-          </ul>
-          <div class="alert alert-info mb-0">
-            <strong>Need immediate pricing?</strong> Email roll width, quantity, and press model to <a class="alert-link" href="mailto:support@chemo.in">support@chemo.in</a> for a same-day quotation.
-          </div>
+{% block content %}
+<div class="chemicals-page" id="autowashClothPage">
+  <div class="chemicals-page__header">
+    <div class="chemicals-page__title">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <h2 class="mb-1">Autowash Cloth</h2>
+          <p class="text-muted mb-0">Automatic blanket-wash rolls for heatset &amp; sheetfed presses. Configurator ships soon—share your press specs for immediate support.</p>
         </div>
+        <span class="badge bg-secondary text-uppercase">Coming soon</span>
       </div>
     </div>
+  </div>
 
-    <div class="col-lg-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex flex-column">
-          <h3 class="h6 text-uppercase text-muted">Shortcuts</h3>
-          <ul class="list-group list-group-flush mb-4">
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>Share press data</span>
-              <a href="mailto:support@chemo.in" class="btn btn-sm btn-outline-gold">Send now</a>
-            </li>
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>See chem-maint range</span>
-              <a href="{{ url_for('chemicals_maintenance') }}" class="btn btn-sm btn-outline-secondary">Chemicals</a>
-            </li>
+  <div class="chemicals-page__content">
+    <div class="chem-layout">
+      <form class="chem-configurator" aria-disabled="true">
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">1. Press + washer preset</h3>
+            <p class="chem-step__helper">Komori, Heidelberg, Manroland, KBA, custom widths.</p>
+          </div>
+          <div class="chem-placeholder mb-0">Send press model, washer make, and trim width so we can map compatible rolls while UI is finalised.</div>
+        </section>
+
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">2. Material &amp; solvent pairing</h3>
+            <p class="chem-step__helper">Polyester, viscose blends, lint-free recipes.</p>
+          </div>
+          <div class="chem-placeholder mb-0">Let us know preferred chemistry or OEM approvals—our team will match stock variants.</div>
+        </section>
+
+        <section class="chem-step chem-step--compact">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">3. Roll dimensions &amp; quantity</h3>
+            <p class="chem-step__helper">Width, roll length, core ID, packs per shipment.</p>
+          </div>
+          <div class="chem-placeholder mb-0">We&rsquo;ll convert your cycle counts into cartons and highlight MOQ timelines.</div>
+        </section>
+      </form>
+
+      <section class="chem-summary">
+        <h3 class="chem-summary__title">In the upcoming release</h3>
+        <div class="chem-summary__body">
+          <ul class="list-unstyled mb-3">
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>OEM/press presets with auto-trim calculations.</span></li>
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>Material selector with solvent compatibility guidance.</span></li>
+            <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2"></i><span>Roll calculator pairing core IDs, lengths, packaging and GST-ready pricing.</span></li>
           </ul>
-          <a href="{{ url_for('index') }}" class="btn btn-dark mt-auto"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+          <div class="alert alert-info mb-0">
+            <strong>Need immediate pricing?</strong> Email roll width, quantity and press model to <a class="alert-link" href="mailto:support@chemo.in">support@chemo.in</a> for same-day quotes.
+          </div>
         </div>
-      </div>
+        <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
+          <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Send specs</a>
+          <a href="{{ url_for('chemicals_maintenance') }}" class="btn btn-outline-secondary"><i class="bi bi-droplet me-1"></i>Chemicals</a>
+          <a href="{{ url_for('index') }}" class="btn btn-dark"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+        </div>
+      </section>
     </div>
   </div>
 </div>

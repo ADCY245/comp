@@ -1,47 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Miscellaneous Products - Product Calculator{% endblock %}
 
-{% block content %}
-<div class="container my-5" id="miscProductsPage">
-  <div class="mb-4">
-    <h1 class="h3 mb-1">Miscellaneous Converting Supplies</h1>
-    <p class="text-muted mb-0">Adhesive tapes, makeready foams, stripping hardware, and everything that keeps die rooms running between tooling jobs. Full listings are being digitised—use this page to reach us quickly.</p>
-  </div>
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='user/css/chemicals.css') }}">
+{% endblock %}
 
-  <div class="row g-4">
-    <div class="col-lg-8">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h2 class="h5 mb-3">On the backlog</h2>
-          <ul class="mb-4">
-            <li class="mb-2">Catalog search with grouping by process (makeready, stripping, maintenance).</li>
-            <li class="mb-2">Logistics-ready pack sizes and MOQ indicators for every SKU.</li>
-            <li>Quick quote builder that can mix adhesives, foams, pins, and rubber in one submission.</li>
-          </ul>
-          <div class="alert alert-info mb-0">
-            <strong>Need supplies urgently?</strong> Describe the item, quantity, and target delivery city at <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or call your usual CGIPL contact.
-          </div>
+{% block content %}
+<div class="chemicals-page" id="miscProductsPage">
+  <div class="chemicals-page__header">
+    <div class="chemicals-page__title">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <h2 class="mb-1">Miscellaneous Converting Supplies</h2>
+          <p class="text-muted mb-0">Adhesive tapes, makeready foams, stripping hardware—everything that keeps die rooms moving. Catalog UI is nearly ready; share your list and we&rsquo;ll quote immediately.</p>
         </div>
+        <span class="badge bg-secondary text-uppercase">Coming soon</span>
       </div>
     </div>
+  </div>
 
-    <div class="col-lg-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body d-flex flex-column">
-          <h3 class="h6 text-uppercase text-muted">Quick actions</h3>
-          <ul class="list-group list-group-flush mb-4">
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>Send requirement list</span>
-              <a href="mailto:support@chemo.in" class="btn btn-sm btn-outline-gold">Email</a>
-            </li>
-            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span>Browse rule configurator</span>
-              <a href="{{ url_for('cutting_rule') }}" class="btn btn-sm btn-outline-secondary">Cutting &amp; Creasing</a>
-            </li>
+  <div class="chemicals-page__content">
+    <div class="chem-layout">
+      <form class="chem-configurator" aria-disabled="true">
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">1. Tell us the process</h3>
+            <p class="chem-step__helper">Makeready, stripping, maintenance, pressroom.</p>
+          </div>
+          <div class="chem-placeholder mb-0">List the process or job reference so we can prioritise the right kit while UI finishes.</div>
+        </section>
+
+        <section class="chem-step">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">2. Item specifics</h3>
+            <p class="chem-step__helper">Tape width, foam density, hardware dimensions, SKU codes.</p>
+          </div>
+          <div class="chem-placeholder mb-0">Drop part numbers, brand references, or photos—we&rsquo;ll match them with the new catalog.</div>
+        </section>
+
+        <section class="chem-step chem-step--compact">
+          <div class="chem-step__header">
+            <h3 class="chem-step__title">3. Quantity &amp; logistics</h3>
+            <p class="chem-step__helper">Units, packs, required-by dates, destination city.</p>
+          </div>
+          <div class="chem-placeholder mb-0">We&rsquo;ll translate your list into packs/cartons and add freight-ready details.</div>
+        </section>
+      </form>
+
+      <section class="chem-summary">
+        <h3 class="chem-summary__title">On the backlog</h3>
+        <div class="chem-summary__body">
+          <ul class="list-unstyled mb-3">
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>Catalog search grouped by process (makeready, stripping, maintenance).</span></li>
+            <li class="d-flex align-items-start mb-2"><i class="bi bi-check2-circle text-success me-2"></i><span>Pack sizes, MOQ flags, and lead-time indicators for every SKU.</span></li>
+            <li class="d-flex align-items-start"><i class="bi bi-check2-circle text-success me-2"></i><span>Quick quote builder to mix tapes, foams, pins, and hardware in one submission.</span></li>
           </ul>
-          <a href="{{ url_for('index') }}" class="btn btn-dark mt-auto"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+          <div class="alert alert-info mb-0">
+            <strong>Need supplies urgently?</strong> Describe item, quantity, and delivery city at <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or call your CGIPL contact.
+          </div>
         </div>
-      </div>
+        <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
+          <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Email list</a>
+          <a href="{{ url_for('cutting_rule') }}" class="btn btn-outline-secondary"><i class="bi bi-scissors me-1"></i>Rule Configurator</a>
+          <a href="{{ url_for('index') }}" class="btn btn-dark"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+        </div>
+      </section>
     </div>
   </div>
 </div>
