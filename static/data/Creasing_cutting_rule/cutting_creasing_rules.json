@@ -1,214 +1,204 @@
 {
   "cutting": {
-    "2pt": {
-      "packets": [
-        {
-          "profile_id": "cut-2pt-universal-centre-bevel-pkt",
-          "label": "UNIVERSAL - CENTRE BEVEL",
-          "code": "CF (CB)-23.80 - 2-42",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "cut-2pt-universal-long-centre-bevel-pkt",
-          "label": "UNIVERSAL - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2-42",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "cut-2pt-star-cutting-centre-bevel-pkt",
-          "label": "STAR CUTTING - CENTRE BEVEL",
-          "code": "CB-23.80-2",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "cut-2pt-star-cutting-long-centre-bevel-pkt",
-          "label": "STAR CUTTING - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2",
-          "packaging": "packets"
-        }
-      ],
-      "coils": [
-        {
-          "profile_id": "cut-2pt-universal-centre-bevel-coil",
-          "label": "UNIVERSAL - CENTRE BEVEL",
-          "code": "CF(CB)-23.80-2-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-universal-long-centre-bevel-coil",
-          "label": "UNIVERSAL - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-star-cutting-centre-bevel-coil",
-          "label": "STAR CUTTING - CENTRE BEVEL",
-          "code": "CB-23.80-2-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-star-cutting-long-centre-bevel-coil",
-          "label": "STAR CUTTING - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2-C",
-          "packaging": "coils",
-          "finish": "Light Gold"
-        },
-        {
-          "profile_id": "cut-2pt-sigma-star63-centre-bevel-coil",
-          "label": "SIGMA STAR 63 - CENTRE BEVEL",
-          "code": "CF(CB)-23.80-2-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-sigma-star63-long-centre-bevel-coil",
-          "label": "SIGMA STAR 63 - LONG CENTRE BEVEL",
-          "code": "CF(CB)-23.80-2-42",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-duraflex-long-centre-bevel-coil-2380",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-2pt-duraflex-ground-long-centre-bevel-coil",
-          "label": "DURAFLEX - GROUND - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-2-42-C - GROUND - Light Gold",
-          "packaging": "coils",
-          "finish": "Ground Light Gold"
-        },
-        {
-          "profile_id": "cut-2pt-duraflex-long-centre-bevel-coil-3000",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-30-2-42-C",
-          "packaging": "coils"
-        }
-      ]
-    },
-    "3pt": {
-      "packets": [
-        {
-          "profile_id": "cut-3pt-duraflex-long-centre-bevel-pkt",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-3-42",
-          "packaging": "packets"
-        }
-      ],
-      "coils": [
-        {
-          "profile_id": "cut-3pt-duraflex-long-centre-bevel-coil-2380",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-23.80-3-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-3pt-duraflex-long-centre-bevel-coil-3000",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-30-3-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-3pt-duraflex-long-centre-bevel-coil-4000",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-40-3-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-3pt-duraflex-long-centre-bevel-coil-5000",
-          "label": "DURAFLEX - LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-50-3-42-C",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "cut-3pt-duraflex-ground-long-centre-bevel-coil-3000",
-          "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-30-3-42-C - GROUND",
-          "packaging": "coils",
-          "finish": "Ground"
-        },
-        {
-          "profile_id": "cut-3pt-duraflex-ground-long-centre-bevel-coil-5000",
-          "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
-          "code": "CFDB(LCB)-50-3-42-C - GROUND",
-          "packaging": "coils",
-          "finish": "Ground"
-        }
-      ]
-    }
+    "packets": [
+      {
+        "profile_id": "cut-universal-centre-bevel-pkt",
+        "label": "UNIVERSAL - CENTRE BEVEL",
+        "code": "CF (CB)-23.80 - 2-42",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-universal-long-centre-bevel-pkt",
+        "label": "UNIVERSAL - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2-42",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-star-cutting-centre-bevel-pkt",
+        "label": "STAR CUTTING - CENTRE BEVEL",
+        "code": "CB-23.80-2",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-star-cutting-long-centre-bevel-pkt",
+        "label": "STAR CUTTING - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3pt-pkt",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-3-42",
+        "thickness": "3pt"
+      }
+    ],
+    "coils": [
+      {
+        "profile_id": "cut-universal-centre-bevel-coil",
+        "label": "UNIVERSAL - CENTRE BEVEL",
+        "code": "CF(CB)-23.80-2-42-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-universal-long-centre-bevel-coil",
+        "label": "UNIVERSAL - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2-42-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-star-cutting-centre-bevel-coil",
+        "label": "STAR CUTTING - CENTRE BEVEL",
+        "code": "CB-23.80-2-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-star-cutting-long-centre-bevel-coil",
+        "label": "STAR CUTTING - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2-C",
+        "thickness": "2pt",
+        "finish": "Light Gold"
+      },
+      {
+        "profile_id": "cut-sigma-star63-centre-bevel-coil",
+        "label": "SIGMA STAR 63 - CENTRE BEVEL",
+        "code": "CF(CB)-23.80-2-42-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-sigma-star63-long-centre-bevel-coil",
+        "label": "SIGMA STAR 63 - LONG CENTRE BEVEL",
+        "code": "CF(CB)-23.80-2-42",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-2380-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2-42-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-duraflex-ground-long-centre-bevel-2380-coil",
+        "label": "DURAFLEX - GROUND - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-2-42-C - GROUND - Light Gold",
+        "thickness": "2pt",
+        "finish": "Ground Light Gold"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3000-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-30-2-42-C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3pt-2380-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-23.80-3-42-C",
+        "thickness": "3pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3pt-3000-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-30-3-42-C",
+        "thickness": "3pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3pt-4000-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-40-3-42-C",
+        "thickness": "3pt"
+      },
+      {
+        "profile_id": "cut-duraflex-long-centre-bevel-3pt-5000-coil",
+        "label": "DURAFLEX - LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-50-3-42-C",
+        "thickness": "3pt"
+      },
+      {
+        "profile_id": "cut-duraflex-ground-long-centre-bevel-3pt-3000-coil",
+        "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-30-3-42-C - GROUND",
+        "thickness": "3pt",
+        "finish": "Ground"
+      },
+      {
+        "profile_id": "cut-duraflex-ground-long-centre-bevel-3pt-5000-coil",
+        "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
+        "code": "CFDB(LCB)-50-3-42-C - GROUND",
+        "thickness": "3pt",
+        "finish": "Ground"
+      }
+    ]
   },
   "creasing": {
-    "2pt": {
-      "packets": [
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2290-pkt",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 22.90 - 2 - C",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2325-pkt",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.25 - 2",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2330-pkt",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.30 - 2",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "crease-2pt-star-crease-dr-2325-pkt",
-          "label": "STAR CREASING - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.25 - 2",
-          "packaging": "packets"
-        },
-        {
-          "profile_id": "crease-2pt-star-crease-dr-2330-pkt",
-          "label": "STAR CREASING - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.30 - 2",
-          "packaging": "packets"
-        }
-      ],
-      "coils": [
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2290-coil",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 22.90 - 2 - C-CW",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2325-coil",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.25 - 2 - C-CW",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "crease-2pt-sigma-super-crease-dr-2330-coil",
-          "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.30 - 2 - C-CW",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "crease-2pt-star-crease-dr-2325-coil",
-          "label": "STAR CREASING - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.25 - 2 - C-CW",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "crease-2pt-star-crease-dr-2330-coil",
-          "label": "STAR CREASING - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 23.30 - 2 - C-CW",
-          "packaging": "coils"
-        },
-        {
-          "profile_id": "crease-2pt-star-crease-dr-2250-coil",
-          "label": "STAR CREASING - DOUBLE ROUND BEVEL",
-          "code": "( DR ) 22.50 - 3 - C-CW",
-          "packaging": "coils"
-        }
-      ]
-    }
+    "packets": [
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2290-pkt",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 22.90 - 2 - C",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2325-pkt",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.25 - 2",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2330-pkt",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.30 - 2",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-star-crease-dr-2325-pkt",
+        "label": "STAR CREASING - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.25 - 2",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-star-crease-dr-2330-pkt",
+        "label": "STAR CREASING - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.30 - 2",
+        "thickness": "2pt"
+      }
+    ],
+    "coils": [
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2290-coil",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 22.90 - 2 - C-CW",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2325-coil",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.25 - 2 - C-CW",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-sigma-super-crease-dr-2330-coil",
+        "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.30 - 2 - C-CW",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-star-crease-dr-2325-coil",
+        "label": "STAR CREASING - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.25 - 2 - C-CW",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-star-crease-dr-2330-coil",
+        "label": "STAR CREASING - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 23.30 - 2 - C-CW",
+        "thickness": "2pt"
+      },
+      {
+        "profile_id": "crease-star-crease-dr-2250-coil",
+        "label": "STAR CREASING - DOUBLE ROUND BEVEL",
+        "code": "( DR ) 22.50 - 3 - C-CW",
+        "thickness": "3pt"
+      }
+    ]
   }
 }

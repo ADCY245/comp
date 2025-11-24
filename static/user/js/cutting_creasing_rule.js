@@ -4,6 +4,29 @@
     return;
   }
 
+  function buildCuttingCatalog(cuttingData = {}) {
+    const packets = Array.isArray(cuttingData.packets) ? cuttingData.packets : [];
+    const coils = Array.isArray(cuttingData.coils) ? cuttingData.coils : [];
+    const thicknessKeys = Array.from(new Set(
+      [...packets, ...coils]
+        .map(entry => normalizeThickness(entry.thickness))
+        .filter(Boolean)
+    ));
+
+    return thicknessKeys.reduce((acc, thickness) => {
+      const catalog = {
+        packets: packets.filter(entry => normalizeThickness(entry.thickness) === thickness),
+        coils: coils.filter(entry => normalizeThickness(entry.thickness) === thickness)
+      };
+      acc[thickness] = buildCatalogEntries(catalog, `cut-${thickness}`);
+      return acc;
+    }, {});
+  }
+
+  function normalizeThickness(value = '') {
+    return value.trim().toLowerCase();
+  }
+
   function buildCatalogEntries(catalog = {}, context = 'cutting') {
     const grouped = new Map();
     Object.entries(catalog || {}).forEach(([packagingId, entries]) => {
@@ -14,11 +37,14 @@
       entries.forEach((entry, index) => {
         const label = (entry.label || `Option ${index + 1}`).trim();
         const normalizedKey = `${context}|${normalizeCode(entry.code || label)}|${label.toLowerCase()}`;
+        const entryThickness = normalizeThickness(entry.thickness);
         const existing = grouped.get(normalizedKey) || {
           id: `${context}-${slugify(label)}-${normalizeCode(entry.code || label) || index}`,
           label,
           code: entry.code || '',
-          packagingOptions: []
+          packagingOptions: [],
+          thickness: entryThickness,
+          displayThickness: entry.thickness || ''
         };
 
         existing.packagingOptions.push({
@@ -369,16 +395,13 @@
         throw new Error(`Failed to fetch rule catalog (${response.status})`);
       }
       const payload = await response.json();
-      const cuttingCatalog = payload?.cutting || {};
-      const creasingCatalog = payload?.creasing?.['2pt'] || {};
+      state.rawSizes.cutting = buildCuttingCatalog(payload?.cutting || {});
 
-      state.rawSizes.cutting = Object.entries(cuttingCatalog)
-        .reduce((acc, [thickness, catalog]) => {
-          acc[thickness] = buildCatalogEntries(catalog, `cut-${thickness}`);
-          return acc;
-        }, {});
-
-      state.rawSizes.creasing = buildCatalogEntries(creasingCatalog, 'crease-2pt');
+      const creasingCatalog = {
+        packets: payload?.creasing?.packets || [],
+        coils: payload?.creasing?.coils || []
+      };
+      state.rawSizes.creasing = buildCatalogEntries(creasingCatalog, 'crease');
       state.flattenedSizes = state.rawSizes.creasing;
     } catch (error) {
       console.error('cutting_creasing_rule.js: unable to load size data', error);
@@ -427,6 +450,8 @@
     }
     if (state.selectedThickness) {
       summaryItems.push(`<li><strong>Thickness:</strong> ${state.selectedThickness.toUpperCase()}</li>`);
+    } else if (state.selectedRuleType === 'creasing' && state.selectedSize?.displayThickness) {
+      summaryItems.push(`<li><strong>Thickness:</strong> ${state.selectedSize.displayThickness}</li>`);
     }
     if (state.selectedSize) {
       summaryItems.push(`<li><strong>Profile:</strong> ${state.selectedSize.label}</li>`);

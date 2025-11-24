@@ -242,21 +242,9 @@ const ChemoApp = (function() {
     
     // Set up product button click handlers
     function setupProductButtons() {
-        const mpacksBtn = document.getElementById('mpacksBtn');
-        const blanketsBtn = document.getElementById('blanketsBtn');
-        const chemMaintBtn = document.getElementById('chemMaintBtn');
-        
-        if (mpacksBtn) {
-            mpacksBtn.addEventListener('click', handleProductButtonClick);
-        }
-        
-        if (blanketsBtn) {
-            blanketsBtn.addEventListener('click', handleProductButtonClick);
-        }
-
-        if (chemMaintBtn) {
-            chemMaintBtn.addEventListener('click', handleProductButtonClick);
-        }
+        document.querySelectorAll('.product-option-card[data-route]').forEach(button => {
+            button.addEventListener('click', handleProductButtonClick);
+        });
     }
 
     // Set up event listeners
@@ -634,7 +622,22 @@ const ChemoApp = (function() {
     }
     
     // Function to check if company is selected before navigation
-    function checkCompanyAndNavigate(route) {
+    async function checkCompanyAndNavigate(route) {
+        // Skip company check for home page and public paths
+        const isHomePage = route === '/' || route === '/index' || route === '';
+        const publicPaths = ['/login', '/register', '/api/'];
+
+        if (isHomePage || publicPaths.some(path => route.startsWith(path))) {
+            window.location.href = route;
+            return;
+        }
+        
+        // Ensure state is available
+        if (!state) {
+            showAlert('Application still loading. Please wait a moment and try again.', 'warning');
+            return;
+        }
+        
         // Get company from state or session storage
         let companyId = '';
         
@@ -652,13 +655,15 @@ const ChemoApp = (function() {
             }
         }
         
-        if (companyId) {
-            // Add company_id as a query parameter if it's not already in the route
-            const separator = route.includes('?') ? '&' : '?';
-            window.location.href = `${route}${separator}company_id=${companyId}`;
-        } else {
+        if (!companyId) {
             showAlert('Please select a company before viewing products.', 'warning');
+            showCompanySelection();
+            return;
         }
+
+        // Add company_id as a query parameter if it's not already in the route
+        const separator = route.includes('?') ? '&' : '?';
+        window.location.href = `${route}${separator}company_id=${companyId}`;
     }
 
     // Function to handle product button clicks
@@ -667,9 +672,11 @@ const ChemoApp = (function() {
         const route = this.getAttribute('data-route');
         checkCompanyAndNavigate(route);
     }
-    
-    // Make function available globally
+
+    // Make functions available globally for navbar usage
     window.checkCompanyAndNavigate = checkCompanyAndNavigate;
+    window.showCompanySelection = showCompanySelection;
+    window.handleProductButtonClick = handleProductButtonClick;
 
     // Check if a company is already selected in the current session
     function checkExistingCompany() {
