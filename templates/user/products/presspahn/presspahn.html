@@ -23,7 +23,22 @@
   <div class="chemicals-page__content">
     <div class="chem-layout">
       <form class="chem-configurator" aria-disabled="true">
-        <section class="chem-step">
+        <div class="mb-3" id="machineControls">
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="presspahnMachineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
+              <select id="presspahnMachineSelect" class="form-select form-select-sm" aria-label="Select Machine" disabled>
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=request.path) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
+          </div>
+        </div>
+        <section class="chem-step chem-step--compact">
           <div class="chem-step__header">
             <h3 class="chem-step__title">1. Sheet / roll format</h3>
             <p class="chem-step__helper">Roll width, sheet size, gsm, thickness (0.3–1.5 mm).</p>
@@ -59,6 +74,19 @@
           <div class="alert alert-info mb-0">
             <strong>Fast quote?</strong> Email sheet size, thickness and quantity to <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or contact your RM.
           </div>
+        </div>
+        <div class="chem-summary__discount mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <label class="form-label mb-0" for="presspahnDiscountInput">Discount (%)</label>
+            <small class="text-muted">Configurator discounts unlock when ordering goes live.</small>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="presspahnDiscountInput" value="0" min="0" max="100" step="0.5" disabled>
+            <span class="input-group-text">%</span>
+          </div>
+        </div>
+        <div class="chem-summary__pricing mt-3">
+          <p class="chem-placeholder mb-0">Pricing preview will appear here after the configurator launches.</p>
         </div>
         <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
           <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Email team</a>

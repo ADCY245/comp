@@ -173,6 +173,12 @@
   padding: 0.45rem 0.65rem;
 }
 
+.chem-step--compact .form-select,
+.chem-step--compact .form-control {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.9rem;
+}
+
 .chem-step--collapsed > :not(.chem-step__header) {
   display: none !important;
 }
@@ -395,6 +401,53 @@
   flex-direction: column;
   gap: 0.75rem;
   margin-top: 1.25rem;
+}
+
+.chem-summary__discount label {
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.chem-summary__discount .form-control,
+.chem-summary__discount .input-group-text {
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #f8fafc;
+}
+
+.chem-summary__discount .form-control:disabled {
+  opacity: 0.65;
+}
+
+.chem-summary__pricing {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+}
+
+.chem-summary__pricing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #e2e8f0;
+  margin-bottom: 0.35rem;
+}
+
+.chem-summary__pricing-row:last-child {
+  margin-bottom: 0;
+}
+
+.chem-summary__pricing-row strong {
+  font-weight: 600;
+}
+
+.chem-summary__pricing-row.total {
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  padding-top: 0.4rem;
+  margin-top: 0.4rem;
+  font-size: 1rem;
 }
 
 .chem-summary__cta-btn {

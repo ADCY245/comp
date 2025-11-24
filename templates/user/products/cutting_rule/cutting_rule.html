@@ -27,7 +27,7 @@
           <div class="d-flex align-items-end gap-2 flex-wrap">
             <div class="flex-grow-1">
               <label for="ruleMachineSelect" class="form-label">Machine / Model</label>
-              <select id="ruleMachineSelect" class="form-select" aria-label="Select Machine">
+              <select id="ruleMachineSelect" class="form-select form-select-sm" aria-label="Select Machine">
                 <option value="">-- Select Machine (optional) --</option>
               </select>
             </div>
@@ -39,14 +39,14 @@
           </div>
         </section>
 
-        <section class="chem-step" id="ruleStepSelection">
+        <section class="chem-step chem-step--compact" id="ruleStepSelection">
           <div class="chem-step__header">
             <h3 class="chem-step__title">2. Choose rule type</h3>
             <p class="chem-step__helper">Switch between cutting and creasing rule workflows.</p>
           </div>
           <div>
             <label for="ruleTypeSelect" class="form-label">Rule selection</label>
-            <select id="ruleTypeSelect" class="form-select" aria-label="Select rule type">
+            <select id="ruleTypeSelect" class="form-select form-select-sm" aria-label="Select rule type">
               <option value="">-- Select Rule --</option>
               <option value="cutting">Cutting Rule</option>
               <option value="creasing">Creasing Rule</option>
@@ -55,42 +55,42 @@
           </div>
         </section>
 
-        <section class="chem-step" id="ruleStepThickness" hidden>
+        <section class="chem-step chem-step--compact" id="ruleStepThickness" hidden>
           <div class="chem-step__header">
             <h3 class="chem-step__title">3. Select thickness (cutting only)</h3>
             <p class="chem-step__helper">Choose between 2pt and 3pt blades.</p>
           </div>
           <div>
             <label for="ruleThicknessSelect" class="form-label">Thickness</label>
-            <select id="ruleThicknessSelect" class="form-select" aria-label="Select thickness" disabled>
+            <select id="ruleThicknessSelect" class="form-select form-select-sm" aria-label="Select thickness" disabled>
               <option value="">Select rule type first</option>
             </select>
             <div class="chem-step__helper" id="ruleThicknessHelper">Thickness is required for cutting rule selections.</div>
           </div>
         </section>
 
-        <section class="chem-step" id="ruleStepSize" hidden>
+        <section class="chem-step chem-step--compact" id="ruleStepSize" hidden>
           <div class="chem-step__header">
             <h3 class="chem-step__title">4. Choose size / profile</h3>
             <p class="chem-step__helper">Sizes are filtered automatically once prerequisites are selected.</p>
           </div>
           <div>
             <label for="ruleSizeSelect" class="form-label">Available sizes</label>
-            <select id="ruleSizeSelect" class="form-select" aria-label="Select size" disabled>
+            <select id="ruleSizeSelect" class="form-select form-select-sm" aria-label="Select size" disabled>
               <option value="">Select a rule to continue</option>
             </select>
             <div class="chem-step__helper" id="ruleSizeHelper">Select thickness (for cutting) or continue for creasing.</div>
           </div>
         </section>
 
-        <section class="chem-step" id="ruleStepPackaging" hidden>
+        <section class="chem-step chem-step--compact" id="ruleStepPackaging" hidden>
           <div class="chem-step__header">
             <h3 class="chem-step__title">5. Packaging preference</h3>
             <p class="chem-step__helper">Specify whether you need packets or coils.</p>
           </div>
           <div>
             <label for="rulePackagingSelect" class="form-label">Packaging type</label>
-            <select id="rulePackagingSelect" class="form-select" aria-label="Select packaging" disabled>
+            <select id="rulePackagingSelect" class="form-select form-select-sm" aria-label="Select packaging" disabled>
               <option value="">Select a size first</option>
             </select>
             <div class="chem-step__helper" id="rulePackagingHelper">Packet/coil selection becomes available after size.</div>
@@ -105,7 +105,7 @@
           <div class="chem-quantity">
             <label class="form-label" for="ruleQuantityInput">Required quantity</label>
             <input type="number"
-                   class="form-control"
+                   class="form-control form-control-sm"
                    id="ruleQuantityInput"
                    name="quantity"
                    min="0"
@@ -127,6 +127,26 @@
         <h3 class="chem-summary__title">Selection summary</h3>
         <div class="chem-summary__body" id="ruleSummaryBody">
           <p class="chem-placeholder mb-0">Start by selecting a rule type.</p>
+        </div>
+        <div class="chem-summary__discount mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <label class="form-label mb-0" for="ruleDiscountInput">Discount (%)</label>
+            <small class="text-muted" id="ruleDiscountHelper">Set the discount once quantity is ready.</small>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="number"
+                   class="form-control"
+                   id="ruleDiscountInput"
+                   value="0"
+                   min="0"
+                   max="100"
+                   step="0.5"
+                   aria-label="Discount percentage">
+            <span class="input-group-text">%</span>
+          </div>
+        </div>
+        <div class="chem-summary__pricing mt-3" id="rulePricingSummary">
+          <p class="chem-placeholder mb-0">Complete the selections to view an estimated breakdown.</p>
         </div>
         <div class="chem-summary__actions pt-3 d-flex flex-column gap-2">
           <button type="button" class="btn btn-primary" id="ruleAddToCartBtn" disabled>Add to Cart</button>

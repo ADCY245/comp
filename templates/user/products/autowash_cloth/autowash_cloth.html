@@ -23,7 +23,22 @@
   <div class="chemicals-page__content">
     <div class="chem-layout">
       <form class="chem-configurator" aria-disabled="true">
-        <section class="chem-step">
+        <div class="mb-3" id="machineControls">
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="autowashMachineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
+              <select id="autowashMachineSelect" class="form-select form-select-sm" aria-label="Select Machine" disabled>
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=request.path) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
+          </div>
+        </div>
+        <section class="chem-step chem-step--compact">
           <div class="chem-step__header">
             <h3 class="chem-step__title">1. Press + washer preset</h3>
             <p class="chem-step__helper">Komori, Heidelberg, Manroland, KBA, custom widths.</p>
@@ -31,7 +46,7 @@
           <div class="chem-placeholder mb-0">Send press model, washer make, and trim width so we can map compatible rolls while UI is finalised.</div>
         </section>
 
-        <section class="chem-step">
+        <section class="chem-step chem-step--compact">
           <div class="chem-step__header">
             <h3 class="chem-step__title">2. Material &amp; solvent pairing</h3>
             <p class="chem-step__helper">Polyester, viscose blends, lint-free recipes.</p>
@@ -59,6 +74,19 @@
           <div class="alert alert-info mb-0">
             <strong>Need immediate pricing?</strong> Email roll width, quantity and press model to <a class="alert-link" href="mailto:support@chemo.in">support@chemo.in</a> for same-day quotes.
           </div>
+        </div>
+        <div class="chem-summary__discount mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <label class="form-label mb-0" for="autowashDiscountInput">Discount (%)</label>
+            <small class="text-muted">Configurator pricing unlocks once ordering goes live.</small>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="autowashDiscountInput" value="0" min="0" max="100" step="0.5" disabled>
+            <span class="input-group-text">%</span>
+          </div>
+        </div>
+        <div class="chem-summary__pricing mt-3">
+          <p class="chem-placeholder mb-0">Pricing preview will appear here after the configurator launches.</p>
         </div>
         <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
           <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Send specs</a>

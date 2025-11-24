@@ -99,6 +99,9 @@
   const quantityConfirmBtn = document.getElementById('ruleQuantityConfirmBtn');
   const addToCartBtn = document.getElementById('ruleAddToCartBtn');
   const summaryBody = document.getElementById('ruleSummaryBody');
+  const summaryPricing = document.getElementById('rulePricingSummary');
+  const discountInput = document.getElementById('ruleDiscountInput');
+  const discountHelper = document.getElementById('ruleDiscountHelper');
   const cartMessage = document.getElementById('ruleCartMessage');
 
   const thicknessHelper = document.getElementById('ruleThicknessHelper');
@@ -222,6 +225,10 @@
         quantityInput.value = '';
         state.quantityConfirmed = false;
         quantityConfirmBtn.disabled = true;
+    if (discountInput) {
+      discountInput.value = '0';
+      discountInput.disabled = true;
+    }
         updateSummary();
       });
     }
@@ -250,6 +257,21 @@
           return;
         }
         state.quantityConfirmed = true;
+        if (discountInput) {
+          discountInput.disabled = false;
+        }
+        updateSummary();
+      });
+    }
+
+    if (discountInput) {
+      discountInput.addEventListener('input', () => {
+        const raw = parseFloat(discountInput.value);
+        if (Number.isNaN(raw) || raw < 0) {
+          discountInput.value = '0';
+        } else if (raw > 100) {
+          discountInput.value = '100';
+        }
         updateSummary();
       });
     }
@@ -495,10 +517,69 @@
       `;
     }
 
+    updatePricingSummary();
+
     const ready = canAddToCart();
     if (addToCartBtn) {
       addToCartBtn.disabled = !ready;
     }
+  }
+
+  function updatePricingSummary() {
+    if (!summaryPricing) return;
+
+    if (!canAddToCart()) {
+      summaryPricing.innerHTML = '<p class="chem-placeholder mb-0">Complete the selections to view an estimated breakdown.</p>';
+      return;
+    }
+
+    const unitPrice = estimateUnitPrice();
+    const quantity = state.quantity || 0;
+    const discountPercent = getDiscountPercent();
+    const gstPercent = 18;
+
+    const subtotal = unitPrice * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
+
+    summaryPricing.innerHTML = `
+      <div class="chem-summary__pricing-row">
+        <span>Unit price</span>
+        <strong>₹${round(unitPrice, 2).toLocaleString()}</strong>
+      </div>
+      <div class="chem-summary__pricing-row">
+        <span>Subtotal</span>
+        <strong>₹${round(subtotal, 2).toLocaleString()}</strong>
+      </div>
+      <div class="chem-summary__pricing-row">
+        <span>Discount (${discountPercent.toFixed(1)}%)</span>
+        <strong>-₹${round(discountAmount, 2).toLocaleString()}</strong>
+      </div>
+      <div class="chem-summary__pricing-row">
+        <span>Pre-GST</span>
+        <strong>₹${round(discountedSubtotal, 2).toLocaleString()}</strong>
+      </div>
+      <div class="chem-summary__pricing-row">
+        <span>GST (${gstPercent}%)</span>
+        <strong>₹${round(gstAmount, 2).toLocaleString()}</strong>
+      </div>
+      <div class="chem-summary__pricing-row total">
+        <span>Total</span>
+        <strong>₹${round(finalTotal, 2).toLocaleString()}</strong>
+      </div>
+    `;
+  }
+
+  function getDiscountPercent() {
+    if (!discountInput || discountInput.disabled) {
+      return 0;
+    }
+    const raw = parseFloat(discountInput.value);
+    if (Number.isNaN(raw) || raw < 0) return 0;
+    if (raw > 100) return 100;
+    return raw;
   }
 
   function canAddToCart() {
@@ -544,7 +625,7 @@
 
     const unitPrice = estimateUnitPrice();
     const quantity = state.quantity;
-    const discountPercent = 0;
+    const discountPercent = getDiscountPercent();
     const gstPercent = 18;
     const subtotal = unitPrice * quantity;
     const discountAmount = subtotal * (discountPercent / 100);

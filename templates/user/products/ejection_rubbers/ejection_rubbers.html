@@ -23,7 +23,22 @@
   <div class="chemicals-page__content">
     <div class="chem-layout">
       <form class="chem-configurator" aria-disabled="true">
-        <section class="chem-step">
+        <div class="mb-3" id="machineControls">
+          <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div class="flex-grow-1">
+              <label for="ejectionMachineSelect" class="form-label">Select Machine/Model <span class="text-muted small">(optional)</span>:</label>
+              <select id="ejectionMachineSelect" class="form-select form-select-sm" aria-label="Select Machine" disabled>
+                <option value="">-- Select Machine (optional) --</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('add_machine', next=request.path) }}" class="btn btn-outline-gold">
+                <i class="fas fa-plus"></i> New Machine
+              </a>
+            </div>
+          </div>
+        </div>
+        <section class="chem-step chem-step--compact">
           <div class="chem-step__header">
             <h3 class="chem-step__title">1. Upload/describe pad layout</h3>
             <p class="chem-step__helper">Station name, profile, and pad length per position.</p>
@@ -31,7 +46,7 @@
           <div class="chem-placeholder mb-0">Share PDF/DXF layouts or a quick list of pad IDs and we&rsquo;ll map them while the configurator finishes baking.</div>
         </section>
 
-        <section class="chem-step">
+        <section class="chem-step chem-step--compact">
           <div class="chem-step__header">
             <h3 class="chem-step__title">2. Choose hardness &amp; adhesives</h3>
             <p class="chem-step__helper">25–60 Shore, PSA-backed or plain.</p>
@@ -59,6 +74,19 @@
           <div class="alert alert-secondary mb-0">
             <strong>Need samples?</strong> Email pad layout, thickness, run speeds and substrate to <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> or ping your CGIPL contact.
           </div>
+        </div>
+        <div class="chem-summary__discount mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <label class="form-label mb-0" for="ejectionDiscountInput">Discount (%)</label>
+            <small class="text-muted">Configurator discounts unlock once ordering opens.</small>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="ejectionDiscountInput" value="0" min="0" max="100" step="0.5" disabled>
+            <span class="input-group-text">%</span>
+          </div>
+        </div>
+        <div class="chem-summary__pricing mt-3">
+          <p class="chem-placeholder mb-0">Pricing preview will appear here after the configurator launches.</p>
         </div>
         <div class="chem-summary__actions pt-3 d-flex gap-2 flex-wrap">
           <a href="mailto:support@chemo.in" class="btn btn-outline-gold"><i class="bi bi-envelope me-1"></i>Share layout</a>
