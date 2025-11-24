@@ -94,11 +94,12 @@
   const packagingSelect = document.getElementById('rulePackagingSelect');
   const packagingSection = document.getElementById('ruleStepPackaging');
   const quantitySection = document.getElementById('ruleStepQuantity');
+  const machineSection = document.getElementById('ruleStepMachine');
+  const selectionSection = document.getElementById('ruleStepSelection');
   const quantityInput = document.getElementById('ruleQuantityInput');
   const quantityHelper = document.getElementById('ruleQuantityHelper');
   const quantityConfirmBtn = document.getElementById('ruleQuantityConfirmBtn');
   const summaryBody = document.getElementById('ruleSummaryBody');
-  const summaryActions = document.getElementById('ruleSummaryActions');
 
   const thicknessHelper = document.getElementById('ruleThicknessHelper');
   const sizeHelper = document.getElementById('ruleSizeHelper');
@@ -132,11 +133,11 @@
     selectedPackaging: null,
     availablePackagingOptions: [],
     quantity: null,
-    quantityConfirmed: false,
-    discountPercent: 0
+    quantityConfirmed: false
   };
 
   document.addEventListener('DOMContentLoaded', () => {
+    initCollapsibleSteps();
     initializeConfigurator().catch(error => {
       console.error('cutting_creasing_rule.js: failed to initialize', error);
       showToast?.('Error', 'Unable to load configurator. Please refresh.', 'error');
@@ -156,6 +157,11 @@
         const option = event.target.selectedOptions[0];
         state.selectedMachine = option ? option.textContent : '';
         updateSummary();
+        if (state.selectedMachine) {
+          collapseStep(machineSection, state.selectedMachine);
+        } else {
+          expandStep(machineSection);
+        }
       });
     }
 
@@ -174,8 +180,13 @@
           populateSizeOptions(state.selectedThickness);
           showSection(sizeSection, sizeSelect);
           sizeHelper.textContent = 'Choose a profile to continue.';
+          collapseStep(thicknessSection, state.selectedThickness.toUpperCase());
         } else {
           sizeHelper.textContent = 'Select thickness (for cutting) or choose creasing rule.';
+          expandStep(thicknessSection);
+          expandStep(sizeSection);
+          expandStep(packagingSection);
+          expandStep(quantitySection);
         }
 
         updateSummary();
@@ -198,8 +209,12 @@
           showSection(packagingSection, packagingSelect);
           populatePackagingOptions();
           packagingHelper.textContent = 'Select the desired packaging format.';
+          collapseStep(sizeSection, state.selectedSize.label);
         } else {
           state.availablePackagingOptions = [];
+          expandStep(sizeSection);
+          expandStep(packagingSection);
+          expandStep(quantitySection);
         }
         updateSummary();
       });
@@ -214,15 +229,17 @@
           quantityInput.disabled = false;
           quantityInput.placeholder = 'Enter required quantity';
           quantityHelper.textContent = 'Enter the number of lengths required.';
+          collapseStep(packagingSection, state.selectedPackaging.label);
         } else {
           disableSection(quantitySection, quantityInput, 'Select packaging first');
+          expandStep(packagingSection);
         }
 
         state.quantity = null;
         quantityInput.value = '';
         state.quantityConfirmed = false;
         quantityConfirmBtn.disabled = true;
-        state.discountPercent = 0;
+        expandStep(quantitySection);
         updateSummary();
       });
     }
@@ -234,11 +251,12 @@
           state.quantity = null;
           state.quantityConfirmed = false;
           quantityConfirmBtn.disabled = true;
-          state.discountPercent = 0;
+          expandStep(quantitySection);
         } else {
           state.quantity = value;
           state.quantityConfirmed = false;
           quantityConfirmBtn.disabled = false;
+          expandStep(quantitySection);
         }
         updateSummary();
       });
@@ -252,13 +270,10 @@
           return;
         }
         state.quantityConfirmed = true;
-        if (discountInput) {
-          discountInput.disabled = false;
-        }
+        collapseStep(quantitySection, `${formatNumber(state.quantity)} lengths`);
         updateSummary();
       });
     }
-
   }
 
   function handleRuleTypeChange(event) {
@@ -269,7 +284,6 @@
     state.availablePackagingOptions = [];
     state.quantity = null;
     state.quantityConfirmed = false;
-    state.discountPercent = 0;
 
     thicknessSelect.value = '';
     sizeSelect.value = '';
@@ -281,7 +295,11 @@
     hideSection(sizeSection);
     hideSection(packagingSection);
     hideSection(quantitySection);
-    state.discountPercent = 0;
+    if (state.selectedRuleType) {
+      collapseStep(selectionSection, `${capitalize(state.selectedRuleType)} rule`);
+    } else {
+      expandStep(selectionSection);
+    }
 
     if (state.selectedRuleType === 'cutting') {
       unlockThicknessSelect();
@@ -321,7 +339,7 @@
     typeHelper.textContent = 'Pick a rule to unlock the rest of the form.';
     sizeHelper.textContent = 'Select thickness (for cutting) or continue for creasing.';
     quantityHelper.textContent = 'Choose a packaging type to enable quantity entry.';
-    state.discountPercent = 0;
+    [machineSection, selectionSection, thicknessSection, sizeSection, packagingSection, quantitySection].forEach(expandStep);
   }
 
   function populateThicknessOptions() {
@@ -340,6 +358,7 @@
     state.selectedThickness = lockedValue;
     showSection(thicknessSection, thicknessSelect);
     thicknessHelper.textContent = 'Thickness is fixed at 2pt for creasing rule selections.';
+    collapseStep(thicknessSection, `${lockedValue.toUpperCase()} (Fixed)`);
   }
 
   function unlockThicknessSelect() {
@@ -435,6 +454,7 @@
   function disableSection(sectionEl, controlEl, placeholderText) {
     if (sectionEl) {
       sectionEl.hidden = true;
+      expandStep(sectionEl);
     }
     if (controlEl) {
       controlEl.disabled = true;
@@ -456,11 +476,12 @@
   function hideSection(sectionEl) {
     if (sectionEl) {
       sectionEl.hidden = true;
+      expandStep(sectionEl);
     }
   }
 
   function updateSummary() {
-    if (!summaryBody || !summaryActions) return;
+    if (!summaryBody) return;
 
     const items = [];
 
@@ -493,32 +514,15 @@
       items.push(summaryItem('Quantity', `${formatNumber(state.quantity)} lengths`, quantityNote));
     }
 
-    const hasCompleteSelection = canAddToCart();
-
-    if (hasCompleteSelection) {
-      const pricing = buildPricingDetails();
-      items.push(summaryItem('Unit price', pricing.unitPriceFormatted, pricing.unitNote));
-      items.push(summaryItem('Subtotal', pricing.subtotalFormatted, `${formatNumber(state.quantity)} × ${pricing.unitPriceFormatted}`));
-      items.push(renderDiscountControl(pricing.discountPercent, pricing.discountAmountFormatted, pricing.discountedSubtotalFormatted));
-      items.push(summaryItem('GST', pricing.gstAmountFormatted, `${pricing.gstPercent}% applied`));
-      items.push(summaryItem('Total payable', pricing.finalTotalFormatted));
-    }
-
     if (!items.length) {
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by selecting a rule type.</p>';
     } else {
       summaryBody.innerHTML = items.join('');
-      rebindDiscountControl();
     }
-
-    updateSummaryActions(hasCompleteSelection);
   }
 
   function getDiscountPercent() {
-    const value = Number(state.discountPercent);
-    if (!Number.isFinite(value) || value < 0) return 0;
-    if (value > 100) return 100;
-    return value;
+    return 0;
   }
 
   function canAddToCart() {
@@ -634,37 +638,6 @@
     }
   }
 
-  function buildPricingDetails() {
-    const unitPrice = estimateUnitPrice();
-    const quantity = state.quantity || 0;
-    const discountPercent = getDiscountPercent();
-    const gstPercent = 18;
-
-    const subtotal = unitPrice * quantity;
-    const discountAmount = subtotal * (discountPercent / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const gstAmount = (discountedSubtotal * gstPercent) / 100;
-    const finalTotal = discountedSubtotal + gstAmount;
-
-    return {
-      unitPrice,
-      unitNote: state.selectedPackaging?.packagingId === 'coils' ? 'Includes coil premium' : 'Estimated for selected profile',
-      subtotal,
-      discountPercent,
-      discountAmount,
-      discountedSubtotal,
-      gstPercent,
-      gstAmount,
-      finalTotal,
-      unitPriceFormatted: formatCurrency(unitPrice),
-      subtotalFormatted: formatCurrency(subtotal),
-      discountAmountFormatted: formatCurrency(discountAmount),
-      discountedSubtotalFormatted: formatCurrency(discountedSubtotal),
-      gstAmountFormatted: formatCurrency(gstAmount),
-      finalTotalFormatted: formatCurrency(finalTotal)
-    };
-  }
-
   function summaryItem(label, value, note) {
     return `
       <div class="chem-summary__item">
@@ -675,64 +648,6 @@
     `;
   }
 
-  function renderDiscountControl(discountPercent, discountAmountFormatted, discountedSubtotalFormatted) {
-    const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5)
-      .map(percent => `<option value="${percent}" ${percent === discountPercent ? 'selected' : ''}>${percent}%</option>`)
-      .join('');
-
-    const discountSummaryText = discountPercent > 0
-      ? `Saving: ${discountAmountFormatted}<br>Subtotal after discount: ${discountedSubtotalFormatted}`
-      : 'No discount applied yet.';
-
-    return `
-      <div class="chem-summary__item chem-summary__item--discount">
-        <div class="chem-summary__discount-control">
-          <span class="chem-summary__label">Discount</span>
-          <select id="ruleDiscountPercent" class="form-select form-select-sm chem-summary__discount-select">${discountOptions}</select>
-        </div>
-        <div class="chem-summary__note chem-summary__note--muted">${discountSummaryText}</div>
-      </div>
-    `;
-  }
-
-  function rebindDiscountControl() {
-    const discountSelectEl = document.getElementById('ruleDiscountPercent');
-    if (discountSelectEl) {
-      discountSelectEl.addEventListener('change', () => {
-        const value = parseFloat(discountSelectEl.value);
-        state.discountPercent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
-        updateSummary();
-      });
-    }
-  }
-
-  function updateSummaryActions(isReady) {
-    if (!summaryActions) return;
-
-    if (!isReady) {
-      summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Confirm quantity to enable the cart button.</p>';
-      return;
-    }
-
-    summaryActions.innerHTML = `
-      <button type="button" class="chem-summary__cta-btn add-to-cart-btn">
-        <i class="fas fa-cart-plus"></i>
-        <span>Add to cart</span>
-      </button>
-    `;
-
-    const cartBtn = summaryActions.querySelector('.add-to-cart-btn');
-    if (cartBtn) {
-      cartBtn.addEventListener('click', event => {
-        event.preventDefault();
-        addRuleToCart(cartBtn);
-      });
-    }
-  }
-
-  function formatCurrency(value) {
-    return `₹${formatNumber(round(value, 2))}`;
-  }
 
   function formatNumber(value) {
     const numeric = Number(value) || 0;
@@ -759,5 +674,75 @@
   function capitalize(value = '') {
     if (!value) return '';
     return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  function collapseStep(stepEl, summaryText) {
+    if (!stepEl) return;
+    stepEl.classList.add('chem-step--collapsed');
+    let summary = stepEl.querySelector('.chem-step__summary');
+    if (!summary) {
+      const header = stepEl.querySelector('.chem-step__header');
+      if (header) {
+        summary = document.createElement('span');
+        summary.className = 'chem-step__summary ms-auto';
+        header.appendChild(summary);
+      }
+    }
+    if (summary) summary.textContent = summaryText || '';
+    const updateBtn = stepEl.querySelector('.chem-step__update');
+    if (updateBtn) updateBtn.classList.remove('d-none');
+  }
+
+  function expandStep(stepEl) {
+    if (!stepEl) return;
+    stepEl.classList.remove('chem-step--collapsed');
+    const updateBtn = stepEl.querySelector('.chem-step__update');
+    if (updateBtn) updateBtn.classList.add('d-none');
+  }
+
+  function initCollapsibleSteps() {
+    document.querySelectorAll('.chem-step').forEach(stepEl => {
+      const header = stepEl.querySelector('.chem-step__header');
+      if (!header) return;
+
+      let summarySpan = header.querySelector('.chem-step__summary');
+      if (!summarySpan) {
+        summarySpan = document.createElement('span');
+        summarySpan.className = 'chem-step__summary ms-2';
+        header.appendChild(summarySpan);
+      }
+
+      let updateBtn = header.querySelector('.chem-step__update');
+      if (!updateBtn) {
+        updateBtn = document.createElement('button');
+        updateBtn.type = 'button';
+        updateBtn.className = 'btn btn-sm btn-outline-secondary chem-step__update ms-2 d-none';
+        updateBtn.textContent = 'Update';
+        header.appendChild(updateBtn);
+      }
+
+      const reopenStep = () => {
+        expandStep(stepEl);
+        if (stepEl === quantitySection) {
+          state.quantityConfirmed = false;
+          if (quantityConfirmBtn) {
+            const currentValue = parseFloat(quantityInput.value);
+            const hasValidQuantity = Number.isFinite(currentValue) && currentValue > 0;
+            quantityConfirmBtn.disabled = !hasValidQuantity;
+          }
+          updateSummary();
+        }
+      };
+
+      updateBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        reopenStep();
+      });
+
+      header.addEventListener('click', e => {
+        if (e.target.closest('.chem-step__update')) return;
+        reopenStep();
+      });
+    });
   }
 })();
