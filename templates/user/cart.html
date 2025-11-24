@@ -602,7 +602,26 @@
                                                 <p class="mb-1"><strong>Machine:</strong> {{ item.machine }}</p>
                                             {% endif %}
 
-                                            {% if item.type in ['chemical', 'maintenance'] %}
+                                            {% if item.type == 'rule' %}
+                                                {% if item.rule_category %}
+                                                    <p class="mb-1"><strong>Rule:</strong> {{ item.rule_category|capitalize }} rule</p>
+                                                {% endif %}
+                                                {% if item.thickness %}
+                                                    <p class="mb-1"><strong>Thickness:</strong> {{ item.thickness }}</p>
+                                                {% endif %}
+                                                {% if item.profile_label %}
+                                                    <p class="mb-1"><strong>Profile:</strong> {{ item.profile_label }}</p>
+                                                {% endif %}
+                                                {% if item.profile_code %}
+                                                    <p class="mb-1"><strong>Profile code:</strong> {{ item.profile_code|trim }}</p>
+                                                {% endif %}
+                                                {% if item.packaging %}
+                                                    <p class="mb-1"><strong>Packaging:</strong> {{ item.packaging }}</p>
+                                                {% endif %}
+                                                {% if item.packaging_type %}
+                                                    <p class="mb-1 text-muted small">{{ item.packaging_type|replace('_', ' ')|title }}</p>
+                                                {% endif %}
+                                            {% elif item.type in ['chemical', 'maintenance'] %}
                                                 <div class="product-format-badge mb-2">
                                                     <span class="badge bg-gold text-dark">
                                                         <i class="fas fa-box me-1"></i>

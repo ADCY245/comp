@@ -97,12 +97,8 @@
   const quantityInput = document.getElementById('ruleQuantityInput');
   const quantityHelper = document.getElementById('ruleQuantityHelper');
   const quantityConfirmBtn = document.getElementById('ruleQuantityConfirmBtn');
-  const addToCartBtn = document.getElementById('ruleAddToCartBtn');
   const summaryBody = document.getElementById('ruleSummaryBody');
-  const summaryPricing = document.getElementById('rulePricingSummary');
-  const discountInput = document.getElementById('ruleDiscountInput');
-  const discountHelper = document.getElementById('ruleDiscountHelper');
-  const cartMessage = document.getElementById('ruleCartMessage');
+  const summaryActions = document.getElementById('ruleSummaryActions');
 
   const thicknessHelper = document.getElementById('ruleThicknessHelper');
   const sizeHelper = document.getElementById('ruleSizeHelper');
@@ -136,7 +132,8 @@
     selectedPackaging: null,
     availablePackagingOptions: [],
     quantity: null,
-    quantityConfirmed: false
+    quantityConfirmed: false,
+    discountPercent: 0
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -225,10 +222,7 @@
         quantityInput.value = '';
         state.quantityConfirmed = false;
         quantityConfirmBtn.disabled = true;
-    if (discountInput) {
-      discountInput.value = '0';
-      discountInput.disabled = true;
-    }
+        state.discountPercent = 0;
         updateSummary();
       });
     }
@@ -240,6 +234,7 @@
           state.quantity = null;
           state.quantityConfirmed = false;
           quantityConfirmBtn.disabled = true;
+          state.discountPercent = 0;
         } else {
           state.quantity = value;
           state.quantityConfirmed = false;
@@ -264,24 +259,6 @@
       });
     }
 
-    if (discountInput) {
-      discountInput.addEventListener('input', () => {
-        const raw = parseFloat(discountInput.value);
-        if (Number.isNaN(raw) || raw < 0) {
-          discountInput.value = '0';
-        } else if (raw > 100) {
-          discountInput.value = '100';
-        }
-        updateSummary();
-      });
-    }
-
-    if (addToCartBtn) {
-      addToCartBtn.addEventListener('click', event => {
-        event.preventDefault();
-        addRuleToCart();
-      });
-    }
   }
 
   function handleRuleTypeChange(event) {
@@ -292,6 +269,7 @@
     state.availablePackagingOptions = [];
     state.quantity = null;
     state.quantityConfirmed = false;
+    state.discountPercent = 0;
 
     thicknessSelect.value = '';
     sizeSelect.value = '';
@@ -303,6 +281,7 @@
     hideSection(sizeSection);
     hideSection(packagingSection);
     hideSection(quantitySection);
+    state.discountPercent = 0;
 
     if (state.selectedRuleType === 'cutting') {
       unlockThicknessSelect();
@@ -342,6 +321,7 @@
     typeHelper.textContent = 'Pick a rule to unlock the rest of the form.';
     sizeHelper.textContent = 'Select thickness (for cutting) or continue for creasing.';
     quantityHelper.textContent = 'Choose a packaging type to enable quantity entry.';
+    state.discountPercent = 0;
   }
 
   function populateThicknessOptions() {
@@ -480,106 +460,65 @@
   }
 
   function updateSummary() {
-    if (!summaryBody) return;
+    if (!summaryBody || !summaryActions) return;
 
-    const summaryItems = [];
+    const items = [];
+
     if (state.selectedRuleType) {
-      summaryItems.push(`<li><strong>Rule Type:</strong> ${capitalize(state.selectedRuleType)} Rule</li>`);
+      items.push(summaryItem('Rule type', `${capitalize(state.selectedRuleType)} rule`));
     }
+
     if (state.selectedMachine) {
-      summaryItems.push(`<li><strong>Machine:</strong> ${state.selectedMachine}</li>`);
+      items.push(summaryItem('Machine / press', state.selectedMachine));
     }
+
     if (state.selectedThickness) {
-      summaryItems.push(`<li><strong>Thickness:</strong> ${state.selectedThickness.toUpperCase()}</li>`);
+      items.push(summaryItem('Thickness', state.selectedThickness.toUpperCase()));
     } else if (state.selectedRuleType === 'creasing' && state.selectedSize?.displayThickness) {
-      summaryItems.push(`<li><strong>Thickness:</strong> ${state.selectedSize.displayThickness}</li>`);
+      items.push(summaryItem('Thickness', state.selectedSize.displayThickness));
     }
+
     if (state.selectedSize) {
-      summaryItems.push(`<li><strong>Profile:</strong> ${state.selectedSize.label}</li>`);
-      if (state.selectedPackaging?.code || state.selectedSize.code) {
-        summaryItems.push(`<li><strong>Code:</strong> ${state.selectedPackaging?.code || state.selectedSize.code}</li>`);
-      }
+      const profileNote = state.selectedSize.code ? `Catalog code ${sanitize(state.selectedSize.code)}` : '';
+      items.push(summaryItem('Profile', state.selectedSize.label, profileNote));
     }
+
     if (state.selectedPackaging) {
-      summaryItems.push(`<li><strong>Packaging:</strong> ${state.selectedPackaging.label}</li>`);
+      const pkgNote = state.selectedPackaging.description || '';
+      items.push(summaryItem('Packaging', state.selectedPackaging.label, pkgNote));
     }
+
     if (state.quantity) {
-      summaryItems.push(`<li><strong>Quantity:</strong> ${state.quantity} lengths</li>`);
+      const quantityNote = state.quantityConfirmed ? 'Confirmed' : 'Pending confirmation';
+      items.push(summaryItem('Quantity', `${formatNumber(state.quantity)} lengths`, quantityNote));
     }
 
-    if (!summaryItems.length) {
-      summaryBody.innerHTML = '<p class="chem-placeholder mb-0">Start by selecting a rule type.</p>';
+    const hasCompleteSelection = canAddToCart();
+
+    if (hasCompleteSelection) {
+      const pricing = buildPricingDetails();
+      items.push(summaryItem('Unit price', pricing.unitPriceFormatted, pricing.unitNote));
+      items.push(summaryItem('Subtotal', pricing.subtotalFormatted, `${formatNumber(state.quantity)} × ${pricing.unitPriceFormatted}`));
+      items.push(renderDiscountControl(pricing.discountPercent, pricing.discountAmountFormatted, pricing.discountedSubtotalFormatted));
+      items.push(summaryItem('GST', pricing.gstAmountFormatted, `${pricing.gstPercent}% applied`));
+      items.push(summaryItem('Total payable', pricing.finalTotalFormatted));
+    }
+
+    if (!items.length) {
+      summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by selecting a rule type.</p>';
     } else {
-      summaryBody.innerHTML = `
-        <ul class="list-unstyled mb-0 small">
-          ${summaryItems.join('')}
-        </ul>
-      `;
+      summaryBody.innerHTML = items.join('');
+      rebindDiscountControl();
     }
 
-    updatePricingSummary();
-
-    const ready = canAddToCart();
-    if (addToCartBtn) {
-      addToCartBtn.disabled = !ready;
-    }
-  }
-
-  function updatePricingSummary() {
-    if (!summaryPricing) return;
-
-    if (!canAddToCart()) {
-      summaryPricing.innerHTML = '<p class="chem-placeholder mb-0">Complete the selections to view an estimated breakdown.</p>';
-      return;
-    }
-
-    const unitPrice = estimateUnitPrice();
-    const quantity = state.quantity || 0;
-    const discountPercent = getDiscountPercent();
-    const gstPercent = 18;
-
-    const subtotal = unitPrice * quantity;
-    const discountAmount = subtotal * (discountPercent / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const gstAmount = (discountedSubtotal * gstPercent) / 100;
-    const finalTotal = discountedSubtotal + gstAmount;
-
-    summaryPricing.innerHTML = `
-      <div class="chem-summary__pricing-row">
-        <span>Unit price</span>
-        <strong>₹${round(unitPrice, 2).toLocaleString()}</strong>
-      </div>
-      <div class="chem-summary__pricing-row">
-        <span>Subtotal</span>
-        <strong>₹${round(subtotal, 2).toLocaleString()}</strong>
-      </div>
-      <div class="chem-summary__pricing-row">
-        <span>Discount (${discountPercent.toFixed(1)}%)</span>
-        <strong>-₹${round(discountAmount, 2).toLocaleString()}</strong>
-      </div>
-      <div class="chem-summary__pricing-row">
-        <span>Pre-GST</span>
-        <strong>₹${round(discountedSubtotal, 2).toLocaleString()}</strong>
-      </div>
-      <div class="chem-summary__pricing-row">
-        <span>GST (${gstPercent}%)</span>
-        <strong>₹${round(gstAmount, 2).toLocaleString()}</strong>
-      </div>
-      <div class="chem-summary__pricing-row total">
-        <span>Total</span>
-        <strong>₹${round(finalTotal, 2).toLocaleString()}</strong>
-      </div>
-    `;
+    updateSummaryActions(hasCompleteSelection);
   }
 
   function getDiscountPercent() {
-    if (!discountInput || discountInput.disabled) {
-      return 0;
-    }
-    const raw = parseFloat(discountInput.value);
-    if (Number.isNaN(raw) || raw < 0) return 0;
-    if (raw > 100) return 100;
-    return raw;
+    const value = Number(state.discountPercent);
+    if (!Number.isFinite(value) || value < 0) return 0;
+    if (value > 100) return 100;
+    return value;
   }
 
   function canAddToCart() {
@@ -588,6 +527,7 @@
     if (!state.selectedSize) return false;
     if (!state.selectedPackaging) return false;
     if (!state.quantity || state.quantity <= 0) return false;
+    if (!state.quantityConfirmed) return false;
     return true;
   }
 
@@ -617,7 +557,7 @@
     return base * sizeFactor * packagingFactor;
   }
 
-  async function addRuleToCart() {
+  async function addRuleToCart(cartBtn) {
     if (!canAddToCart()) {
       showToast?.('Incomplete selection', 'Fill in every step before adding to cart.', 'warning');
       return;
@@ -633,15 +573,17 @@
     const gstAmount = (discountedSubtotal * gstPercent) / 100;
     const finalTotal = discountedSubtotal + gstAmount;
 
+    const thicknessLabel = state.selectedThickness || state.selectedSize?.displayThickness || state.selectedSize?.thickness || '';
+    const profileCode = (state.selectedPackaging?.code || state.selectedSize?.code || '').trim();
     const payload = {
       type: 'rule',
       name: `${capitalize(state.selectedRuleType)} Rule - ${state.selectedSize?.label || 'Custom Spec'}`,
       machine: state.selectedMachine || '',
       rule_category: state.selectedRuleType,
-      thickness: state.selectedThickness || '',
+      thickness: thicknessLabel,
       profile_id: state.selectedPackaging?.profileId || state.selectedSize?.id,
       profile_label: state.selectedSize?.label,
-      profile_code: state.selectedPackaging?.code || state.selectedSize?.code || '',
+      profile_code: profileCode,
       packaging: state.selectedPackaging?.label,
       packaging_type: state.selectedPackaging?.packagingId,
       quantity,
@@ -661,8 +603,10 @@
       }
     };
 
-    addToCartBtn.disabled = true;
-    addToCartBtn.textContent = 'Adding…';
+    if (cartBtn) {
+      cartBtn.disabled = true;
+      cartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding…';
+    }
 
     try {
       const response = await fetch('/add_to_cart', {
@@ -677,17 +621,135 @@
       }
 
       showToast?.('Rule added', 'Rule configuration saved to your cart.', 'success');
-      cartMessage.textContent = 'Rule added successfully!';
       updateCartCount?.();
       state.quantityConfirmed = true;
     } catch (error) {
       console.error('cutting_creasing_rule.js: add to cart failed', error);
       showToast?.('Error', error.message || 'Unable to add rule to cart.', 'error');
-      cartMessage.textContent = '';
     } finally {
-      addToCartBtn.disabled = false;
-      addToCartBtn.textContent = 'Add to Cart';
+      if (cartBtn) {
+        cartBtn.disabled = false;
+        cartBtn.innerHTML = '<i class="fas fa-cart-plus"></i><span>Add to cart</span>';
+      }
     }
+  }
+
+  function buildPricingDetails() {
+    const unitPrice = estimateUnitPrice();
+    const quantity = state.quantity || 0;
+    const discountPercent = getDiscountPercent();
+    const gstPercent = 18;
+
+    const subtotal = unitPrice * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
+
+    return {
+      unitPrice,
+      unitNote: state.selectedPackaging?.packagingId === 'coils' ? 'Includes coil premium' : 'Estimated for selected profile',
+      subtotal,
+      discountPercent,
+      discountAmount,
+      discountedSubtotal,
+      gstPercent,
+      gstAmount,
+      finalTotal,
+      unitPriceFormatted: formatCurrency(unitPrice),
+      subtotalFormatted: formatCurrency(subtotal),
+      discountAmountFormatted: formatCurrency(discountAmount),
+      discountedSubtotalFormatted: formatCurrency(discountedSubtotal),
+      gstAmountFormatted: formatCurrency(gstAmount),
+      finalTotalFormatted: formatCurrency(finalTotal)
+    };
+  }
+
+  function summaryItem(label, value, note) {
+    return `
+      <div class="chem-summary__item">
+        <span class="chem-summary__label">${sanitize(label)}</span>
+        <span class="chem-summary__value">${sanitize(value)}</span>
+        ${note ? `<span class="chem-summary__note chem-summary__note--muted">${note}</span>` : ''}
+      </div>
+    `;
+  }
+
+  function renderDiscountControl(discountPercent, discountAmountFormatted, discountedSubtotalFormatted) {
+    const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5)
+      .map(percent => `<option value="${percent}" ${percent === discountPercent ? 'selected' : ''}>${percent}%</option>`)
+      .join('');
+
+    const discountSummaryText = discountPercent > 0
+      ? `Saving: ${discountAmountFormatted}<br>Subtotal after discount: ${discountedSubtotalFormatted}`
+      : 'No discount applied yet.';
+
+    return `
+      <div class="chem-summary__item chem-summary__item--discount">
+        <div class="chem-summary__discount-control">
+          <span class="chem-summary__label">Discount</span>
+          <select id="ruleDiscountPercent" class="form-select form-select-sm chem-summary__discount-select">${discountOptions}</select>
+        </div>
+        <div class="chem-summary__note chem-summary__note--muted">${discountSummaryText}</div>
+      </div>
+    `;
+  }
+
+  function rebindDiscountControl() {
+    const discountSelectEl = document.getElementById('ruleDiscountPercent');
+    if (discountSelectEl) {
+      discountSelectEl.addEventListener('change', () => {
+        const value = parseFloat(discountSelectEl.value);
+        state.discountPercent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+        updateSummary();
+      });
+    }
+  }
+
+  function updateSummaryActions(isReady) {
+    if (!summaryActions) return;
+
+    if (!isReady) {
+      summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Confirm quantity to enable the cart button.</p>';
+      return;
+    }
+
+    summaryActions.innerHTML = `
+      <button type="button" class="chem-summary__cta-btn add-to-cart-btn">
+        <i class="fas fa-cart-plus"></i>
+        <span>Add to cart</span>
+      </button>
+    `;
+
+    const cartBtn = summaryActions.querySelector('.add-to-cart-btn');
+    if (cartBtn) {
+      cartBtn.addEventListener('click', event => {
+        event.preventDefault();
+        addRuleToCart(cartBtn);
+      });
+    }
+  }
+
+  function formatCurrency(value) {
+    return `₹${formatNumber(round(value, 2))}`;
+  }
+
+  function formatNumber(value) {
+    const numeric = Number(value) || 0;
+    return numeric.toLocaleString('en-IN', {
+      minimumFractionDigits: numeric % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function sanitize(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function round(value, decimals = 2) {
