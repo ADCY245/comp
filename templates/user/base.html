@@ -174,6 +174,37 @@
                                     </svg>Chemicals &amp; Maintenance
                                 </a>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" id="lithoPerforationLink" href="{{ url_for('litho_perforation_rules') }}" data-route="{{ url_for('litho_perforation_rules') }}">
+                                    <i class="bi bi-grid-1x2 me-2"></i>Litho Perforation Rules
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="ejectionRubbersLink" href="{{ url_for('ejection_rubbers') }}" data-route="{{ url_for('ejection_rubbers') }}">
+                                    <i class="bi bi-bounding-box me-2"></i>Ejection Rubbers
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="autowashClothLink" href="{{ url_for('autowash_cloth') }}" data-route="{{ url_for('autowash_cloth') }}">
+                                    <i class="bi bi-droplet-half me-2"></i>Autowash Cloth
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="presspahnLink" href="{{ url_for('presspahn') }}" data-route="{{ url_for('presspahn') }}">
+                                    <i class="bi bi-layers me-2"></i>Presspahn Boards
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="plottersLink" href="{{ url_for('plotters') }}" data-route="{{ url_for('plotters') }}">
+                                    <i class="bi bi-vector-pen me-2"></i>Plotters &amp; Sample Makers
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" id="miscProductsLink" href="{{ url_for('misc_products') }}" data-route="{{ url_for('misc_products') }}">
+                                    <i class="bi bi-tools me-2"></i>Misc. Products
+                                </a>
+                            </li>
                         </ul>
                     </li>
                 </ul>
@@ -277,6 +308,8 @@
                 });
             });
         }
+
+        bindProductTypeLinks();
     });
     </script>
     
@@ -325,9 +358,20 @@
                 </div>
                 <div class="modal-body text-center">
                     <div class="mb-3">
-                        <a href="{{ url_for('mpacks') }}" class="btn btn-primary btn-lg d-block mb-3">M-Packs</a>
-                        <a href="{{ url_for('blankets') }}" class="btn btn-success btn-lg d-block mb-3">Blankets</a>
-                        <a href="{{ url_for('chemicals_maintenance') }}" class="btn btn-warning btn-lg d-block">Chemicals &amp; Maintenance</a>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-primary btn-lg product-type-link" data-route="{{ url_for('mpacks') }}">Underpacking Materials</a>
+                            <a href="#" class="btn btn-success btn-lg product-type-link" data-route="{{ url_for('blankets') }}">Blankets</a>
+                            <a href="#" class="btn btn-warning btn-lg product-type-link" data-route="{{ url_for('chemicals_maintenance') }}">Chemicals &amp; Maintenance</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('spray_powder') }}">Spray Powder</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('cutting_rule') }}">Cutting &amp; Creasing Rule</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('creasing_matrix') }}">Creasing Matrix</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('litho_perforation_rules') }}">Litho Perforation Rules</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('ejection_rubbers') }}">Ejection Rubbers</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('autowash_cloth') }}">Autowash Cloth</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('presspahn') }}">Presspahn Boards</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('plotters') }}">Plotters &amp; Sample Makers</a>
+                            <a href="#" class="btn btn-outline-dark btn-lg product-type-link" data-route="{{ url_for('misc_products') }}">Miscellaneous Products</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -339,7 +383,23 @@
     // Function to create and return the product type modal
     function createProductTypeModal() {
         // Return the modal element if it exists
-        return document.getElementById('productTypeModal');
+        const modal = document.getElementById('productTypeModal');
+        bindProductTypeLinks();
+        return modal;
+    }
+
+    function bindProductTypeLinks() {
+        document.querySelectorAll('.product-type-link[data-route]').forEach(link => {
+            if (link.dataset.productLinkBound === 'true') return;
+            link.dataset.productLinkBound = 'true';
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                const route = link.getAttribute('data-route');
+                if (route) {
+                    checkCompanyAndNavigate(route);
+                }
+            });
+        });
     }
 
     // Initialize company data in sessionStorage if it doesn't exist
@@ -422,7 +482,13 @@
             'spray-powder': 'sprayPowderLink',
             'cutting-rule': 'cuttingRuleLink',
             'creasing-matrix': 'creasingMatrixLink',
-            'chemicals-maintenance': 'chemMaintLink'
+            'chemicals-maintenance': 'chemMaintLink',
+            'litho-perforation-rules': 'lithoPerforationLink',
+            'ejection-rubbers': 'ejectionRubbersLink',
+            'autowash-cloth': 'autowashClothLink',
+            'presspahn': 'presspahnLink',
+            'plotters': 'plottersLink',
+            'misc-products': 'miscProductsLink'
         };
         
         // Check if current path matches any route pattern

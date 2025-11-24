@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Ejection Rubbers - Product Calculator{% endblock %}
+
+{% block content %}
+<div class="container my-5" id="ejectionRubbersPage">
+  <div class="mb-4">
+    <h1 class="h3 mb-1">Ejection Rubbers</h1>
+    <p class="text-muted mb-0">All popular hardness grades, profiles, and adhesives for consistent stripping performance. Configuration tools are in progress—use the quick brief below so we can price the right pads for your die room.</p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Coming soon</h2>
+          <ol class="mb-4 ps-3">
+            <li class="mb-2">Profile selector covering flat-top, double-bevel, W-profile and specialty cross sections.</li>
+            <li class="mb-2">Option to mix hardness (25–60 Shore) across stations with automated quantity balancing.</li>
+            <li class="mb-2">Direct add-to-cart with carton-ready packaging and GST-calculated breakdown.</li>
+          </ol>
+          <div class="alert alert-secondary mb-0">
+            <strong>Need samples?</strong> Reach us at <a href="mailto:support@chemo.in" class="alert-link">support@chemo.in</a> with your rubber layout, thickness, and expected run speeds.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body d-flex flex-column">
+          <h3 class="h6 text-uppercase text-muted">Resources</h3>
+          <ul class="list-group list-group-flush mb-4">
+            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+              <span>Send pad layout</span>
+              <a href="mailto:support@chemo.in" class="btn btn-sm btn-outline-gold">Share now</a>
+            </li>
+            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+              <span>Explore die-tools</span>
+              <a href="{{ url_for('cutting_rule') }}" class="btn btn-sm btn-outline-secondary">Cutting Rule</a>
+            </li>
+          </ul>
+          <a href="{{ url_for('index') }}" class="btn btn-dark mt-auto"><i class="bi bi-arrow-left-circle me-1"></i>Back to Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

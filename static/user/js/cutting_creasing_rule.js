@@ -278,23 +278,26 @@
     quantityInput.disabled = true;
     quantityConfirmBtn.disabled = true;
 
-    hideSection(thicknessSection);
     hideSection(sizeSection);
     hideSection(packagingSection);
     hideSection(quantitySection);
 
     if (state.selectedRuleType === 'cutting') {
+      unlockThicknessSelect();
       showSection(thicknessSection, thicknessSelect);
       populateThicknessOptions();
+      thicknessSelect.value = '';
       typeHelper.textContent = 'Select 2pt or 3pt to continue.';
       thicknessHelper.textContent = 'Thickness is required for cutting rule selections.';
     } else if (state.selectedRuleType === 'creasing') {
+      lockCreasingThickness();
       typeHelper.textContent = 'Continue to packaging after choosing a profile.';
       populateCreasingSizes();
       showSection(sizeSection, sizeSelect);
       sizeHelper.textContent = 'Choose the specification to continue.';
       packagingHelper.textContent = 'Select a profile first.';
     } else {
+      hideSection(thicknessSection);
       typeHelper.textContent = 'Pick a rule to unlock the rest of the form.';
     }
 
@@ -324,6 +327,22 @@
     thicknessSelect.innerHTML = '<option value="">Select thickness</option>' +
       keys.map(key => `<option value="${key}">${key.toUpperCase()}</option>`).join('');
     thicknessSelect.disabled = keys.length === 0;
+  }
+
+  function lockCreasingThickness() {
+    if (!thicknessSelect) return;
+    const lockedValue = '2pt';
+    thicknessSelect.innerHTML = `<option value="${lockedValue}" selected>${lockedValue.toUpperCase()} (Fixed)</option>`;
+    thicknessSelect.value = lockedValue;
+    thicknessSelect.disabled = true;
+    state.selectedThickness = lockedValue;
+    showSection(thicknessSection, thicknessSelect);
+    thicknessHelper.textContent = 'Thickness is fixed at 2pt for creasing rule selections.';
+  }
+
+  function unlockThicknessSelect() {
+    if (!thicknessSelect) return;
+    thicknessSelect.disabled = false;
   }
 
   function populateSizeOptions(thickness) {
