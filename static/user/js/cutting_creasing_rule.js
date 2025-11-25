@@ -101,6 +101,7 @@
   const quantityHelper = document.getElementById('ruleQuantityHelper');
   const quantityConfirmBtn = document.getElementById('ruleQuantityConfirmBtn');
   const summaryBody = document.getElementById('ruleSummaryBody');
+  const summaryActions = document.getElementById('ruleSummaryActions');
 
   const thicknessHelper = document.getElementById('ruleThicknessHelper');
   const sizeHelper = document.getElementById('ruleSizeHelper');
@@ -519,6 +520,10 @@
 
     const items = [];
 
+    if (summaryActions) {
+      summaryActions.innerHTML = '';
+    }
+
     if (state.selectedRuleType) {
       items.push(summaryItem('Rule type', `${capitalize(state.selectedRuleType)} rule`));
     }
@@ -583,6 +588,29 @@
     } else {
       summaryBody.innerHTML = items.join('');
       rebindRuleDiscountSelect();
+    }
+
+    if (!summaryActions) {
+      return;
+    }
+
+    if (canAddToCart()) {
+      summaryActions.innerHTML = `
+        <button type="button" class="chem-summary__cta-btn add-to-cart-btn" id="ruleSummaryAddToCartBtn">
+          <i class="fas fa-cart-plus"></i>
+          <span>Add to cart</span>
+        </button>
+      `;
+
+      const summaryCartBtn = document.getElementById('ruleSummaryAddToCartBtn');
+      if (summaryCartBtn) {
+        summaryCartBtn.addEventListener('click', async event => {
+          event.preventDefault();
+          await addRuleToCart(summaryCartBtn);
+        });
+      }
+    } else {
+      summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Complete every step and confirm quantity to add this rule to your cart.</p>';
     }
   }
 

@@ -504,7 +504,7 @@
                 {% for item in cart.products %}
                 {% if item %}
                     <div class="cart-item" 
-                         data-type="{{ item.type }}" 
+                         data-type="{{ item.type|default('', true)|lower }}" 
                          data-index="{{ loop.index0 }}"
                          data-item-id="{{ item.id or item._id }}"
                          data-name="{{ item.name }}"
@@ -854,7 +854,7 @@
                                                 class="btn btn-outline-gold btn-sm change-item-btn" 
                                                 data-item-id="{{ item.id or item._id }}" 
                                                 data-index="{{ loop.index0 }}"
-                                                data-type="{{ item.type }}"
+                                                data-type="{{ item.type|default('', true)|lower }}"
                                                 {% if item.type == 'blanket' %}
                                                     {% if item.machine %}data-item-machine="{{ item.machine }}"{% endif %}
                                                     {% if item.thickness %}data-item-thickness="{{ item.thickness }}"{% endif %}

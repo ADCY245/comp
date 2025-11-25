@@ -787,13 +787,16 @@ function handleClearCart(event) {
 // Function to sync cart from server to localStorage
 function syncCartFromServer() {
     try {
-        // Get the cart data from the server-rendered template
-        const serverCartData = document.getElementById('cartData');
+        // Get the cart data from the server-rendered template (matches template id "serverCartData")
+        const serverCartData = document.getElementById('serverCartData') || document.getElementById('cartData');
         if (serverCartData && serverCartData.textContent) {
-            const serverCart = JSON.parse(serverCartData.textContent);
-            if (serverCart && Array.isArray(serverCart.products)) {
-                // Update localStorage with server cart data
-                localStorage.setItem('cart', JSON.stringify(serverCart));
+            const rawCart = JSON.parse(serverCartData.textContent);
+            const normalized = Array.isArray(rawCart)
+                ? { products: rawCart }
+                : (rawCart && Array.isArray(rawCart.products) ? rawCart : null);
+
+            if (normalized) {
+                localStorage.setItem('cart', JSON.stringify(normalized));
                 console.log('Synced cart from server to localStorage');
                 return true;
             }
