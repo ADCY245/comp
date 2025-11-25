@@ -621,6 +621,15 @@
                                                 {% if item.packaging_type %}
                                                     <p class="mb-1 text-muted small">{{ item.packaging_type|replace('_', ' ')|title }}</p>
                                                 {% endif %}
+                                                {% if item.length_per_unit_m %}
+                                                    <p class="mb-1"><strong>Pack length:</strong> <span class="rule-pack-length">{{ '%.0f'|format(item.length_per_unit_m|float) }}</span> m</p>
+                                                {% endif %}
+                                                {% if item.rate_per_meter %}
+                                                    <p class="mb-1"><strong>Rate per meter:</strong> ₹<span class="rule-rate-per-meter">{{ '%.2f'|format(item.rate_per_meter|float) }}</span></p>
+                                                {% endif %}
+                                                {% if item.total_length_m %}
+                                                    <p class="mb-1 text-muted small"><strong>Total length:</strong> <span class="rule-total-length">{{ '%.0f'|format(item.total_length_m|float) }}</span> m</p>
+                                                {% endif %}
                                             {% elif item.type in ['chemical', 'maintenance'] %}
                                                 <div class="product-format-badge mb-2">
                                                     <span class="badge bg-gold text-dark">

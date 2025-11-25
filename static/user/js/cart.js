@@ -1512,6 +1512,47 @@ function updateCartTotals() {
                         discount_percent: discountPercent,
                         gst_percent: gstPercent
                     });
+                } else if (type === 'rule') {
+                    const quantity = parseInt(item.getAttribute('data-quantity') || '1');
+                    const validQuantity = Number.isNaN(quantity) || quantity < 1 ? 1 : quantity;
+                    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || '0');
+                    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
+                    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '18');
+                    const lengthPerUnit = parseFloat(item.getAttribute('data-length-per-unit-m') || item.dataset.lengthPerUnitM || '100');
+                    const ratePerMeter = parseFloat(item.getAttribute('data-rate-per-meter') || item.dataset.ratePerMeter || '0');
+
+                    const itemSubtotal = unitPrice * validQuantity;
+                    const discountAmount = itemSubtotal * (discountPercent / 100);
+                    const discountedSubtotal = itemSubtotal - discountAmount;
+                    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+                    const itemTotal = discountedSubtotal + gstAmount;
+                    const totalLength = lengthPerUnit * validQuantity;
+
+                    subtotal += itemSubtotal;
+                    totalDiscount += discountAmount;
+                    totalGst += gstAmount;
+                    total += itemTotal;
+                    totalItems += validQuantity;
+
+                    item.setAttribute('data-quantity', validQuantity.toString());
+                    item.setAttribute('data-length-per-unit-m', lengthPerUnit.toString());
+                    item.setAttribute('data-total-length-m', totalLength.toString());
+
+                    updateItemDisplay(item, {
+                        type: 'rule',
+                        unit_price: unitPrice,
+                        quantity: validQuantity,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent,
+                        length_per_unit_m: lengthPerUnit,
+                        rate_per_meter: ratePerMeter,
+                        total_length_m: totalLength,
+                        subtotal: itemSubtotal,
+                        discount_amount: discountAmount,
+                        discounted_subtotal: discountedSubtotal,
+                        gst_amount: gstAmount,
+                        final_total: itemTotal
+                    });
                 }
             } catch (error) {
                 console.error('Error calculating item totals:', error);
@@ -3014,6 +3055,134 @@ function updateItemDisplay(item, data) {
         const preGstTotalElement = item.querySelector('.pre-gst-total .pre-gst-amount');
         if (preGstTotalElement) {
             preGstTotalElement.textContent = `₹${totalBeforeGst.toFixed(2)}`;
+        }
+    } else if (type === 'rule') {
+        const toPositiveNumber = (value, fallback = 0) => {
+            const num = toNumber(value);
+            return num === null || !Number.isFinite(num) ? fallback : num;
+        };
+
+        let lengthPerUnit = toPositiveNumber(data.length_per_unit_m ?? item.getAttribute('data-length-per-unit-m'), 100);
+        let ratePerMeter = toPositiveNumber(data.rate_per_meter ?? item.getAttribute('data-rate-per-meter'), 21);
+        let unitPrice = toPositiveNumber(data.unit_price ?? item.getAttribute('data-unit-price'), lengthPerUnit * ratePerMeter);
+        let quantity = toPositiveNumber(data.quantity ?? item.getAttribute('data-quantity'), 1);
+        quantity = Math.max(1, Math.round(quantity));
+        let discountPercent = toPositiveNumber(data.discount_percent ?? item.getAttribute('data-discount-percent'), 0);
+        if (discountPercent < 0) discountPercent = 0;
+        if (discountPercent > 100) discountPercent = 100;
+        let gstPercent = toPositiveNumber(data.gst_percent ?? item.getAttribute('data-gst-percent'), 18);
+        if (gstPercent < 0) gstPercent = 0;
+
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+            unitPrice = lengthPerUnit * ratePerMeter;
+        }
+
+        const subtotal = unitPrice * quantity;
+        const discountAmount = subtotal * (discountPercent / 100);
+        const discountedSubtotal = subtotal - discountAmount;
+        const gstAmount = (discountedSubtotal * gstPercent) / 100;
+        const total = discountedSubtotal + gstAmount;
+        const totalLength = lengthPerUnit * quantity;
+
+        // Persist updated metadata on the DOM element
+        item.dataset.unitPrice = unitPrice.toFixed(2);
+        item.dataset.quantity = quantity.toString();
+        item.dataset.discountPercent = discountPercent.toString();
+        item.dataset.gstPercent = gstPercent.toString();
+        item.dataset.lengthPerUnitM = lengthPerUnit.toString();
+        item.dataset.ratePerMeter = ratePerMeter.toString();
+        item.dataset.totalLengthM = totalLength.toFixed(2);
+
+        const quantityInput = item.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.value = quantity;
+        }
+
+        const setText = (selector, value) => {
+            const el = item.querySelector(selector);
+            if (el) {
+                el.textContent = value;
+            }
+        };
+
+        const formatCurrencyValue = amount => `₹${(Number.isFinite(amount) ? amount : 0).toFixed(2)}`;
+
+        item.querySelectorAll('.quantity-display, .item-quantity').forEach(el => {
+            el.textContent = quantity;
+        });
+
+        setText('.rule-pack-length', formatNumber(lengthPerUnit, 0));
+        setText('.rule-rate-per-meter', formatNumber(ratePerMeter, 2));
+        setText('.rule-total-length', formatNumber(totalLength, 0));
+
+        item.querySelectorAll('.unit-price, .item-unit-price').forEach(el => {
+            el.textContent = formatCurrencyValue(unitPrice);
+        });
+
+        item.querySelectorAll('.subtotal, .item-subtotal, .subtotal-value').forEach(el => {
+            el.textContent = formatCurrencyValue(subtotal);
+        });
+
+        const discountElements = item.querySelectorAll('.discount-amount, .item-discount');
+        discountElements.forEach(el => {
+            el.textContent = `-₹${discountAmount.toFixed(2)}`;
+        });
+
+        const preGstElements = item.querySelectorAll('.total-before-gst, .pre-gst-total .pre-gst-amount, .item-total-before-gst');
+        preGstElements.forEach(el => {
+            el.textContent = formatCurrencyValue(discountedSubtotal);
+        });
+
+        item.querySelectorAll('.gst-amount, .item-gst').forEach(el => {
+            el.textContent = formatCurrencyValue(gstAmount);
+        });
+
+        item.querySelectorAll('.total-amount, .item-total, .total-value').forEach(el => {
+            el.textContent = formatCurrencyValue(total);
+        });
+
+        const gstPercentElement = item.querySelector('.gst-percent');
+        if (gstPercentElement) {
+            gstPercentElement.textContent = `${gstPercent}`;
+        }
+
+        const discountRow = item.querySelector('.discount-row');
+        if (discountRow) {
+            discountRow.style.display = discountPercent > 0 ? 'flex' : 'flex';
+            const discountPercentDisplay = discountRow.querySelector('.discount-percent');
+            if (discountPercentDisplay) {
+                discountPercentDisplay.textContent = `${discountPercent}%`;
+            }
+        }
+
+        const totalLengthNote = item.querySelector('.rule-total-length');
+        if (totalLengthNote) {
+            totalLengthNote.textContent = formatNumber(totalLength, 0);
+        }
+
+        const packLengthEl = item.querySelector('.rule-pack-length');
+        if (packLengthEl) {
+            packLengthEl.textContent = formatNumber(lengthPerUnit, 0);
+        }
+
+        const ratePerMeterEl = item.querySelector('.rule-rate-per-meter');
+        if (ratePerMeterEl) {
+            ratePerMeterEl.textContent = formatNumber(ratePerMeter, 2);
+        }
+
+        const hiddenGstInput = item.querySelector('input[name$="_gst_amount"]');
+        if (hiddenGstInput) {
+            hiddenGstInput.value = gstAmount.toFixed(2);
+        }
+
+        const hiddenTotalInput = item.querySelector('input[name$="_total"]');
+        if (hiddenTotalInput) {
+            hiddenTotalInput.value = total.toFixed(2);
+        }
+
+        const totalBeforeGstElement = item.querySelector('.pre-gst-total .pre-gst-amount');
+        if (totalBeforeGstElement) {
+            totalBeforeGstElement.textContent = formatCurrencyValue(discountedSubtotal);
         }
     } else if (type === 'chemical' || type === 'maintenance') {
         // Handle chemical items with litre-based pricing

@@ -89,6 +89,122 @@ def to_float(value):
     except (TypeError, ValueError):
         return None
 
+
+def patch_rule_metadata(product, payload=None):
+    """Ensure rule-specific metadata fields exist on the product dict."""
+    if product is None:
+        return {}
+
+    payload = payload or {}
+
+    length = to_float(payload.get('length_per_unit_m'))
+    if length is None or length <= 0:
+        length = to_float(product.get('length_per_unit_m'))
+    if length is None or length <= 0:
+        length = 100.0
+
+    rate = to_float(payload.get('rate_per_meter'))
+    if rate is None or rate < 0:
+        rate = to_float(product.get('rate_per_meter'))
+    if rate is None or rate < 0:
+        rate = 0.0
+
+    total_length = to_float(payload.get('total_length_m'))
+    if total_length is None:
+        total_length = to_float(product.get('total_length_m'))
+
+    quantity = payload.get('quantity')
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        try:
+            quantity = int(product.get('quantity', 1))
+        except (TypeError, ValueError):
+            quantity = 1
+    if quantity < 1:
+        quantity = 1
+
+    if total_length is None:
+        total_length = length * quantity
+
+    product['length_per_unit_m'] = length
+    product['rate_per_meter'] = rate
+    product['quantity'] = quantity
+    product['total_length_m'] = round(total_length, 2)
+
+    for key in ['rule_category', 'profile_id', 'profile_label', 'profile_code', 'packaging', 'packaging_type']:
+        value = payload.get(key)
+        if value is not None:
+            product[key] = value
+        elif key not in product:
+            product[key] = None
+
+    return product
+
+
+def recalc_rule_pricing(product):
+    """Recalculate pricing totals for a rule product in-place."""
+    if product is None:
+        return {}
+
+    patch_rule_metadata(product)
+
+    length = to_float(product.get('length_per_unit_m')) or 100.0
+    if length <= 0:
+        length = 100.0
+
+    rate = to_float(product.get('rate_per_meter')) or 0.0
+    if rate < 0:
+        rate = 0.0
+
+    try:
+        quantity = int(product.get('quantity', 1))
+    except (TypeError, ValueError):
+        quantity = 1
+    if quantity < 1:
+        quantity = 1
+
+    discount_percent = to_float(product.get('discount_percent')) or 0.0
+    discount_percent = max(0.0, min(discount_percent, 100.0))
+
+    gst_percent = to_float(product.get('gst_percent'))
+    if gst_percent is None or gst_percent < 0:
+        gst_percent = 18.0
+
+    unit_price = to_float(product.get('unit_price'))
+    if unit_price is None or unit_price <= 0:
+        unit_price = length * rate
+
+    subtotal = unit_price * quantity
+    discount_amount = subtotal * (discount_percent / 100)
+    discounted_subtotal = subtotal - discount_amount
+    gst_amount = (discounted_subtotal * gst_percent) / 100
+    final_total = discounted_subtotal + gst_amount
+    total_length = length * quantity
+
+    product['unit_price'] = round(unit_price, 2)
+    product['total_price'] = round(final_total, 2)
+    product['quantity'] = quantity
+    product['discount_percent'] = discount_percent
+    product['gst_percent'] = gst_percent
+    product['length_per_unit_m'] = length
+    product['rate_per_meter'] = rate
+    product['total_length_m'] = round(total_length, 2)
+
+    product['calculations'] = {
+        'unit_price': round(unit_price, 2),
+        'quantity': quantity,
+        'subtotal': round(subtotal, 2),
+        'discount_percent': discount_percent,
+        'discount_amount': round(discount_amount, 2),
+        'discounted_subtotal': round(discounted_subtotal, 2),
+        'gst_percent': gst_percent,
+        'gst_amount': round(gst_amount, 2),
+        'final_total': round(final_total, 2)
+    }
+
+    return product
+
 # CORS Configuration
 from flask_cors import CORS
 # Initialize Flask app and login manager
@@ -3081,6 +3197,8 @@ def get_user_cart():
                             'final_unit_price': round(final_unit_price, 2),
                             'final_total': round(final_total, 2)
                         }
+                    elif product.get('type') == 'rule':
+                        recalc_rule_pricing(product)
             
             products = sanitized_products
             return {"products": products}
@@ -3521,6 +3639,9 @@ def add_to_cart():
 
             product_type = product.get('type')
 
+            if product_type == 'rule':
+                patch_rule_metadata(product, data)
+
             if product_type in ('chemical', 'maintenance'):
                 pack_size = to_float(data.get('pack_size_litre'))
                 quantity_litre = to_float(data.get('quantity_litre'))
@@ -3613,6 +3734,9 @@ def add_to_cart():
                     'display_size_label': display_size_label,
                     'cut_to_custom_size': cut_to_custom
                 }
+            elif product_type == 'rule':
+                patch_rule_metadata(product, data)
+                recalc_rule_pricing(product)
         
         # Get existing cart or create new one
         try:

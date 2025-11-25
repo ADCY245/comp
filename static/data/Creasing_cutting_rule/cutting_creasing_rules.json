@@ -5,31 +5,51 @@
         "profile_id": "cut-universal-centre-bevel-pkt",
         "label": "UNIVERSAL - CENTRE BEVEL",
         "code": "23.80 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-universal-long-centre-bevel-pkt",
         "label": "UNIVERSAL - LONG CENTRE BEVEL",
         "code": "23.80 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-star-cutting-centre-bevel-pkt",
         "label": "STAR CUTTING - CENTRE BEVEL",
         "code": "23.80 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-star-cutting-long-centre-bevel-pkt",
         "label": "STAR CUTTING - LONG CENTRE BEVEL",
         "code": "  23.80",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3pt-pkt",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  23.80-3 ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       }
     ],
     "coils": [
@@ -37,95 +57,155 @@
         "profile_id": "cut-universal-centre-bevel-coil",
         "label": "UNIVERSAL - CENTRE BEVEL",
         "code": " 23.80   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-universal-long-centre-bevel-coil",
         "label": "UNIVERSAL - LONG CENTRE BEVEL",
         "code": "  23.80   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-star-cutting-centre-bevel-coil",
         "label": "STAR CUTTING - CENTRE BEVEL",
         "code": " 23.80",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-star-cutting-long-centre-bevel-coil",
         "label": "STAR CUTTING - LONG CENTRE BEVEL",
         "code": "  23.80- ",
         "thickness": "2pt",
-        "finish": "Light Gold"
+        "finish": "Light Gold",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-sigma-star63-centre-bevel-coil",
         "label": "SIGMA STAR 63 - CENTRE BEVEL",
         "code": " 23.80   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-sigma-star63-long-centre-bevel-coil",
         "label": "SIGMA STAR 63 - LONG CENTRE BEVEL",
         "code": " 23.80  ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel- 2380-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  23.80   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-ground-long-centre-bevel- 2380-coil",
         "label": "DURAFLEX - GROUND - LONG CENTRE BEVEL",
         "code": "  23.80    - GROUND - Light Gold",
         "thickness": "2pt",
-        "finish": "Ground Light Gold"
+        "finish": "Ground Light Gold",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3000-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  30   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3pt- 2380-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  23.80  ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3pt-3000-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": " 30  ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3pt-4000-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  40  ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-long-centre-bevel-3pt-5000-coil",
         "label": "DURAFLEX - LONG CENTRE BEVEL",
         "code": "  50  ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-ground-long-centre-bevel-3pt-3000-coil",
         "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
         "code": "  30   - GROUND",
         "thickness": "3pt",
-        "finish": "Ground"
+        "finish": "Ground",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "cut-duraflex-ground-long-centre-bevel-3pt-5000-coil",
         "label": "DURAFLEX - GROUND LONG CENTRE BEVEL",
         "code": "  50   - GROUND",
         "thickness": "3pt",
-        "finish": "Ground"
+        "finish": "Ground",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       }
     ]
   },
@@ -135,31 +215,51 @@
         "profile_id": "crease-sigma-super-crease-dr- 2290-pkt",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  22.90   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-sigma-super-crease-dr- 2325-pkt",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  23.25 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-sigma-super-crease-dr- 2330-pkt",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  23.30 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-star-crease-dr- 2325-pkt",
         "label": "STAR CREASING - DOUBLE ROUND BEVEL",
         "code": "  23.25 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-star-crease-dr- 2330-pkt",
         "label": "STAR CREASING - DOUBLE ROUND BEVEL",
         "code": "  23.30 ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       }
     ],
     "coils": [
@@ -167,38 +267,66 @@
         "profile_id": "crease-sigma-super-crease-dr- 2290-coil",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  22.90  ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-sigma-super-crease-dr- 2325-coil",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  23.25   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-sigma-super-crease-dr- 2330-coil",
         "label": "SIGMA SUPER CREASE - DOUBLE ROUND BEVEL",
         "code": "  23.30   ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-star-crease-dr- 2325-coil",
         "label": "STAR CREASING - DOUBLE ROUND BEVEL",
         "code": "  23.25  ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-star-crease-dr- 2330-coil",
         "label": "STAR CREASING - DOUBLE ROUND BEVEL",
         "code": "  23.30  ",
-        "thickness": "2pt"
+        "thickness": "2pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       },
       {
         "profile_id": "crease-star-crease-dr- 2250-coil",
         "label": "STAR CREASING - DOUBLE ROUND BEVEL",
         "code": "  22.50 - 3PT  ",
-        "thickness": "3pt"
+        "thickness": "3pt",
+        "pricing": {
+          "length_per_unit_m": 100,
+          "rate_per_meter": 21
+        }
       }
     ]
+  },
+  "pricing": {
+    "length_per_unit_m": 100,
+    "rate_per_meter": 21
   }
 }

@@ -4,7 +4,7 @@
     return;
   }
 
-  function buildCuttingCatalog(cuttingData = {}) {
+  function buildCuttingCatalog(cuttingData = {}, fallbackPricing = DEFAULT_RULE_PRICING) {
     const packets = Array.isArray(cuttingData.packets) ? cuttingData.packets : [];
     const coils = Array.isArray(cuttingData.coils) ? cuttingData.coils : [];
     const thicknessKeys = Array.from(new Set(
@@ -18,7 +18,7 @@
         packets: packets.filter(entry => normalizeThickness(entry.thickness) === thickness),
         coils: coils.filter(entry => normalizeThickness(entry.thickness) === thickness)
       };
-      acc[thickness] = buildCatalogEntries(catalog, `cut-${thickness}`);
+      acc[thickness] = buildCatalogEntries(catalog, `cut-${thickness}` , fallbackPricing);
       return acc;
     }, {});
   }
@@ -27,7 +27,7 @@
     return value.trim().toLowerCase();
   }
 
-  function buildCatalogEntries(catalog = {}, context = 'cutting') {
+  function buildCatalogEntries(catalog = {}, context = 'cutting', fallbackPricing = DEFAULT_RULE_PRICING) {
     const grouped = new Map();
     Object.entries(catalog || {}).forEach(([packagingId, entries]) => {
       if (!Array.isArray(entries)) {
@@ -54,7 +54,8 @@
           profileId: entry.profile_id,
           code: entry.code || '',
           description: PACKAGING_PRESETS[packagingId]?.description || '',
-          finish: entry.finish || ''
+          finish: entry.finish || '',
+          pricing: normalizeRulePricing(entry.pricing, fallbackPricing)
         });
 
         grouped.set(normalizedKey, existing);
@@ -122,6 +123,27 @@
     creasing: 390
   };
 
+  const RULE_GST_PERCENT = 18;
+  const RULE_DISCOUNT_OPTIONS = Array.from({ length: 21 }, (_, idx) => idx * 0.5);
+  const DEFAULT_RULE_PRICING = { lengthPerUnit: 100, ratePerMeter: 21 };
+
+  function normalizeRulePricing(sourcePricing = {}, fallbackPricing = DEFAULT_RULE_PRICING) {
+    const fallbackLength = Number(fallbackPricing?.lengthPerUnit) || DEFAULT_RULE_PRICING.lengthPerUnit;
+    const fallbackRate = Number(fallbackPricing?.ratePerMeter) || DEFAULT_RULE_PRICING.ratePerMeter;
+
+    const lengthPerUnit = Number(sourcePricing?.length_per_unit_m ?? sourcePricing?.lengthPerUnit) || fallbackLength;
+    const ratePerMeter = Number(sourcePricing?.rate_per_meter ?? sourcePricing?.ratePerMeter) || fallbackRate;
+
+    return {
+      lengthPerUnit: lengthPerUnit > 0 ? lengthPerUnit : fallbackLength,
+      ratePerMeter: ratePerMeter >= 0 ? ratePerMeter : fallbackRate
+    };
+  }
+
+  function getActiveRulePricing() {
+    return state.selectedPricing || state.rulePricing || DEFAULT_RULE_PRICING;
+  }
+
   const state = {
     machines: [],
     rawSizes: { cutting: {}, creasing: [] },
@@ -133,7 +155,10 @@
     selectedPackaging: null,
     availablePackagingOptions: [],
     quantity: null,
-    quantityConfirmed: false
+    quantityConfirmed: false,
+    discountPercent: 0,
+    rulePricing: { ...DEFAULT_RULE_PRICING },
+    selectedPricing: null
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -201,6 +226,7 @@
           : state.rawSizes.creasing;
         state.selectedSize = collection.find(option => option.id === selectedId) || null;
         state.selectedPackaging = null;
+        state.selectedPricing = null;
         packagingSelect.value = '';
         disableSection(packagingSection, packagingSelect, 'Select a size first');
 
@@ -224,6 +250,7 @@
       packagingSelect.addEventListener('change', event => {
         const options = state.availablePackagingOptions || [];
         state.selectedPackaging = options.find(option => option.id === event.target.value) || null;
+        state.selectedPricing = normalizeRulePricing(state.selectedPackaging?.pricing, state.rulePricing);
         if (state.selectedPackaging) {
           showSection(quantitySection, quantityInput);
           quantityInput.disabled = false;
@@ -233,6 +260,7 @@
         } else {
           disableSection(quantitySection, quantityInput, 'Select packaging first');
           expandStep(packagingSection);
+          state.selectedPricing = null;
         }
 
         state.quantity = null;
@@ -270,7 +298,7 @@
           return;
         }
         state.quantityConfirmed = true;
-        collapseStep(quantitySection, `${formatNumber(state.quantity)} lengths`);
+        collapseStep(quantitySection, `${formatNumber(state.quantity)} packs`);
         updateSummary();
       });
     }
@@ -284,6 +312,7 @@
     state.availablePackagingOptions = [];
     state.quantity = null;
     state.quantityConfirmed = false;
+    state.selectedPricing = null;
 
     thicknessSelect.value = '';
     sizeSelect.value = '';
@@ -331,6 +360,8 @@
     quantityInput.value = '';
     quantityInput.disabled = true;
     quantityConfirmBtn.disabled = true;
+    state.discountPercent = 0;
+    state.selectedPricing = null;
 
     hideSection(thicknessSection);
     hideSection(sizeSection);
@@ -435,19 +466,22 @@
         throw new Error(`Failed to fetch rule catalog (${response.status})`);
       }
       const payload = await response.json();
-      state.rawSizes.cutting = buildCuttingCatalog(payload?.cutting || {});
+      state.rulePricing = normalizeRulePricing(payload?.pricing, DEFAULT_RULE_PRICING);
+      const fallbackPricing = state.rulePricing;
+      state.rawSizes.cutting = buildCuttingCatalog(payload?.cutting || {}, fallbackPricing);
 
       const creasingCatalog = {
         packets: payload?.creasing?.packets || [],
         coils: payload?.creasing?.coils || []
       };
-      state.rawSizes.creasing = buildCatalogEntries(creasingCatalog, 'crease');
+      state.rawSizes.creasing = buildCatalogEntries(creasingCatalog, 'crease', fallbackPricing);
       state.flattenedSizes = state.rawSizes.creasing;
     } catch (error) {
       console.error('cutting_creasing_rule.js: unable to load size data', error);
       state.rawSizes.cutting = {};
       state.rawSizes.creasing = [];
       state.flattenedSizes = [];
+      state.rulePricing = { ...DEFAULT_RULE_PRICING };
     }
   }
 
@@ -511,18 +545,57 @@
 
     if (state.quantity) {
       const quantityNote = state.quantityConfirmed ? 'Confirmed' : 'Pending confirmation';
-      items.push(summaryItem('Quantity', `${formatNumber(state.quantity)} lengths`, quantityNote));
+      items.push(summaryItem('Quantity', `${formatNumber(state.quantity)} packs`, quantityNote));
+
+      const pricing = getRulePricingSnapshot();
+      if (pricing.quantity > 0) {
+        items.push(renderRuleDiscountControl(pricing));
+        items.push(summaryItem(
+          'Rate',
+          `${formatCurrency(pricing.ratePerMeter)} per meter`,
+          `${pricing.lengthPerUnit} m fixed per pack`
+        ));
+        items.push(summaryItem(
+          'Pack price',
+          formatCurrency(pricing.unitPrice),
+          `${pricing.lengthPerUnit} m × ${formatCurrency(pricing.ratePerMeter)} per meter`
+        ));
+
+        const discountNote = pricing.discountPercent > 0
+          ? `Discount applied: ${formatCurrency(pricing.discountAmount)}`
+          : 'No discount applied';
+        items.push(summaryItem(
+          'Subtotal',
+          formatCurrency(pricing.discountedSubtotal),
+          discountNote
+        ));
+
+        items.push(summaryItem(
+          'Estimated total',
+          formatCurrency(pricing.finalTotal),
+          `GST (${pricing.gstPercent}%): ${formatCurrency(pricing.gstAmount)}`
+        ));
+      }
     }
 
     if (!items.length) {
       summaryBody.innerHTML = '<p class="chem-summary__empty mb-0">Start by selecting a rule type.</p>';
     } else {
       summaryBody.innerHTML = items.join('');
+      rebindRuleDiscountSelect();
     }
   }
 
   function getDiscountPercent() {
-    return 0;
+    const selectEl = document.getElementById('ruleDiscountPercent');
+    if (selectEl) {
+      const value = parseFloat(selectEl.value);
+      if (Number.isFinite(value)) {
+        state.discountPercent = Math.max(0, Math.min(100, value));
+      }
+    }
+    const numeric = Number(state.discountPercent);
+    return Math.max(0, Math.min(100, Number.isFinite(numeric) ? numeric : 0));
   }
 
   function canAddToCart() {
@@ -567,15 +640,19 @@
       return;
     }
 
-    const unitPrice = estimateUnitPrice();
-    const quantity = state.quantity;
-    const discountPercent = getDiscountPercent();
-    const gstPercent = 18;
-    const subtotal = unitPrice * quantity;
-    const discountAmount = subtotal * (discountPercent / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const gstAmount = (discountedSubtotal * gstPercent) / 100;
-    const finalTotal = discountedSubtotal + gstAmount;
+    const pricing = getRulePricingSnapshot();
+    const unitPrice = pricing.unitPrice;
+    const quantity = pricing.quantity;
+    const discountPercent = pricing.discountPercent;
+    const gstPercent = pricing.gstPercent;
+    const subtotal = pricing.subtotal;
+    const discountAmount = pricing.discountAmount;
+    const discountedSubtotal = pricing.discountedSubtotal;
+    const gstAmount = pricing.gstAmount;
+    const finalTotal = pricing.finalTotal;
+    const lengthPerUnit = pricing.lengthPerUnit;
+    const ratePerMeter = pricing.ratePerMeter;
+    const totalLength = lengthPerUnit * quantity;
 
     const thicknessLabel = state.selectedThickness || state.selectedSize?.displayThickness || state.selectedSize?.thickness || '';
     const profileCode = (state.selectedPackaging?.code || state.selectedSize?.code || '').trim();
@@ -592,6 +669,9 @@
       packaging_type: state.selectedPackaging?.packagingId,
       quantity,
       unit_price: round(unitPrice, 2),
+      length_per_unit_m: round(lengthPerUnit, 2),
+      rate_per_meter: round(ratePerMeter, 2),
+      total_length_m: round(totalLength, 2),
       discount_percent: discountPercent,
       gst_percent: gstPercent,
       total_price: round(finalTotal, 2),
@@ -648,6 +728,39 @@
     `;
   }
 
+  function renderRuleDiscountControl(pricing) {
+    const discountPercent = pricing.discountPercent;
+    const discountOptions = RULE_DISCOUNT_OPTIONS.map(percent => `
+      <option value="${percent}" ${percent === discountPercent ? 'selected' : ''}>${percent}%</option>
+    `).join('');
+
+    const discountSummaryText = discountPercent > 0
+      ? `Saving: ${formatCurrency(pricing.discountAmount)} · Subtotal after discount: ${formatCurrency(pricing.discountedSubtotal)}`
+      : 'No discount applied yet.';
+
+    return `
+      <div class="chem-summary__item chem-summary__item--discount">
+        <div class="chem-summary__discount-control">
+          <span class="chem-summary__label">Discount</span>
+          <select id="ruleDiscountPercent" class="form-select form-select-sm chem-summary__discount-select">
+            ${discountOptions}
+          </select>
+        </div>
+        <div class="chem-summary__note chem-summary__note--muted">${discountSummaryText}</div>
+      </div>
+    `;
+  }
+
+  function rebindRuleDiscountSelect() {
+    const selectEl = document.getElementById('ruleDiscountPercent');
+    if (!selectEl) return;
+    selectEl.addEventListener('change', () => {
+      const value = parseFloat(selectEl.value);
+      state.discountPercent = Number.isFinite(value) ? value : 0;
+      updateSummary();
+    }, { once: true });
+  }
+
 
   function formatNumber(value) {
     const numeric = Number(value) || 0;
@@ -655,6 +768,39 @@
       minimumFractionDigits: numeric % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2
     });
+  }
+
+  function formatCurrency(value) {
+    return `₹${formatNumber(value ?? 0)}`;
+  }
+
+  function getRulePricingSnapshot(overrides = {}) {
+    const quantity = overrides.quantity ?? (state.quantity || 0);
+    const discountPercent = overrides.discountPercent ?? getDiscountPercent();
+    const gstPercent = overrides.gstPercent ?? RULE_GST_PERCENT;
+    const pricingSource = overrides.pricing || getActiveRulePricing();
+    const lengthPerUnit = Number(pricingSource.lengthPerUnit) || DEFAULT_RULE_PRICING.lengthPerUnit;
+    const ratePerMeter = Number(pricingSource.ratePerMeter) || DEFAULT_RULE_PRICING.ratePerMeter;
+    const unitPrice = lengthPerUnit * ratePerMeter;
+    const subtotal = unitPrice * quantity;
+    const discountAmount = subtotal * (discountPercent / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+    const finalTotal = discountedSubtotal + gstAmount;
+
+    return {
+      lengthPerUnit,
+      ratePerMeter,
+      unitPrice,
+      quantity,
+      subtotal,
+      discountPercent,
+      discountAmount,
+      discountedSubtotal,
+      gstPercent,
+      gstAmount,
+      finalTotal
+    };
   }
 
   function sanitize(value) {
