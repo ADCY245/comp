@@ -221,7 +221,7 @@
                             <i class="bi bi-person-circle"></i> {{ current_user.username if current_user.is_authenticated else 'User' }}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                            {% if current_user.is_authenticated and current_user.role|lower == 'admin' %}
+                            {% if current_user.is_authenticated and current_user.role|lower|trim in ['admin', 'superadmin'] %}
                             <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2"></i> Admin Dashboard</a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
