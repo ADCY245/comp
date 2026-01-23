@@ -188,7 +188,7 @@
                 if (allQuotations.length === 0) {
                     showNoQuotationsMessage();
                 } else {
-                    updateStatistics();
+                    updateStatistics(filteredQuotations);
                     displayQuotations(filteredQuotations);
                 }
                 
@@ -199,15 +199,19 @@
         }
         
         // Update statistics
-        function updateStatistics() {
-            const total = allQuotations.length;
-            const totalValue = allQuotations.reduce((sum, q) => sum + (q.total_amount_post_gst || 0), 0);
+        function updateStatistics(source = null) {
+            const dataSet = Array.isArray(source) && source.length >= 0
+                ? source
+                : (filteredQuotations.length || !allQuotations.length ? filteredQuotations : allQuotations);
+
+            const total = dataSet.length;
+            const totalValue = dataSet.reduce((sum, q) => sum + (q.total_amount_post_gst || 0), 0);
             const avgValue = total > 0 ? totalValue / total : 0;
-            
+
             // This month quotations
             const thisMonth = new Date().getMonth();
             const thisYear = new Date().getFullYear();
-            const thisMonthQuots = allQuotations.filter(q => {
+            const thisMonthQuots = dataSet.filter(q => {
                 const quotDate = new Date(q.created_at);
                 return quotDate.getMonth() === thisMonth && quotDate.getFullYear() === thisYear;
             });
@@ -262,6 +266,8 @@
                     minute: '2-digit',
                     hour12: true
                 });
+            } else if (!createdTime) {
+                createdTime = 'N/A';
             }
             
             card.innerHTML = `
@@ -505,6 +511,7 @@
                 );
             }
             
+            updateStatistics(filteredQuotations);
             displayQuotations(filteredQuotations);
         }
         
@@ -536,7 +543,8 @@
                     }
                 });
             }
-            
+
+            updateStatistics(filteredQuotations);
             displayQuotations(filteredQuotations);
         }
         
