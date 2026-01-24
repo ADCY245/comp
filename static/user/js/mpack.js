@@ -241,7 +241,7 @@ function formatDimensionLabel(acrossMm, alongMm) {
   if (!formattedAcross || !formattedAlong) {
     return '';
   }
-  return `${formattedAcross} x ${formattedAlong} mm`;
+  return `${formattedAlong} x ${formattedAcross} mm`;
 }
 
 function populateSelectOptions(selectEl, values = [], placeholder = '-- Select --') {
@@ -1928,7 +1928,7 @@ async function addMpackToCart() {
 
   const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
   const standardSizeLabel = selectedSize || standardSize.label || customSizeLabel;
-  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
+  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : (standardSize.rollLength || standardAlong);
   const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
   const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
 
