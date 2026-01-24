@@ -7387,6 +7387,7 @@ def creasing_matrix():
         }
     )
 
+@app.route('/chemicals')
 @app.route('/chemicals-maintenance')
 @login_required
 @company_required
