@@ -509,6 +509,17 @@
                          data-item-id="{{ item.id or item._id }}"
                          data-name="{{ item.name }}"
                          data-quantity="{{ item.quantity }}"
+                         {% if item.type == 'creasing_matrix' %}
+                         data-unit-price="{{ item.unit_price|default(0) }}"
+                         data-quantity-rolls="{{ item.quantity_rolls|default(item.quantity|default(1)) }}"
+                         data-thickness-id="{{ item.thickness_id }}"
+                         data-thickness-label="{{ item.thickness_label }}"
+                         data-size-id="{{ item.size_id }}"
+                         data-size-label="{{ item.size_label }}"
+                         data-total-length-m="{{ item.total_length_m }}"
+                         data-discount-percent="{{ item.discount_percent|default(0) }}"
+                         data-gst-percent="{{ item.gst_percent|default(18) }}"
+                         {% endif %}
                          {% if item.type == 'blanket' %}
                          data-base-price="{{ item.base_price }}"
                          data-bar-price="{{ item.bar_price }}"
@@ -778,7 +789,7 @@
                                             </div>
                                             {% endif %}
                                             <div class="price-row d-flex justify-content-between align-items-center">
-                                                <span class="price-label">Quantity:</span>
+                                                <span class="price-label">Quantity{% if item.type == 'creasing_matrix' %} (rolls){% endif %}:</span>
                                                 <div class="d-flex align-items-center ms-auto">
                                                     <div class="input-group" style="width: 120px;">
                                                         <button class="btn btn-outline-secondary quantity-decrease" type="button" data-index="{{ loop.index0 }}" style="padding: 0.25rem 0.5rem; min-width: 36px; transition: all 0.2s ease;">
@@ -786,7 +797,7 @@
                                                         </button>
                                                         <input type="number" 
                                                                class="form-control text-center quantity-input" 
-                                                               value="{{ item.quantity }}" 
+                                                               value="{% if item.type == 'creasing_matrix' %}{{ item.quantity_rolls|default(item.quantity|default(1)) }}{% else %}{{ item.quantity }}{% endif %}" 
                                                                min="1" 
                                                                data-index="{{ loop.index0 }}" 
                                                                style="border-left: 0; border-right: 0; padding: 0.25rem;">
@@ -799,7 +810,8 @@
                                             <div class="price-row">
                                                 <span class="price-label">Subtotal:</span>
                                                 <span class="price-value subtotal-value">
-                                                    ₹{{ "%.2f"|format((((item.unit_price|default(0) - item.bar_price|default(0)) + item.bar_price|default(0)) * item.quantity|default(1))|round(2)) }}
+                                                    {% set qty = item.quantity_rolls if item.type == 'creasing_matrix' else item.quantity %}
+                                                    ₹{{ "%.2f"|format((((item.unit_price|default(0) - item.bar_price|default(0)) + item.bar_price|default(0)) * qty|default(1))|round(2)) }}
                                                 </span>
                                             </div>
                                             <!-- Discount input row with amount aligned to right -->
