@@ -569,10 +569,11 @@
                             return amount > 100000;
                         default:
                             return true;
-                    }
+                                    }
                 });
             }
-            
+
+            updateStatistics(filteredQuotations);
             displayQuotations(filteredQuotations);
         }
         
