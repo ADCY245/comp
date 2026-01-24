@@ -252,6 +252,7 @@ async function updateCartItem(button, itemId) {
             unit_price: formData.unit_price || 0,
             base_price: formData.base_price || 0,
             name: formData.name || 'Custom Blanket',
+            blanket_name: formData.blanket_name || formData.name || 'Custom Blanket',
             type: 'blanket', // Explicitly set type
             unit: formData.unit || 'mm',
             calculations: formData.calculations || {}

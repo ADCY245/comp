@@ -3924,10 +3924,19 @@ def update_cart_item():
     item = products[item_index]
     
     # Update fields from the form data
-    for key in ['quantity', 'length', 'width', 'thickness', 'size', 'machine', 'bar_type', 
-               'discount_percent', 'gst_percent', 'unit_price', 'base_price', 'bar_price', 'name', 'type']:
+    for key in ['quantity', 'length', 'width', 'thickness', 'size', 'machine', 'bar_type',
+               'discount_percent', 'gst_percent', 'unit_price', 'base_price', 'bar_price', 'name', 'type',
+               'unit', 'blanket_name', 'underpacking_type', 'category', 'format_label',
+               'custom_length_mm', 'custom_width_mm', 'custom_area_sqm',
+               'standard_length_mm', 'standard_width_mm', 'standard_area_sqm',
+               'display_length_mm', 'display_width_mm', 'display_size_label',
+               'standard_size_label', 'custom_size_label', 'cut_to_custom_size',
+               'along_mm', 'across_mm']:
         if key in data:
             item[key] = data[key]
+
+    if 'calculations' in data and isinstance(data.get('calculations'), dict):
+        item['calculations'] = data['calculations']
     
     # Recalculate any calculated fields
     if 'quantity' in data or 'unit_price' in data or 'discount_percent' in data or 'gst_percent' in data:

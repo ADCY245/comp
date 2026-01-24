@@ -1017,6 +1017,13 @@ function getFormData() {
   const displayAlong = aroundRollLength;
   const displayAcross = customAcross || 0;
   const displaySizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
+  const standardAlong = isPositiveNumber(standardSize.along) ? standardSize.along : null;
+  const standardAcross = isPositiveNumber(standardSize.across) ? standardSize.across : null;
+  const standardArea = isPositiveNumber(standardSize.area)
+    ? standardSize.area
+    : (standardAcross && standardAlong ? mmToSqm(standardAcross, standardAlong) : null);
+  const standardSizeLabel = standardSize.label || '';
+  const customSizeLabel = displaySizeLabel;
 
   return {
     id: 'mpack_' + Date.now(),
@@ -1035,12 +1042,15 @@ function getFormData() {
     custom_along_mm: customAlong,
     custom_across_mm: customAcross,
     custom_area_sqm: customArea,
-    standard_along_mm: null,
-    standard_across_mm: null,
-    standard_area_sqm: 0,
+    standard_along_mm: standardAlong,
+    standard_across_mm: standardAcross,
+    standard_area_sqm: standardArea,
+    display_length_mm: displayAlong,
+    display_width_mm: displayAcross,
+    display_size_label: displaySizeLabel,
     cut_to_custom_size: cutToCustom,
-    standard_size_label: '',
-    custom_size_label: displaySizeLabel,
+    standard_size_label: standardSizeLabel,
+    custom_size_label: customSizeLabel,
     image: 'images/mpack-placeholder.jpg',
     added_at: new Date().toISOString(),
     calculations: {
