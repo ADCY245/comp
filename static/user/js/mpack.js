@@ -241,7 +241,7 @@ function formatDimensionLabel(acrossMm, alongMm) {
   if (!formattedAcross || !formattedAlong) {
     return '';
   }
-  return `${formattedAlong} x ${formattedAcross} mm`;
+  return `${formattedAcross} x ${formattedAlong} mm`;
 }
 
 function populateSelectOptions(selectEl, values = [], placeholder = '-- Select --') {
