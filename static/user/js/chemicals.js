@@ -691,6 +691,60 @@
       if (quantityIsReady) {
         collapseStep(document.getElementById('chemStepQuantity'), `${formatNumber(state.quantityLitres)} L`);
       }
+    } else {
+      summaryBody.innerHTML = items.join('');
+
+      const discountSelectEl = document.getElementById('discountPercent');
+      if (discountSelectEl) {
+        if (Number.isFinite(state.discountPercent)) {
+          discountSelectEl.value = String(state.discountPercent);
+        }
+        discountSelectEl.addEventListener('change', () => {
+          state.discountPercent = Number(discountSelectEl.value) || 0;
+          updateSummary();
+        });
+      }
+
+      if (summaryActions) {
+        if (hasCompleteSelection) {
+          const { isEditMode } = resolveEditState();
+          summaryActions.innerHTML = `
+            <button type="button" class="chem-summary__cta-btn add-to-cart-btn" id="chemSummaryAddToCartBtn">
+              <i class="fas fa-${isEditMode ? 'save' : 'cart-plus'}"></i>
+              <span>${isEditMode ? 'Update item' : 'Add to cart'}</span>
+            </button>
+          `;
+
+          const summaryCartBtn = document.getElementById('chemSummaryAddToCartBtn');
+          if (summaryCartBtn) {
+            summaryCartBtn.addEventListener('click', async event => {
+              event.preventDefault();
+              try {
+                await addChemicalToCart();
+              } catch (error) {
+                console.error('chemicals.js: failed to process cart action from summary', error);
+                showToast('Error', 'Failed to process your request. Please try again.', 'error');
+              }
+            });
+          }
+        } else {
+          summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Confirm volume to enable the cart button.</p>';
+        }
+      }
+
+      if (state.selectedCategory) {
+        collapseStep(document.getElementById('chemStepCategory'), state.selectedCategory.name);
+      }
+      if (state.selectedProduct) {
+        collapseStep(document.getElementById('chemStepProduct'), state.selectedProduct.name);
+      }
+      if (state.selectedFormat) {
+        const fmtLabel = state.selectedFormat.label || `${state.selectedFormat.size_litre || ''}L pack`;
+        collapseStep(document.getElementById('chemStepFormat'), fmtLabel);
+      }
+      if (quantityIsReady) {
+        collapseStep(document.getElementById('chemStepQuantity'), `${formatNumber(state.quantityLitres)} L`);
+      }
     }
   }
 
