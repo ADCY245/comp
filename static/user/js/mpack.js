@@ -50,6 +50,20 @@ function getActivePolipackConfig() {
   if (isPolipackWASelected()) return { list: POLIPACK_WA_THICKNESSES, base: POLIPACK_WA_BASE_RATE };
   return null;
 }
+
+function getPolipackFormatLabel() {
+  const formatSelect = document.getElementById('productFormatSelect');
+  const formatValue = formatSelect ? formatSelect.value : '';
+
+  if (formatValue === 'polipack_aa') {
+    return 'Self Adhesive';
+  }
+  if (formatValue === 'polipack_wa') {
+    return 'Non Adhesive';
+  }
+  return '';
+}
+
 // --------------------------------------------------------------------
 
 function resolveRollForLength(inputAround) {
@@ -858,6 +872,27 @@ function prefillFormWithItem(item) {
         }
       }
     }
+
+    // Set Polipack format (AA/WA) when editing
+    if (item.underpacking_type === 'polipack') {
+      const formatSelect = document.getElementById('productFormatSelect');
+      if (formatSelect) {
+        const formatLabel = (item.format_label || item.format || '').toString().toLowerCase();
+        let resolvedFormat = '';
+        if (formatLabel.includes('self') || formatLabel.includes('aa')) {
+          resolvedFormat = 'polipack_aa';
+        } else if (formatLabel.includes('non') || formatLabel.includes('wa')) {
+          resolvedFormat = 'polipack_wa';
+        }
+
+        if (resolvedFormat) {
+          setTimeout(() => {
+            formatSelect.value = resolvedFormat;
+            formatSelect.dispatchEvent(new Event('change'));
+          }, 200);
+        }
+      }
+    }
     
     // Set thickness after a short delay to allow the thickness options to load
     setTimeout(() => {
@@ -993,7 +1028,12 @@ function getFormData() {
     underpackingType = underpackingTypeSelect.value;
     underpackingTypeDisplay = underpackingTypeSelect.options[underpackingTypeSelect.selectedIndex].text;
   }
-  
+
+  const formatLabel = underpackingType === 'polipack' ? getPolipackFormatLabel() : '';
+  const resolvedName = underpackingType === 'polipack' && formatLabel
+    ? `Polipack - ${formatLabel}`
+    : underpackingTypeDisplay;
+
   const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
   // Use effective roll-based area for manual entries to honor half-roll pricing
   const sqmArea = manualEntryEnabled ? (standardSize.area || customSize.area || 0) : (standardSize.area || customSize.area || 0);
@@ -1028,13 +1068,14 @@ function getFormData() {
   return {
     id: 'mpack_' + Date.now(),
     type: 'mpack',
-    name: underpackingTypeDisplay,
+    name: resolvedName,
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: displaySizeLabel,
     along_mm: displayAlong,
     across_mm: displayAcross,
     underpacking_type: underpackingType,
+    format_label: formatLabel || undefined,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
@@ -1042,9 +1083,13 @@ function getFormData() {
     custom_along_mm: customAlong,
     custom_across_mm: customAcross,
     custom_area_sqm: customArea,
+    custom_length_mm: customAlong,
+    custom_width_mm: customAcross,
     standard_along_mm: standardAlong,
     standard_across_mm: standardAcross,
     standard_area_sqm: standardArea,
+    standard_length_mm: standardAlong,
+    standard_width_mm: standardAcross,
     display_length_mm: displayAlong,
     display_width_mm: displayAcross,
     display_size_label: displaySizeLabel,
@@ -1890,13 +1935,14 @@ async function addMpackToCart() {
   const product = {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
-    name: underpackingTypeDisplay,
+    name: resolvedName,
     machine: machineSelect && machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: displaySizeLabel,
     along_mm: displayAlong,
     across_mm: displayAcross,
     underpacking_type: underpackingType,
+    format_label: formatLabel || undefined,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
@@ -1961,11 +2007,12 @@ async function addMpackToCart() {
   const payload = {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
     type: 'mpack',
-    name: underpackingTypeDisplay,
+    name: resolvedName,
     machine: machineSelect.value ? machineSelect.options[machineSelect.selectedIndex].text : '--',
     thickness: thicknessSelect.value + ' micron',
     size: displaySizeLabel,
     underpacking_type: underpackingType,
+    format_label: formatLabel || undefined,
     quantity: quantity,
     unit_price: parseFloat(unitPrice.toFixed(2)),
     discount_percent: discount,
