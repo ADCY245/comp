@@ -19,21 +19,22 @@
   const quantityStepEl = document.getElementById('chemStepQuantity');
   const summaryBody = document.getElementById('chemSummaryBody');
   // Deprecated pricing section removed
-const pricingSection = null;
-const summaryActions = document.getElementById('summaryActions');
+  const pricingSection = null;
+  const summaryActions = document.getElementById('summaryActions');
+
   // Discount dropdown is injected dynamically into the summary
-  // Helper to fetch the current discount percent from DOM
   function getDiscountPercent() {
     const discountSelectEl = document.getElementById('discountPercent');
-    if (discountSelectEl) {
-      if (Number.isFinite(state.discountPercent)) {
-        discountSelectEl.value = String(state.discountPercent);
+    if (discountSelectEl && discountSelectEl.value !== '') {
+      const val = parseFloat(discountSelectEl.value);
+      if (Number.isFinite(val)) {
+        state.discountPercent = val;
+        return val;
       }
-      discountSelectEl.addEventListener('change', () => {
-        state.discountPercent = Number(discountSelectEl.value) || 0;
-        updateSummary();
-      });
     }
+    return Number.isFinite(state.discountPercent) ? state.discountPercent : 0;
+  }
+
   // removed updateDiscountBtn (discount now inside summary)
   const pricingBreakdown = document.getElementById('pricingBreakdown');
   const addToCartBtn = document.getElementById('addToCartBtn');
