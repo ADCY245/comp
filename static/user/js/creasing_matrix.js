@@ -655,6 +655,7 @@
       },
       unit_price: unitPrice,
       price_per_roll: unitPrice,
+      quantity: quantityValue,
       quantity_rolls: quantityValue,
       total_length_m: rollLength > 0 ? quantityValue * rollLength : null,
       discount_percent: discountPercent,

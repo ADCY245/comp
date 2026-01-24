@@ -1002,12 +1002,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get and validate the quantity
         const type = cartItem.getAttribute('data-type');
         let newQuantity = parseFloat(input.value);
+        const isDecimalQuantity = type === 'chemical' || type === 'maintenance' || type === 'creasing_matrix';
+
         if (isNaN(newQuantity) || newQuantity <= 0) {
-            newQuantity = type === 'chemical' || type === 'maintenance' ? 0.1 : 1;
-            input.value = type === 'chemical' || type === 'maintenance'
+            newQuantity = isDecimalQuantity ? 0.1 : 1;
+            input.value = isDecimalQuantity
                 ? newQuantity.toFixed(2).replace(/\.00$/, '')
                 : Math.round(newQuantity);
-        } else if (type !== 'chemical' && type !== 'maintenance') {
+        } else if (!isDecimalQuantity) {
             newQuantity = Math.max(1, Math.round(newQuantity));
             input.value = newQuantity;
         } else {
@@ -1515,6 +1517,46 @@ function updateCartTotals() {
                         discount_percent: discountPercent,
                         gst_percent: gstPercent
                     });
+                } else if (type === 'creasing_matrix') {
+                    const quantityInput = item.querySelector('.quantity-input');
+                    const rawQuantity = quantityInput?.value
+                        ?? item.getAttribute('data-quantity')
+                        ?? item.dataset.quantity
+                        ?? item.getAttribute('data-quantity-rolls')
+                        ?? '1';
+                    const quantity = Math.max(1, Math.round(parseFloat(rawQuantity) || 1));
+                    const unitPrice = parseFloat(item.getAttribute('data-unit-price') || item.dataset.unitPrice || '0');
+                    const discountPercent = parseFloat(item.getAttribute('data-discount-percent') || '0');
+                    const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '18');
+
+                    const itemSubtotal = unitPrice * quantity;
+                    const discountAmount = itemSubtotal * (discountPercent / 100);
+                    const discountedSubtotal = itemSubtotal - discountAmount;
+                    const gstAmount = (discountedSubtotal * gstPercent) / 100;
+                    const itemTotal = discountedSubtotal + gstAmount;
+
+                    subtotal += itemSubtotal;
+                    totalDiscount += discountAmount;
+                    totalGst += gstAmount;
+                    total += itemTotal;
+                    totalItems += quantity;
+
+                    item.setAttribute('data-quantity', quantity.toString());
+                    item.setAttribute('data-unit-price', unitPrice.toString());
+
+                    updateItemDisplay(item, {
+                        type: 'creasing_matrix',
+                        unit_price: unitPrice,
+                        quantity,
+                        quantity_rolls: quantity,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent,
+                        subtotal: itemSubtotal,
+                        discount_amount: discountAmount,
+                        discounted_subtotal: discountedSubtotal,
+                        gst_amount: gstAmount,
+                        final_total: itemTotal
+                    });
                 } else if (type === 'rule') {
                     const quantity = parseInt(item.getAttribute('data-quantity') || '1');
                     const validQuantity = Number.isNaN(quantity) || quantity < 1 ? 1 : quantity;
@@ -1917,11 +1959,13 @@ function handleQuantityInputChange(event) {
     }
     
     let newQuantity = parseFloat(input.value);
+    const isDecimalQuantity = type === 'chemical' || type === 'maintenance' || type === 'creasing_matrix';
+
     if (isNaN(newQuantity) || newQuantity <= 0) {
-        newQuantity = type === 'chemical' || type === 'maintenance' ? 0.1 : 1;
+        newQuantity = isDecimalQuantity ? 0.1 : 1;
     }
 
-    if (type !== 'chemical' && type !== 'maintenance') {
+    if (!isDecimalQuantity) {
         newQuantity = Math.max(1, Math.round(newQuantity));
         input.value = newQuantity;
     } else {
@@ -2688,6 +2732,13 @@ function updateItemDisplay(item, data) {
         item.dataset.quantityLitre = litres || 0;
         item.dataset.discountPercent = data.discount_percent || 0;
         item.dataset.gstPercent = data.gst_percent || 18;
+    } else if (type === 'creasing_matrix') {
+        const quantity = data.quantity ?? data.quantity_rolls ?? 1;
+        item.dataset.unitPrice = data.unit_price || 0;
+        item.dataset.quantity = quantity;
+        item.dataset.quantityRolls = data.quantity_rolls ?? quantity;
+        item.dataset.discountPercent = data.discount_percent || 0;
+        item.dataset.gstPercent = data.gst_percent || 18;
     }
 
     // Sync additional metadata used in the descriptive section
@@ -3294,6 +3345,56 @@ function updateItemDisplay(item, data) {
         const hiddenTotalInput = item.querySelector('input[name$="_total"]');
         if (hiddenTotalInput) {
             hiddenTotalInput.value = total.toFixed(2);
+        }
+    } else if (type === 'creasing_matrix') {
+        const rawUnitPrice = data.unit_price ?? item.getAttribute('data-unit-price');
+        const rawQuantity = data.quantity ?? data.quantity_rolls ?? item.getAttribute('data-quantity') ?? item.getAttribute('data-quantity-rolls');
+        const rawDiscountPercent = data.discount_percent ?? item.getAttribute('data-discount-percent');
+        const rawGstPercent = data.gst_percent ?? item.getAttribute('data-gst-percent');
+
+        const unitPrice = Number(rawUnitPrice) || 0;
+        const quantity = Math.max(1, Math.round(Number(rawQuantity) || 1));
+        const discountPercent = Number(rawDiscountPercent) || 0;
+        const gstPercent = Number(rawGstPercent) || 18;
+
+        const subtotal = unitPrice * quantity;
+        const discountAmount = subtotal * (discountPercent / 100);
+        const discountedSubtotal = subtotal - discountAmount;
+        const gstAmount = discountedSubtotal * (gstPercent / 100);
+        const total = discountedSubtotal + gstAmount;
+
+        item.dataset.unitPrice = unitPrice.toString();
+        item.dataset.quantity = quantity.toString();
+        item.dataset.quantityRolls = quantity.toString();
+        item.dataset.discountPercent = discountPercent.toString();
+        item.dataset.gstPercent = gstPercent.toString();
+
+        const quantityInput = item.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.value = quantity;
+        }
+
+        if (discountInput && Object.prototype.hasOwnProperty.call(data, 'discount_percent')) {
+            discountInput.value = discountPercent % 1 === 0 ? discountPercent : discountPercent.toFixed(1);
+        }
+
+        const applyPrice = (selector, value, prefix = '₹') => {
+            const amount = Number.isFinite(value) ? value : 0;
+            item.querySelectorAll(selector).forEach(el => {
+                el.textContent = `${prefix}${amount.toFixed(2)}`;
+            });
+        };
+
+        applyPrice('.unit-price, .item-unit-price', unitPrice);
+        applyPrice('.subtotal, .item-subtotal, .subtotal-value', subtotal);
+        applyPrice('.discount-amount, .item-discount', discountAmount, '-₹');
+        applyPrice('.total-before-gst, .pre-gst-total .pre-gst-amount, .item-total-before-gst', discountedSubtotal);
+        applyPrice('.gst-amount, .item-gst', gstAmount);
+        applyPrice('.total-amount, .item-total, .total-value', total);
+
+        const gstPercentElement = item.querySelector('.gst-percent');
+        if (gstPercentElement) {
+            gstPercentElement.textContent = `${gstPercent}`;
         }
     }
 }
