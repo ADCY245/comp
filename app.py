@@ -7288,6 +7288,7 @@ def creasing_rule():
     return redirect(url_for('cutting_rule', **redirect_args))
 
 
+@app.route('/rules')
 @app.route('/cutting-rule')
 @login_required
 @company_required

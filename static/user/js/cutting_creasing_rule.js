@@ -384,13 +384,13 @@
   function lockCreasingThickness() {
     if (!thicknessSelect) return;
     const lockedValue = '2pt';
-    thicknessSelect.innerHTML = `<option value="${lockedValue}" selected>${lockedValue.toUpperCase()} (Fixed)</option>`;
+    thicknessSelect.innerHTML = `<option value="${lockedValue}" selected>${lockedValue.toUpperCase()}</option>`;
     thicknessSelect.value = lockedValue;
     thicknessSelect.disabled = true;
     state.selectedThickness = lockedValue;
     showSection(thicknessSection, thicknessSelect);
-    thicknessHelper.textContent = 'Thickness is fixed at 2pt for creasing rule selections.';
-    collapseStep(thicknessSection, `${lockedValue.toUpperCase()} (Fixed)`);
+    thicknessHelper.textContent = 'Thickness is automatically set to 2pt when using creasing rules.';
+    collapseStep(thicknessSection, `${lockedValue.toUpperCase()}`);
   }
 
   function unlockThicknessSelect() {
