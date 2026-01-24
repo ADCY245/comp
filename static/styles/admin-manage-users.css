@@ -140,8 +140,15 @@
 }
 
 /* Company detail modal styling */
-#companyModal .form-label {
+#companyModal .form-label,
+#userModal .form-label {
     color: #C8AA4E;
     letter-spacing: 0.02em;
+    font-weight: 600;
+}
+
+/* Modal titles golden color */
+.modal-title {
+    color: #C8AA4E !important;
     font-weight: 600;
 }
