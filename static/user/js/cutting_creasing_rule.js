@@ -4,6 +4,8 @@
     return;
   }
 
+  const editContext = detectEditContext();
+
   function buildCuttingCatalog(cuttingData = {}, fallbackPricing = DEFAULT_RULE_PRICING) {
     const packets = Array.isArray(cuttingData.packets) ? cuttingData.packets : [];
     const coils = Array.isArray(cuttingData.coils) ? cuttingData.coils : [];
@@ -164,10 +166,21 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initCollapsibleSteps();
-    initializeConfigurator().catch(error => {
-      console.error('cutting_creasing_rule.js: failed to initialize', error);
-      showToast?.('Error', 'Unable to load configurator. Please refresh.', 'error');
-    });
+    initializeConfigurator()
+      .then(async () => {
+        if (editContext.isEditMode && editContext.itemData) {
+          try {
+            await applyEditingItem(editContext.itemData);
+          } catch (prefillError) {
+            console.error('cutting_creasing_rule.js: failed to apply editing context', prefillError);
+            showToast?.('Warning', 'Loaded rule, but couldn\'t prefill previous values completely.', 'warning');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('cutting_creasing_rule.js: failed to initialize', error);
+        showToast?.('Error', 'Unable to load configurator. Please refresh.', 'error');
+      });
   });
 
   async function initializeConfigurator() {
@@ -303,6 +316,259 @@
         updateSummary();
       });
     }
+  }
+
+  function refreshSummaryActionButton() {
+    const summaryBtn = document.getElementById('ruleSummaryAddToCartBtn');
+    if (!summaryBtn) return;
+    summaryBtn.innerHTML = editContext.isEditMode
+      ? '<i class="fas fa-save"></i><span>Update item</span>'
+      : '<i class="fas fa-cart-plus"></i><span>Add to cart</span>';
+  }
+
+  function detectEditContext() {
+    const params = new URLSearchParams(window.location.search);
+    const isEditMode = params.get('edit') === 'true';
+    const itemId = params.get('item_id');
+    if (!isEditMode || !itemId) {
+      const stored = sessionStorage.getItem('editingCartItem');
+      if (!stored) {
+        return { isEditMode: false };
+      }
+      try {
+        const parsed = JSON.parse(stored);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: true, itemId: parsed.id || parsed._id, itemData: parsed };
+      } catch (err) {
+        console.error('cutting_creasing_rule.js: failed to parse editingCartItem', err);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: false };
+      }
+    }
+
+    const itemData = {};
+    params.forEach((value, key) => {
+      if (['edit', 'item_id', 'type', '_'].includes(key)) return;
+      try {
+        itemData[key] = JSON.parse(decodeURIComponent(value));
+      } catch (parseErr) {
+        itemData[key] = decodeURIComponent(value);
+      }
+    });
+
+    return {
+      isEditMode: true,
+      itemId,
+      itemData: {
+        ...itemData,
+        id: itemId,
+        type: params.get('type') || 'rule'
+      }
+    };
+  }
+
+  async function applyEditingItem(item) {
+    refreshSummaryActionButton();
+
+    if (item.machine) {
+      await selectMachineByLabel(item.machine);
+    }
+
+    if (item.rule_category) {
+      ruleTypeSelect.value = item.rule_category;
+      ruleTypeSelect.dispatchEvent(new Event('change'));
+    }
+
+    const thicknessValue = normalizeThickness(item.thickness || '2pt');
+    if (thicknessSelect && !thicknessSelect.disabled) {
+      thicknessSelect.value = thicknessValue;
+      thicknessSelect.dispatchEvent(new Event('change'));
+    } else if (state.selectedRuleType === 'creasing') {
+      state.selectedThickness = '2pt';
+    }
+
+    await waitFor(() => state.rawSizes?.[state.selectedRuleType === 'cutting' ? 'cutting' : 'creasing']);
+
+    if (item.profile_id) {
+      await selectSizeById(item.profile_id);
+    } else if (item.profile_label) {
+      await selectSizeByLabel(item.profile_label);
+    }
+
+    if (item.packaging_type || item.packaging) {
+      await selectPackagingById(item.packaging_type || item.packaging);
+    }
+
+    if (item.quantity) {
+      quantityInput.value = item.quantity;
+      quantityInput.dispatchEvent(new Event('input'));
+      quantityConfirmBtn?.click();
+    }
+
+    if (item.discount_percent !== undefined) {
+      state.discountPercent = Number(item.discount_percent) || 0;
+      updateSummary();
+    }
+  }
+
+  function selectMachineByLabel(label) {
+    if (!machineSelect || !label) return Promise.resolve();
+    const option = Array.from(machineSelect.options).find(opt => opt.textContent.trim() === label.trim());
+    if (option) {
+      machineSelect.value = option.value;
+      machineSelect.dispatchEvent(new Event('change'));
+    }
+    return Promise.resolve();
+  }
+
+  function selectSizeById(id) {
+    if (!sizeSelect || !id) return Promise.resolve();
+    return waitFor(() => !sizeSelect.disabled).then(() => {
+      const option = Array.from(sizeSelect.options).find(opt => opt.value === id);
+      if (option) {
+        sizeSelect.value = option.value;
+        sizeSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  function selectSizeByLabel(label) {
+    if (!sizeSelect || !label) return Promise.resolve();
+    return waitFor(() => !sizeSelect.disabled).then(() => {
+      const option = Array.from(sizeSelect.options).find(opt => opt.textContent.trim() === label.trim());
+      if (option) {
+        sizeSelect.value = option.value;
+        sizeSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  function selectPackagingById(packagingIdOrLabel) {
+    if (!packagingSelect || !packagingIdOrLabel) return Promise.resolve();
+    return waitFor(() => !packagingSelect.disabled).then(() => {
+      const option = Array.from(packagingSelect.options).find(opt => opt.value === packagingIdOrLabel || opt.textContent.trim() === packagingIdOrLabel.trim());
+      if (option) {
+        packagingSelect.value = option.value;
+        packagingSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  function waitFor(predicate, timeout = 3000, interval = 100) {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        try {
+          if (predicate()) {
+            resolve();
+            return;
+          }
+        } catch (err) {
+          reject(err);
+          return;
+        }
+
+        if (Date.now() - start >= timeout) {
+          reject(new Error('Timeout waiting for condition in rules edit mode'));
+          return;
+        }
+        setTimeout(check, interval);
+      };
+      check();
+    });
+  }
+
+  async function updateRuleCartItem(button) {
+    if (!editContext.isEditMode || !editContext.itemId) {
+      await addRuleToCart(button);
+      return;
+    }
+
+    const payload = buildRulePayload();
+    payload.item_id = editContext.itemId;
+    payload.id = editContext.itemId;
+
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating…';
+    }
+
+    try {
+      const response = await fetch('/update_cart_item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (!response.ok || result?.success === false) {
+        throw new Error(result?.error || 'Unable to update cart item');
+      }
+
+      showToast?.('Rule updated', 'Cart item refreshed with your edits.', 'success');
+      updateCartCount?.();
+      setTimeout(() => {
+        window.location.href = '/cart';
+      }, 800);
+    } catch (error) {
+      console.error('cutting_creasing_rule.js: update failed', error);
+      showToast?.('Error', error.message || 'Could not update this cart item.', 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-save"></i><span>Update item</span>';
+      }
+    }
+  }
+
+  function buildRulePayload() {
+    const pricing = getRulePricingSnapshot();
+    const unitPrice = pricing.unitPrice;
+    const quantity = pricing.quantity;
+    const discountPercent = pricing.discountPercent;
+    const gstPercent = pricing.gstPercent;
+    const subtotal = pricing.subtotal;
+    const discountAmount = pricing.discountAmount;
+    const discountedSubtotal = pricing.discountedSubtotal;
+    const gstAmount = pricing.gstAmount;
+    const finalTotal = pricing.finalTotal;
+    const lengthPerUnit = pricing.lengthPerUnit;
+    const ratePerMeter = pricing.ratePerMeter;
+    const totalLength = lengthPerUnit * quantity;
+
+    const thicknessLabel = state.selectedThickness || state.selectedSize?.displayThickness || state.selectedSize?.thickness || '2pt';
+    const profileCode = (state.selectedPackaging?.code || state.selectedSize?.code || '').trim();
+
+    return {
+      type: 'rule',
+      name: `${capitalize(state.selectedRuleType)} Rule - ${state.selectedSize?.label || 'Custom Spec'}`,
+      machine: state.selectedMachine || '',
+      rule_category: state.selectedRuleType,
+      thickness: thicknessLabel,
+      profile_id: state.selectedPackaging?.profileId || state.selectedSize?.id,
+      profile_label: state.selectedSize?.label,
+      profile_code: profileCode,
+      packaging: state.selectedPackaging?.label,
+      packaging_type: state.selectedPackaging?.packagingId,
+      quantity,
+      unit_price: round(unitPrice, 2),
+      length_per_unit_m: round(lengthPerUnit, 2),
+      rate_per_meter: round(ratePerMeter, 2),
+      total_length_m: round(totalLength, 2),
+      discount_percent: discountPercent,
+      gst_percent: gstPercent,
+      total_price: round(finalTotal, 2),
+      calculations: {
+        unit_price: round(unitPrice, 2),
+        subtotal: round(subtotal, 2),
+        discount_percent: discountPercent,
+        discount_amount: round(discountAmount, 2),
+        discounted_subtotal: round(discountedSubtotal, 2),
+        gst_percent: gstPercent,
+        gst_amount: round(gstAmount, 2),
+        final_total: round(finalTotal, 2)
+      }
+    };
   }
 
   function handleRuleTypeChange(event) {
@@ -597,16 +863,21 @@
     if (canAddToCart()) {
       summaryActions.innerHTML = `
         <button type="button" class="chem-summary__cta-btn add-to-cart-btn" id="ruleSummaryAddToCartBtn">
-          <i class="fas fa-cart-plus"></i>
-          <span>Add to cart</span>
+          <i class="fas fa-${editContext.isEditMode ? 'save' : 'cart-plus'}"></i>
+          <span>${editContext.isEditMode ? 'Update item' : 'Add to cart'}</span>
         </button>
       `;
+      refreshSummaryActionButton();
 
       const summaryCartBtn = document.getElementById('ruleSummaryAddToCartBtn');
       if (summaryCartBtn) {
         summaryCartBtn.addEventListener('click', async event => {
           event.preventDefault();
-          await addRuleToCart(summaryCartBtn);
+          if (editContext.isEditMode) {
+            await updateRuleCartItem(summaryCartBtn);
+          } else {
+            await addRuleToCart(summaryCartBtn);
+          }
         });
       }
     } else {
@@ -668,52 +939,7 @@
       return;
     }
 
-    const pricing = getRulePricingSnapshot();
-    const unitPrice = pricing.unitPrice;
-    const quantity = pricing.quantity;
-    const discountPercent = pricing.discountPercent;
-    const gstPercent = pricing.gstPercent;
-    const subtotal = pricing.subtotal;
-    const discountAmount = pricing.discountAmount;
-    const discountedSubtotal = pricing.discountedSubtotal;
-    const gstAmount = pricing.gstAmount;
-    const finalTotal = pricing.finalTotal;
-    const lengthPerUnit = pricing.lengthPerUnit;
-    const ratePerMeter = pricing.ratePerMeter;
-    const totalLength = lengthPerUnit * quantity;
-
-    const thicknessLabel = state.selectedThickness || state.selectedSize?.displayThickness || state.selectedSize?.thickness || '';
-    const profileCode = (state.selectedPackaging?.code || state.selectedSize?.code || '').trim();
-    const payload = {
-      type: 'rule',
-      name: `${capitalize(state.selectedRuleType)} Rule - ${state.selectedSize?.label || 'Custom Spec'}`,
-      machine: state.selectedMachine || '',
-      rule_category: state.selectedRuleType,
-      thickness: thicknessLabel,
-      profile_id: state.selectedPackaging?.profileId || state.selectedSize?.id,
-      profile_label: state.selectedSize?.label,
-      profile_code: profileCode,
-      packaging: state.selectedPackaging?.label,
-      packaging_type: state.selectedPackaging?.packagingId,
-      quantity,
-      unit_price: round(unitPrice, 2),
-      length_per_unit_m: round(lengthPerUnit, 2),
-      rate_per_meter: round(ratePerMeter, 2),
-      total_length_m: round(totalLength, 2),
-      discount_percent: discountPercent,
-      gst_percent: gstPercent,
-      total_price: round(finalTotal, 2),
-      calculations: {
-        unit_price: round(unitPrice, 2),
-        subtotal: round(subtotal, 2),
-        discount_percent: discountPercent,
-        discount_amount: round(discountAmount, 2),
-        discounted_subtotal: round(discountedSubtotal, 2),
-        gst_percent: gstPercent,
-        gst_amount: round(gstAmount, 2),
-        final_total: round(finalTotal, 2)
-      }
-    };
+    const payload = buildRulePayload();
 
     if (cartBtn) {
       cartBtn.disabled = true;
