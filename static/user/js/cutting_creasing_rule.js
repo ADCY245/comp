@@ -318,18 +318,36 @@
     }
   }
 
+  function resolveEditState() {
+    const params = new URLSearchParams(window.location.search);
+    const rawEdit = params.get('edit');
+    const editFlag = rawEdit !== null && ['1', 'true', 'yes', 'y', 'on'].includes(String(rawEdit).trim().toLowerCase());
+    const itemId = editContext.itemId || params.get('item_id') || editContext.itemData?.id || editContext.itemData?._id;
+    return {
+      isEditMode: editContext.isEditMode || editFlag || Boolean(itemId),
+      itemId
+    };
+  }
+
   function refreshSummaryActionButton() {
     const summaryBtn = document.getElementById('ruleSummaryAddToCartBtn');
     if (!summaryBtn) return;
-    summaryBtn.innerHTML = editContext.isEditMode
+    const { isEditMode } = resolveEditState();
+    summaryBtn.innerHTML = isEditMode
       ? '<i class="fas fa-save"></i><span>Update item</span>'
       : '<i class="fas fa-cart-plus"></i><span>Add to cart</span>';
   }
 
   function detectEditContext() {
+    const parseTruthy = value => {
+      if (typeof value === 'boolean') return value;
+      if (value === null || value === undefined) return false;
+      return ['1', 'true', 'yes', 'y', 'on'].includes(String(value).trim().toLowerCase());
+    };
     const params = new URLSearchParams(window.location.search);
-    const isEditMode = params.get('edit') === 'true';
     const itemId = params.get('item_id');
+    const hasEditFlag = parseTruthy(params.get('edit'));
+    const isEditMode = Boolean(itemId) || hasEditFlag;
     if (!isEditMode || !itemId) {
       const stored = sessionStorage.getItem('editingCartItem');
       if (!stored) {
@@ -479,14 +497,15 @@
   }
 
   async function updateRuleCartItem(button) {
-    if (!editContext.isEditMode || !editContext.itemId) {
+    const { isEditMode, itemId } = resolveEditState();
+    if (!isEditMode || !itemId) {
       await addRuleToCart(button);
       return;
     }
 
     const payload = buildRulePayload();
-    payload.item_id = editContext.itemId;
-    payload.id = editContext.itemId;
+    payload.item_id = itemId;
+    payload.id = itemId;
 
     if (button) {
       button.disabled = true;
