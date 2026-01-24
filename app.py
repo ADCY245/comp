@@ -6313,20 +6313,12 @@ def send_quotation():
         # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
         quote_id = get_next_quote_id()
 
-        logo_src = url_for('static', filename='images/CGI_LOGO_EMAIL.png', _external=True)
-        watermark_layer_html = ""
-        try:
-            png_path = os.path.join(app.root_path, 'static', 'images', 'CGI_LOGO_EMAIL.png')
-            with open(png_path, 'rb') as png_file:
-                png_base64 = base64.b64encode(png_file.read()).decode('utf-8')
-                logo_src = f"data:image/png;base64,{png_base64}"
-                watermark_layer_html = f"""
-                  <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.12; width:320px; max-width:60%; pointer-events:none;'>
-                    <img src='{logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
-                  </div>
-                """
-        except Exception as img_error:
-            app.logger.error(f"Failed to embed PNG logo for quotation email: {img_error}")
+        logo_src = "https://cgi-logo.tiiny.site/CGI_LOGO.svg"
+        watermark_layer_html = f"""
+          <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.12; width:320px; max-width:60%; pointer-events:none;'>
+            <img src='{logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
+          </div>
+        """
 
         company_name_display = "Chemo Graphic International (CGI)"
         company_email_html = "<a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a>"
