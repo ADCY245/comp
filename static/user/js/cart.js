@@ -1941,6 +1941,28 @@ function handleQuantityKeyDown(event) {
 }
 
 // Function to handle change item button clicks
+function resolveConfiguratorPath(productType) {
+    const normalized = String(productType || '').trim().toLowerCase();
+    const routeMap = {
+        chemical: '/chemicals',
+        rule: '/rules',
+        creasing_matrix: '/creasing-matrix',
+        blanket: '/blankets',
+        mpack: '/mpacks',
+        spray_powder: '/spray-powder'
+    };
+
+    if (routeMap[normalized]) {
+        return routeMap[normalized];
+    }
+
+    if (!normalized) {
+        return null;
+    }
+
+    return normalized.endsWith('s') ? `/${normalized}` : `/${normalized}s`;
+}
+
 function handleChangeItem(e) {
     if (!e.target.closest('.change-item-btn')) return;
     
@@ -2023,7 +2045,12 @@ function handleChangeItem(e) {
     
     try {
         // Prepare the redirect URL based on item type
-        const baseUrl = `/${item.type}s`;
+        const baseUrl = resolveConfiguratorPath(item.type);
+        if (!baseUrl) {
+            console.error('❌ Unable to resolve configurator path for item type:', item.type);
+            showToast('Error', 'Cannot edit this product because its configurator is unknown.', 'error');
+            return;
+        }
         const urlParams = new URLSearchParams();
         
         // Add edit mode and item ID

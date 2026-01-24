@@ -1,6 +1,12 @@
 (function() {
   const dataUrl = '/static/data/creasing_matrix/options.json';
 
+  function isTruthyFlag(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === null || value === undefined) return false;
+    return ['1', 'true', 'yes', 'y', 'on'].includes(String(value).trim().toLowerCase());
+  }
+
   const machineSelect = document.getElementById('creasingMatrixMachineSelect');
   const thicknessSelect = document.getElementById('creasingMatrixThicknessSelect');
   const thicknessHelper = document.getElementById('creasingMatrixThicknessHelper');
@@ -16,6 +22,8 @@
     return;
   }
 
+  const editContext = detectEditContext();
+
   const state = {
     machineName: '',
     machines: [],
@@ -23,13 +31,183 @@
     selectedThickness: null,
     selectedSize: null,
     quantityRolls: null,
-    quantityConfirmed: false
+    quantityConfirmed: false,
+    discountPercent: 0
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    initializeConfigurator();
     initCollapsibleSteps();
+    initializeConfigurator()
+      .then(async () => {
+        if (editContext.isEditMode && editContext.itemData) {
+          try {
+            await applyEditingItem(editContext.itemData);
+          } catch (error) {
+            console.error('creasing_matrix.js: failed to apply editing context', error);
+            showToast('Warning', 'Loaded creasing matrix but previous selections were not fully restored.', 'warning');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('creasing_matrix.js: initialization failed', error);
+        showToast('Error', 'Could not load the creasing matrix configurator. Please refresh.', 'error');
+      });
   });
+
+  function detectEditContext() {
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get('item_id');
+    const hasEditFlag = isTruthyFlag(params.get('edit'));
+    const isEditMode = Boolean(itemId) || hasEditFlag;
+
+    if (!isEditMode || !itemId) {
+      const stored = sessionStorage.getItem('editingCartItem');
+      if (!stored) {
+        return { isEditMode: false };
+      }
+      try {
+        const parsed = JSON.parse(stored);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: true, itemId: parsed.id || parsed._id, itemData: parsed };
+      } catch (err) {
+        console.error('creasing_matrix.js: failed to parse editingCartItem', err);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: false };
+      }
+    }
+
+    const itemData = {};
+    params.forEach((value, key) => {
+      if (['edit', 'item_id', 'type', '_'].includes(key)) return;
+      try {
+        itemData[key] = JSON.parse(decodeURIComponent(value));
+      } catch (parseErr) {
+        itemData[key] = decodeURIComponent(value);
+      }
+    });
+
+    return {
+      isEditMode: true,
+      itemId,
+      itemData: {
+        ...itemData,
+        id: itemId,
+        type: params.get('type') || 'creasing_matrix'
+      }
+    };
+  }
+
+  function resolveEditState() {
+    const params = new URLSearchParams(window.location.search);
+    const itemId = editContext.itemId || params.get('item_id') || editContext.itemData?.id || editContext.itemData?._id;
+    const editFlag = isTruthyFlag(params.get('edit'));
+    return {
+      isEditMode: Boolean(editContext.isEditMode || editFlag || itemId),
+      itemId
+    };
+  }
+
+  function waitFor(predicate, timeout = 4000, interval = 50) {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        try {
+          if (predicate()) {
+            resolve();
+            return;
+          }
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (Date.now() - start >= timeout) {
+          reject(new Error('creasing_matrix.js: timed out waiting for configurator state'));
+          return;
+        }
+        setTimeout(check, interval);
+      };
+      check();
+    });
+  }
+
+  function selectMachineByLabel(label) {
+    if (!machineSelect || !label) return;
+    const normalized = label.trim().toLowerCase();
+    const option = Array.from(machineSelect.options).find(opt => opt.textContent.trim().toLowerCase() === normalized);
+    if (option) {
+      machineSelect.value = option.value;
+      machineSelect.dispatchEvent(new Event('change'));
+    } else {
+      state.machineName = label;
+      updateSummary();
+    }
+  }
+
+  async function selectThicknessByIdentifier(identifier) {
+    if (!identifier) return;
+    await waitFor(() => state.thicknesses.length > 0);
+    const normalized = String(identifier).trim().toLowerCase();
+    const target = state.thicknesses.find(entry => {
+      return (
+        String(entry.id) === String(identifier) ||
+        (entry.label && entry.label.trim().toLowerCase() === normalized) ||
+        (entry.value && String(entry.value).trim().toLowerCase() === normalized)
+      );
+    });
+    if (target) {
+      selectThickness(target.id);
+      await waitFor(() => state.selectedThickness?.id === target.id);
+    }
+  }
+
+  async function selectSizeByIdentifier(identifier) {
+    if (!identifier) return;
+    await waitFor(() => Boolean(state.selectedThickness));
+    const normalized = String(identifier).trim().toLowerCase();
+    const sizes = Array.isArray(state.selectedThickness?.sizes) ? state.selectedThickness.sizes : [];
+    const target = sizes.find(size => {
+      return (
+        String(size.id) === String(identifier) ||
+        (size.label && size.label.trim().toLowerCase() === normalized)
+      );
+    });
+    if (target) {
+      selectSize(target.id);
+      await waitFor(() => state.selectedSize?.id === target.id);
+    }
+  }
+
+  async function applyEditingItem(item) {
+    if (!item) return;
+
+    if (item.machine) {
+      selectMachineByLabel(item.machine);
+    }
+
+    const thicknessIdentifier = item.thickness_id || item.thickness_label || item.thickness;
+    await selectThicknessByIdentifier(thicknessIdentifier);
+
+    const sizeIdentifier = item.size_id || item.size_label || item.size;
+    await selectSizeByIdentifier(sizeIdentifier);
+
+    const quantityValue = Number(item.quantity_rolls ?? item.quantity);
+    if (Number.isFinite(quantityValue) && quantityValue > 0) {
+      quantityInput.value = quantityValue;
+      quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
+      state.quantityRolls = quantityValue;
+      state.quantityConfirmed = true;
+      if (confirmQuantityBtn && !confirmQuantityBtn.disabled) {
+        confirmQuantityBtn.click();
+      }
+    }
+
+    if (item.discount_percent !== undefined) {
+      state.discountPercent = Number(item.discount_percent) || 0;
+    }
+
+    updateSummary();
+  }
 
   async function initializeConfigurator() {
     setThicknessLoading('Loading thickness options…');
@@ -321,7 +499,9 @@
 
     let discountLabel = '';
     if (hasCompleteSelection) {
-      const discountPercent = getDiscountPercent();
+      const discountValue = getDiscountPercent();
+      const discountPercent = Math.max(0, Math.min(100, Number.isFinite(discountValue) ? discountValue : 0));
+      state.discountPercent = discountPercent;
       discountLabel = discountPercent > 0 ? ` (${discountPercent}% discount)` : '';
       const unitPrice = getUnitPrice();
       const subtotal = unitPrice * quantityValue;
@@ -348,22 +528,23 @@
 
       if (summaryActions) {
         if (hasCompleteSelection) {
+          const { isEditMode } = resolveEditState();
           summaryActions.innerHTML = `
-            <button type="button" class="chem-summary__cta-btn add-to-cart-btn">
-              <i class="fas fa-cart-plus"></i>
-              <span>Add to cart</span>
+            <button type="button" class="chem-summary__cta-btn add-to-cart-btn" id="creasingMatrixAddToCartBtn">
+              <i class="fas fa-${isEditMode ? 'save' : 'cart-plus'}"></i>
+              <span>${isEditMode ? 'Update item' : 'Add to cart'}</span>
             </button>
           `;
 
-          const summaryCartBtn = summaryActions.querySelector('.add-to-cart-btn');
+          const summaryCartBtn = document.getElementById('creasingMatrixAddToCartBtn');
           if (summaryCartBtn) {
             summaryCartBtn.addEventListener('click', async event => {
               event.preventDefault();
               try {
                 await addMatrixToCart(summaryCartBtn);
               } catch (error) {
-                console.error('creasing_matrix.js: failed to add to cart', error);
-                showToast('Error', 'Failed to add creasing matrix to cart. Please try again.', 'error');
+                console.error('creasing_matrix.js: failed to process cart action', error);
+                showToast('Error', 'Failed to process your request. Please try again.', 'error');
               }
             });
           }
@@ -386,8 +567,14 @@
 
   function getDiscountPercent() {
     const discountSelectEl = document.getElementById('creasingMatrixDiscountPercent');
-    const value = parseFloat(discountSelectEl && discountSelectEl.value);
-    return Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+    if (discountSelectEl && discountSelectEl.value !== '') {
+      const value = parseFloat(discountSelectEl.value);
+      if (Number.isFinite(value)) {
+        state.discountPercent = value;
+        return value;
+      }
+    }
+    return Math.max(0, Math.min(100, Number.isFinite(state.discountPercent) ? state.discountPercent : 0));
   }
 
   function renderDiscountControl(discountPercent, discountAmount, discountedSubtotal) {
@@ -413,7 +600,11 @@
   function rebindDiscountSelect() {
     const discountSelectEl = document.getElementById('creasingMatrixDiscountPercent');
     if (discountSelectEl) {
+      if (Number.isFinite(state.discountPercent)) {
+        discountSelectEl.value = String(state.discountPercent);
+      }
       discountSelectEl.addEventListener('change', () => {
+        state.discountPercent = Number(discountSelectEl.value) || 0;
         updateSummary();
       });
     }
@@ -444,8 +635,11 @@
     const finalTotal = discountedSubtotal + gstAmount;
     const rollLength = Number(state.selectedSize.length_m) || 0;
 
+    const { isEditMode, itemId } = resolveEditState();
+    const resolvedId = isEditMode && itemId ? itemId : 'creasing_matrix_' + Date.now();
+
     const payload = {
-      id: 'creasing_matrix_' + Date.now(),
+      id: resolvedId,
       type: 'creasing_matrix',
       name: `${state.selectedThickness.label || state.selectedThickness.id} - ${state.selectedSize.label}`,
       machine: state.machineName || '--',
@@ -474,34 +668,52 @@
       added_at: new Date().toISOString()
     };
 
-    if (cartBtn) {
-      const originalText = cartBtn.innerHTML;
-      cartBtn.disabled = true;
-      cartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+    const targetBtn = cartBtn || document.getElementById('creasingMatrixAddToCartBtn');
+    if (targetBtn) {
+      const originalText = targetBtn.innerHTML;
+      targetBtn.disabled = true;
+      targetBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${isEditMode ? 'Updating…' : 'Adding…'}`;
 
       try {
-        const response = await fetch('/add_to_cart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        let response;
+        if (isEditMode && itemId) {
+          payload.item_id = resolvedId;
+          response = await fetch('/update_cart_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          response = await fetch('/add_to_cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
 
         const data = await response.json();
         if (data.success) {
-          showToast('Success', 'Creasing matrix added to cart!', 'success');
+          showToast('Success', isEditMode ? 'Creasing matrix updated!' : 'Creasing matrix added to cart!', 'success');
           if (typeof updateCartCount === 'function') {
             updateCartCount();
           }
-          setTimeout(() => resetForm(), 1500);
+
+          if (isEditMode && itemId) {
+            setTimeout(() => {
+              window.location.href = '/cart';
+            }, 800);
+          } else {
+            setTimeout(() => resetForm(), 1500);
+          }
         } else {
-          throw new Error(data.message || 'Failed to add to cart');
+          throw new Error(data.message || 'Failed to save creasing matrix');
         }
       } catch (error) {
-        console.error('creasing_matrix.js: error adding to cart', error);
-        showToast('Error', error.message || 'Failed to add creasing matrix to cart. Please try again.', 'error');
+        console.error('creasing_matrix.js: error saving cart item', error);
+        showToast('Error', error.message || 'Failed to process creasing matrix. Please try again.', 'error');
       } finally {
-        cartBtn.disabled = false;
-        cartBtn.innerHTML = originalText;
+        targetBtn.disabled = false;
+        targetBtn.innerHTML = originalText;
       }
     }
   }
@@ -512,6 +724,7 @@
     state.quantityRolls = null;
     state.quantityConfirmed = false;
     state.machineName = '';
+    state.discountPercent = 0;
 
     if (machineSelect) machineSelect.value = '';
     thicknessSelect.value = '';
