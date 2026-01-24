@@ -1,6 +1,14 @@
 (function() {
   const dataUrl = '/static/data/chemicals/products.json';
 
+  function isTruthyFlag(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === null || value === undefined) return false;
+    return ['1', 'true', 'yes', 'y', 'on'].includes(String(value).trim().toLowerCase());
+  }
+
+  const editContext = detectEditContext();
+
   const machineSelect = document.getElementById('machineSelect');
   const categoryOptionsEl = document.getElementById('categoryOptions');
   const productOptionsEl = document.getElementById('productOptions');
@@ -16,10 +24,16 @@ const summaryActions = document.getElementById('summaryActions');
   // Discount dropdown is injected dynamically into the summary
   // Helper to fetch the current discount percent from DOM
   function getDiscountPercent() {
-    const el = document.getElementById('discountPercent');
-    const v = parseFloat(el && el.value);
-    return Number.isFinite(v) ? v : 0;
-  }
+    const discountSelectEl = document.getElementById('discountPercent');
+    if (discountSelectEl) {
+      if (Number.isFinite(state.discountPercent)) {
+        discountSelectEl.value = String(state.discountPercent);
+      }
+      discountSelectEl.addEventListener('change', () => {
+        state.discountPercent = Number(discountSelectEl.value) || 0;
+        updateSummary();
+      });
+    }
   // removed updateDiscountBtn (discount now inside summary)
   const pricingBreakdown = document.getElementById('pricingBreakdown');
   const addToCartBtn = document.getElementById('addToCartBtn');
@@ -36,8 +50,168 @@ const summaryActions = document.getElementById('summaryActions');
     selectedProduct: null,
     selectedFormat: null,
     quantityLitres: null,
-    quantityConfirmed: false
+    quantityConfirmed: false,
+    discountPercent: 0
   };
+
+  function detectEditContext() {
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get('item_id');
+    const hasEditFlag = isTruthyFlag(params.get('edit'));
+    const isEditMode = Boolean(itemId) || hasEditFlag;
+
+    if (!isEditMode || !itemId) {
+      const stored = sessionStorage.getItem('editingCartItem');
+      if (!stored) {
+        return { isEditMode: false };
+      }
+      try {
+        const parsed = JSON.parse(stored);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: true, itemId: parsed.id || parsed._id, itemData: parsed };
+      } catch (err) {
+        console.error('chemicals.js: failed to parse editingCartItem', err);
+        sessionStorage.removeItem('editingCartItem');
+        return { isEditMode: false };
+      }
+    }
+
+    const itemData = {};
+    params.forEach((value, key) => {
+      if (['edit', 'item_id', 'type', '_'].includes(key)) return;
+      try {
+        itemData[key] = JSON.parse(decodeURIComponent(value));
+      } catch (parseErr) {
+        itemData[key] = decodeURIComponent(value);
+      }
+    });
+
+    return {
+      isEditMode: true,
+      itemId,
+      itemData: {
+        ...itemData,
+        id: itemId,
+        type: params.get('type') || 'chemical'
+      }
+    };
+  }
+
+  function resolveEditState() {
+    const params = new URLSearchParams(window.location.search);
+    const itemId = editContext.itemId || params.get('item_id') || editContext.itemData?.id || editContext.itemData?._id;
+    const editFlag = isTruthyFlag(params.get('edit'));
+    return {
+      isEditMode: Boolean(editContext.isEditMode || editFlag || itemId),
+      itemId
+    };
+  }
+
+  function waitFor(predicate, timeout = 4000, interval = 50) {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        try {
+          if (predicate()) {
+            resolve();
+            return;
+          }
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (Date.now() - start >= timeout) {
+          reject(new Error('chemicals.js: timed out waiting for configurator state'));
+          return;
+        }
+        setTimeout(check, interval);
+      };
+      check();
+    });
+  }
+
+  function selectMachineByLabel(label) {
+    if (!machineSelect || !label) return;
+    const normalized = label.trim().toLowerCase();
+    const option = Array.from(machineSelect.options).find(opt => opt.textContent.trim().toLowerCase() === normalized);
+    if (option) {
+      machineSelect.value = option.value;
+      machineSelect.dispatchEvent(new Event('change'));
+    } else {
+      state.machineName = label;
+      updateSummary();
+    }
+  }
+
+  async function selectCategoryByIdentifier(identifier) {
+    if (!identifier) return;
+    await waitFor(() => state.categories.length > 0);
+    const normalized = String(identifier).trim().toLowerCase();
+    const target = state.categories.find(cat => String(cat.id) === String(identifier) || cat.name?.trim().toLowerCase() === normalized);
+    if (target) {
+      selectCategory(target.id);
+      await waitFor(() => state.selectedCategory?.id === target.id);
+    }
+  }
+
+  async function selectProductByIdentifier(identifier) {
+    if (!identifier || !state.selectedCategory) return;
+    const products = Array.isArray(state.selectedCategory.products) ? state.selectedCategory.products : [];
+    const normalized = String(identifier).trim().toLowerCase();
+    const target = products.find(prod => String(prod.id) === String(identifier) || prod.name?.trim().toLowerCase() === normalized);
+    if (target) {
+      selectProduct(target.id);
+      await waitFor(() => state.selectedProduct?.id === target.id);
+    }
+  }
+
+  async function selectFormatByIdentifier(identifier) {
+    if (!identifier || !state.selectedProduct) return;
+    const formats = Array.isArray(state.selectedProduct.formats) ? state.selectedProduct.formats : [];
+    const normalized = String(identifier).trim().toLowerCase();
+    const target = formats.find(fmt => String(fmt.id) === String(identifier) || fmt.label?.trim().toLowerCase() === normalized);
+    if (target) {
+      selectFormat(target.id);
+      await waitFor(() => state.selectedFormat?.id === target.id);
+    }
+  }
+
+  async function applyEditingItem(item) {
+    if (!item) return;
+
+    if (item.machine) {
+      selectMachineByLabel(item.machine);
+    }
+
+    const categoryIdentifier = item.category_id || item.category;
+    await selectCategoryByIdentifier(categoryIdentifier);
+
+    const productIdentifier = item.product_id || item.name;
+    await selectProductByIdentifier(productIdentifier);
+
+    const formatIdentifier = item.format_id || item.format_label;
+    await selectFormatByIdentifier(formatIdentifier);
+
+    const quantityLitres = Number(item.quantity_litre ?? item.quantity);
+    if (Number.isFinite(quantityLitres) && quantityLitres > 0) {
+      if (quantityInput) {
+        quantityInput.value = quantityLitres;
+        quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      state.quantityLitres = quantityLitres;
+      state.quantityConfirmed = true;
+      if (confirmQuantityBtn && !confirmQuantityBtn.disabled) {
+        confirmQuantityBtn.click();
+      }
+    }
+
+    if (item.discount_percent !== undefined) {
+      state.discountPercent = Number(item.discount_percent) || 0;
+    }
+
+    updateSummary();
+  }
 
   function getBasePricePerLitre(product = state.selectedProduct, format = state.selectedFormat) {
     const productPrice = product && Number(product.price_per_litre);
@@ -54,8 +228,22 @@ const summaryActions = document.getElementById('summaryActions');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    initializeConfigurator();
     initCollapsibleSteps();
+    initializeConfigurator()
+      .then(async () => {
+        if (editContext.isEditMode && editContext.itemData) {
+          try {
+            await applyEditingItem(editContext.itemData);
+          } catch (prefillErr) {
+            console.error('chemicals.js: failed to apply editing context', prefillErr);
+            showToast('Warning', 'Chemical loaded, but previous values could not be fully restored.', 'warning');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('chemicals.js: initialization failed', error);
+        showToast('Error', 'Unable to load the chemical configurator. Please refresh.', 'error');
+      });
   });
 
   async function initializeConfigurator() {
@@ -492,46 +680,6 @@ const summaryActions = document.getElementById('summaryActions');
       if (summaryActions) {
         summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Your cart button will appear after you complete the selections.</p>';
       }
-    } else {
-      summaryBody.innerHTML = items.join('');
-      // Rewire discount listener on freshly rendered select
-      const discountSelectEl = document.getElementById('discountPercent');
-      if (discountSelectEl) {
-        discountSelectEl.addEventListener('change', () => {
-          updateSummary();
-        });
-      }
-
-      if (summaryActions) {
-        if (hasCompleteSelection) {
-          summaryActions.innerHTML = `
-            <button type="button" class="chem-summary__cta-btn add-to-cart-btn">
-              <i class="fas fa-cart-plus"></i>
-              <span>Add to cart</span>
-            </button>
-          `;
-
-          const summaryCartBtn = summaryActions.querySelector('.add-to-cart-btn');
-          if (summaryCartBtn) {
-            summaryCartBtn.addEventListener('click', async (event) => {
-              event.preventDefault();
-              try {
-                await addChemicalToCart();
-              } catch (error) {
-                console.error('chemicals.js: failed to add to cart from summary', error);
-                showToast('Error', 'Failed to add chemical to cart. Please try again.', 'error');
-              }
-            });
-          }
-        } else {
-          summaryActions.innerHTML = '<p class="chem-summary__note chem-summary__note--muted mb-0">Confirm volume to enable the cart button.</p>';
-        }
-      }
-
-      // Auto-collapse completed steps
-      if (state.selectedCategory) {
-        collapseStep(document.getElementById('chemStepCategory'), state.selectedCategory.name);
-      }
       if (state.selectedProduct) {
         collapseStep(document.getElementById('chemStepProduct'), state.selectedProduct.name);
       }
@@ -717,31 +865,50 @@ const summaryActions = document.getElementById('summaryActions');
     };
 
     // Show loading state on the Add to Cart button
-    const cartBtn = document.querySelector('.add-to-cart-btn') || addToCartBtn;
+    const cartBtn = document.getElementById('chemSummaryAddToCartBtn') || document.querySelector('.add-to-cart-btn') || addToCartBtn;
     if (cartBtn) {
       const originalText = cartBtn.innerHTML;
       cartBtn.disabled = true;
-      cartBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+      const { isEditMode } = resolveEditState();
+      cartBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${isEditMode ? 'Updating…' : 'Adding…'}`;
 
       try {
-        const response = await fetch('/add_to_cart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(chemicalProduct)
-        });
+        let response;
+        const { itemId, isEditMode: editModeResolved } = resolveEditState();
+        const payload = { ...chemicalProduct };
+        if (editModeResolved && itemId) {
+          payload.id = itemId;
+          payload.item_id = itemId;
+          response = await fetch('/update_cart_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          response = await fetch('/add_to_cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
 
         const data = await response.json();
 
         if (data.success) {
-          showToast('Success', 'Chemical added to cart!', 'success');
+          showToast('Success', editModeResolved ? 'Chemical updated!' : 'Chemical added to cart!', 'success');
           updateCartCount();
 
-          // Reset form after successful addition
-          setTimeout(() => {
-            resetForm();
-          }, 1500);
+          if (editModeResolved && itemId) {
+            setTimeout(() => {
+              window.location.href = '/cart';
+            }, 800);
+          } else {
+            setTimeout(() => {
+              resetForm();
+            }, 1500);
+          }
         } else {
-          throw new Error(data.message || 'Failed to add to cart');
+          throw new Error(data.message || 'Failed to save chemical');
         }
       } catch (error) {
         console.error('Error adding chemical to cart:', error);
