@@ -1928,7 +1928,7 @@ async function addMpackToCart() {
 
   const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
   const standardSizeLabel = selectedSize || standardSize.label || customSizeLabel;
-  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : (standardSize.rollLength || standardAlong);
+  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
   const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
   const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
 
