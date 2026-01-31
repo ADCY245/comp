@@ -9,6 +9,13 @@ const togglePassword = document.querySelector('.toggle-password');
 
 // Initialize the login form
 document.addEventListener('DOMContentLoaded', () => {
+  try {
+    localStorage.removeItem('selectedCompany');
+    sessionStorage.removeItem('selectedCompany');
+  } catch (storageError) {
+    console.warn('Unable to clear stored company selection:', storageError);
+  }
+
   setupEventListeners();
   
   // Check for success message in URL (after registration)

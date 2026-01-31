@@ -981,29 +981,35 @@
         // Handle logout with confirmation
         const logoutButton = document.getElementById('logoutButton');
         if (logoutButton) {
-            logoutButton.addEventListener('click', async function(e) {
+            logoutButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                if (confirm('Are you sure you want to sign out?')) {
-                    try {
-                        const response = await fetch('{{ url_for("api_logout") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            credentials: 'same-origin'
-                        });
-                        
-                        if (response.ok) {
-                            window.location.href = '{{ url_for("login") }}';
-                        } else {
-                            console.error('Logout failed');
-                            window.location.reload();
-                        }
-                    } catch (error) {
-                        console.error('Error during logout:', error);
+                const modal = new bootstrap.Modal(document.getElementById('logoutConfirmationModal'));
+                modal.show();
+            });
+        }
+
+        const confirmLogoutButton = document.getElementById('confirmLogout');
+        if (confirmLogoutButton) {
+            confirmLogoutButton.addEventListener('click', async function() {
+                try {
+                    const response = await fetch('{{ url_for("api_logout") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+                    
+                    if (response.ok) {
                         window.location.href = '{{ url_for("login") }}';
+                    } else {
+                        console.error('Logout failed');
+                        window.location.reload();
                     }
+                } catch (error) {
+                    console.error('Error during logout:', error);
+                    window.location.href = '{{ url_for("login") }}';
                 }
             });
         }

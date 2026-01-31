@@ -217,6 +217,42 @@ app.jinja_loader.searchpath.append(os.path.join(app.root_path, 'templates', 'use
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# -------------------- Helpers --------------------
+
+def reset_company_selection_session():
+    """Clear any stored company selection data so the user must re-select."""
+    cleared = False
+    for key in ('selected_company', 'company_id', 'company_name', 'company_email', 'company', 'email'):
+        if key in session:
+            session.pop(key, None)
+            cleared = True
+    if cleared:
+        session.modified = True
+
+
+def clear_login_prompt_flash():
+    """Remove the automatic 'please log in' flash from Flask-Login if it exists."""
+    flashes = session.get('_flashes')
+    if not flashes:
+        return
+
+    filtered = [
+        flash for flash in flashes
+        if not (
+            isinstance(flash, (list, tuple)) and len(flash) >= 2 and
+            flash[0] == getattr(login_manager, 'login_message_category', None) and
+            flash[1] == getattr(login_manager, 'login_message', None)
+        )
+    ]
+
+    if len(filtered) != len(flashes):
+        if filtered:
+            session['_flashes'] = filtered
+        else:
+            session.pop('_flashes', None)
+        session.modified = True
+
 # -------------------- Company selection enforcement --------------------
 
 def company_required(view_func):
@@ -6940,9 +6976,13 @@ def api_login():
                 )
                 
                 print(f'Successfully created user object for login: {user.email} (ID: {user.id})')
-                
+
+                # Clear any previously selected company from earlier sessions
+                reset_company_selection_session()
+
                 # Log the user in
                 login_user(user)
+                clear_login_prompt_flash()
                 print(f'User {user.username} logged in successfully')
                 
                 if request.is_json:
@@ -7016,8 +7056,10 @@ def api_login():
         if not user.check_password(password):
             print('Password verification failed for JSON user')
             return jsonify({'error': 'Invalid email/username or password'}), 401
-            
+
+        reset_company_selection_session()
         login_user(user)
+        clear_login_prompt_flash()
         print(f'User {user.username} logged in successfully (JSON storage)')
         
         return jsonify({
