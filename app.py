@@ -2153,7 +2153,7 @@ def build_quotation_company_details(selected_company=None, session_company_id=No
 
     email = (company_record.get('email') or company_record.get('EmailID')) if company_record else None
     if not email:
-        email = company_email or placeholder
+        email = company_email or selected_company.get('email') or placeholder
 
     address = ''
     if company_record:

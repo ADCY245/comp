@@ -163,10 +163,10 @@
                             <div>
                                 <div class="text-muted small">Email</div>
                                 <div>
-                                    {% if company_details.email %}
+                                    {% if company_details.email and company_details.email != '--' %}
                                         <a href="mailto:{{ company_details.email }}">{{ company_details.email }}</a>
                                     {% else %}
-                                        <span class="text-muted">--</span>
+                                        <span class="text-muted">No email provided</span>
                                     {% endif %}
                                 </div>
                             </div>
