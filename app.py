@@ -306,10 +306,10 @@ def company_required(view_func):
                 app.logger.info("[DEBUG] Updated session with company details")
                 return view_func(*args, **kwargs)
 
-        # Otherwise, redirect to company selection
-        app.logger.warning("[DEBUG] No company selected, redirecting to company selection")
+        # Otherwise, redirect to home with a warning
+        app.logger.warning("[DEBUG] No company selected, redirecting to index")
         flash('Please select a company first.', 'warning')
-        return redirect(url_for('company_selection'))
+        return redirect(url_for('index'))
     return wrapped_view
 
 
@@ -3392,7 +3392,7 @@ def cart():
         active_company_id = selected_company.get('id')
         if not active_company_id:
             flash('Please select a company before accessing the cart.', 'warning')
-            return redirect(url_for('company_selection'))
+            return redirect(url_for('index'))
 
         # Ensure products list exists
         cart_data.setdefault("products", [])
