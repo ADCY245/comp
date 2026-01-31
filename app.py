@@ -228,23 +228,22 @@ def company_required(view_func):
     def wrapped_view(*args, **kwargs):
         app.logger.info("[DEBUG] company_required decorator called for %s", request.path)
         
-        # If session already has a selected company, allow
-        selected_company = session.get('selected_company', {})
+        # If session already has a selected company id, allow
+        selected_company = session.get('selected_company', {}) or {}
         app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
-        
-        if selected_company.get('id'):
-            app.logger.info("[DEBUG] Company already selected, allowing access")
-            return view_func(*args, **kwargs)
+        session_company_id = session.get('company_id')
+        active_company_id = selected_company.get('id') or session_company_id
 
-        # Check for company_name and company_email in session as fallback
-        if session.get('company_name') or session.get('company_email'):
-            app.logger.info("[DEBUG] Found company_name/email in session, creating selected_company")
-            session['selected_company'] = {
-                'id': session.get('company_id'),
-                'name': session.get('company_name', ''),
-                'email': session.get('company_email', '')
-            }
-            session.modified = True
+        if active_company_id:
+            # Ensure the selected_company dict is populated with the active id
+            if not selected_company.get('id'):
+                session['selected_company'] = {
+                    'id': active_company_id,
+                    'name': selected_company.get('name') or session.get('company_name', ''),
+                    'email': selected_company.get('email') or session.get('company_email', '')
+                }
+                session.modified = True
+            app.logger.info("[DEBUG] Company already selected (id=%s), allowing access", active_company_id)
             return view_func(*args, **kwargs)
 
         # Attempt to use company_id from query parameters (first-time access)
@@ -3351,10 +3350,17 @@ def cart():
         cart_data = get_user_cart()
         if not isinstance(cart_data, dict):
             cart_data = {"products": []}
-        
+
+        # Verify company selection even after decorator guard (belt-and-suspenders)
+        selected_company = session.get('selected_company', {}) or {}
+        active_company_id = selected_company.get('id') or session.get('company_id')
+        if not active_company_id:
+            flash('Please select a company before accessing the cart.', 'warning')
+            return redirect(url_for('company_selection'))
+
         # Ensure products list exists
         cart_data.setdefault("products", [])
-        
+
         # Calculate cart totals using the actual total field from each product
         total = 0
         if cart_data.get('products'):
@@ -3383,9 +3389,7 @@ def cart():
             }
         
         # Get company info with proper fallbacks
-        selected_company = session.get('selected_company', {})
-        
-        # Get company name with fallbacks
+        # Get company name with fallbacks after ensuring active id
         company_name = (
             selected_company.get('name') or 
             session.get('company_name') or 
