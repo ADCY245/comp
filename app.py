@@ -430,8 +430,9 @@ def is_superadmin(user) -> bool:
 def has_gm_pricing_access(user) -> bool:
     if not user or not getattr(user, 'is_authenticated', False):
         return False
-    role = (getattr(user, 'role', '') or '').strip().lower()
-    return role in GM_PRICING_ROLES
+    raw_role = getattr(user, 'role', '') or ''
+    role_key = normalize_role_key(raw_role)
+    return role_key in GM_PRICING_ROLES
 
 
 def sanitize_gm_discount(value) -> int:
