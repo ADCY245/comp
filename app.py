@@ -228,17 +228,52 @@ def company_required(view_func):
     def wrapped_view(*args, **kwargs):
         app.logger.info("[DEBUG] company_required decorator called for %s", request.path)
         
-        # If session already has a selected company with ID, allow
+        # If session already has a selected company, allow
         selected_company = session.get('selected_company', {})
         app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
         
-        if selected_company.get('id') and (selected_company.get('name') or selected_company.get('email')):
-            app.logger.info("[DEBUG] Company already selected with ID, allowing access")
+        if selected_company.get('id'):
+            app.logger.info("[DEBUG] Company already selected, allowing access")
             return view_func(*args, **kwargs)
 
-        # No company selected - redirect to company selection
+        # Check for company_name and company_email in session as fallback
+        if session.get('company_name') or session.get('company_email'):
+            app.logger.info("[DEBUG] Found company_name/email in session, creating selected_company")
+            session['selected_company'] = {
+                'id': session.get('company_id'),
+                'name': session.get('company_name', ''),
+                'email': session.get('company_email', '')
+            }
+            session.modified = True
+            return view_func(*args, **kwargs)
+
+        # Attempt to use company_id from query parameters (first-time access)
+        company_id = request.args.get('company_id')
+        app.logger.info("[DEBUG] No company in session, checking for company_id in query params: %s", company_id)
+        
+        if company_id:
+            # Lazy import to avoid circular dependencies
+            from app import get_company_name_by_id, get_company_email_by_id  # type: ignore
+            company_name = get_company_name_by_id(company_id) or ''
+            company_email = get_company_email_by_id(company_id) or ''
+            app.logger.info("[DEBUG] Found company details - name: %s, email: %s", company_name, company_email)
+            
+            if company_name or company_email:
+                session['selected_company'] = {
+                    'id': company_id,
+                    'name': company_name,
+                    'email': company_email
+                }
+                session['company_name'] = company_name
+                session['company_email'] = company_email
+                session['company_id'] = company_id  # Ensure company_id is set in session
+                session.modified = True
+                app.logger.info("[DEBUG] Updated session with company details")
+                return view_func(*args, **kwargs)
+
+        # Otherwise, redirect to company selection
         app.logger.warning("[DEBUG] No company selected, redirecting to company selection")
-        flash('Please select a company first before accessing the cart.', 'error')
+        flash('Please select a company first.', 'warning')
         return redirect(url_for('company_selection'))
     return wrapped_view
 
@@ -2118,7 +2153,7 @@ def build_quotation_company_details(selected_company=None, session_company_id=No
 
     email = (company_record.get('email') or company_record.get('EmailID')) if company_record else None
     if not email:
-        email = company_email or selected_company.get('email') or placeholder
+        email = company_email or placeholder
 
     address = ''
     if company_record:
@@ -3312,12 +3347,6 @@ def cart():
     The Jinja template expects a cart object with products list and calculated totals.
     """
     try:
-        # Additional check - ensure company is properly selected
-        selected_company = session.get('selected_company', {})
-        if not selected_company.get('id') or not (selected_company.get('name') or selected_company.get('email')):
-            flash('Please select a company first before accessing the cart.', 'error')
-            return redirect(url_for('company_selection'))
-        
         # Get the current cart
         cart_data = get_user_cart()
         if not isinstance(cart_data, dict):
@@ -5859,7 +5888,11 @@ def quotation_preview():
         'company_details': build_quotation_company_details(
             selected_company,
             session.get('company_id'),
-            session.get('company_email')
+            session.get('company_email'),
+            fallback={
+                'name': customer_name,
+                'email': customer_email
+            }
         ),
         'now': current_datetime,  # Add current datetime object for the template
         'calculations': {

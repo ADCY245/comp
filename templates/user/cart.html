@@ -470,11 +470,17 @@
     <div class="cart-container">
         <div class="cart-header">
             <h2>Your Cart</h2>
+            {% set display_company_name = company_name if company_name and company_name|trim else 'Your Company' %}
+            {% set display_company_email = company_email if company_email and company_email|trim else None %}
             <div class="cart-company-details" aria-live="polite">
                 <h6>Quotation For</h6>
-                <p class="cart-company-name mb-0" id="companyName">Your Company</p>
+                <p class="cart-company-name mb-0" id="companyName">{{ display_company_name }}</p>
                 <div class="cart-company-contact" id="companyInfo">
-                    <span id="companyEmail">No email provided</span>
+                    {% if display_company_email %}
+                        <a href="mailto:{{ display_company_email }}" id="companyEmail" class="text-muted mb-0" style="text-decoration: none;">{{ display_company_email }}</a>
+                    {% else %}
+                        <span id="companyEmail">No email provided</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="cart-actions">
