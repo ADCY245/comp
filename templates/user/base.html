@@ -92,21 +92,6 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    {% if current_user.is_authenticated and has_gm_pricing_access(current_user) %}
-                        {% if active_pricing_mode == 'gm' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('index') }}">
-                                <i class="bi bi-shop"></i> User Page
-                            </a>
-                        </li>
-                        {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link{% if request.endpoint=='gm_page' %} active{% endif %}" href="{{ url_for('gm_page') }}">
-                                <i class="bi bi-percent"></i> % GM Page
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint in ['index', 'add_company', 'add_machine'] %}disabled{% endif %}"
    href="#"
@@ -236,6 +221,14 @@
                             <i class="bi bi-person-circle"></i> {{ current_user.username if current_user.is_authenticated else 'User' }}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                            {% if current_user.is_authenticated and has_gm_pricing_access(current_user) %}
+                                {% if active_pricing_mode == 'gm' %}
+                                <li><a class="dropdown-item" href="{{ url_for('index') }}"><i class="bi bi-shop"></i> User Page</a></li>
+                                {% else %}
+                                <li><a class="dropdown-item" href="{{ url_for('gm_page') }}"><i class="bi bi-percent"></i> % GM Page</a></li>
+                                {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
                             {% if current_user.is_authenticated and current_user.role|lower|trim in ['admin', 'superadmin'] %}
                             <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2"></i> Admin Dashboard</a></li>
                             <li><hr class="dropdown-divider"></li>
