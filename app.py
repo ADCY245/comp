@@ -267,8 +267,8 @@ def company_required(view_func):
         # If session already has a selected company id, allow
         selected_company = session.get('selected_company', {}) or {}
         app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
-        session_company_id = session.get('company_id')
-        active_company_id = selected_company.get('id') or session_company_id
+        # Only allow access if an explicit company has been selected in this session
+        active_company_id = selected_company.get('id')
 
         if active_company_id:
             # Ensure the selected_company dict is populated with the active id
@@ -3389,7 +3389,7 @@ def cart():
 
         # Verify company selection even after decorator guard (belt-and-suspenders)
         selected_company = session.get('selected_company', {}) or {}
-        active_company_id = selected_company.get('id') or session.get('company_id')
+        active_company_id = selected_company.get('id')
         if not active_company_id:
             flash('Please select a company before accessing the cart.', 'warning')
             return redirect(url_for('company_selection'))
