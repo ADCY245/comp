@@ -9,14 +9,6 @@
 
 {% block content %}
 <div class="container landing-container mt-5">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <!-- Company Selection -->
     <div class="d-flex align-items-center justify-content-center min-vh-50 py-5" id="companySelectionSection">
         {% if companies %}

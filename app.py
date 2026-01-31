@@ -308,7 +308,8 @@ def company_required(view_func):
 
         # Otherwise, redirect to home with a warning
         app.logger.warning("[DEBUG] No company selected, redirecting to index")
-        flash('Please select a company first.', 'warning')
+        session['needs_company_warning'] = True
+        session.modified = True
         return redirect(url_for('index'))
     return wrapped_view
 
@@ -3391,7 +3392,6 @@ def cart():
         selected_company = session.get('selected_company', {}) or {}
         active_company_id = selected_company.get('id')
         if not active_company_id:
-            flash('Please select a company before accessing the cart.', 'warning')
             return redirect(url_for('index'))
 
         # Ensure products list exists
@@ -4530,6 +4530,11 @@ def index():
     try:
         companies = load_companies_data()
         
+        needs_warning = session.pop('needs_company_warning', False)
+        if needs_warning:
+            flash('Please select a company first.', 'warning')
+            session.modified = True
+
         if not current_user.is_authenticated:
             companies = []
         else:
