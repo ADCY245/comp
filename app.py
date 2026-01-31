@@ -4600,6 +4600,11 @@ def load_companies_data():
 @app.route('/index')
 @login_required
 def index():
+    # Auto-redirect sales_admin/superadmin to GM view unless they explicitly chose the user view
+    if has_gm_pricing_access(current_user):
+        # If coming fresh (no pricing_mode) or currently in gm mode, force gm page
+        if get_active_pricing_mode() == 'gm' or 'force_user' not in request.args:
+            return redirect(url_for('gm_page'))
     try:
         set_pricing_mode('standard')
         companies = load_companies_data()
