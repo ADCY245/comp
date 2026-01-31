@@ -67,6 +67,17 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="mb-0 text-uppercase text-muted">Select Product Category</h3>
         </div>
+        {% if gm_mode %}
+        <div class="d-flex align-items-center mb-3 gap-3">
+            <label for="gmDiscountSelect" class="form-label mb-0 fw-medium"><i class="bi bi-percent"></i> GM Discount</label>
+            <select id="gmDiscountSelect" class="form-select w-auto">
+                {% for step in gm_discount_steps %}
+                    <option value="{{ step }}" {% if step == gm_discount %}selected{% endif %}>{{ step }}%</option>
+                {% endfor %}
+            </select>
+            <span class="text-muted small">(applies to all prices)</span>
+        </div>
+        {% endif %}
         <div class="product-options">
             <button type="button" class="product-option-card" id="mpacksBtn" data-route="{{ url_for('mpacks') }}">
                 <span class="product-option-card__icon"><i class="bi bi-box-seam"></i></span>
@@ -209,6 +220,25 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if gm_mode %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('gmDiscountSelect');
+    if (!sel) return;
+    sel.addEventListener('change', async () => {
+      const percent = parseInt(sel.value || 0);
+      try {
+        await fetch('/gm/discount', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          body: JSON.stringify({ discount: percent })
+        });
+        location.reload();
+      } catch (e) { console.error('Failed to update GM discount', e); }
+    });
+  });
+</script>
+{% endif %}
 <div id="companies-data" style="display: none;">{{ companies|tojson|safe }}</div>
 <script>
 // Main application module

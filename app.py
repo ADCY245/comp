@@ -360,6 +360,9 @@ def render_company_product_page(template_name, extra_context=None):
 
 EXTENDED_DISCOUNT_ADMIN_ROLES = {'admin', 'superadmin', 'sales_admin'}
 COMPANY_FULL_ACCESS_ROLES = {'admin', 'superadmin'}
+GM_PRICING_ROLES = {'sales_admin', 'superadmin'}
+GM_DISCOUNT_STEPS = tuple(range(0, 51, 5))
+DEFAULT_GM_DISCOUNT = 0
 
 SUPERADMIN_ROLE_NAME = 'superadmin'
 DEFAULT_ROLE_DEFINITIONS = [
@@ -422,6 +425,75 @@ def is_superadmin(user) -> bool:
     if not user:
         return False
     return (getattr(user, 'role', '') or '').strip().lower() == SUPERADMIN_ROLE_NAME
+
+
+def has_gm_pricing_access(user) -> bool:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    role = (getattr(user, 'role', '') or '').strip().lower()
+    return role in GM_PRICING_ROLES
+
+
+def sanitize_gm_discount(value) -> int:
+    try:
+        percent = int(float(value))
+    except (TypeError, ValueError):
+        return DEFAULT_GM_DISCOUNT
+    percent = max(0, min(50, percent))
+    # Snap to nearest lower multiple of 5 to respect allowed steps
+    if percent % 5 != 0:
+        percent -= percent % 5
+    return percent
+
+
+def set_pricing_mode(mode: str):
+    if mode not in ('gm', 'standard'):
+        mode = 'standard'
+    session['pricing_mode'] = mode
+    session.modified = True
+
+
+def get_active_pricing_mode() -> str:
+    return session.get('pricing_mode', 'standard')
+
+
+def get_gm_discount_percent(force=False) -> int:
+    if not force and get_active_pricing_mode() != 'gm':
+        return DEFAULT_GM_DISCOUNT
+    stored = session.get('gm_discount', DEFAULT_GM_DISCOUNT)
+    percent = sanitize_gm_discount(stored)
+    if stored != percent:
+        session['gm_discount'] = percent
+        session.modified = True
+    return percent
+
+
+def apply_gm_discount_to_total(total: float):
+    """Apply GM flat discount (post-GST) if GM pricing mode is active."""
+    if get_active_pricing_mode() != 'gm':
+        return total, 0.0, 0
+
+    percent = get_gm_discount_percent()
+    if percent <= 0:
+        return total, 0.0, 0
+
+    total_value = float(total or 0)
+    discount_amount = max(0.0, total_value * (percent / 100))
+    adjusted_total = max(0.0, total_value - discount_amount)
+    return adjusted_total, discount_amount, percent
+
+
+@app.context_processor
+def inject_pricing_context():
+    pricing_mode = get_active_pricing_mode()
+    gm_discount = get_gm_discount_percent() if pricing_mode == 'gm' else DEFAULT_GM_DISCOUNT
+    return {
+        'active_pricing_mode': pricing_mode,
+        'session_gm_discount': gm_discount,
+        'gm_pricing_roles': sorted(GM_PRICING_ROLES),
+        'gm_discount_steps': list(GM_DISCOUNT_STEPS),
+        'has_gm_pricing_access': has_gm_pricing_access
+    }
 
 
 def normalize_role_key(raw: str) -> str:
@@ -4528,6 +4600,7 @@ def load_companies_data():
 @login_required
 def index():
     try:
+        set_pricing_mode('standard')
         companies = load_companies_data()
         
         needs_warning = session.pop('needs_company_warning', False)
@@ -4550,12 +4623,85 @@ def index():
         if not isinstance(companies, list):
             companies = []
             
-        return render_template('user/index.html', companies=companies)
+        return render_template(
+            'user/index.html',
+            companies=companies,
+            gm_mode=False,
+            gm_discount=DEFAULT_GM_DISCOUNT,
+            gm_discount_steps=GM_DISCOUNT_STEPS
+        )
         
     except Exception as e:
         app.logger.error(f"Error in index route: {str(e)}")
         # Return empty companies list on error
-        return render_template('user/index.html', companies=[])
+        return render_template(
+            'user/index.html',
+            companies=[],
+            gm_mode=False,
+            gm_discount=DEFAULT_GM_DISCOUNT,
+            gm_discount_steps=GM_DISCOUNT_STEPS
+        )
+
+
+@app.route('/gm-page')
+@login_required
+def gm_page():
+    try:
+        if not has_gm_pricing_access(current_user):
+            flash('You do not have permission to access GM pricing.', 'danger')
+            return redirect(url_for('index'))
+
+        set_pricing_mode('gm')
+        companies = load_companies_data()
+
+        if not current_user.is_authenticated:
+            companies = []
+        else:
+            assigned_ids = get_user_assigned_company_ids(current_user)
+            if assigned_ids is not None:
+                if assigned_ids:
+                    assigned_set = {str(cid) for cid in assigned_ids}
+                    companies = [company for company in companies if str(company.get('id')) in assigned_set]
+                else:
+                    companies = []
+
+        if not isinstance(companies, list):
+            companies = []
+
+        discount = get_gm_discount_percent(force=True)
+        return render_template(
+            'user/index.html',
+            companies=companies,
+            gm_mode=True,
+            gm_discount=discount,
+            gm_discount_steps=GM_DISCOUNT_STEPS
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error in gm_page route: {str(e)}", exc_info=True)
+        flash('Unable to load GM page right now.', 'danger')
+        return redirect(url_for('index'))
+
+
+@app.route('/gm/discount', methods=['POST'])
+@login_required
+def update_gm_discount():
+    if not has_gm_pricing_access(current_user):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    payload = request.get_json(silent=True) or request.form or {}
+    new_percent = sanitize_gm_discount(
+        payload.get('discount') or payload.get('percent') or payload.get('value') or DEFAULT_GM_DISCOUNT
+    )
+    session['gm_discount'] = new_percent
+    session.modified = True
+
+    response_data = {'success': True, 'discount': new_percent}
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(response_data)
+
+    flash(f'GM discount updated to {new_percent}%.', 'success')
+    return redirect(request.referrer or url_for('gm_page'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -6985,16 +7131,18 @@ def api_login():
                 # Clear any previously selected company from earlier sessions
                 reset_company_selection_session()
 
-                # Log the user in
                 login_user(user)
                 clear_login_prompt_flash()
-                print(f'User {user.username} logged in successfully')
+                pricing_mode = 'gm' if has_gm_pricing_access(user) else 'standard'
+                set_pricing_mode(pricing_mode)
+                redirect_path = '/gm-page' if pricing_mode == 'gm' else '/index'
+                print(f'User {user.username} logged in successfully (mode={pricing_mode})')
                 
                 if request.is_json:
                     response = jsonify({
                         'success': True,
                         'message': 'Login successful',
-                        'redirectTo': '/index',
+                        'redirectTo': redirect_path,
                         'user': {
                             'id': str(user.id),
                             'email': user.email,
@@ -7003,7 +7151,7 @@ def api_login():
                     })
                 else:
                     # For form submission, redirect directly
-                    return redirect(url_for('index'))
+                    return redirect(url_for('gm_page' if pricing_mode == 'gm' else 'index'))
                 
                 # Set session
                 session['user_id'] = str(user.id)
@@ -7065,12 +7213,15 @@ def api_login():
         reset_company_selection_session()
         login_user(user)
         clear_login_prompt_flash()
-        print(f'User {user.username} logged in successfully (JSON storage)')
+        pricing_mode = 'gm' if has_gm_pricing_access(user) else 'standard'
+        set_pricing_mode(pricing_mode)
+        redirect_path = '/gm-page' if pricing_mode == 'gm' else '/index'
+        print(f'User {user.username} logged in successfully (JSON storage, mode={pricing_mode})')
         
         return jsonify({
             'success': True,
             'message': 'Login successful',
-            'redirectTo': '/index',  # Changed to use index route
+            'redirectTo': redirect_path,
             'user': {
                 'id': user.id,
                 'email': user.email,

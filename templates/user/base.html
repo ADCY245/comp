@@ -92,6 +92,22 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
+                    {% if 'sales_admin' in gm_pricing_roles or 'superadmin' in gm_pricing_roles %}
+                    {% if current_user.is_authenticated and active_pricing_mode == 'gm' %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint=='gm_page' %} active{% endif %}" href="{{ url_for('index') }}">
+                            <i class="bi bi-shop"></i> User Page
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_authenticated and has_gm_pricing_access(current_user) %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint=='gm_page' %} active{% endif %}" href="{{ url_for('gm_page') }}">
+                            <i class="bi bi-percent"></i> GM Page
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint in ['index', 'add_company', 'add_machine'] %}disabled{% endif %}"
    href="#"
