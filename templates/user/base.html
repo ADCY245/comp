@@ -769,22 +769,8 @@
             // Scroll to the company selection area
             companySearchWrapper.scrollIntoView({ behavior: 'smooth' });
         } else {
-            // Fallback to the old behavior if the UI elements don't exist
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-warning alert-dismissible fade show';
-            alertDiv.role = 'alert';
-            alertDiv.innerHTML = `
-                <strong>Company Selection Required</strong>
-                <p>Please select a company before accessing this page.</p>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            
-            document.body.insertBefore(alertDiv, document.body.firstChild);
-            window.scrollTo(0, 0);
-            
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 3000);
+            // Fallback: just redirect to index; flash will show once
+            window.location.href = '/';
         }
     }
     
