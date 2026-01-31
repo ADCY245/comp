@@ -702,8 +702,8 @@ const ChemoApp = (function() {
         }
         
         if (!companyId) {
-            showAlert('Please select a company before viewing products.', 'warning');
-            showCompanySelection();
+            // Let the server enforce selection and flash once
+            window.location.href = route;
             return;
         }
 
