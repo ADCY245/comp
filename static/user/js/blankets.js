@@ -1324,12 +1324,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (discountSelect) {
     discountSelect.addEventListener('change', function() {
       currentDiscount = parseFloat(this.value) || 0;
-    const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
-    const dataRoot = gmMod  ? '/stacia/data/gm' : ulatePricdata';
-    fetch(`${e();Root}`
+      calculatePrice();
     });
 
-    fetch('/static/data/discount.json')
+    const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+    const dataRoot = gmMode ? '/static/data/gm' : '/static/data';
+    fetch(`${dataRoot}/discount.json`)
       .then(res => res.json())
       .then(data => {
         const parsedOptions = data && Array.isArray(data.discounts) ? data.discounts : [];
