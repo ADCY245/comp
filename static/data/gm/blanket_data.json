@@ -1,0 +1,186 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Image Sunrise Eco BL",
+      "ratePerSqMt": 2850,
+      "ratePerSqYard": 2383
+    },
+    {
+      "id": 2,
+      "name": "Image Print Master GR",
+      "ratePerSqMt": 3950,
+      "ratePerSqYard": 3303
+    },
+    {
+      "id": 3,
+      "name": "Image Print Master BL",
+      "ratePerSqMt": 3950,
+      "ratePerSqYard": 3303
+    },
+    {
+      "id": 4,
+      "name": "Image Web Master GR",
+      "ratePerSqMt": 3950,
+      "ratePerSqYard": 3303
+    },
+    {
+      "id": 5,
+      "unused": true,
+      "name": "Image Underlay Black - Indian",
+      "ratePerSqMt": 1015,
+      "ratePerSqYard": 849
+    },
+    {
+      "id": 6,
+      "unused": true,
+      "name": "Image Under Black - Imported",
+      "ratePerSqMt": 2870,
+      "ratePerSqYard": 2400
+    },
+    {
+      "id": 7,
+      "name": "MTech Active SF",
+      "ratePerSqMt": 4975,
+      "ratePerSqYard": 4160
+    },
+    {
+      "id": 8,
+      "name": "MTech Active PRIME",
+      "ratePerSqMt": 5750,
+      "ratePerSqYard": 4808
+    },
+    {
+      "id": 9,
+      "name": "MTech Active UV K (BLACK)",
+      "ratePerSqMt": 6600,
+      "ratePerSqYard": 5518
+    },
+    {
+      "id": 10,
+      "name": "MTech Magnum SF",
+      "ratePerSqMt": 5900,
+      "ratePerSqYard": 4933
+    },
+    {
+      "id": 11,
+      "name": "MTech Magnum UV R",
+      "ratePerSqMt": 6950,
+      "ratePerSqYard": 5811
+    },
+    {
+      "id": 12,
+      "name": "MTech EZ Peel",
+      "ratePerSqMt": 5500,
+      "ratePerSqYard": 4598
+    },
+    {
+      "id": 13,
+      "unused": true,
+      "name": "MTech Underlay - 0.6",
+      "ratePerSqMt": 2870,
+      "ratePerSqYard": 2400
+    },
+    {
+      "id": 14,
+      "unused": true,
+      "name": "MTech Underlay - 0.8",
+      "ratePerSqMt": 2870,
+      "ratePerSqYard": 2400
+    },
+    {
+      "id": 15,
+      "unused": true,
+      "name": "MTech Underlay - 1.0",
+      "ratePerSqMt": 2870,
+      "ratePerSqYard": 2400
+    },
+    {
+      "id": 16,
+      "name": "MTech Kleber BF - 0.95",
+      "ratePerSqMt": 9750,
+      "ratePerSqYard": 8152
+    },
+    {
+      "id": 17,
+      "name": "MTech Kleber BF - 1.05",
+      "ratePerSqMt": 9750,
+      "ratePerSqYard": 8152
+    },
+    {
+      "id": 18,
+      "name": "MTech Kleber BF - 1.95",
+      "ratePerSqMt": 15170,
+      "ratePerSqYard": 12684
+    },
+    {
+      "id": 19,
+      "name": "Conti Sava Privilege Cart",
+      "ratePerSqMt": 7900,
+      "ratePerSqYard": 6605
+    },
+    {
+      "id": 20,
+      "unused": true,
+      "name": "Conti Sava Advantage Plus",
+      "ratePerSqMt": 8750,
+      "ratePerSqYard": 7316
+    },
+    {
+      "id": 21,
+      "name": "Conti Sava Advantage Stripping",
+      "ratePerSqMt": 7200,
+      "ratePerSqYard": 6020
+    },
+    {
+      "id": 23,
+      "name": "Conti Sava Privilege UV Black",
+      "ratePerSqMt": 8900,
+      "ratePerSqYard": 7441
+    },
+    {
+      "id": 28,
+      "name": "MTech Web X Press G3",
+      "ratePerSqMt": 7900,
+      "ratePerSqYard": 6605
+    },
+    {
+      "id": 29,
+      "name": "MTech Web Primo G8",
+      "ratePerSqMt": 8400,
+      "ratePerSqYard": 7023
+    },
+    {
+      "id": 30,
+      "name": "MTech Strip Plate PLY",
+      "ratePerSqMt": null,
+      "ratePerSqYard": null
+    },
+    {
+      "id": 31,
+      "name": "MTech Strip Plate PLR",
+      "ratePerSqMt": null,
+      "ratePerSqYard": null,
+      "needsRates": true
+    },
+    {
+      "id": 32,
+      "name": "MTech Strip Plate UV Black",
+      "ratePerSqMt": null,
+      "ratePerSqYard": null,
+      "needsRates": true
+    },
+        {
+      "id": 33,
+      "name": "Conti Sava Advantage UV Red",
+      "ratePerSqMt": 9800,
+      "ratePerSqYard": 8194
+    },
+        {
+      "id": 34,
+      "name": "Conti Sava Metal Back Blanket (MBB)",
+      "ratePerSqMt": 49250,
+      "ratePerSqYard": 41179
+    }
+  ]
+}

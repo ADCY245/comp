@@ -1,5 +1,6 @@
 (function() {
-  const dataUrl = '/static/data/chemicals/products.json';
+  const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+  const dataUrl = gmMode ? '/static/data/gm/chemicals/products.json' : '/static/data/chemicals/products.json';
 
   function isTruthyFlag(value) {
     if (typeof value === 'boolean') return value;

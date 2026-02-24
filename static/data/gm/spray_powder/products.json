@@ -1,0 +1,44 @@
+{
+  "categories": [
+    {
+      "id": "px-series",
+      "name": "PX Series Spray Powders",
+      "icon": "fas fa-cloud",
+      "products": [
+        {
+          "id": "px-100",
+          "name": "Image Anti Set-Off Spray Powder - PX 100",
+          "icon": "fas fa-cloud-sun",
+          "price_per_kg": 350,
+          "formats": [
+            { "id": "px-100-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-100-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-100-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        },
+        {
+          "id": "px-200",
+          "name": "Image Anti Set-Off Spray Powder - PX 200",
+          "icon": "fas fa-wind",
+          "price_per_kg": 245,
+          "formats": [
+            { "id": "px-200-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-200-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-200-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        },
+        {
+          "id": "px-300",
+          "name": "Image Anti Set-Off Spray Powder - PX 300",
+          "icon": "fas fa-grip-lines",
+          "price_per_kg": 310,
+          "formats": [
+            { "id": "px-300-1kg", "label": "1 kg Pouch", "size_kg": 1 },
+            { "id": "px-300-5kg", "label": "5 kg Bag", "size_kg": 5 },
+            { "id": "px-300-20kg", "label": "20 kg Bag", "size_kg": 20 }
+          ]
+        }
+      ]
+    }
+  ]
+}

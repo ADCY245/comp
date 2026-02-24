@@ -640,8 +640,11 @@ window.onload = () => {
       alert('Error loading machine data. Please refresh the page to try again.');
     });
     
+  const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+  const dataRoot = gmMode ? '/static/data/gm' : '/static/data';
+
   // Load blanket categories
-  fetch("/static/data/blanket_categories.json")
+  fetch(`${dataRoot}/blanket_categories.json`)
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -686,7 +689,7 @@ window.onload = () => {
     });
 
   // Load blankets data
-  fetch("/static/data/blanket_data.json")
+  fetch(`${dataRoot}/blanket_data.json`)
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -780,7 +783,7 @@ window.onload = () => {
   loadThicknessData();
 
   // Load bar data
-  fetch("/static/data/bar_data.json")
+  fetch(`${dataRoot}/bar_data.json`)
     .then(res => {
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -810,7 +813,7 @@ window.onload = () => {
 
   // Load discounts from discount.json
   function loadDiscounts() {
-    fetch("/static/data/discount.json")
+    fetch(`${dataRoot}/discount.json`)
       .then(res => res.json())
       .then(data => {
         const select = document.getElementById("discountSelect");
@@ -1321,7 +1324,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (discountSelect) {
     discountSelect.addEventListener('change', function() {
       currentDiscount = parseFloat(this.value) || 0;
-      calculatePrice();
+    const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+    const dataRoot = gmMod  ? '/stacia/data/gm' : ulatePricdata';
+    fetch(`${e();Root}`
     });
 
     fetch('/static/data/discount.json')

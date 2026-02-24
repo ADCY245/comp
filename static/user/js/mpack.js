@@ -1581,7 +1581,9 @@ function enableThicknessForSize() {
 }
 
 function loadSizes() {
-  fetch(`/static/data/mpack.json?v=${Date.now()}`)
+  const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+  const dataPath = gmMode ? '/static/data/gm/mpack.json' : '/static/data/mpack.json';
+  fetch(`${dataPath}?v=${Date.now()}`)
     .then(res => {
       if (!res.ok) throw new Error('Failed to load MPack data');
       return res.json();
@@ -1668,8 +1670,10 @@ async function loadDiscounts() {
     // Clear existing options except the first one
     while (select.options.length > 1) {
       select.remove(1);
-    }
-    
+    }t gmMde = document.documentEment && documentdocumentEement.dataset && document.dcumentElement.datas.prigMode === 'm';
+    constPath= gmMde ? '/static/data/g/discount.json': ';
+    console.log(`Fetching discounts from ${discountPath}`
+    tPah
     console.log('Fetching discounts from /static/data/discount.json');
     const response = await fetch('/static/data/discount.json');
     

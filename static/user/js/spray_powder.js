@@ -1,5 +1,6 @@
 (function() {
-  const dataUrl = '/static/data/spray_powder/products.json';
+  const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
+  const dataUrl = gmMode ? '/static/data/gm/spray_powder/products.json' : '/static/data/spray_powder/products.json';
 
   const machineSelect = document.getElementById('sprayPowderMachineSelect');
   const productOptionsEl = document.getElementById('sprayPowderProductOptions');
