@@ -1874,18 +1874,23 @@ async function addMpackToCart() {
   const sizeSelect = document.getElementById('sizeSelect');
   const sheetInput = document.getElementById('sheetInput');
   const underpackingTypeSelect = document.getElementById('underpackingType');
-  const quantity = parseInt(sheetInput.value) || 1;
 
-  const hasSizeSelect = Boolean(sizeSelect && sizeSelect.value);
-  const hasCustomSize = hasValidCustomSize();
-  
-  // Get underpacking type display name
   let underpackingType = '';
   let underpackingTypeDisplay = 'Underpacking Material';
   if (underpackingTypeSelect && underpackingTypeSelect.value) {
     underpackingType = underpackingTypeSelect.value;
     underpackingTypeDisplay = underpackingTypeSelect.options[underpackingTypeSelect.selectedIndex].text;
   }
+
+  const formatLabel = underpackingType === 'polipack' ? getPolipackFormatLabel() : '';
+  const resolvedName = underpackingType === 'polipack' && formatLabel
+    ? `Polipack - ${formatLabel}`
+    : underpackingTypeDisplay;
+  const quantity = parseInt(sheetInput.value) || 1;
+
+  const hasSizeSelect = Boolean(sizeSelect && sizeSelect.value);
+  const hasCustomSize = hasValidCustomSize();
+
   
   // Check that a size is selected in the dropdown (like thickness)
   if (!underpackingType) {
