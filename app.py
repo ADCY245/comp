@@ -270,6 +270,36 @@ def company_required(view_func):
         # Only allow access if an explicit company has been selected in this session
         active_company_id = selected_company.get('id')
 
+        # Backwards-compatible fallback: accept existing session company_id/company_name/company_email
+        # and hydrate session['selected_company'] so downstream logic can proceed.
+        if not active_company_id:
+            fallback_company_id = session.get('company_id')
+            if fallback_company_id:
+                session['selected_company'] = {
+                    'id': fallback_company_id,
+                    'name': session.get('company_name', ''),
+                    'email': session.get('company_email', '')
+                }
+                session.modified = True
+                selected_company = session.get('selected_company', {}) or {}
+                active_company_id = selected_company.get('id')
+
+        # Final fallback: if user has company info on the user record, hydrate session automatically.
+        if not active_company_id and getattr(current_user, 'is_authenticated', False):
+            user_company_id = getattr(current_user, 'company_id', None)
+            if user_company_id:
+                session['selected_company'] = {
+                    'id': str(user_company_id),
+                    'name': getattr(current_user, 'company_name', '') or session.get('company_name', ''),
+                    'email': getattr(current_user, 'company_email', '') or session.get('company_email', '')
+                }
+                session['company_id'] = str(user_company_id)
+                session['company_name'] = session['selected_company'].get('name', '')
+                session['company_email'] = session['selected_company'].get('email', '')
+                session.modified = True
+                selected_company = session.get('selected_company', {}) or {}
+                active_company_id = selected_company.get('id')
+
         if active_company_id:
             # Ensure the selected_company dict is populated with the active id
             if not selected_company.get('id'):
