@@ -306,7 +306,17 @@ def company_required(view_func):
                 app.logger.info("[DEBUG] Updated session with company details")
                 return view_func(*args, **kwargs)
 
-        # Otherwise, redirect to home with a warning
+        # Otherwise, block access.
+        # For AJAX/JSON requests, return a JSON error instead of redirecting to index.
+        wants_json = (
+            request.is_json
+            or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or 'application/json' in (request.headers.get('Accept') or '')
+        )
+        if wants_json:
+            app.logger.warning("[DEBUG] No company selected for JSON request (%s)", request.path)
+            return jsonify({'success': False, 'error': 'No company selected'}), 403
+
         app.logger.warning("[DEBUG] No company selected, redirecting to index")
         session['needs_company_warning'] = True
         session.modified = True
