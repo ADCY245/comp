@@ -698,6 +698,59 @@ function toggleQuotationSection() {
     }
 }
 
+async function sendQuotationFromCart(event) {
+    if (event && event.preventDefault) {
+        event.preventDefault();
+    }
+
+    const sendBtn = document.getElementById('sendQuotationBtn');
+    if (!sendBtn || sendBtn.classList.contains('disabled') || sendBtn.getAttribute('aria-disabled') === 'true') {
+        return;
+    }
+
+    const originalHtml = sendBtn.innerHTML;
+    sendBtn.classList.add('disabled');
+    sendBtn.setAttribute('aria-disabled', 'true');
+    sendBtn.style.pointerEvents = 'none';
+    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+
+    try {
+        const res = await fetch('/send_quotation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ notes: '' })
+        });
+
+        const data = await res.json();
+        if (data && data.success) {
+            const message = data.email_sent
+                ? 'Quotation sent successfully!'
+                : 'Quotation processed successfully (email not sent - configuration missing)';
+            showToast('Success', message, 'success');
+
+            setTimeout(() => {
+                window.location.href = '/quotation_preview';
+            }, 800);
+        } else {
+            showToast('Error', (data && data.error) ? data.error : 'Failed to process quotation', 'error');
+        }
+    } catch (err) {
+        console.error('Error sending quotation:', err);
+        showToast('Error', 'An error occurred while sending the quotation', 'error');
+    } finally {
+        // Re-enable (unless navigation happened)
+        if (document.body.contains(sendBtn)) {
+            sendBtn.classList.remove('disabled');
+            sendBtn.removeAttribute('aria-disabled');
+            sendBtn.style.pointerEvents = '';
+            sendBtn.innerHTML = originalHtml;
+        }
+    }
+}
+
 // Function to handle clearing the cart
 function handleClearCart(event) {
     // Update empty state after clearing cart
@@ -875,6 +928,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Toggle quotation section based on cart items
         toggleQuotationSection();
+        
+        // Ensure Send Quotation works even when the button is an <a href="...">.
+        const sendQuotationBtn = document.getElementById('sendQuotationBtn');
+        if (sendQuotationBtn) {
+            sendQuotationBtn.addEventListener('click', sendQuotationFromCart);
+        }
         
         // Listen for cart updates from other tabs
         window.addEventListener('storage', function(event) {
