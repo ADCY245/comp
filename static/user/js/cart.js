@@ -715,16 +715,29 @@ async function sendQuotationFromCart(event) {
     sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
 
     try {
+        const csrfToken = getCSRFToken();
         const res = await fetch('/send_quotation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ notes: '' })
         });
 
-        const data = await res.json();
+        const contentType = res.headers.get('content-type') || '';
+        let data = null;
+        if (contentType.includes('application/json')) {
+            data = await res.json();
+        } else {
+            const text = await res.text();
+            console.error('Non-JSON response from /send_quotation:', text.slice(0, 300));
+            showToast('Error', 'Session expired or server returned an unexpected response. Redirecting…', 'error');
+            window.location.href = '/quotation_preview';
+            return;
+        }
         if (data && data.success) {
             const message = data.email_sent
                 ? 'Quotation sent successfully!'
