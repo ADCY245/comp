@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle send quotation button
   const sendBtn = document.getElementById('sendQuotationBtn');
   if (sendBtn) {
-    sendBtn.addEventListener('click', async () => {
+    sendBtn.addEventListener('click', async (event) => {
+      if (event && event.preventDefault) {
+        event.preventDefault();
+      }
       const notes = document.getElementById('quotationNotes')?.value || '';
       sendBtn.disabled = true;
       sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
@@ -32,9 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           showToast('Success', message, 'success');
           
-          // Redirect to cart after a short delay
+          // Redirect to quotation preview after a short delay
           setTimeout(() => {
-            window.location.href = '/cart';
+            window.location.href = '/quotation_preview';
           }, 1500);
         } else {
           showToast('Error', data.error || 'Failed to process quotation', 'error');

@@ -1048,8 +1048,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const cartItem = event.target.closest('.cart-item');
             if (cartItem) {
                 const itemType = cartItem.getAttribute('data-type');
-                // Update discount percent in data attribute for calculations
-                const discountValue = parseFloat(event.target.value) || 0;
+                // Apply cap immediately and update discount percent in data attribute for calculations
+                const rawDiscountValue = parseFloat(event.target.value);
+                const discountValue = clampDiscountWithCap(Number.isFinite(rawDiscountValue) ? rawDiscountValue : 0);
+                if (String(discountValue) !== String(event.target.value || '')) {
+                    event.target.value = discountValue;
+                }
                 cartItem.setAttribute('data-discount-percent', discountValue);
                 
                 if (itemType === 'mpack') {
@@ -1058,6 +1062,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     calculateBlanketPrices(cartItem);
                 } else if (itemType === 'chemical' || itemType === 'maintenance') {
                     calculateChemicalPrices(cartItem);
+                } else if (itemType === 'creasing_matrix') {
+                    // Keep summary in sync for creasing matrix discounts as well
+                    updateCartTotals();
                 }
             }
         }
@@ -1695,9 +1702,28 @@ function handleDiscountKeyDown(event) {
     }
 }
 
+function getCartDiscountCap() {
+    const pricingMode = document.documentElement?.dataset?.pricingMode;
+    return pricingMode === 'gm' ? 50 : 10;
+}
+
+function clampDiscountWithCap(discountPercent) {
+    const cap = getCartDiscountCap();
+    let normalized = Number(discountPercent);
+    if (Number.isNaN(normalized) || normalized < 0) {
+        normalized = 0;
+    }
+    if (normalized > cap) {
+        showToast('Error', `Discount cannot exceed ${cap}%. Please choose between 0-${cap}%.`, 'error');
+        normalized = cap;
+    }
+    return normalized;
+}
+
 // Function to update cart item discount
 function updateCartItemDiscount(index, discountPercent, itemId) {
     updateCartEmptyState();
+    discountPercent = clampDiscountWithCap(discountPercent);
     const csrfToken = getCSRFToken();
     
     // Try to find the cart item in the DOM
@@ -1721,6 +1747,13 @@ function updateCartItemDiscount(index, discountPercent, itemId) {
     // Get the update button before any async operations
     const updateButton = cartItem ? cartItem.querySelector('.update-discount-btn') : null;
     let originalHtml = '';
+
+    if (cartItem) {
+        const discountInput = cartItem.querySelector('.discount-input');
+        if (discountInput) {
+            discountInput.value = discountPercent;
+        }
+    }
     
     // Store the original button state
     if (updateButton) {
@@ -2394,19 +2427,13 @@ function removeFromCart(event, itemId, callback) {
                 return refreshPromise;
             };
 
-            // Fade out the item
+            // Fade out the item, but DO NOT remove it yet.
+            // Removing before the server refresh can cause a brief empty-cart flash.
             if (itemElement) {
                 itemElement.style.opacity = '0.5';
                 itemElement.style.transition = 'opacity 0.3s ease';
-                
-                // Wait for the fade-out animation to complete before removing
-                setTimeout(() => {
-                    itemElement.remove();
-                    finalizeRemoval();
-                }, 300);
-            } else {
-                finalizeRemoval();
             }
+            finalizeRemoval();
         } else {
             releaseRemovalGuard(true);
             throw new Error(data.error || 'Failed to remove item from cart');
