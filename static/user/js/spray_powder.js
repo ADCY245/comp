@@ -2,6 +2,10 @@
   const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
   const dataUrl = gmMode ? '/static/data/gm/spray_powder/products.json' : '/static/data/spray_powder/products.json';
 
+  function getDiscountCap() {
+    return gmMode ? 50 : 10;
+  }
+
   const machineSelect = document.getElementById('sprayPowderMachineSelect');
   const productOptionsEl = document.getElementById('sprayPowderProductOptions');
   const formatOptionsEl = document.getElementById('sprayPowderFormatOptions');
@@ -404,7 +408,8 @@
   }
 
   function renderDiscountControl(discountPercent, discountAmount, discountedSubtotal) {
-    const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5)
+    const cap = getDiscountCap();
+    const discountOptions = Array.from({ length: Math.round(cap / 0.5) + 1 }, (_, idx) => idx * 0.5)
       .map(percent => `<option value="${percent}" ${percent === discountPercent ? 'selected' : ''}>${percent}%</option>`)
       .join('');
 

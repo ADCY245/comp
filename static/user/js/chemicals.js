@@ -2,6 +2,10 @@
   const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
   const dataUrl = gmMode ? '/static/data/gm/chemicals/products.json' : '/static/data/chemicals/products.json';
 
+  function getDiscountCap() {
+    return gmMode ? 50 : 10;
+  }
+
   function isTruthyFlag(value) {
     if (typeof value === 'boolean') return value;
     if (value === null || value === undefined) return false;
@@ -644,7 +648,10 @@
         `₹${basePricePerLitre.toFixed(2)} × ${formatNumber(quantityLitresValue)} L`
       ));
       // Build discount select
-      const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5).map(p => `<option value="${p}" ${p === discountPercent ? 'selected' : ''}>${p}%</option>`).join('');
+      const cap = getDiscountCap();
+      const discountOptions = Array.from({ length: Math.round(cap / 0.5) + 1 }, (_, idx) => idx * 0.5)
+        .map(p => `<option value="${p}" ${p === discountPercent ? 'selected' : ''}>${p}%</option>`)
+        .join('');
       const discountSelectHtml = `<select id="discountPercent" class="form-select form-select-sm chem-summary__discount-select">${discountOptions}</select>`;
       const discountSummaryText = discountPercent > 0
         ? `Saving: ₹${discountAmount.toFixed(2)}<br>Subtotal after discount: ₹${discountedSubtotal.toFixed(2)}`

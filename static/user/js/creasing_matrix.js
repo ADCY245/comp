@@ -1,5 +1,10 @@
 (function() {
+  const gmMode = document.documentElement && document.documentElement.dataset && document.documentElement.dataset.pricingMode === 'gm';
   const dataUrl = '/static/data/creasing_matrix/options.json';
+
+  function getDiscountCap() {
+    return gmMode ? 50 : 10;
+  }
 
   function isTruthyFlag(value) {
     if (typeof value === 'boolean') return value;
@@ -578,7 +583,8 @@
   }
 
   function renderDiscountControl(discountPercent, discountAmount, discountedSubtotal) {
-    const discountOptions = Array.from({ length: 21 }, (_, idx) => idx * 0.5)
+    const cap = getDiscountCap();
+    const discountOptions = Array.from({ length: Math.round(cap / 0.5) + 1 }, (_, idx) => idx * 0.5)
       .map(percent => `<option value="${percent}" ${percent === discountPercent ? 'selected' : ''}>${percent}%</option>`)
       .join('');
 
