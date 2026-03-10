@@ -592,9 +592,14 @@
             alert(`Download functionality for quotation #${quotationId} will be implemented soon!`);
         }
         
-        // Download quotation PDF (placeholder)
+        // Download quotation PDF
         function downloadQuotationPDF() {
-            alert('PDF download functionality will be implemented soon!');
+            if (!selectedQuotation || !(selectedQuotation.id || selectedQuotation.mongo_id)) {
+                alert('Unable to download PDF: quotation not selected.');
+                return;
+            }
+            const quotationId = selectedQuotation.mongo_id || selectedQuotation.id;
+            window.location.href = `/admin/quotations/${encodeURIComponent(quotationId)}/pdf`;
         }
     </script>
 {% endblock %}

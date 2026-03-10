@@ -1746,6 +1746,94 @@ def admin_get_quotation(quotation_id):
         return jsonify({'success': False, 'error': 'Failed to load quotation'}), 500
 
 
+@app.route('/admin/quotations/<quotation_id>/pdf')
+@login_required
+@admin_required
+def admin_quotation_pdf(quotation_id):
+    if HTML is None:
+        flash('PDF generation is not available on this server.', 'danger')
+        return redirect(url_for('admin_quotations'))
+
+    if not (MONGO_AVAILABLE and USE_MONGO and mongo_db is not None):
+        flash('Database not available.', 'danger')
+        return redirect(url_for('admin_quotations'))
+
+    try:
+        mongo_db.command('ping')
+        query = {'quote_id': quotation_id}
+        if ObjectId.is_valid(quotation_id):
+            query = {'_id': ObjectId(quotation_id)}
+
+        doc = mongo_db.quotations.find_one(query)
+        if not doc and '_id' in query:
+            doc = mongo_db.quotations.find_one({'quote_id': quotation_id})
+
+        if not doc:
+            flash('Quotation not found.', 'warning')
+            return redirect(url_for('admin_quotations'))
+
+        created_at = doc.get('created_at')
+        if isinstance(created_at, dict) and '$date' in created_at:
+            try:
+                created_at = datetime.fromisoformat(created_at['$date'].replace('Z', '+00:00'))
+            except Exception:
+                created_at = None
+
+        current_datetime = created_at if isinstance(created_at, datetime) else datetime.now()
+        quote_date = current_datetime.strftime('%d-%m-%Y')
+        quote_time = current_datetime.strftime('%H:%M:%S')
+
+        products = doc.get('products') or []
+        cart = {'products': products}
+
+        selected_company = {
+            'id': doc.get('company_id') or '',
+            'name': doc.get('company_name') or '',
+            'email': doc.get('company_email') or ''
+        }
+
+        calculations = {
+            'subtotal_after_discount': doc.get('subtotal_after_discount') or doc.get('total_amount_pre_gst') or 0,
+            'gst_breakdown': {
+                'total_gst': doc.get('total_gst') or doc.get('gst_amount') or 0
+            },
+            'total': doc.get('total_amount_post_gst') or 0
+        }
+
+        context = {
+            'cart': cart,
+            'quote_date': quote_date,
+            'quote_time': quote_time,
+            'company_name': selected_company.get('name') or 'Not specified',
+            'company_email': selected_company.get('email') or '',
+            'company_details': build_quotation_company_details(
+                selected_company,
+                selected_company.get('id'),
+                selected_company.get('email'),
+                fallback={
+                    'name': selected_company.get('name') or 'Not specified',
+                    'email': selected_company.get('email') or ''
+                }
+            ),
+            'calculations': calculations,
+            'now': current_datetime
+        }
+
+        html = render_template('quotation_pdf.html', **context)
+        pdf_bytes = HTML(string=html, base_url=request.url_root).write_pdf()
+
+        safe_id = doc.get('quote_id') or str(doc.get('_id'))
+        filename = f"quotation_{safe_id}.pdf"
+        response = make_response(pdf_bytes)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+    except Exception as e:
+        app.logger.error(f"Error generating admin quotation PDF: {e}", exc_info=True)
+        flash('Failed to generate PDF.', 'danger')
+        return redirect(url_for('admin_quotations'))
+
+
 @app.route('/api/customers', methods=['GET'])
 @login_required
 @admin_required
