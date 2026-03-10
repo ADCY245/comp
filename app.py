@@ -6279,6 +6279,86 @@ def quotation_pdf():
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
 
+    # Reuse the quotation_preview calculation logic so PDF always has complete totals.
+    subtotal_blankets = 0
+    subtotal_mpacks = 0
+    discount_blankets = 0
+    discount_mpacks = 0
+
+    for item in cart.get('products', []):
+        item.setdefault('type', '')
+        item.setdefault('quantity', 1)
+        item.setdefault('discount_percent', 0)
+        item.setdefault('gst_percent', 18)
+        item.setdefault('unit_price', 0)
+        item.setdefault('base_price', 0)
+        item.setdefault('bar_price', 0)
+
+        raw_quantity = item.get('quantity', 1)
+        if item['type'] == 'chemical':
+            try:
+                quantity_value = float(item.get('quantity_litre') or item.get('total_litre') or raw_quantity or 0)
+            except (TypeError, ValueError):
+                quantity_value = 0.0
+            quantity_value = max(quantity_value, 0.0)
+        else:
+            try:
+                quantity_value = float(raw_quantity or 0)
+            except (TypeError, ValueError):
+                quantity_value = 0.0
+            if quantity_value <= 0:
+                quantity_value = 1.0
+
+        price = float(item.get('unit_price', 0) or 0)
+        discount_percent = float(item.get('discount_percent', 0) or 0)
+        gst_percent = float(item.get('gst_percent', 18) or 18)
+
+        subtotal = price * quantity_value
+        discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
+        discounted_subtotal = subtotal - discount_amount
+        gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
+        final_total = discounted_subtotal + gst_amount
+
+        item['calculations'] = item.get('calculations') or {}
+        item['calculations'].update({
+            'unit_price': round(price, 2),
+            'quantity': quantity_value,
+            'subtotal': round(subtotal, 2),
+            'discount_percent': discount_percent,
+            'discount_amount': round(discount_amount, 2),
+            'discounted_subtotal': round(discounted_subtotal, 2),
+            'gst_percent': gst_percent,
+            'gst_amount': round(gst_amount, 2),
+            'final_total': round(final_total, 2)
+        })
+
+        if item.get('type') == 'blanket':
+            subtotal_blankets += subtotal
+            discount_blankets += discount_amount
+        else:
+            subtotal_mpacks += subtotal
+            discount_mpacks += discount_amount
+
+    subtotal_before_discount = subtotal_blankets + subtotal_mpacks
+    total_discount = discount_blankets + discount_mpacks
+    subtotal_after_discount_blankets = max(0, subtotal_blankets - discount_blankets)
+    subtotal_after_discount_mpacks = max(0, subtotal_mpacks - discount_mpacks)
+    subtotal_after_discount = subtotal_after_discount_blankets + subtotal_after_discount_mpacks
+    gst_blankets = subtotal_after_discount_blankets * 0.18
+    gst_mpacks = subtotal_after_discount_mpacks * 0.18
+    total_gst = gst_blankets + gst_mpacks
+    total = subtotal_after_discount + total_gst
+
+    calculations = {
+        'subtotal_before_discount': round(subtotal_before_discount, 2),
+        'total_discount': round(total_discount, 2),
+        'subtotal_after_discount': round(subtotal_after_discount, 2),
+        'total': round(total, 2),
+        'gst_breakdown': {
+            'total_gst': round(total_gst, 2)
+        }
+    }
+
     context = {
         'cart': cart,
         'quote_date': quote_date,
@@ -6294,7 +6374,7 @@ def quotation_pdf():
                 'email': customer_email
             }
         ),
-        'calculations': session.get('quotation_calculations') or {},
+        'calculations': calculations,
         'now': current_datetime
     }
 

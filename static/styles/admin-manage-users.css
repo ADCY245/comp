@@ -5,6 +5,7 @@
     box-shadow: 0 24px 48px rgba(5, 10, 48, 0.45);
     background: rgba(5, 10, 48, 0.65);
     color: #EAEAEA;
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .btn-action {
@@ -68,6 +69,7 @@
 
 .filter-dropdown-btn span {
     color: #EAEAEA;
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .filter-dropdown-menu {
@@ -102,6 +104,7 @@
     justify-content: space-between;
     align-items: center;
     color: #C8AA4E;
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .filter-option .badge {

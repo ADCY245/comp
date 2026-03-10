@@ -231,15 +231,15 @@
       <tbody>
         <tr>
           <td class="num">Subtotal</td>
-          <td class="num">₹{{ '%.2f'|format(calculations.subtotal_after_discount) }}</td>
+          <td class="num">₹{{ '%.2f'|format((calculations.subtotal_after_discount|default(0))) }}</td>
         </tr>
         <tr>
           <td class="num">GST</td>
-          <td class="num">₹{{ '%.2f'|format(calculations.gst_breakdown.total_gst) }}</td>
+          <td class="num">₹{{ '%.2f'|format(((calculations.gst_breakdown|default({})).total_gst|default(0))) }}</td>
         </tr>
         <tr>
           <td class="num">Total</td>
-          <td class="num">₹{{ '%.2f'|format(calculations.total) }}</td>
+          <td class="num">₹{{ '%.2f'|format((calculations.total|default(0))) }}</td>
         </tr>
       </tbody>
     </table>
