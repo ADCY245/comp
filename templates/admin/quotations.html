@@ -164,6 +164,7 @@
     <script>
         let allQuotations = [];
         let filteredQuotations = [];
+        let selectedQuotation = null;
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
@@ -335,6 +336,7 @@
                 }
                 
                 const quotation = data.quotation;
+                selectedQuotation = data.quotation;
                 displayQuotationModal(quotation);
                 
             } catch (error) {
