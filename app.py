@@ -12,6 +12,11 @@ from io import BytesIO
 import uuid
 import hashlib
 import secrets
+
+try:
+    from weasyprint import HTML
+except Exception:
+    HTML = None
 import re
 import random
 import time
@@ -6160,6 +6165,60 @@ def quotation_preview():
     }
     
     return render_template('quotation.html', **context)
+
+
+@app.route('/quotation_pdf')
+@login_required
+@company_required
+def quotation_pdf():
+    if HTML is None:
+        flash('PDF generation is not available on this server.', 'danger')
+        return redirect(url_for('quotation_preview'))
+
+    current_datetime = datetime.now()
+    quote_date = current_datetime.strftime('%d-%m-%Y')
+    quote_time = current_datetime.strftime('%H:%M:%S')
+
+    cart = get_user_cart()
+    if not cart.get('products'):
+        flash('Your cart is empty', 'warning')
+        return redirect(url_for('cart'))
+
+    selected_company = session.get('selected_company', {})
+    if not isinstance(selected_company, dict):
+        selected_company = {}
+
+    customer_name = selected_company.get('name') or session.get('company_name', '')
+    customer_email = selected_company.get('email') or session.get('company_email', '')
+
+    context = {
+        'cart': cart,
+        'quote_date': quote_date,
+        'quote_time': quote_time,
+        'company_name': customer_name,
+        'company_email': customer_email,
+        'company_details': build_quotation_company_details(
+            selected_company,
+            session.get('company_id'),
+            session.get('company_email'),
+            fallback={
+                'name': customer_name,
+                'email': customer_email
+            }
+        ),
+        'calculations': session.get('quotation_calculations') or {},
+        'now': current_datetime
+    }
+
+    # Render HTML first (absolute URLs needed for remote assets like logo)
+    html = render_template('quotation_pdf.html', **context)
+    pdf_bytes = HTML(string=html, base_url=request.url_root).write_pdf()
+
+    filename = f"quotation_{quote_date.replace('-', '')}_{current_user.username}.pdf"
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 # ---------------------------------------------------------------------------
 # Send Quotation Route

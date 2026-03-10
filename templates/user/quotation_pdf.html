@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Quotation PDF{% endblock %}
+
+{% block extra_css %}
+<style>
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    background: #fff;
+  }
+
+  .pdf-wrap {
+    width: 100%;
+  }
+
+  .pdf-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    border-bottom: 1px solid #d9d9d9;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  .pdf-header__left {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .pdf-logo {
+    width: 42mm;
+    height: 28mm;
+    object-fit: contain;
+  }
+
+  .pdf-seller {
+    font-size: 10.5pt;
+    line-height: 1.25;
+  }
+
+  .pdf-seller .pdf-seller__name {
+    font-weight: 700;
+  }
+
+  .pdf-title {
+    text-align: right;
+    min-width: 55mm;
+  }
+
+  .pdf-title__text {
+    font-size: 20pt;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .pdf-meta {
+    margin-top: 8px;
+    font-size: 10pt;
+  }
+
+  .pdf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .pdf-card {
+    border: 1px solid #e3e3e3;
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .pdf-card__title {
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+  }
+
+  .pdf-kv {
+    display: grid;
+    grid-template-columns: 34mm 1fr;
+    gap: 6px;
+    font-size: 10pt;
+    line-height: 1.25;
+  }
+
+  .pdf-kv .k {
+    color: #444;
+  }
+
+  .pdf-kv .v {
+    color: #111;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+
+  th, td {
+    border: 1px solid #d9d9d9;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  thead th {
+    background: #f3f3f3;
+    font-weight: 700;
+  }
+
+  .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .muted {
+    color: #666;
+  }
+
+  .totals {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .totals table {
+    width: 70mm;
+    font-size: 10pt;
+  }
+
+  .totals td {
+    border: 1px solid #d9d9d9;
+  }
+
+  .totals tr:last-child td {
+    font-weight: 700;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pdf-wrap">
+  <div class="pdf-header">
+    <div class="pdf-header__left">
+      <img class="pdf-logo" src="https://cgi-logo.tiiny.site/CGI_LOGO.svg" alt="CGI Logo">
+      <div class="pdf-seller">
+        <div class="pdf-seller__name">Chemo Graphic International</div>
+        <div>113-114 High Tech Industrial Centre, Caves Road,</div>
+        <div>Jogeshwari East, (Near Bank of Baroda Branch)</div>
+        <div>Mumbai - 400060, Maharashtra, India.</div>
+        <div>GSTIN: 27AAAPB9020H1Z6</div>
+        <div>Phone: 09619888755</div>
+        <div>Email: info@chemo.in &nbsp; Website: www.chemo.in</div>
+      </div>
+    </div>
+    <div class="pdf-title">
+      <p class="pdf-title__text">ESTIMATE</p>
+      <div class="pdf-meta muted">Generated: {{ quote_date }} {{ quote_time }}</div>
+    </div>
+  </div>
+
+  <div class="pdf-grid">
+    <div class="pdf-card">
+      <div class="pdf-card__title">Bill To</div>
+      <div class="pdf-kv">
+        <div class="k">Company</div>
+        <div class="v">{{ company_details.name or company_name or 'Not specified' }}</div>
+        <div class="k">Email</div>
+        <div class="v">{{ company_details.email or company_email or '' }}</div>
+      </div>
+    </div>
+
+    <div class="pdf-card">
+      <div class="pdf-card__title">Document Details</div>
+      <div class="pdf-kv">
+        <div class="k">Estimate Date</div>
+        <div class="v">{{ quote_date }}</div>
+        <div class="k">Sales Person</div>
+        <div class="v">{{ current_user.username }}</div>
+        <div class="k">Payment Terms</div>
+        <div class="v">100% Advance</div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10mm;">#</th>
+        <th>Item</th>
+        <th>Description</th>
+        <th style="width: 16mm;" class="num">Qty</th>
+        <th style="width: 28mm;" class="num">Rate / Qty</th>
+        <th style="width: 30mm;" class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in cart.products %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td>
+          <div><strong>{{ item.name }}</strong></div>
+          <div class="muted">{{ item.type }}</div>
+        </td>
+        <td>
+          {% if item.machine %}<div><span class="muted">Machine:</span> {{ item.machine }}</div>{% endif %}
+          {% if item.thickness %}<div><span class="muted">Thickness:</span> {{ item.thickness }}</div>{% endif %}
+          {% if item.size %}<div><span class="muted">Size:</span> {{ item.size }}</div>{% endif %}
+        </td>
+        <td class="num">{{ item.quantity }}</td>
+        <td class="num">₹{{ '%.2f'|format(item.unit_price or 0) }}</td>
+        <td class="num">₹{{ '%.2f'|format(item.total_price or item.calculations.final_total or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tbody>
+        <tr>
+          <td class="num">Subtotal</td>
+          <td class="num">₹{{ '%.2f'|format(calculations.subtotal_after_discount) }}</td>
+        </tr>
+        <tr>
+          <td class="num">GST</td>
+          <td class="num">₹{{ '%.2f'|format(calculations.gst_breakdown.total_gst) }}</td>
+        </tr>
+        <tr>
+          <td class="num">Total</td>
+          <td class="num">₹{{ '%.2f'|format(calculations.total) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -66,6 +66,10 @@
     color: #EAEAEA;
 }
 
+.filter-dropdown-btn span {
+    color: #EAEAEA;
+}
+
 .filter-dropdown-menu {
     position: absolute;
     top: 100%;
@@ -98,6 +102,11 @@
     justify-content: space-between;
     align-items: center;
     color: #EAEAEA;
+}
+
+.filter-option .badge {
+    color: #0b1638;
+    background-color: rgba(234, 234, 234, 0.92) !important;
 }
 
 .filter-option:hover,
