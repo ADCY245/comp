@@ -1,8 +1,10 @@
-{% extends "base.html" %}
-{% block title %}Quotation PDF{% endblock %}
-
-{% block extra_css %}
-<style>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quotation PDF</title>
+  <style>
   @page {
     size: A4;
     margin: 16mm;
@@ -143,13 +145,16 @@
     border: 1px solid #d9d9d9;
   }
 
+  .totals table td {
+    padding: 6px 8px;
+  }
+
   .totals tr:last-child td {
     font-weight: 700;
   }
 </style>
-{% endblock %}
-
-{% block content %}
+</head>
+<body>
 <div class="pdf-wrap">
   <div class="pdf-header">
     <div class="pdf-header__left">
@@ -245,4 +250,6 @@
     </table>
   </div>
 </div>
-{% endblock %}
+
+</body>
+</html>
