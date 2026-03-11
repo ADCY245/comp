@@ -514,6 +514,7 @@
                          data-index="{{ loop.index0 }}"
                          data-item-id="{{ item.id or item._id }}"
                          data-name="{{ item.name }}"
+                         data-calculations='{{ (item.calculations or {}) | tojson | safe }}'
                          data-quantity="{{ item.quantity }}"
                          {% if item.type == 'blanket' %}
                          data-base-price="{{ item.base_price }}"

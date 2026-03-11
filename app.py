@@ -6026,18 +6026,34 @@ def quotation_preview():
     selected_company = session.get('selected_company', {})
     app.logger.info(f"[DEBUG] Selected company from session: {selected_company}")
 
-    payment_terms = session.get('payment_terms', '')
+    payment_terms_default = ''
+    company_id = session.get('company_id') or (selected_company.get('id') if isinstance(selected_company, dict) else None)
+    payment_terms_company_id = session.get('payment_terms_company_id')
+
+    # If the company changed, don't leak previous company's payment terms.
+    if str(payment_terms_company_id or '') != str(company_id or ''):
+        session.pop('payment_terms', None)
+        session['payment_terms_company_id'] = str(company_id or '')
+        session.modified = True
+
+    payment_terms = (session.get('payment_terms') or '').strip()
+    if not payment_terms and company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
+        try:
+            company_doc = mongo_db.companies.find_one({'_id': ObjectId(str(company_id))}, {'last_payment_terms': 1})
+            payment_terms = ((company_doc or {}).get('last_payment_terms') or '').strip()
+            if payment_terms:
+                session['payment_terms'] = payment_terms
+                session['payment_terms_company_id'] = str(company_id)
+                session.modified = True
+        except Exception as e:
+            app.logger.warning(f"Failed to load last payment terms for company {company_id}: {e}")
+
+    # If still empty, keep it as "Non selected" (UI will show placeholder).
     if not payment_terms:
-        company_id = session.get('company_id') or (selected_company.get('id') if isinstance(selected_company, dict) else None)
-        if company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
-            try:
-                company_doc = mongo_db.companies.find_one({'_id': ObjectId(str(company_id))}, {'last_payment_terms': 1})
-                payment_terms = (company_doc or {}).get('last_payment_terms') or ''
-                if payment_terms:
-                    session['payment_terms'] = payment_terms
-                    session.modified = True
-            except Exception as e:
-                app.logger.warning(f"Failed to load last payment terms for company {company_id}: {e}")
+        payment_terms = payment_terms_default
+        session['payment_terms'] = payment_terms
+        session['payment_terms_company_id'] = str(company_id or '')
+        session.modified = True
     
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
@@ -6431,18 +6447,9 @@ def set_payment_terms():
     data = request.get_json() or {}
     payment_terms = (data.get('payment_terms') or '').strip()
     session['payment_terms'] = payment_terms
+    session['payment_terms_company_id'] = str(session.get('company_id') or (session.get('selected_company', {}) or {}).get('id') or '')
     session.modified = True
 
-    company_id = session.get('company_id') or (session.get('selected_company', {}) or {}).get('id')
-    if payment_terms and company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
-        try:
-            mongo_db.companies.update_one(
-                {'_id': ObjectId(str(company_id))},
-                {'$set': {'last_payment_terms': payment_terms, 'updated_at': get_india_time()}},
-                upsert=False
-            )
-        except Exception as e:
-            app.logger.warning(f"Failed to persist payment terms to company {company_id}: {e}")
     return jsonify({'success': True, 'payment_terms': payment_terms})
 
 # ---------------------------------------------------------------------------

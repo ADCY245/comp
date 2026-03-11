@@ -1427,6 +1427,45 @@ function updateCartTotals() {
             try {
                 const type = item.getAttribute('data-type');
 
+                const rawServerCalculations = item.getAttribute('data-calculations');
+                let serverCalc = null;
+                if (rawServerCalculations) {
+                    try {
+                        serverCalc = JSON.parse(rawServerCalculations);
+                    } catch (e) {
+                        serverCalc = null;
+                    }
+                }
+
+                // Prefer server-side calculations to avoid rounding drift.
+                if (serverCalc && (serverCalc.final_total !== undefined || serverCalc.finalTotal !== undefined)) {
+                    const itemSubtotal = parseFloat(serverCalc.subtotal ?? serverCalc.display_subtotal ?? 0) || 0;
+                    const discountAmount = parseFloat(serverCalc.discount_amount ?? serverCalc.discountAmount ?? 0) || 0;
+                    const gstAmount = parseFloat(serverCalc.gst_amount ?? serverCalc.gstAmount ?? 0) || 0;
+                    const itemTotal = parseFloat(serverCalc.final_total ?? serverCalc.finalTotal ?? serverCalc.final_price ?? 0) || 0;
+
+                    subtotal += itemSubtotal;
+                    totalDiscount += discountAmount;
+                    totalGst += gstAmount;
+                    total += itemTotal;
+
+                    if (type === 'mpack') {
+                        totalItems += 1;
+                    } else {
+                        const q = parseFloat(item.getAttribute('data-quantity') || item.dataset.quantity || '1');
+                        totalItems += Number.isFinite(q) ? q : 1;
+                    }
+
+                    updateItemDisplay(item, {
+                        type,
+                        final_total: itemTotal,
+                        discount_amount: discountAmount,
+                        gst_amount: gstAmount
+                    });
+                    return;
+                }
+
+                // Fallback: original client-side calculations
                 if (type === 'mpack') {
                     const quantity = parseInt(item.getAttribute('data-quantity') || '1');
                     const validQuantity = isNaN(quantity) || quantity < 1 ? 1 : quantity;
@@ -1476,7 +1515,6 @@ function updateCartTotals() {
                     const gstPercent = parseFloat(item.getAttribute('data-gst-percent') || '18');
                     
                     // Calculate prices
-                    const pricePerUnit = basePrice + barPrice;
                     const displaySubtotal = (basePrice + barPrice) * validQuantity;
                     const discountAmount = displaySubtotal * (discountPercent / 100);
                     const discountedSubtotal = displaySubtotal - discountAmount;
