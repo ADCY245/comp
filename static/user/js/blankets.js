@@ -1132,18 +1132,16 @@ function calculatePrice() {
     // Get discount percentage from select
     currentDiscount = discountSelect ? (parseFloat(discountSelect.value) || 0) : 0;
     
-    // Calculate discount amount and discounted total
-    let discountAmount = 0;
-    let discountedTotal = baseTotal;
+    // Calculate discount amount and discounted total (round each step like server)
+    const subtotal2 = Number(baseTotal.toFixed(2));
+    const discountAmount2 = currentDiscount > 0 ? Number((subtotal2 * currentDiscount / 100).toFixed(2)) : 0;
+    const taxable2 = Number((subtotal2 - discountAmount2).toFixed(2));
     const discountValue = document.getElementById('discountedValue');
     
     if (currentDiscount > 0) {
-      discountAmount = (baseTotal * currentDiscount) / 100;
-      discountedTotal = baseTotal - discountAmount;
-      
       // Update discount display
       if (discountValue) {
-        discountValue.textContent = `Discount (${currentDiscount}%): -₹${discountAmount.toFixed(2)}`;
+        discountValue.textContent = `Discount (${currentDiscount}%): -₹${discountAmount2.toFixed(2)}`;
         discountValue.style.display = 'block';
       }
     } else {
@@ -1153,10 +1151,10 @@ function calculatePrice() {
       }
     }
     
-    // Apply GST on the discounted total
+    // Apply GST on the taxable amount
     const gstRate = parseFloat(document.getElementById('gstSelect').value) || 0;
-    const gstAmount = (discountedTotal * gstRate) / 100;
-    const totalPrice = discountedTotal + gstAmount;
+    const gstAmount2 = Number((taxable2 * gstRate / 100).toFixed(2));
+    const totalPrice2 = Number((taxable2 + gstAmount2).toFixed(2));
     
     // Update price summary
     const finalPriceElement = document.getElementById('finalPrice');
@@ -1184,30 +1182,30 @@ function calculatePrice() {
         </div>
         <div class="d-flex justify-content-between mb-2 fw-bold">
           <span>Net Price:</span>
-          <span>₹${netPrice.toFixed(2)}</span>
+          <span>₹${subtotal2.toFixed(2)}</span>
         </div>`;
       
       if (currentDiscount > 0) {
         summaryHTML += `
         <div class="d-flex justify-content-between text-danger mb-2">
           <span>Discount (${currentDiscount}%):</span>
-          <span>-₹${discountAmount.toFixed(2)}</span>
+          <span>-₹${discountAmount2.toFixed(2)}</span>
         </div>
         <div class="d-flex justify-content-between mb-2 fw-bold">
           <span>Discounted Price:</span>
-          <span>₹${discountedTotal.toFixed(2)}</span>
+          <span>₹${taxable2.toFixed(2)}</span>
         </div>`;
       }
       
       summaryHTML += `
         <div class="d-flex justify-content-between mb-2">
           <span>GST (${gstRate}%):</span>
-          <span>₹${gstAmount.toFixed(2)}</span>
+          <span>₹${gstAmount2.toFixed(2)}</span>
         </div>
         <hr>
         <div class="d-flex justify-content-between fw-bold fs-5">
           <span>Sum Total:</span>
-          <span>₹${totalPrice.toFixed(2)}</span>
+          <span>₹${totalPrice2.toFixed(2)}</span>
         </div>`;
       
       finalPriceElement.innerHTML = summaryHTML;
