@@ -1240,6 +1240,7 @@ def admin_list_companies():
                     'name': 1,
                     'email': 1,
                     'Address': 1,
+                    'last_payment_terms': 1,
                     'assigned_to': 1
                 }
 
@@ -6012,6 +6013,17 @@ def quotation_preview():
     app.logger.info(f"[DEBUG] Selected company from session: {selected_company}")
 
     payment_terms = session.get('payment_terms', '')
+    if not payment_terms:
+        company_id = session.get('company_id') or (selected_company.get('id') if isinstance(selected_company, dict) else None)
+        if company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
+            try:
+                company_doc = mongo_db.companies.find_one({'_id': ObjectId(str(company_id))}, {'last_payment_terms': 1})
+                payment_terms = (company_doc or {}).get('last_payment_terms') or ''
+                if payment_terms:
+                    session['payment_terms'] = payment_terms
+                    session.modified = True
+            except Exception as e:
+                app.logger.warning(f"Failed to load last payment terms for company {company_id}: {e}")
     
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
@@ -6269,7 +6281,7 @@ def quotation_pdf():
         flash('PDF generation is not available on this server.', 'danger')
         return redirect(url_for('quotation_preview'))
 
-    current_datetime = datetime.now()
+    current_datetime = get_india_time()
     quote_date = current_datetime.strftime('%d-%m-%Y')
     quote_time = current_datetime.strftime('%H:%M:%S')
 
@@ -6406,6 +6418,17 @@ def set_payment_terms():
     payment_terms = (data.get('payment_terms') or '').strip()
     session['payment_terms'] = payment_terms
     session.modified = True
+
+    company_id = session.get('company_id') or (session.get('selected_company', {}) or {}).get('id')
+    if payment_terms and company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
+        try:
+            mongo_db.companies.update_one(
+                {'_id': ObjectId(str(company_id))},
+                {'$set': {'last_payment_terms': payment_terms, 'updated_at': get_india_time()}},
+                upsert=False
+            )
+        except Exception as e:
+            app.logger.warning(f"Failed to persist payment terms to company {company_id}: {e}")
     return jsonify({'success': True, 'payment_terms': payment_terms})
 
 # ---------------------------------------------------------------------------
@@ -6572,6 +6595,17 @@ def send_quotation():
         if payment_terms:
             session['payment_terms'] = payment_terms
             session.modified = True
+
+            company_id = session.get('company_id') or (session.get('selected_company', {}) or {}).get('id')
+            if company_id and MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and ObjectId.is_valid(str(company_id)):
+                try:
+                    mongo_db.companies.update_one(
+                        {'_id': ObjectId(str(company_id))},
+                        {'$set': {'last_payment_terms': payment_terms, 'updated_at': quote_generated_at}},
+                        upsert=False
+                    )
+                except Exception as e:
+                    app.logger.warning(f"Failed to update company payment terms for company {company_id}: {e}")
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
         quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
@@ -8114,5 +8148,7 @@ if __name__ == '__main__':
 if USE_MONGO:
     users = {}
 else:
+    users = load_users()
+    print(f"Loaded {len(users)} users from file")
     users = load_users()
     print(f"Loaded {len(users)} users from file")

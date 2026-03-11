@@ -101,7 +101,7 @@ def get_companies():
         companies_cursor = db.companies.find(
             query,
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 
-             'phone': 1, 'address': 1, 'created_at': 1, 'updated_at': 1}
+             'phone': 1, 'address': 1, 'created_at': 1, 'updated_at': 1, 'last_payment_terms': 1}
         ).skip((page - 1) * per_page).limit(per_page)
         
         companies = list(companies_cursor)
@@ -142,7 +142,7 @@ def get_company(company_id):
         company = db.companies.find_one(
             {'_id': ObjectId(company_id)},
             {'_id': 0, 'id': {'$toString': '$_id'}, 'name': 1, 'email': 1, 
-             'phone': 1, 'address': 1, 'created_at': 1, 'updated_at': 1}
+             'phone': 1, 'address': 1, 'created_at': 1, 'updated_at': 1, 'last_payment_terms': 1}
         )
         
         if not company:

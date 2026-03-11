@@ -211,7 +211,7 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-12 col-md-6">
-                    <label for="paymentTerms" class="form-label">Payment Terms</label>
+                    <label for="paymentTerms" class="form-label">Payment Terms <span style="color: #dc3545;">*</span></label>
                     <select id="paymentTerms" class="form-select">
                         {% set terms = [
                             '100% advance',
@@ -452,9 +452,9 @@
                 <button onclick="window.print()" class="btn btn-primary me-2">
                     <i class="fas fa-print me-1"></i> Print Quotation
                 </button>
-                <a href="{{ url_for('quotation_pdf') }}" class="btn btn-outline-dark me-2">
+                <button type="button" class="btn btn-outline-dark me-2" onclick="downloadQuotationPdf()">
                     <i class="fas fa-file-pdf me-1"></i> Download PDF
-                </a>
+                </button>
                 <button id="sendQuotationBtn" class="btn btn-success">
                     <i class="fas fa-paper-plane me-1"></i> Send Quotation
                 </button>
@@ -479,6 +479,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     // No JavaScript needed for company info as it's now server-rendered
 });
+
+function downloadQuotationPdf() {
+    const paymentTerms = document.getElementById('paymentTerms');
+    const paymentVal = paymentTerms ? paymentTerms.value : '';
+    if (!paymentVal) {
+        alert('Please select Payment Terms before downloading the PDF.');
+        return;
+    }
+    window.location.href = "{{ url_for('quotation_pdf') }}";
+}
 </script>
 
 <script src="{{ url_for('static', filename='user/js/quotation.js') }}"></script>

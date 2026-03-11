@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const notes = document.getElementById('quotationNotes')?.value || '';
       const payment_terms = document.getElementById('paymentTerms')?.value || '';
+
+      if (!payment_terms) {
+        showToast('Error', 'Please select Payment Terms before sending the quotation.', 'danger');
+        return;
+      }
       sendBtn.disabled = true;
       sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
 
