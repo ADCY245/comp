@@ -6613,6 +6613,9 @@ def send_quotation():
         quote_generated_at_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
         quote_generated_at = quote_generated_at_utc.astimezone(IST)
 
+        # Generate a unique quote ID early so it is always available for attachments/logging.
+        quote_id = get_next_quote_id()
+
         if payment_terms:
             session['payment_terms'] = payment_terms
             session.modified = True
@@ -6653,45 +6656,6 @@ def send_quotation():
             <tbody>
         """
 
-        pdf_attachments = None
-        try:
-            if HTML is not None:
-                pdf_context = {
-                    'cart': cart,
-                    'quote_date': quote_generated_at.strftime('%d-%m-%Y'),
-                    'quote_time': quote_generated_at.strftime('%H:%M:%S'),
-                    'company_name': customer_name,
-                    'company_email': customer_email,
-                    'payment_terms': payment_terms,
-                    'company_details': build_quotation_company_details(
-                        session.get('selected_company', {}) if isinstance(session.get('selected_company', {}), dict) else {},
-                        session.get('company_id'),
-                        session.get('company_email'),
-                        fallback={'name': customer_name, 'email': customer_email}
-                    ),
-                    'calculations': {
-                        'subtotal_before_discount': subtotal_before_discount,
-                        'total_discount': total_discount,
-                        'subtotal_after_discount': subtotal_after_discount,
-                        'total': total,
-                        'gst_breakdown': {
-                            'total_gst': total_gst
-                        }
-                    },
-                    'now': quote_generated_at
-                }
-                pdf_html = render_template('quotation_pdf.html', **pdf_context)
-                pdf_bytes = HTML(string=pdf_html, base_url=request.url_root).write_pdf()
-                pdf_attachments = [
-                    {
-                        'filename': f"quotation_{quote_id}.pdf",
-                        'content': base64.b64encode(pdf_bytes).decode('utf-8'),
-                        'type': 'application/pdf'
-                    }
-                ]
-        except Exception as pdf_err:
-            app.logger.warning(f"Failed to generate PDF attachment for email (quotation_{quote_id}.pdf): {pdf_err}")
-        
         subtotal = 0
         subtotal_before_discount = 0.0
         subtotal_after_discount = 0.0
@@ -6900,8 +6864,44 @@ def send_quotation():
         total_gst = round(total_gst, 2)
         total = round(total, 2)
 
-        # Generate a unique quote ID in the format CGI_Q1, CGI_Q2, ...
-        quote_id = get_next_quote_id()
+        pdf_attachments = None
+        try:
+            if HTML is not None:
+                pdf_context = {
+                    'cart': cart,
+                    'quote_date': quote_generated_at.strftime('%d-%m-%Y'),
+                    'quote_time': quote_generated_at.strftime('%H:%M:%S'),
+                    'company_name': customer_name,
+                    'company_email': customer_email,
+                    'payment_terms': payment_terms,
+                    'company_details': build_quotation_company_details(
+                        session.get('selected_company', {}) if isinstance(session.get('selected_company', {}), dict) else {},
+                        session.get('company_id'),
+                        session.get('company_email'),
+                        fallback={'name': customer_name, 'email': customer_email}
+                    ),
+                    'calculations': {
+                        'subtotal_before_discount': subtotal_before_discount,
+                        'total_discount': total_discount,
+                        'subtotal_after_discount': subtotal_after_discount,
+                        'total': total,
+                        'gst_breakdown': {
+                            'total_gst': total_gst
+                        }
+                    },
+                    'now': quote_generated_at
+                }
+                pdf_html = render_template('quotation_pdf.html', **pdf_context)
+                pdf_bytes = HTML(string=pdf_html, base_url=request.url_root).write_pdf()
+                pdf_attachments = [
+                    {
+                        'filename': f"quotation_{quote_id}.pdf",
+                        'content': base64.b64encode(pdf_bytes).decode('utf-8'),
+                        'type': 'application/pdf'
+                    }
+                ]
+        except Exception as pdf_err:
+            app.logger.warning(f"Failed to generate PDF attachment for email (quotation_{quote_id}.pdf): {pdf_err}")
 
         logo_src = "https://cgi-logo.tiiny.site/CGI_LOGO.svg"
 
