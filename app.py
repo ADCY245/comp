@@ -1780,7 +1780,9 @@ def admin_quotation_pdf(quotation_id):
             except Exception:
                 created_at = None
 
-        current_datetime = created_at if isinstance(created_at, datetime) else datetime.now()
+        current_datetime = created_at if isinstance(created_at, datetime) else get_india_time()
+        if isinstance(current_datetime, datetime) and current_datetime.tzinfo is None:
+            current_datetime = current_datetime.replace(tzinfo=IST)
         quote_date = current_datetime.strftime('%d-%m-%Y')
         quote_time = current_datetime.strftime('%H:%M:%S')
 
@@ -1793,12 +1795,20 @@ def admin_quotation_pdf(quotation_id):
             'email': doc.get('company_email') or ''
         }
 
+        subtotal_before_discount = doc.get('subtotal_before_discount') or 0
+        total_discount = doc.get('total_discount') or 0
+        subtotal_after_discount = doc.get('subtotal_after_discount') or doc.get('total_amount_pre_gst') or max(0, float(subtotal_before_discount or 0) - float(total_discount or 0))
+        total_gst = doc.get('total_gst') or doc.get('gst_amount') or 0
+        total_after_gst = doc.get('total_amount_post_gst') or (float(subtotal_after_discount or 0) + float(total_gst or 0))
+
         calculations = {
-            'subtotal_after_discount': doc.get('subtotal_after_discount') or doc.get('total_amount_pre_gst') or 0,
+            'subtotal_before_discount': subtotal_before_discount,
+            'total_discount': total_discount,
+            'subtotal_after_discount': subtotal_after_discount,
             'gst_breakdown': {
-                'total_gst': doc.get('total_gst') or doc.get('gst_amount') or 0
+                'total_gst': total_gst
             },
-            'total': doc.get('total_amount_post_gst') or 0
+            'total': total_after_gst
         }
 
         payment_terms = doc.get('payment_terms') or doc.get('paymentTerms') or ''
@@ -3150,7 +3160,8 @@ def send_email_resend(
     from_email: str | None = None,
     cc=None,
     bcc=None,
-    reply_to: str | None = None
+    reply_to: str | None = None,
+    attachments=None
 ) -> bool:
     """Send an email via Resend API."""
     if not email_config_valid:
@@ -3181,6 +3192,9 @@ def send_email_resend(
         payload["bcc"] = bcc if isinstance(bcc, list) else [bcc]
     if reply_to:
         payload["reply_to"] = reply_to
+
+    if attachments:
+        payload["attachments"] = attachments
 
     # Resend requires at least one of html/text
     if "html" not in payload and "text" not in payload:
@@ -5996,7 +6010,7 @@ def quotation_preview():
     app.logger.info("[DEBUG] quotation_preview() called")
     
     # Get current date and time
-    current_datetime = datetime.now()
+    current_datetime = get_india_time()
     quote_date = current_datetime.strftime('%d-%m-%Y')
     quote_time = current_datetime.strftime('%H:%M:%S')
     
@@ -6609,6 +6623,8 @@ def send_quotation():
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
         quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
+        payment_terms_display = payment_terms or '---'
+
         # Table rows with header
         rows_html = """
         <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
@@ -6629,6 +6645,45 @@ def send_quotation():
             </thead>
             <tbody>
         """
+
+        pdf_attachments = None
+        try:
+            if HTML is not None:
+                pdf_context = {
+                    'cart': cart,
+                    'quote_date': quote_generated_at.strftime('%d-%m-%Y'),
+                    'quote_time': quote_generated_at.strftime('%H:%M:%S'),
+                    'company_name': customer_name,
+                    'company_email': customer_email,
+                    'payment_terms': payment_terms,
+                    'company_details': build_quotation_company_details(
+                        session.get('selected_company', {}) if isinstance(session.get('selected_company', {}), dict) else {},
+                        session.get('company_id'),
+                        session.get('company_email'),
+                        fallback={'name': customer_name, 'email': customer_email}
+                    ),
+                    'calculations': {
+                        'subtotal_before_discount': subtotal_before_discount,
+                        'total_discount': total_discount,
+                        'subtotal_after_discount': subtotal_after_discount,
+                        'total': total,
+                        'gst_breakdown': {
+                            'total_gst': total_gst
+                        }
+                    },
+                    'now': quote_generated_at
+                }
+                pdf_html = render_template('quotation_pdf.html', **pdf_context)
+                pdf_bytes = HTML(string=pdf_html, base_url=request.url_root).write_pdf()
+                pdf_attachments = [
+                    {
+                        'filename': f"quotation_{quote_id}.pdf",
+                        'content': base64.b64encode(pdf_bytes).decode('utf-8'),
+                        'type': 'application/pdf'
+                    }
+                ]
+        except Exception as pdf_err:
+            app.logger.warning(f"Failed to generate PDF attachment for email: {pdf_err}")
         
         subtotal = 0
         subtotal_before_discount = 0.0
@@ -6976,9 +7031,11 @@ def send_quotation():
                 <h5 style='margin: 0; font-size: 1rem;'>Quotation Details</h5>
               </div>
               <div style='padding: 1.5rem; background-color: white;'>
-                <p style='margin-bottom: 1rem;'>Hello,</p>
-                <p style='margin-bottom: 1rem;'>This is {current_user.username} from CGI.</p>
+                <p style='margin-bottom: 1.5rem; font-size: 1rem;'>Hello <strong>{customer_name}</strong>,</p>
+                <p style='margin-bottom: 1.5rem;'>This is <strong>{current_user.username}</strong> from CGI.</p>
                 <p style='margin-bottom: 1.5rem;'>Here is the proposed quotation for the required products:</p>
+
+                <p style='margin: 0 0 1rem 0;'><strong>Payment Terms:</strong> {payment_terms_display}</p>
                 {'<p style="margin-bottom: 1.5rem;"><strong>Notes:</strong><br>' + notes + '</p>' if notes else ''}
                 
                 <div style='overflow-x: auto; margin: 1.5rem 0;'>
@@ -7075,7 +7132,8 @@ def send_quotation():
         email_sent = send_email_resend(
             to=recipients,
             subject=f"Quotation from Chemo INTERNATIONAL - {quote_date_display}",
-            html=email_content
+            html=email_content,
+            attachments=pdf_attachments
         )
 
         if email_sent:
