@@ -1116,7 +1116,7 @@ function calculatePrice() {
     const ratePerSqMt = parseFloat(selectedBlanket.ratePerSqMt || selectedBlanket.base_rate || 0);
     basePrice = areaSqM * ratePerSqMt;
     
-    // Calculate net price per piece (base price + barring)
+    // Calculate net price per piece (base price + barring per piece)
     const netPricePerPiece = basePrice + currentBarRate;
     
     // Get quantity
@@ -1365,8 +1365,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-async function addBlanketToCart() {
+async function addBlanketToCart(event) {
   return new Promise(async (resolve, reject) => {
+  if (event && typeof event.preventDefault === 'function') {
+    event.preventDefault();
+  }
+  if (event && typeof event.stopPropagation === 'function') {
+    event.stopPropagation();
+  }
   // Get input elements
   const blanketSelect = document.getElementById('blanketSelect');
   const machineSelect = document.getElementById('machineSelect');
@@ -1415,18 +1421,19 @@ async function addBlanketToCart() {
   const ratePerSqMt = parseFloat(selectedBlanket.ratePerSqMt || selectedBlanket.base_rate || 0);
   basePrice = areaSqM * ratePerSqMt;
   
-  // Apply discount to base price only
-  const discountAmount = currentDiscount > 0 ? (basePrice * currentDiscount / 100) : 0;
-  const discountedBasePrice = basePrice - discountAmount;
-  
-  // Add bar price after discount - multiply bar rate by area in square meters
-  const priceWithBar = discountedBasePrice + (barPrice * areaSqM);
-  const discountedPrice = priceWithBar;
-  
-  // Calculate GST on the discounted price
-  const gstAmount = (discountedPrice * gstPercent) / 100;
-  const finalUnitPrice = discountedPrice + gstAmount;
-  const finalTotalPrice = finalUnitPrice * quantity;
+  // Calculate using the same formula as cart/server:
+  // subtotal = (base_price + bar_price) * qty
+  // discount = subtotal * discount%
+  // taxable = subtotal - discount
+  // gst = taxable * gst%
+  // final_total = taxable + gst
+  const unitPricePerPiece = basePrice + barPrice;
+  const subtotal = unitPricePerPiece * quantity;
+  const discountAmount = currentDiscount > 0 ? (subtotal * currentDiscount / 100) : 0;
+  const taxableAmount = subtotal - discountAmount;
+  const gstAmount = (taxableAmount * gstPercent) / 100;
+  const finalTotalPrice = taxableAmount + gstAmount;
+  const finalUnitPrice = quantity > 0 ? (finalTotalPrice / quantity) : 0;
 
   // Create product object with all calculated values
   const machineName = (machineSelect && machineSelect.value)
@@ -1459,13 +1466,13 @@ async function addBlanketToCart() {
       areaSqM: parseFloat(areaSqM.toFixed(4)),
       ratePerSqMt: parseFloat(selectedBlanket.base_rate) || 0,
       basePrice: parseFloat(basePrice.toFixed(2)),
-      pricePerUnit: parseFloat(priceWithBar.toFixed(2)),
-      subtotal: parseFloat((priceWithBar * quantity).toFixed(2)),
+      pricePerUnit: parseFloat(unitPricePerPiece.toFixed(2)),
+      subtotal: parseFloat(subtotal.toFixed(2)),
       discount_percent: currentDiscount,
       discount_amount: parseFloat(discountAmount.toFixed(2)),
-      discounted_subtotal: parseFloat((discountedPrice * quantity).toFixed(2)),
+      discounted_subtotal: parseFloat(taxableAmount.toFixed(2)),
       gst_percent: gstPercent,
-      gst_amount: parseFloat((gstAmount * quantity).toFixed(2)),
+      gst_amount: parseFloat(gstAmount.toFixed(2)),
       final_price: parseFloat(finalTotalPrice.toFixed(2))
     },
     

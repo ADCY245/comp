@@ -6690,7 +6690,7 @@ def send_quotation():
                     }
                 ]
         except Exception as pdf_err:
-            app.logger.warning(f"Failed to generate PDF attachment for email: {pdf_err}")
+            app.logger.warning(f"Failed to generate PDF attachment for email (quotation_{quote_id}.pdf): {pdf_err}")
         
         subtotal = 0
         subtotal_before_discount = 0.0
@@ -6904,11 +6904,6 @@ def send_quotation():
         quote_id = get_next_quote_id()
 
         logo_src = "https://cgi-logo.tiiny.site/CGI_LOGO.svg"
-        watermark_layer_html = f"""
-          <div style='position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.12; width:320px; max-width:60%; pointer-events:none;'>
-            <img src='{logo_src}' alt='CGI watermark' style='width:100%; height:auto; display:block;'>
-          </div>
-        """
 
         company_name_display = "Chemo Graphic International (CGI)"
         company_email_html = "<a href='mailto:info@chemo.in' style='color: #0d6efd; text-decoration: none; word-break: break-word;'>info@chemo.in</a>"
@@ -6917,12 +6912,11 @@ def send_quotation():
         company_gst_html = "27AAAPB9020H1Z6"
 
         email_content = f"""
-        <div style='font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; line-height: 1.6; background-color: #e0caa9; padding: 20px;'>
-          <div style='position: relative; background-color: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 2rem; margin-bottom: 1.5rem; overflow: hidden;'>
-            {watermark_layer_html}
-            <div style='position: relative; z-index: 1;'>
-              <div style='text-align: center; margin-bottom: 2rem;'>
-                <img src='{logo_src}' alt='CGI Logo' style='max-width: 200px; margin-bottom: 1rem;'>
+        <div style='font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; line-height: 1.6; background-color: #e0caa9; padding: 12px;'>
+          <div style='background-color: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 1.5rem; margin-bottom: 1rem;'>
+            <div>
+              <div style='text-align: center; margin-bottom: 1.25rem;'>
+                <img src='{logo_src}' alt='CGI Logo' style='max-width: 180px; margin-bottom: 0.5rem;'>
                 <h2 style='margin: 0 0 0.5rem 0; color: #2c3e50;'>QUOTATION</h2>
                 <p style='color: #6c757d; margin: 0; font-size: 0.9rem;'>{quote_date_display}</p>
               </div>
