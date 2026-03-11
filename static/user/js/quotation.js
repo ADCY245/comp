@@ -6,6 +6,25 @@ function goToQuotationPreview() {
 
 // Function to handle quotation preview
 document.addEventListener('DOMContentLoaded', () => {
+  const paymentTermsSelect = document.getElementById('paymentTerms');
+  if (paymentTermsSelect) {
+    paymentTermsSelect.addEventListener('change', async () => {
+      const payment_terms = paymentTermsSelect.value || '';
+      try {
+        await fetch('/api/payment_terms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ payment_terms })
+        });
+      } catch (err) {
+        console.error('Error saving payment terms:', err);
+      }
+    });
+  }
+
   // Handle send quotation button
   const sendBtn = document.getElementById('sendQuotationBtn');
   if (sendBtn) {
@@ -14,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
       }
       const notes = document.getElementById('quotationNotes')?.value || '';
+      const payment_terms = document.getElementById('paymentTerms')?.value || '';
       sendBtn.disabled = true;
       sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
 
@@ -24,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ notes })
+          body: JSON.stringify({ notes, payment_terms })
         });
         const data = await res.json();
         

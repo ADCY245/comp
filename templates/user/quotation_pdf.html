@@ -103,6 +103,10 @@
     color: #111;
   }
 
+  .pdf-kv .span-2 {
+    grid-column: 1 / -1;
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -194,7 +198,7 @@
         <div class="k">Sales Person</div>
         <div class="v">{{ current_user.username }}</div>
         <div class="k">Payment Terms</div>
-        <div class="v">100% Advance</div>
+        <div class="v">{{ payment_terms or '---' }}</div>
       </div>
     </div>
   </div>
@@ -202,30 +206,129 @@
   <table>
     <thead>
       <tr>
-        <th style="width: 10mm;">#</th>
-        <th>Item</th>
-        <th>Description</th>
+        <th style="width: 10mm;">Sr No</th>
+        <th style="width: 22mm;">Machine</th>
+        <th style="width: 24mm;">Product Type</th>
+        <th>Type</th>
+        <th style="width: 30mm;">Format / Thickness</th>
+        <th>Details</th>
+        <th style="width: 22mm;">Barring Type</th>
         <th style="width: 16mm;" class="num">Qty</th>
-        <th style="width: 28mm;" class="num">Rate / Qty</th>
-        <th style="width: 30mm;" class="num">Amount</th>
+        <th style="width: 24mm;" class="num">Price</th>
+        <th style="width: 20mm;" class="num">Discount</th>
+        <th style="width: 28mm;" class="num">Net Amount</th>
       </tr>
     </thead>
     <tbody>
       {% for item in cart.products %}
+      {% set prod_type = item.type %}
+      {% set calc = item.get('calculations', {}) %}
+      {% set unit_price = (calc.get('unit_price', item.get('unit_price', item.get('base_price', 0))) or 0) | float %}
+      {% set quantity = (calc.get('quantity', item.get('quantity', 1)) or 0) | float %}
+      {% set pre_discount = unit_price * quantity %}
+      {% set discount_amount = calc.get('discount_amount') %}
+      {% if discount_amount is none %}
+        {% set discount_amount = pre_discount * ((item.get('discount_percent', 0)|float) / 100) %}
+      {% endif %}
+      {% set net_amount = pre_discount - (discount_amount or 0) %}
       <tr>
         <td class="num">{{ loop.index }}</td>
+        <td>{{ item.get('machine', '') }}</td>
+        <td>{% if prod_type == 'mpack' %}Underpacking{% else %}{{ prod_type }}{% endif %}</td>
         <td>
-          <div><strong>{{ item.name }}</strong></div>
-          <div class="muted">{{ item.type }}</div>
+          {% if prod_type == 'blanket' %}
+            {{ item.get('blanket_type', item.get('name', '----')) }}
+          {% elif prod_type == 'mpack' %}
+            {% set underpacking_type = item.get('underpacking_type', '') %}
+            {% if underpacking_type %}
+              {% if underpacking_type == 'mtech_mpack' %}
+                Mtech Mpack
+              {% elif underpacking_type == 'mark3zet' %}
+                Mark3zet
+              {% else %}
+                {{ item.get('name', '') }}
+              {% endif %}
+            {% else %}
+              {{ item.get('name', '') }}
+            {% endif %}
+          {% else %}
+            {{ item.get('name', '') }}
+          {% endif %}
         </td>
         <td>
-          {% if item.machine %}<div><span class="muted">Machine:</span> {{ item.machine }}</div>{% endif %}
-          {% if item.thickness %}<div><span class="muted">Thickness:</span> {{ item.thickness }}</div>{% endif %}
-          {% if item.size %}<div><span class="muted">Size:</span> {{ item.size }}</div>{% endif %}
+          {% if prod_type == 'maintenance' %}
+            {% if item.get('format_label') %}
+              {{ item.format_label }}
+            {% elif item.get('pack_size_litre') %}
+              {{ item.pack_size_litre }}L Pack
+            {% else %}
+              ------
+            {% endif %}
+          {% else %}
+            {% if item.get('thickness') %}
+              {% if item.type == 'blanket' %}
+                {{ item.thickness|replace('.0', '') }} mm
+              {% else %}
+                {{ item.thickness }}{% if item.thickness and not (item.thickness|string).endswith(('mm', 'micron', 'in', 'cm')) and item.thickness|float >= 1 %} mm{% endif %}
+              {% endif %}
+            {% else %}
+              ------
+            {% endif %}
+          {% endif %}
         </td>
-        <td class="num">{{ item.quantity }}</td>
-        <td class="num">₹{{ '%.2f'|format(item.unit_price or 0) }}</td>
-        <td class="num">₹{{ '%.2f'|format(item.total_price or item.calculations.final_total or 0) }}</td>
+        <td>
+          {% if prod_type in ['chemical', 'maintenance'] %}
+            {% if item.get('category') %}<div><span class="muted">Category:</span> {{ item.category }}</div>{% endif %}
+            {% if item.get('quantity_litre') %}<div><span class="muted">Quantity:</span> {{ item.quantity_litre }}L</div>{% endif %}
+            {% if item.get('packs_needed') %}<div><span class="muted">Packs:</span> {{ item.packs_needed }}</div>{% endif %}
+          {% else %}
+            {% if prod_type == 'mpack' %}
+              {% set use_custom = item.cut_to_custom_size and item.custom_length_mm and item.custom_width_mm %}
+              {% set display_length = (use_custom and item.custom_length_mm) or (item.display_length_mm or item.standard_length_mm or item.length) %}
+              {% set display_width = (use_custom and item.custom_width_mm) or (item.display_width_mm or item.standard_width_mm or item.width) %}
+              {% if display_length and display_width %}
+                {% set length_display = '%g' % (display_length|float) %}
+                {% set width_display = '%g' % (display_width|float) %}
+                {{ width_display }} x {{ length_display }} mm
+              {% elif item.size %}
+                {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+              {% else %}
+                ------
+              {% endif %}
+            {% elif item.get('size') %}
+              {{ item.size|replace('.0 mm', ' mm')|replace('.0mm', 'mm') }}
+            {% elif item.get('length') and item.get('width') %}
+              {{ '%sx%s%s'|format(
+                item.length|string|replace('.0', ''),
+                item.width|string|replace('.0', ''),
+                item.get('unit', '')|replace('mm', ' mm')
+              ) }}
+            {% else %}
+              ------
+            {% endif %}
+          {% endif %}
+        </td>
+        <td>{{ item.get('bar_type', '------') if prod_type == 'blanket' else '------' }}</td>
+        <td class="num">
+          {% if prod_type == 'chemical' %}
+            {% set litre_qty = item.get('quantity_litre') or item.get('total_litre') or item.get('quantity', 0) %}
+            {% set litre_val = litre_qty|float %}
+            {% if litre_val %}
+              {% if litre_val == litre_val|int %}
+                {{ litre_val|int }}L
+              {% else %}
+                {{ '%.2f' % litre_val }}L
+              {% endif %}
+            {% else %}
+              0L
+            {% endif %}
+          {% else %}
+            {{ item.get('quantity', 1) }}
+          {% endif %}
+        </td>
+        <td class="num">₹{{ '%.2f'|format(unit_price) }}</td>
+        <td class="num">{% if item.get('discount_percent', 0) > 0 %}{{ '%.1f'|format(item.discount_percent) }}%{% else %}------{% endif %}</td>
+        <td class="num">₹{{ '%.2f'|format(net_amount|float) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -235,9 +338,19 @@
     <table>
       <tbody>
         <tr>
-          <td class="num">Subtotal</td>
-          <td class="num">₹{{ '%.2f'|format((calculations.subtotal_after_discount|default(0))) }}</td>
+          <td class="num">Subtotal (Pre-Discount)</td>
+          <td class="num">₹{{ '%.2f'|format((calculations.subtotal_before_discount|default(0))) }}</td>
         </tr>
+        {% if (calculations.total_discount|default(0))|float > 0 %}
+        <tr>
+          <td class="num">Discount</td>
+          <td class="num">-₹{{ '%.2f'|format((calculations.total_discount|default(0))) }}</td>
+        </tr>
+        <tr>
+          <td class="num"><strong>Total (Pre-GST)</strong></td>
+          <td class="num"><strong>₹{{ '%.2f'|format((calculations.subtotal_after_discount|default(0))) }}</strong></td>
+        </tr>
+        {% endif %}
         <tr>
           <td class="num">GST</td>
           <td class="num">₹{{ '%.2f'|format(((calculations.gst_breakdown|default({})).total_gst|default(0))) }}</td>

@@ -208,6 +208,27 @@
             <p>Hello,</p>
             <p>This is <strong>{{ current_user.username }}</strong> from CGI.</p>
             <p>Here is the proposed quotation for the required products:</p>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <label for="paymentTerms" class="form-label">Payment Terms</label>
+                    <select id="paymentTerms" class="form-select">
+                        {% set terms = [
+                            '100% advance',
+                            'P.O.D',
+                            '7 days',
+                            '15 days',
+                            '1 Month',
+                            '45 Days',
+                            '2 Month'
+                        ] %}
+                        <option value="" {% if not payment_terms %}selected{% endif %}>Select payment terms</option>
+                        {% for term in terms %}
+                            <option value="{{ term }}" {% if payment_terms and payment_terms|lower == term|lower %}selected{% endif %}>{{ term }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             
             <div class="table-responsive">
                 <table class="table table-bordered">

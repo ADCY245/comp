@@ -1800,12 +1800,15 @@ def admin_quotation_pdf(quotation_id):
             'total': doc.get('total_amount_post_gst') or 0
         }
 
+        payment_terms = doc.get('payment_terms') or doc.get('paymentTerms') or ''
+
         context = {
             'cart': cart,
             'quote_date': quote_date,
             'quote_time': quote_time,
             'company_name': selected_company.get('name') or 'Not specified',
             'company_email': selected_company.get('email') or '',
+            'payment_terms': payment_terms,
             'company_details': build_quotation_company_details(
                 selected_company,
                 selected_company.get('id'),
@@ -6007,6 +6010,8 @@ def quotation_preview():
     # Get company info from selected_company dict first, then fallback to direct session values
     selected_company = session.get('selected_company', {})
     app.logger.info(f"[DEBUG] Selected company from session: {selected_company}")
+
+    payment_terms = session.get('payment_terms', '')
     
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
@@ -6216,6 +6221,7 @@ def quotation_preview():
         'quote_time': quote_time,
         'company_name': customer_name,
         'company_email': customer_email,
+        'payment_terms': payment_terms,
         'company_details': build_quotation_company_details(
             selected_company,
             session.get('company_id'),
@@ -6275,6 +6281,8 @@ def quotation_pdf():
     selected_company = session.get('selected_company', {})
     if not isinstance(selected_company, dict):
         selected_company = {}
+
+    payment_terms = session.get('payment_terms', '')
 
     customer_name = selected_company.get('name') or session.get('company_name', '')
     customer_email = selected_company.get('email') or session.get('company_email', '')
@@ -6365,6 +6373,7 @@ def quotation_pdf():
         'quote_time': quote_time,
         'company_name': customer_name,
         'company_email': customer_email,
+        'payment_terms': payment_terms,
         'company_details': build_quotation_company_details(
             selected_company,
             session.get('company_id'),
@@ -6388,6 +6397,17 @@ def quotation_pdf():
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response
 
+
+@app.route('/api/payment_terms', methods=['POST'])
+@login_required
+@company_required
+def set_payment_terms():
+    data = request.get_json() or {}
+    payment_terms = (data.get('payment_terms') or '').strip()
+    session['payment_terms'] = payment_terms
+    session.modified = True
+    return jsonify({'success': True, 'payment_terms': payment_terms})
+
 # ---------------------------------------------------------------------------
 # Send Quotation Route
 # ---------------------------------------------------------------------------
@@ -6400,6 +6420,7 @@ def send_quotation():
         # Parse optional notes from request body
         data = request.get_json() or {}
         notes = (data.get('notes') or '').strip()
+        payment_terms = (data.get('payment_terms') or session.get('payment_terms') or '').strip()
 
         # Fetch cart
         cart = get_user_cart()
@@ -6547,6 +6568,10 @@ def send_quotation():
 
         quote_generated_at_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
         quote_generated_at = quote_generated_at_utc.astimezone(IST)
+
+        if payment_terms:
+            session['payment_terms'] = payment_terms
+            session.modified = True
         quote_date_display = quote_generated_at.strftime('%d/%m/%Y')
         quote_time_display = quote_generated_at.strftime('%I:%M %p')
 
@@ -6995,6 +7020,7 @@ def send_quotation():
                     'user_email': current_user.email,
                     'company_name': customer_name,
                     'company_email': customer_email,
+                    'payment_terms': payment_terms,
                     'products': products,
                     'products_count': len(products),
                     'subtotal_before_discount': subtotal_before_discount,
