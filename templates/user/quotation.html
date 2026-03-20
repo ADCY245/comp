@@ -136,6 +136,10 @@
                         <div class="text-muted small">Prepared by:</div>
                         <div class="fw-semibold">{{ current_user.username }}</div>
                         <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
+                        <div class="mt-2">
+                            <label for="preparedByPhone" class="form-label mb-1">Phone <span style="color: #dc3545;">*</span></label>
+                            <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,6 +173,15 @@
                                         <span class="text-muted">--</span>
                                     {% endif %}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-phone me-2 text-muted"></i>
+                            <div class="w-100">
+                                <div class="text-muted small">Phone <span style="color: #dc3545;">*</span></div>
+                                <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required>
                             </div>
                         </div>
                     </div>

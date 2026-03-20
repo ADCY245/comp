@@ -7,6 +7,26 @@ function goToQuotationPreview() {
 // Function to handle quotation preview
 document.addEventListener('DOMContentLoaded', () => {
   const paymentTermsSelect = document.getElementById('paymentTerms');
+  const customerPhoneInput = document.getElementById('customerPhone');
+  const preparedByPhoneInput = document.getElementById('preparedByPhone');
+
+  async function persistPhones() {
+    const customer_phone = customerPhoneInput?.value || '';
+    const prepared_by_phone = preparedByPhoneInput?.value || '';
+    try {
+      await fetch('/api/quotation_phones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ customer_phone, prepared_by_phone })
+      });
+    } catch (err) {
+      console.error('Error saving quotation phones:', err);
+    }
+  }
+
   if (paymentTermsSelect) {
     paymentTermsSelect.addEventListener('change', async () => {
       const payment_terms = paymentTermsSelect.value || '';
@@ -25,6 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  if (customerPhoneInput) {
+    customerPhoneInput.addEventListener('change', persistPhones);
+    customerPhoneInput.addEventListener('blur', persistPhones);
+  }
+  if (preparedByPhoneInput) {
+    preparedByPhoneInput.addEventListener('change', persistPhones);
+    preparedByPhoneInput.addEventListener('blur', persistPhones);
+  }
+
   // Handle send quotation button
   const sendBtn = document.getElementById('sendQuotationBtn');
   if (sendBtn) {
@@ -34,11 +63,25 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const notes = document.getElementById('quotationNotes')?.value || '';
       const payment_terms = document.getElementById('paymentTerms')?.value || '';
+      const customer_phone = document.getElementById('customerPhone')?.value || '';
+      const prepared_by_phone = document.getElementById('preparedByPhone')?.value || '';
 
       if (!payment_terms) {
         showToast('Error', 'Please select Payment Terms before sending the quotation.', 'danger');
         return;
       }
+
+      if (!customer_phone.trim()) {
+        showToast('Error', 'Please enter Customer Phone before sending the quotation.', 'danger');
+        return;
+      }
+
+      if (!prepared_by_phone.trim()) {
+        showToast('Error', 'Please enter your Phone before sending the quotation.', 'danger');
+        return;
+      }
+
+      await persistPhones();
       sendBtn.disabled = true;
       sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
 
@@ -49,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ notes, payment_terms })
+          body: JSON.stringify({ notes, payment_terms, customer_phone, prepared_by_phone })
         });
         const data = await res.json();
         

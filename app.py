@@ -6452,6 +6452,21 @@ def set_payment_terms():
 
     return jsonify({'success': True, 'payment_terms': payment_terms})
 
+
+@app.route('/api/quotation_phones', methods=['POST'])
+@login_required
+@company_required
+def set_quotation_phones():
+    data = request.get_json() or {}
+    customer_phone = (data.get('customer_phone') or '').strip()
+    prepared_by_phone = (data.get('prepared_by_phone') or '').strip()
+
+    session['quotation_customer_phone'] = customer_phone
+    session['quotation_prepared_by_phone'] = prepared_by_phone
+    session.modified = True
+
+    return jsonify({'success': True, 'customer_phone': customer_phone, 'prepared_by_phone': prepared_by_phone})
+
 # ---------------------------------------------------------------------------
 # Send Quotation Route
 # ---------------------------------------------------------------------------
@@ -6465,6 +6480,8 @@ def send_quotation():
         data = request.get_json() or {}
         notes = (data.get('notes') or '').strip()
         payment_terms = (data.get('payment_terms') or session.get('payment_terms') or '').strip()
+        customer_phone = (data.get('customer_phone') or session.get('quotation_customer_phone') or '').strip()
+        prepared_by_phone = (data.get('prepared_by_phone') or session.get('quotation_prepared_by_phone') or '').strip()
 
         # Fetch cart
         cart = get_user_cart()
@@ -6479,6 +6496,12 @@ def send_quotation():
     try:
         if not products:
             return jsonify({'error': 'Cart is empty'}), 400
+
+        if not customer_phone:
+            return jsonify({'error': 'Customer phone is required'}), 400
+
+        if not prepared_by_phone:
+            return jsonify({'error': 'Prepared-by phone is required'}), 400
 
         selected_company = session.get('selected_company', {})
         if not isinstance(selected_company, dict):
@@ -7107,11 +7130,13 @@ def send_quotation():
                     'from_email': 'info@chemo.in',
                     'prepared_by_name': current_user.username,
                     'prepared_by_email': current_user.email,
+                    'prepared_by_phone': prepared_by_phone,
                     'user_id': str(current_user.id),
                     'username': current_user.username,
                     'user_email': current_user.email,
                     'company_name': customer_name,
                     'company_email': customer_email,
+                    'company_phone': customer_phone,
                     'payment_terms': payment_terms,
                     'products': products,
                     'products_count': len(products),
@@ -7159,7 +7184,8 @@ def send_quotation():
             'company': {
                 'id': session.get('selected_company', {}).get('id'),
                 'name': session.get('selected_company', {}).get('name'),
-                'email': session.get('selected_company', {}).get('email')
+                'email': session.get('selected_company', {}).get('email'),
+                'phone': customer_phone
             }
         })
     except Exception as e:
