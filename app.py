@@ -56,7 +56,69 @@ print("\n=== Environment Variables ===")
 print(f"MONGO_URI: {'Set' if os.getenv('MONGO_URI') else 'Not set'}")
 print(f"DB_NAME: {os.getenv('DB_NAME', 'moneda_db')}")
 print(f"USE_MONGO: {os.getenv('USE_MONGO', 'Not set')}")
+print(f"WA_SERVICE_URL: {os.getenv('WA_SERVICE_URL', 'Not set')}")
+print(f"WA_SERVICE_AUTH_TOKEN: {'Set' if os.getenv('WA_SERVICE_AUTH_TOKEN') else 'Not set'}")
 print("===========================\n")
+
+# WhatsApp service configuration
+WA_SERVICE_URL = os.getenv('WA_SERVICE_URL', '').rstrip('/')
+WA_SERVICE_AUTH_TOKEN = os.getenv('WA_SERVICE_AUTH_TOKEN', '')
+
+def send_whatsapp_message(to_phone, body, attachment=None):
+    """Send WhatsApp message via wa_service.
+    
+    Args:
+        to_phone: Phone number (will be normalized to E164)
+        body: Message text
+        attachment: Optional dict with {filename, content (base64), type}
+    
+    Returns:
+        bool: True if sent successfully
+    """
+    if not WA_SERVICE_URL or not WA_SERVICE_AUTH_TOKEN:
+        app.logger.warning("WhatsApp service not configured (WA_SERVICE_URL or WA_SERVICE_AUTH_TOKEN missing)")
+        return False
+    
+    # Normalize phone to E164
+    phone = (to_phone or '').strip()
+    if not phone:
+        return False
+    if phone.startswith('+'):
+        phone = phone
+    elif len(phone) == 10 and phone.isdigit():
+        phone = f"+91{phone}"
+    elif len(phone) > 10 and phone.startswith('91'):
+        phone = f"+{phone}"
+    else:
+        phone = f"+{phone.replace('+', '')}"
+    
+    payload = {
+        'to': phone,
+        'body': body
+    }
+    if attachment:
+        payload['attachment'] = attachment
+    
+    try:
+        import requests as _requests
+        resp = _requests.post(
+            f"{WA_SERVICE_URL}/send",
+            json=payload,
+            headers={
+                'Authorization': f"Bearer {WA_SERVICE_AUTH_TOKEN}",
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
+        if resp.status_code == 200:
+            app.logger.info(f"WhatsApp message sent to {phone}")
+            return True
+        else:
+            app.logger.warning(f"WhatsApp send failed: {resp.status_code} {resp.text}")
+            return False
+    except Exception as e:
+        app.logger.error(f"Error sending WhatsApp message: {e}")
+        return False
 
 # Timezone for sequential IDs
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -7167,6 +7229,23 @@ def send_quotation():
         else:
             app.logger.error("Quotation email failed to send via Resend")
 
+        # Send WhatsApp message to customer with PDF attachment
+        whatsapp_sent = False
+        if customer_phone:
+            wa_body = f"Quotation #{quote_id} from Chemo Graphic International\n\nDate: {quote_date_display}\nTotal: ₹{total:,.2f}\n\nPayment Terms: {payment_terms or 'N/A'}\n\nPlease find the quotation PDF attached."
+            wa_attachment = None
+            if pdf_attachments and len(pdf_attachments) > 0:
+                wa_attachment = {
+                    'filename': pdf_attachments[0]['filename'],
+                    'content': pdf_attachments[0]['content'],
+                    'type': pdf_attachments[0]['type']
+                }
+            whatsapp_sent = send_whatsapp_message(customer_phone, wa_body, wa_attachment)
+            if whatsapp_sent:
+                app.logger.info(f"Quotation WhatsApp sent to {customer_phone}")
+            else:
+                app.logger.warning(f"Quotation WhatsApp failed to send to {customer_phone}")
+
         # Clear cart after attempting to send email
         clear_cart()
         
@@ -7177,6 +7256,7 @@ def send_quotation():
             'success': True,
             'message': 'Quotation processed successfully',
             'email_sent': email_sent,
+            'whatsapp_sent': whatsapp_sent,
             'quote_id': quote_id,
             'generated_at': quote_generated_at.isoformat(),
             'generated_at_date': quote_date_display,
