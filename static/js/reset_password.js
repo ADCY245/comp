@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const emailInput = document.getElementById('email');
+  const phoneInput = document.getElementById('phone');
+  const phoneGroup = document.getElementById('phoneGroup');
   const otpInput = document.getElementById('otp');
   const newPasswordInput = document.getElementById('new_password');
   const confirmPasswordInput = document.getElementById('confirm_password');
@@ -77,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+
     const button = isResend ? resendOtpLink : requestOtpBtn;
     if (button.classList.contains('disabled')) return;
     
@@ -87,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch('/api/auth/request-password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, phone }),
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -100,6 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
         showMessage(1, 'A new verification code has been sent.', 'success');
       } else {
         const errorStep = isResend ? 1 : 0;
+        if (data && data.error === 'phone_required') {
+          if (phoneGroup) phoneGroup.style.display = 'block';
+          if (phoneInput) phoneInput.focus();
+          showMessage(errorStep, data.message || 'Please enter your WhatsApp number to receive the OTP.');
+          return;
+        }
         showMessage(errorStep, data.error || 'An unexpected error occurred.');
       }
     } catch (error) {

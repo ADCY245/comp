@@ -5102,6 +5102,10 @@ def get_companies():
 def forgot_password_redirect():
     return redirect(url_for('reset_password_page'))
 
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    return redirect(url_for('reset_password_page'))
+
 # API Routes
 
 # Company Management
@@ -5878,6 +5882,7 @@ def api_add_machine():
 def api_request_password_reset():
     data = request.get_json()
     email = data.get('email', '').strip().lower()
+    provided_phone = data.get('phone', '').strip()
 
     if not email:
         return jsonify({'error': 'Email is required'}), 400
@@ -5897,6 +5902,27 @@ def api_request_password_reset():
     if not user:
         # Don't reveal if email exists for security
         return jsonify({'success': True, 'message': 'If an account with that email exists, a password reset OTP has been sent.'})
+
+    linked_phone = None
+    if isinstance(user, dict):
+        linked_phone = (
+            user.get('phone')
+            or user.get('Phone')
+            or user.get('mobile')
+            or user.get('Mobile')
+            or user.get('contact')
+            or user.get('Contact')
+        )
+    else:
+        linked_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None)
+
+    target_phone = (linked_phone or '').strip() or provided_phone
+    if not target_phone:
+        return jsonify({
+            'success': False,
+            'error': 'phone_required',
+            'message': 'No phone number is linked to this email. Please enter your WhatsApp number to receive the OTP.'
+        }), 400
 
     # Generate OTP
     otp = ''.join(random.choices('0123456789', k=6))
@@ -5925,18 +5951,25 @@ def api_request_password_reset():
         "<p>If you did not request this, please ignore this email.</p>"
     )
 
-    if send_email_resend(
+    email_ok = send_email_resend(
         to=email,
         subject='Password Reset OTP',
         html=body
-    ):
-        return jsonify({
-            'success': True,
-            'message': 'If an account with that email exists, a password reset OTP has been sent.'
-        })
+    )
 
-    app.logger.error('Failed to send password reset email via Resend')
-    return jsonify({'error': 'Failed to send password reset email. Please try again later.'}), 500
+    if not email_ok:
+        app.logger.error('Failed to send password reset email via Resend')
+        return jsonify({'error': 'Failed to send password reset email. Please try again later.'}), 500
+
+    wa_body = f"Your password reset OTP is: {otp}. This OTP will expire in 10 minutes."
+    wa_ok = send_whatsapp_message(target_phone, wa_body)
+    if not wa_ok:
+        return jsonify({'error': 'Failed to send OTP to WhatsApp number. Please try again later.'}), 500
+
+    return jsonify({
+        'success': True,
+        'message': 'If an account with that email exists, a password reset OTP has been sent.'
+    })
 
 @app.route('/api/auth/verify-reset-otp', methods=['POST'])
 def api_verify_reset_otp():
