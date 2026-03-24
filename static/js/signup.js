@@ -11,6 +11,7 @@ const otpInput = document.getElementById('otp');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
+const phoneInput = document.getElementById('phone');
 const messageDiv = document.querySelector('.message');
 if (!messageDiv) {
   messageDiv = document.createElement('div');
@@ -461,6 +462,7 @@ async function handleCompleteSignup(e) {
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   const otp = otpInput.value.trim();
+  const phone = phoneInput ? phoneInput.value.trim() : '';
   
   try {
     setLoading(true, 'completeSignupBtn');
@@ -474,6 +476,7 @@ async function handleCompleteSignup(e) {
         email: currentEmail,
         username,
         password,
+        phone,
         otp,
         confirmPassword: password // Add confirmPassword to match backend expectation
       }),

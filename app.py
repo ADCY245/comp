@@ -5937,6 +5937,16 @@ def api_request_password_reset():
 
     app.logger.info(f"Using phone: {target_phone} for OTP delivery")
 
+    if MONGO_AVAILABLE and USE_MONGO and isinstance(user, dict) and provided_phone:
+        try:
+            if not (linked_phone or '').strip():
+                users_col.update_one(
+                    {'_id': user['_id']},
+                    {'$set': {'phone': provided_phone, 'updated_at': time.time()}}
+                )
+        except Exception as e:
+            app.logger.warning(f"Failed to persist phone number for {email}: {e}")
+
     # Generate OTP
     otp = ''.join(random.choices('0123456789', k=6))
     otp_expiry = datetime.utcnow() + timedelta(minutes=10)
@@ -7404,6 +7414,7 @@ def api_register_complete():
         email = data.get('email', '').strip()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
+        phone = (data.get('phone') or '').strip()
         new_user = None
         
         print(f"\n🔍 Registration attempt for: {email} ({username})")
@@ -7441,6 +7452,16 @@ def api_register_complete():
                 # Create user and retrieve document
                 user_id = mu_create_user(email, username, password)
                 print(f'User created with ID: {user_id}')
+
+                if user_id and phone:
+                    try:
+                        from bson.objectid import ObjectId
+                        users_col.update_one(
+                            {'_id': ObjectId(user_id)},
+                            {'$set': {'phone': phone, 'updated_at': time.time()}}
+                        )
+                    except Exception as e:
+                        print(f"Error saving phone to user: {str(e)}")
                 
                 # Try to retrieve user document using both UUID and ObjectId formats
                 doc = mu_find_user_by_id(user_id)
