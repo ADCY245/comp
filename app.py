@@ -5962,6 +5962,10 @@ def api_request_password_reset():
         return jsonify({'error': 'Failed to send password reset email. Please try again later.'}), 500
 
     wa_body = f"Your password reset OTP is: {otp}. This OTP will expire in 10 minutes."
+    if not WA_SERVICE_URL or not WA_SERVICE_AUTH_TOKEN:
+        app.logger.warning("WhatsApp service not configured (WA_SERVICE_URL or WA_SERVICE_AUTH_TOKEN missing)")
+        return jsonify({'error': 'wa_not_configured', 'message': 'WhatsApp OTP is required but WhatsApp service is not configured on the server.'}), 500
+
     wa_ok = send_whatsapp_message(target_phone, wa_body)
     if not wa_ok:
         return jsonify({'error': 'Failed to send OTP to WhatsApp number. Please try again later.'}), 500
