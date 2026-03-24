@@ -5904,9 +5904,10 @@ def api_request_password_reset():
                 user = u
                 break
 
+    app.logger.info(f"User found: {user is not None}, user data: {user}")
+
     if not user:
-        user = mu_find_user_by_email_or_username(email)
-    if not user:
+        app.logger.info("User not found, returning security response")
         # For security, don't reveal if email exists
         return jsonify({'success': False}), 200
 
