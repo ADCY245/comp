@@ -5918,13 +5918,18 @@ def api_request_password_reset():
     else:
         linked_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None)
 
+    app.logger.info(f"Password reset request for email: {email}, linked_phone: {linked_phone}, provided_phone: {provided_phone}")
+
     target_phone = (linked_phone or '').strip() or provided_phone
     if not target_phone:
+        app.logger.info(f"No phone found for email: {email}, returning phone_required")
         return jsonify({
             'success': False,
             'error': 'phone_required',
             'message': 'No phone number is linked to this email. Please enter your WhatsApp number to receive the OTP.'
         }), 400
+
+    app.logger.info(f"Using phone: {target_phone} for OTP delivery")
 
     # Generate OTP
     otp = ''.join(random.choices('0123456789', k=6))
