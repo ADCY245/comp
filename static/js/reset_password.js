@@ -111,7 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
         showMessage(1, 'A new verification code has been sent.', 'success');
       } else {
         const errorStep = isResend ? 1 : 0;
-        showMessage(errorStep, data.error || 'An unexpected error occurred.');
+        if (data && data.error === 'phone_required') {
+          if (phoneGroup) phoneGroup.style.display = 'block';
+          if (phoneInput) {
+            phoneInput.required = true;
+            phoneInput.focus();
+          }
+          showMessage(errorStep, data.message || 'Please enter your WhatsApp number to receive the OTP.');
+          return;
+        }
+        showMessage(errorStep, (data && (data.message || data.error)) || 'An unexpected error occurred.');
       }
     } catch (error) {
       const errorStep = isResend ? 1 : 0;
