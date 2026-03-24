@@ -5903,18 +5903,27 @@ def api_request_password_reset():
         user = mu_find_user_by_email_or_username(email)
     if not user:
         # For security, don't reveal if email exists
-        return jsonify({
-            'success': False,
-            'error': 'phone_required',
-            'message': 'Please enter your WhatsApp number to receive the OTP.'
-        }), 400
+        return jsonify({'success': False}), 200
 
-    target_phone = provided_phone
+    # Get phone from user document if available
+    if isinstance(user, dict):
+        linked_phone = (
+            user.get('phone')
+            or user.get('Phone')
+            or user.get('mobile')
+            or user.get('Mobile')
+            or user.get('contact')
+            or user.get('Contact')
+        )
+    else:
+        linked_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None)
+
+    target_phone = (linked_phone or '').strip() or provided_phone
     if not target_phone:
         return jsonify({
             'success': False,
             'error': 'phone_required',
-            'message': 'Please enter your WhatsApp number to receive the OTP.'
+            'message': 'No phone number is linked to this email. Please enter your WhatsApp number to receive the OTP.'
         }), 400
 
     # Generate OTP
