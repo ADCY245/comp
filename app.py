@@ -5884,8 +5884,13 @@ def api_request_password_reset():
     email = data.get('email', '').strip().lower()
     provided_phone = data.get('phone', '').strip()
 
+    app.logger.info(f"Password reset request received: email={email}, phone={provided_phone}")
+
     if not email:
-        return jsonify({'error': 'Email is required'}), 400
+        app.logger.info("No email provided")
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+
+    app.logger.info("Starting user lookup")
 
     # Find user by email
     user = None
