@@ -26,21 +26,28 @@ document.addEventListener('DOMContentLoaded', () => {
     hideAllMessages();
   }
 
+  function _getMessageDiv(stepIndex) {
+    if (stepIndex === 0) return document.getElementById('message');
+    if (stepIndex === 1) return document.getElementById('otpMessage');
+    if (stepIndex === 2) return document.getElementById('passwordMessage');
+    return null;
+  }
+
   function showMessage(stepIndex, message, type = 'error') {
-    const step = steps[stepIndex];
-    if (!step) return;
-    const messageDiv = step.querySelector('.message');
-    if (messageDiv) {
-      messageDiv.textContent = message;
-      messageDiv.className = `message ${type}`;
-      messageDiv.style.display = 'block';
-    }
+    const messageDiv = _getMessageDiv(stepIndex);
+    if (!messageDiv) return;
+    messageDiv.textContent = message;
+    messageDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} mb-3`;
+    messageDiv.style.display = 'block';
   }
 
   function hideAllMessages() {
-    document.querySelectorAll('.message').forEach(div => {
-      div.style.display = 'none';
-      div.textContent = '';
+    [0, 1, 2].forEach(idx => {
+      const div = _getMessageDiv(idx);
+      if (div) {
+        div.style.display = 'none';
+        div.textContent = '';
+      }
     });
   }
 
