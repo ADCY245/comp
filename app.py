@@ -941,7 +941,7 @@ def mu_find_user_by_email_or_username(identifier):
         print(f"Error finding user by email/username: {str(e)}")
         return None
 
-def mu_create_user(email, username, password):
+def mu_create_user(email, username, password, phone=None):
     """Create a new user in MongoDB"""
     if not MONGO_AVAILABLE or users_col is None:
         return None
@@ -951,6 +951,7 @@ def mu_create_user(email, username, password):
         user_data = {
             'email': email,
             'username': username,
+            'username_lower': username.lower(),
             'password_hash': generate_password_hash(password),
             'is_verified': False,
             'otp_verified': False,
@@ -958,6 +959,8 @@ def mu_create_user(email, username, password):
             'updated_at': time.time(),
             'role': 'user'
         }
+        if phone:
+            user_data['phone'] = phone
         result = users_col.insert_one(user_data)
         return str(result.inserted_id)
     except Exception as e:
@@ -7450,18 +7453,8 @@ def api_register_complete():
                     print(f'Current users in DB: {users_col.count_documents({})}')
                 
                 # Create user and retrieve document
-                user_id = mu_create_user(email, username, password)
+                user_id = mu_create_user(email, username, password, phone)
                 print(f'User created with ID: {user_id}')
-
-                if user_id and phone:
-                    try:
-                        from bson.objectid import ObjectId
-                        users_col.update_one(
-                            {'_id': ObjectId(user_id)},
-                            {'$set': {'phone': phone, 'updated_at': time.time()}}
-                        )
-                    except Exception as e:
-                        print(f"Error saving phone to user: {str(e)}")
                 
                 # Try to retrieve user document using both UUID and ObjectId formats
                 doc = mu_find_user_by_id(user_id)
