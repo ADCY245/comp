@@ -269,6 +269,45 @@ function populateCustomDropdowns({ widths = [], lengths = [] } = {}) {
   }
 }
 
+function handleSizeSelection() {
+  const sizeSelectEl = document.getElementById('sizeSelect');
+  if (!sizeSelectEl) return;
+
+  const selectedValue = (sizeSelectEl.value || '').trim();
+  const selectedOption = sizeSelectEl.options && sizeSelectEl.selectedIndex >= 0
+    ? sizeSelectEl.options[sizeSelectEl.selectedIndex]
+    : null;
+
+  if (!selectedValue) {
+    standardSize = { across: 0, along: 0, area: 0, label: '', rollLength: 0, usesHalfRoll: false, halfLength: 0 };
+    updatePricingFromSelections();
+    return;
+  }
+
+  const meta = sizeMetaMap[selectedValue] || parseSizeLabel(selectedOption ? selectedOption.text : '') || null;
+  const along = meta && typeof meta.length === 'number' ? meta.length : (meta && typeof meta.along === 'number' ? meta.along : 0);
+  const across = meta && typeof meta.width === 'number' ? meta.width : (meta && typeof meta.across === 'number' ? meta.across : 0);
+  const area = mmToSqm(across, along);
+  const label = formatDimensionLabel(across, along);
+
+  // Sync customSize too so other flows (manual summary/payload) always have consistent values.
+  customSize.across = across || null;
+  customSize.along = along || null;
+  customSize.area = area || 0;
+
+  standardSize = {
+    across,
+    along,
+    area,
+    label,
+    rollLength: along,
+    usesHalfRoll: false,
+    halfLength: along ? along / 2 : 0
+  };
+
+  updatePricingFromSelections();
+}
+
 function updateLengthOptionsForWidth(widthValue) {
   if (manualEntryEnabled) return;
   if (!customLengthInputEl) return;

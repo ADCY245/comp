@@ -5159,8 +5159,13 @@ def api_get_companies():
 
         # Convert to list of dicts if it's a dict
         if isinstance(companies, dict):
-            companies = [{'id': k, 'name': v.get('name'), 'email': v.get('email')}
-                         for k, v in companies.items()]
+            companies = [
+                normalize_company_record({**v, 'id': k})
+                for k, v in companies.items()
+                if isinstance(v, dict)
+            ]
+        elif isinstance(companies, list):
+            companies = [normalize_company_record(c) for c in companies if isinstance(c, dict)]
 
         assigned_ids = get_user_assigned_company_ids(current_user)
         if assigned_ids is not None:
