@@ -8379,5 +8379,3 @@ if USE_MONGO:
 else:
     users = load_users()
     print(f"Loaded {len(users)} users from file")
-    users = load_users()
-    print(f"Loaded {len(users)} users from file")
