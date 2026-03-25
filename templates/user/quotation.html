@@ -138,7 +138,10 @@
                         <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
                         <div class="mt-2">
                             <label for="preparedByPhone" class="form-label mb-1">Phone <span style="color: #dc3545;">*</span></label>
-                            {% set prepared_phone_value = session.get('quotation_prepared_by_phone') or current_user.phone or '' %}
+                            {% set session_phone = session.get('quotation_prepared_by_phone') %}
+                            {% set user_phone = current_user.phone %}
+                            {% set prepared_phone_value = session_phone or user_phone or '' %}
+                            <!-- DEBUG: session_phone={{ session_phone|default('None') }} user_phone={{ user_phone|default('None') }} prepared_phone_value={{ prepared_phone_value }} -->
                             <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required value="{{ prepared_phone_value }}" {% if prepared_phone_value %}readonly{% endif %}>
                         </div>
                     </div>
