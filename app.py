@@ -3509,6 +3509,112 @@ def get_user_cart():
                     continue
                 sanitized_products.append(product)
 
+                if product.get('type') == 'mpack':
+                    try:
+                        underpacking_type = (product.get('underpacking_type') or '').strip().lower()
+                        format_label = (product.get('format_label') or '').strip().lower()
+                        name_lower = (product.get('name') or '').strip().lower()
+
+                        base_rate_per_100 = 75.0
+                        if underpacking_type == 'polipack':
+                            if 'self' in format_label or 'adhesive' in format_label or 'self' in name_lower:
+                                base_rate_per_100 = 925.0
+                            elif 'non' in format_label or 'wa' in format_label or 'non' in name_lower:
+                                base_rate_per_100 = 425.0
+
+                        thickness_raw = product.get('thickness') or ''
+                        thickness_digits = ''.join(ch for ch in str(thickness_raw) if ch.isdigit() or ch == '.')
+                        try:
+                            thickness_micron = float(thickness_digits) if thickness_digits else 0.0
+                        except ValueError:
+                            thickness_micron = 0.0
+
+                        sqm_per_sheet = product.get('standard_area_sqm') or product.get('custom_area_sqm')
+                        try:
+                            sqm_per_sheet = float(sqm_per_sheet) if sqm_per_sheet is not None else 0.0
+                        except (TypeError, ValueError):
+                            sqm_per_sheet = 0.0
+
+                        if not sqm_per_sheet:
+                            w = product.get('display_width_mm') or product.get('standard_width_mm') or product.get('custom_width_mm')
+                            l = product.get('display_length_mm') or product.get('standard_length_mm') or product.get('custom_length_mm')
+                            try:
+                                w = float(w) if w is not None else 0.0
+                            except (TypeError, ValueError):
+                                w = 0.0
+                            try:
+                                l = float(l) if l is not None else 0.0
+                            except (TypeError, ValueError):
+                                l = 0.0
+                            if w and l:
+                                sqm_per_sheet = (w * l) / 1_000_000
+
+                        calculations = product.get('calculations') if isinstance(product.get('calculations'), dict) else {}
+                        stored_rate = calculations.get('rate_per_sqm')
+                        stored_unit_price = calculations.get('unit_price', product.get('unit_price', 0))
+                        try:
+                            stored_unit_price = float(stored_unit_price) if stored_unit_price is not None else 0.0
+                        except (TypeError, ValueError):
+                            stored_unit_price = 0.0
+
+                        should_recalc = False
+                        if stored_unit_price <= 0 or not sqm_per_sheet or thickness_micron <= 0:
+                            should_recalc = True
+                        if underpacking_type == 'polipack':
+                            try:
+                                stored_rate_val = float(stored_rate) if stored_rate is not None else 0.0
+                            except (TypeError, ValueError):
+                                stored_rate_val = 0.0
+                            desired_rate = base_rate_per_100 * (thickness_micron / 100.0) if thickness_micron else 0.0
+                            if desired_rate and (not stored_rate_val or abs(stored_rate_val - desired_rate) > 0.01):
+                                should_recalc = True
+
+                        if should_recalc:
+                            rate_per_sqm = base_rate_per_100 * (thickness_micron / 100.0) if thickness_micron else 0.0
+                            unit_price = rate_per_sqm * sqm_per_sheet
+                            try:
+                                quantity = int(product.get('quantity', 1) or 1)
+                            except (TypeError, ValueError):
+                                quantity = 1
+                            try:
+                                discount_percent = float(product.get('discount_percent', 0) or 0)
+                            except (TypeError, ValueError):
+                                discount_percent = 0.0
+                            try:
+                                gst_percent = float(product.get('gst_percent', 18) or 18)
+                            except (TypeError, ValueError):
+                                gst_percent = 18.0
+
+                            subtotal = unit_price * quantity
+                            discount_amount = subtotal * (discount_percent / 100.0)
+                            discounted_subtotal = subtotal - discount_amount
+                            gst_amount = discounted_subtotal * (gst_percent / 100.0)
+                            final_total = discounted_subtotal + gst_amount
+
+                            product['unit_price'] = round(unit_price, 2)
+                            product['standard_area_sqm'] = round(sqm_per_sheet, 6) if sqm_per_sheet else product.get('standard_area_sqm')
+                            product['discount_amount'] = round(discount_amount, 2)
+                            product['discounted_subtotal'] = round(discounted_subtotal, 2)
+                            product['gst_amount'] = round(gst_amount, 2)
+                            product['total_price'] = round(final_total, 2)
+                            product['total'] = product['total_price']
+
+                            product['calculations'] = {
+                                'rate_per_sqm': round(rate_per_sqm, 2),
+                                'sqm_per_sheet': round(sqm_per_sheet, 3),
+                                'unit_price': round(unit_price, 2),
+                                'quantity': quantity,
+                                'subtotal': round(subtotal, 2),
+                                'discount_percent': discount_percent,
+                                'discount_amount': round(discount_amount, 2),
+                                'discounted_subtotal': round(discounted_subtotal, 2),
+                                'gst_percent': gst_percent,
+                                'gst_amount': round(gst_amount, 2),
+                                'final_total': round(final_total, 2)
+                            }
+                    except Exception as _mpack_recalc_error:
+                        app.logger.warning(f"MPack recalc skipped due to error: {_mpack_recalc_error}")
+
                 if 'calculations' not in product:
                     # If calculations are missing, recalculate them
                     if product.get('type') == 'blanket':
