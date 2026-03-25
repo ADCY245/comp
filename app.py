@@ -7076,15 +7076,17 @@ def send_quotation():
                 }
                 pdf_html = render_template('quotation_pdf.html', **pdf_context)
                 pdf_bytes = HTML(string=pdf_html, base_url=request.url_root).write_pdf()
+                safe_customer_name = secure_filename((customer_name or '').strip()) or 'customer'
+                pdf_filename = f"{safe_customer_name}_{quote_id}.pdf"
                 pdf_attachments = [
                     {
-                        'filename': f"quotation_{quote_id}.pdf",
+                        'filename': pdf_filename,
                         'content': base64.b64encode(pdf_bytes).decode('utf-8'),
                         'type': 'application/pdf'
                     }
                 ]
         except Exception as pdf_err:
-            app.logger.warning(f"Failed to generate PDF attachment for email (quotation_{quote_id}.pdf): {pdf_err}")
+            app.logger.warning(f"Failed to generate PDF attachment for email: {pdf_err}")
 
         logo_src = "https://cgi-logo.tiiny.site/CGI_LOGO.svg"
 
@@ -7327,22 +7329,41 @@ def send_quotation():
         else:
             app.logger.error("Quotation email failed to send via Resend")
 
-        # Send WhatsApp message to customer with PDF attachment
-        whatsapp_sent = False
+        # Send WhatsApp message to both customer and prepared-by/user with PDF attachment
+        wa_body = f"Quotation #{quote_id} from Chemo Graphic International\n\nDate: {quote_date_display}\nTotal: ₹{total:,.2f}\n\nPayment Terms: {payment_terms or 'N/A'}\n\nPlease find the quotation PDF attached."
+        wa_attachment = None
+        if pdf_attachments and len(pdf_attachments) > 0:
+            wa_attachment = {
+                'filename': pdf_attachments[0]['filename'],
+                'content': pdf_attachments[0]['content'],
+                'type': pdf_attachments[0]['type']
+            }
+
+        whatsapp_results = {}
+        targets = []
         if customer_phone:
-            wa_body = f"Quotation #{quote_id} from Chemo Graphic International\n\nDate: {quote_date_display}\nTotal: ₹{total:,.2f}\n\nPayment Terms: {payment_terms or 'N/A'}\n\nPlease find the quotation PDF attached."
-            wa_attachment = None
-            if pdf_attachments and len(pdf_attachments) > 0:
-                wa_attachment = {
-                    'filename': pdf_attachments[0]['filename'],
-                    'content': pdf_attachments[0]['content'],
-                    'type': pdf_attachments[0]['type']
-                }
-            whatsapp_sent = send_whatsapp_message(customer_phone, wa_body, wa_attachment)
-            if whatsapp_sent:
-                app.logger.info(f"Quotation WhatsApp sent to {customer_phone}")
+            targets.append(('customer', customer_phone))
+        user_phone_target = prepared_by_phone or getattr(current_user, 'phone', None)
+        if user_phone_target:
+            targets.append(('user', user_phone_target))
+
+        seen_numbers = set()
+        for label, phone in targets:
+            phone_key = (phone or '').strip()
+            if not phone_key or phone_key in seen_numbers:
+                continue
+            seen_numbers.add(phone_key)
+            sent_ok = send_whatsapp_message(phone, wa_body, wa_attachment)
+            whatsapp_results[label] = {
+                'phone': phone,
+                'sent': bool(sent_ok)
+            }
+            if sent_ok:
+                app.logger.info(f"Quotation WhatsApp sent to {label}: {phone}")
             else:
-                app.logger.warning(f"Quotation WhatsApp failed to send to {customer_phone}")
+                app.logger.warning(f"Quotation WhatsApp failed to send to {label}: {phone}")
+
+        whatsapp_sent = any(v.get('sent') for v in whatsapp_results.values())
 
         # Clear cart after attempting to send email
         clear_cart()
@@ -7355,6 +7376,7 @@ def send_quotation():
             'message': 'Quotation processed successfully',
             'email_sent': email_sent,
             'whatsapp_sent': whatsapp_sent,
+            'whatsapp_results': whatsapp_results,
             'quote_id': quote_id,
             'generated_at': quote_generated_at.isoformat(),
             'generated_at_date': quote_date_display,
