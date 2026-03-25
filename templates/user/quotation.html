@@ -138,7 +138,8 @@
                         <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
                         <div class="mt-2">
                             <label for="preparedByPhone" class="form-label mb-1">Phone <span style="color: #dc3545;">*</span></label>
-                            <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required>
+                            {% set prepared_phone_value = session.get('quotation_prepared_by_phone') or current_user.phone or '' %}
+                            <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required value="{{ prepared_phone_value }}" {% if prepared_phone_value %}readonly{% endif %}>
                         </div>
                     </div>
                 </div>
@@ -181,7 +182,8 @@
                             <i class="fas fa-phone me-2 text-muted"></i>
                             <div class="w-100">
                                 <div class="text-muted small">Phone <span style="color: #dc3545;">*</span></div>
-                                <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required>
+                                {% set customer_phone_value = session.get('quotation_customer_phone') or company_details.phone or '' %}
+                                <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required value="{{ customer_phone_value }}" {% if customer_phone_value %}readonly{% endif %}>
                             </div>
                         </div>
                     </div>

@@ -101,21 +101,41 @@ def send_whatsapp_message(to_phone, body, attachment=None):
     
     try:
         import requests as _requests
-        resp = _requests.post(
-            f"{WA_SERVICE_URL}/send",
-            json=payload,
-            headers={
-                'Authorization': f"Bearer {WA_SERVICE_AUTH_TOKEN}",
-                'Content-Type': 'application/json'
-            },
-            timeout=30
-        )
-        if resp.status_code == 200:
-            app.logger.info(f"WhatsApp message sent to {phone}")
-            return True
-        else:
-            app.logger.warning(f"WhatsApp send failed: {resp.status_code} {resp.text}")
-            return False
+        import time as _time
+
+        max_attempts = int(os.getenv('WA_SEND_MAX_ATTEMPTS', '3') or '3')
+        connect_timeout = float(os.getenv('WA_SEND_CONNECT_TIMEOUT', '10') or '10')
+        read_timeout = float(os.getenv('WA_SEND_READ_TIMEOUT', '45') or '45')
+        backoff_seconds = float(os.getenv('WA_SEND_BACKOFF_SECONDS', '2') or '2')
+
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = _requests.post(
+                    f"{WA_SERVICE_URL}/send",
+                    json=payload,
+                    headers={
+                        'Authorization': f"Bearer {WA_SERVICE_AUTH_TOKEN}",
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=(connect_timeout, read_timeout)
+                )
+
+                if resp.status_code == 200:
+                    app.logger.info(f"WhatsApp message sent to {phone}")
+                    return True
+
+                last_error = f"HTTP {resp.status_code}: {resp.text}"
+                app.logger.warning(f"WhatsApp send failed (attempt {attempt}/{max_attempts}): {last_error}")
+            except Exception as e:
+                last_error = str(e)
+                app.logger.error(f"Error sending WhatsApp message (attempt {attempt}/{max_attempts}): {e}")
+
+            if attempt < max_attempts:
+                _time.sleep(backoff_seconds * attempt)
+
+        app.logger.warning(f"WhatsApp send ultimately failed after {max_attempts} attempts: {last_error}")
+        return False
     except Exception as e:
         app.logger.error(f"Error sending WhatsApp message: {e}")
         return False
