@@ -2303,7 +2303,7 @@ def normalize_assigned_companies(assigned):
 
 
 class User(UserMixin):
-    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user', created_at=None, assigned_companies=None):
+    def __init__(self, id, email, username, password_hash, is_verified=False, otp_verified=False, cart=None, reset_token=None, reset_token_expiry=None, company_id=None, role='user', created_at=None, assigned_companies=None, phone=None):
         self.id = id
         self.email = email
         self.username = username
@@ -2314,6 +2314,7 @@ class User(UserMixin):
         self.reset_token = reset_token
         self.reset_token_expiry = reset_token_expiry
         self.company_id = company_id
+        self.phone = phone
         self.role = role or 'user'
         self.created_at = created_at or datetime.utcnow()
         self.assigned_companies = normalize_assigned_companies(assigned_companies)
@@ -2325,6 +2326,7 @@ class User(UserMixin):
             'username': self.username,
             'password_hash': self.password_hash,
             'is_verified': self.is_verified,
+            'phone': self.phone,
             'reset_token': self.reset_token,
             'reset_token_expiry': self.reset_token_expiry.isoformat() if self.reset_token_expiry else None,
             'otp_verified': self.otp_verified,
@@ -3096,6 +3098,7 @@ def load_user(user_id):
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id'),
+                phone=doc.get('phone'),
                 role=doc.get('role', 'user'),
                 created_at=_parse_datetime(doc.get('created_at')),
                 assigned_companies=doc.get('assigned_companies', [])
@@ -3121,6 +3124,7 @@ def load_user(user_id):
             reset_token=user_data.get('reset_token'),
             reset_token_expiry=user_data.get('reset_token_expiry'),
             company_id=user_data.get('company_id'),
+            phone=user_data.get('phone'),
             role=user_data.get('role', 'user'),
             created_at=_parse_datetime(user_data.get('created_at')),
             assigned_companies=user_data.get('assigned_companies', [])
