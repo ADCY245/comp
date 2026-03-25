@@ -1092,10 +1092,14 @@ function getFormData() {
   const customArea = isPositiveNumber(customSize.area) ? customSize.area : (customAcross && customAlong ? mmToSqm(customAcross, customAlong) : null);
   const cutToCustom = manualEntryEnabled ? true : Boolean(cutYesRadio && cutYesRadio.checked);
 
-  const aroundRollLength = standardSize.rollLength || (customAlong || 0);
-  const displayAlong = aroundRollLength;
+  const resolvedRollLength = standardSize.rollLength || standardSize.along || 0;
+  const displayAlong = manualEntryEnabled
+    ? (resolvedRollLength || (customAlong || 0))
+    : (resolvedRollLength || (customAlong || 0));
   const displayAcross = customAcross || 0;
-  const displaySizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
+  const displaySizeLabel = (customAcross && displayAlong)
+    ? formatDimensionLabel(customAcross, displayAlong)
+    : '';
   const standardAlong = isPositiveNumber(standardSize.along) ? standardSize.along : null;
   const standardAcross = isPositiveNumber(standardSize.across) ? standardSize.across : null;
   const standardArea = isPositiveNumber(standardSize.area)
@@ -1976,9 +1980,14 @@ async function addMpackToCart() {
 
   const customSizeLabel = customAcross && customAlong ? formatDimensionLabel(customAcross, customAlong) : '';
   const standardSizeLabel = selectedSize || standardSize.label || customSizeLabel;
-  const displayAlong = cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong;
+  const resolvedRollLength = standardSize.rollLength || standardAlong || standardSize.along || 0;
+  const displayAlong = manualEntryEnabled
+    ? (resolvedRollLength || (cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong))
+    : (cutToCustom && isPositiveNumber(customAlong) ? customAlong : standardAlong);
   const displayAcross = cutToCustom && isPositiveNumber(customAcross) ? customAcross : standardAcross;
-  const displaySizeLabel = (cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel;
+  const displaySizeLabel = manualEntryEnabled
+    ? (displayAcross && displayAlong ? formatDimensionLabel(displayAcross, displayAlong) : (standardSizeLabel || ''))
+    : ((cutToCustom && customSizeLabel) ? customSizeLabel : standardSizeLabel);
 
   const product = {
     id: isEditMode ? itemId : 'mpack_' + Date.now(),
