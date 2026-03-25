@@ -4062,33 +4062,33 @@ def add_to_cart():
 
             # Calculate prices for other product types if needed
             if product_type == 'mpack':
-                price = product['unit_price']
-                quantity = product['quantity']
-                discount_percent = product['discount_percent']
-                gst_percent = product['gst_percent']
-                
-                # Calculate prices
-                discount_amount = (price * discount_percent / 100)
-                price_after_discount = price - discount_amount
-                gst_amount = (price_after_discount * gst_percent / 100)
-                final_unit_price = price_after_discount + gst_amount
-                final_total = final_unit_price * quantity
-                
-                # Set all price fields
-                product['unit_price'] = round(price, 2)
+                unit_price = float(product.get('unit_price', 0) or 0)
+                quantity = int(product.get('quantity', 1) or 1)
+                discount_percent = float(product.get('discount_percent', 0) or 0)
+                gst_percent = float(product.get('gst_percent', 18) or 18)
+
+                subtotal = unit_price * quantity
+                discount_amount = subtotal * (discount_percent / 100)
+                discounted_subtotal = subtotal - discount_amount
+                gst_amount = discounted_subtotal * (gst_percent / 100)
+                final_total = discounted_subtotal + gst_amount
+
+                product['unit_price'] = round(unit_price, 2)
                 product['discount_amount'] = round(discount_amount, 2)
-                product['price_after_discount'] = round(price_after_discount, 2)
+                product['discounted_subtotal'] = round(discounted_subtotal, 2)
                 product['gst_amount'] = round(gst_amount, 2)
-                product['final_unit_price'] = round(final_unit_price, 2)
                 product['total_price'] = round(final_total, 2)
-                
-                # Store calculations
+                product['total'] = product['total_price']
+
                 product['calculations'] = {
                     'unit_price': product['unit_price'],
+                    'quantity': quantity,
+                    'subtotal': round(subtotal, 2),
+                    'discount_percent': discount_percent,
                     'discount_amount': product['discount_amount'],
-                    'price_after_discount': product['price_after_discount'],
+                    'discounted_subtotal': product['discounted_subtotal'],
+                    'gst_percent': gst_percent,
                     'gst_amount': product['gst_amount'],
-                    'final_unit_price': product['final_unit_price'],
                     'final_total': product['total_price'],
                     'machine': product.get('machine', ''),
                     'thickness': product.get('thickness', ''),
