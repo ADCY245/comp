@@ -2777,6 +2777,7 @@ def serialize_admin_user(user_doc):
         'id': uid,
         'username': user_doc.get('username') or user_doc.get('email', '')[: user_doc.get('email', '').find('@')],
         'email': user_doc.get('email') or user_doc.get('Email', ''),
+        'phone': user_doc.get('phone') or '',
         'role': user_doc.get('role', 'user'),
         'is_verified': bool(user_doc.get('is_verified', True)),
         'created_at': str(user_doc.get('created_at') or user_doc.get('Created', '')),
@@ -3665,8 +3666,10 @@ def load_user(user_id):
                 is_verified=doc.get('is_verified', False),
                 otp_verified=doc.get('otp_verified', False),
                 company_id=doc.get('company_id'),
+                phone=doc.get('phone'),
                 role=doc.get('role', 'user'),
-                created_at=_parse_datetime(doc.get('created_at'))
+                created_at=_parse_datetime(doc.get('created_at')),
+                assigned_companies=doc.get('assigned_companies', [])
             )
             print(f'Successfully loaded user: {user.email} (ID: {user.id})')
             return user
@@ -3688,6 +3691,7 @@ def load_user(user_id):
                 reset_token=user_data.get('reset_token'),
                 reset_token_expiry=user_data.get('reset_token_expiry'),
                 company_id=user_data.get('company_id'),
+                phone=user_data.get('phone'),
                 role=user_data.get('role', 'user'),
                 created_at=_parse_datetime(user_data.get('created_at')),
                 assigned_companies=user_data.get('assigned_companies', [])
@@ -6456,7 +6460,6 @@ def quotation_preview():
         'cart_total': subtotal_after_discount  # cart_total is the subtotal after discount but before taxes
     }
     
-    app.logger.info(f"[DEBUG] current_user.phone={getattr(current_user, 'phone', 'MISSING')} current_user.id={getattr(current_user, 'id', 'MISSING')}")
     return render_template('quotation.html', **context)
 
 
