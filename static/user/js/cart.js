@@ -1444,6 +1444,35 @@ function updateCartTotals() {
                     const gstAmount = parseFloat(serverCalc.gst_amount ?? serverCalc.gstAmount ?? 0) || 0;
                     const itemTotal = parseFloat(serverCalc.final_total ?? serverCalc.finalTotal ?? serverCalc.final_price ?? 0) || 0;
 
+                    const quantity = (() => {
+                        const rawQty = serverCalc.quantity ?? serverCalc.qty ?? item.getAttribute('data-quantity') ?? item.dataset.quantity;
+                        const parsed = parseFloat(rawQty);
+                        if (!Number.isFinite(parsed) || parsed <= 0) return 1;
+                        return type === 'mpack' ? Math.max(1, Math.round(parsed)) : parsed;
+                    })();
+
+                    const unitPrice = (() => {
+                        const fromServer = serverCalc.unit_price ?? serverCalc.unitPrice;
+                        const parsedServer = parseFloat(fromServer);
+                        if (Number.isFinite(parsedServer) && parsedServer > 0) return parsedServer;
+                        if (quantity > 0 && itemSubtotal > 0) return itemSubtotal / quantity;
+                        const fromAttr = item.getAttribute('data-unit-price') ?? item.dataset.unitPrice;
+                        const parsedAttr = parseFloat(fromAttr);
+                        return Number.isFinite(parsedAttr) ? parsedAttr : 0;
+                    })();
+
+                    const discountPercent = (() => {
+                        const raw = serverCalc.discount_percent ?? serverCalc.discountPercent ?? item.getAttribute('data-discount-percent') ?? item.dataset.discountPercent;
+                        const parsed = parseFloat(raw);
+                        return Number.isFinite(parsed) ? parsed : 0;
+                    })();
+
+                    const gstPercent = (() => {
+                        const raw = serverCalc.gst_percent ?? serverCalc.gstPercent ?? item.getAttribute('data-gst-percent') ?? item.dataset.gstPercent;
+                        const parsed = parseFloat(raw);
+                        return Number.isFinite(parsed) ? parsed : (type === 'mpack' ? 12 : 18);
+                    })();
+
                     subtotal += itemSubtotal;
                     totalDiscount += discountAmount;
                     totalGst += gstAmount;
@@ -1458,9 +1487,14 @@ function updateCartTotals() {
 
                     updateItemDisplay(item, {
                         type,
+                        unit_price: unitPrice,
+                        quantity,
+                        subtotal: itemSubtotal,
                         final_total: itemTotal,
                         discount_amount: discountAmount,
-                        gst_amount: gstAmount
+                        gst_amount: gstAmount,
+                        discount_percent: discountPercent,
+                        gst_percent: gstPercent
                     });
                     return;
                 }
