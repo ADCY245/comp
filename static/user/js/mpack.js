@@ -51,6 +51,11 @@ function getActivePolipackConfig() {
   return null;
 }
 
+function getActiveBaseRatePer100Micron() {
+  const polCfg = getActivePolipackConfig();
+  return polCfg ? polCfg.base : BASE_RATE_PER_100_MICRON;
+}
+
 function getPolipackFormatLabel() {
   const formatSelect = document.getElementById('productFormatSelect');
   const formatValue = formatSelect ? formatSelect.value : '';
@@ -1076,7 +1081,7 @@ function getFormData() {
   const thicknessValue = Number(currentThickness || (thicknessSelect && thicknessSelect.value) || 0);
   // Use effective roll-based area for manual entries to honor half-roll pricing
   const sqmArea = manualEntryEnabled ? (standardSize.area || customSize.area || 0) : (standardSize.area || customSize.area || 0);
-  const ratePerSqm = BASE_RATE_PER_100_MICRON * (thicknessValue / 100);
+  const ratePerSqm = getActiveBaseRatePer100Micron() * (thicknessValue / 100);
   const sheetCount = Math.max(1, quantity);
   const unitPrice = ratePerSqm * sqmArea;
   const subtotal = unitPrice * sheetCount;
@@ -1821,7 +1826,7 @@ function calculateFinalPrice() {
   const effectiveSqm = isPositiveNumber(standardSize.area) ? standardSize.area : (customSize.area || 0);
   const sqmLabel = effectiveSqm.toFixed(3);
 
-  const baseRateDisplay = BASE_RATE_PER_100_MICRON.toFixed(2);
+  const baseRateDisplay = getActiveBaseRatePer100Micron().toFixed(2);
   const thicknessFactor = Number(currentThickness || 0) / 100;
   const thicknessFactorDisplay = thicknessFactor.toFixed(2);
   const ratePerSqmDisplay = currentRatePerSqm.toFixed(2);
@@ -1890,8 +1895,7 @@ function updatePricingFromSelections() {
   }
 
   currentThickness = String(activeThickness);
-  const polCfg = getActivePolipackConfig();
-  const baseRate = polCfg ? polCfg.base : BASE_RATE_PER_100_MICRON;
+  const baseRate = getActiveBaseRatePer100Micron();
   currentRatePerSqm = baseRate * (activeThickness / 100);
   currentNetPrice = currentRatePerSqm * sqmArea;
 
@@ -1955,7 +1959,7 @@ async function addMpackToCart() {
   const discount = discountSelect ? parseFloat(discountSelect.value) || 0 : 0;
   const sqmArea = standardSize.area || customSize.area || 0;
   const thicknessValue = Number(currentThickness || thicknessSelect.value || 0);
-  const ratePerSqm = BASE_RATE_PER_100_MICRON * (thicknessValue / 100);
+  const ratePerSqm = getActiveBaseRatePer100Micron() * (thicknessValue / 100);
   const unitPrice = ratePerSqm * sqmArea;
   const subtotal = unitPrice * quantity;
   const discountAmount = (subtotal * discount) / 100;
