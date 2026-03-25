@@ -6456,6 +6456,7 @@ def quotation_preview():
         'cart_total': subtotal_after_discount  # cart_total is the subtotal after discount but before taxes
     }
     
+    app.logger.info(f"[DEBUG] current_user.phone={getattr(current_user, 'phone', 'MISSING')} current_user.id={getattr(current_user, 'id', 'MISSING')}")
     return render_template('quotation.html', **context)
 
 
