@@ -152,6 +152,12 @@
                                     <input type="email" class="form-control" id="email" required>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="userPhone" class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="userPhone">
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -1150,6 +1156,7 @@ function getRoleBadgeColor(role) {
             const userId = document.getElementById('userId').value;
             const username = document.getElementById('username').value.trim();
             const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
             const password = document.getElementById('password').value;
             const role = document.getElementById('role').value;
             
@@ -1161,6 +1168,7 @@ function getRoleBadgeColor(role) {
             const userData = {
                 username,
                 email,
+                phone,
                 role,
                 assigned_companies: getSelectedCompanyIds()
             };
@@ -1259,6 +1267,7 @@ function getRoleBadgeColor(role) {
                         document.getElementById('userId').value = user.id;
                         document.getElementById('username').value = user.username;
                         document.getElementById('email').value = user.email;
+                        document.getElementById('userPhone').value = user.phone || '';
                         document.getElementById('role').value = user.role;
                         document.getElementById('password').required = false;
                         

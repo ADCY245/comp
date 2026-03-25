@@ -1132,6 +1132,7 @@ def admin_create_user():
         username = (data.get('username') or '').strip()
         email = (data.get('email') or '').strip().lower()
         password = data.get('password')
+        phone = (data.get('phone') or '').strip()
         role = (data.get('role') or 'user').lower()
         assigned_companies = normalize_assigned_companies(data.get('assigned_companies', []))
 
@@ -1151,6 +1152,7 @@ def admin_create_user():
                     'username_lower': username.lower(),
                     'email': email,
                     'password_hash': hashed_password,
+                    'phone': phone,
                     'role': role,
                     'is_verified': True,
                     'assigned_companies': assigned_companies,
@@ -1177,6 +1179,7 @@ def admin_create_user():
             'username': username,
             'email': email,
             'password_hash': hashed_password,
+            'phone': phone,
             'role': role,
             'is_verified': True,
             'assigned_companies': assigned_companies,
@@ -1210,6 +1213,8 @@ def admin_update_user(user_id):
                     update_fields['username_lower'] = data['username'].lower()
                 if 'email' in data:
                     update_fields['email'] = data['email'].lower()
+                if 'phone' in data:
+                    update_fields['phone'] = data['phone'].strip()
                 if 'role' in data:
                     role_value = normalize_role_key(data['role'])
                     if not can_assign_role(current_user, role_value):
@@ -1241,6 +1246,8 @@ def admin_update_user(user_id):
             user['username'] = data['username']
         if 'email' in data:
             user['email'] = data['email'].lower()
+        if 'phone' in data:
+            user['phone'] = data['phone'].strip()
         if 'role' in data:
             role_value = normalize_role_key(data['role'])
             if not can_assign_role(current_user, role_value):
