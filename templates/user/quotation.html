@@ -138,8 +138,13 @@
                         <div><a href="mailto:{{ current_user.email }}">{{ current_user.email }}</a></div>
                         <div class="mt-2">
                             <label for="preparedByPhone" class="form-label mb-1">Phone <span style="color: #dc3545;">*</span></label>
-                            {% set prepared_phone_value = session.get('quotation_prepared_by_phone') or current_user.phone or '' %}
-                            <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required value="{{ prepared_phone_value }}" {% if prepared_phone_value %}readonly{% endif %}>
+                            <div class="input-group">
+                                {% set prepared_phone_value = session.get('quotation_prepared_by_phone') or current_user.phone or '' %}
+                                <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required value="{{ prepared_phone_value }}" {% if prepared_phone_value %}readonly{% endif %}>
+                                <button type="button" class="btn btn-outline-secondary" id="editPreparedByPhoneBtn" title="Edit phone">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -182,8 +187,13 @@
                             <i class="fas fa-phone me-2 text-muted"></i>
                             <div class="w-100">
                                 <div class="text-muted small">Phone <span style="color: #dc3545;">*</span></div>
-                                {% set customer_phone_value = session.get('quotation_customer_phone') or company_details.phone or '' %}
-                                <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required value="{{ customer_phone_value }}" {% if customer_phone_value %}readonly{% endif %}>
+                                <div class="input-group">
+                                    {% set customer_phone_value = session.get('quotation_customer_phone') or company_details.phone or '' %}
+                                    <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required value="{{ customer_phone_value }}" {% if customer_phone_value %}readonly{% endif %}>
+                                    <button type="button" class="btn btn-outline-secondary" id="editCustomerPhoneBtn" title="Edit phone">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -492,7 +502,83 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // No JavaScript needed for company info as it's now server-rendered
+    // Pencil edit handlers for phone fields
+    const preparedByPhoneInput = document.getElementById('preparedByPhone');
+    const customerPhoneInput = document.getElementById('customerPhone');
+    const editPreparedByBtn = document.getElementById('editPreparedByPhoneBtn');
+    const editCustomerBtn = document.getElementById('editCustomerPhoneBtn');
+
+    function makeEditable(input, button) {
+        input.removeAttribute('readonly');
+        input.focus();
+        input.select();
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        button.title = 'Save phone';
+    }
+
+    function makeReadonly(input, button) {
+        input.setAttribute('readonly', true);
+        button.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+        button.title = 'Edit phone';
+    }
+
+    async function savePhones() {
+        const customerPhone = customerPhoneInput.value.trim();
+        const preparedByPhone = preparedByPhoneInput.value.trim();
+
+        try {
+            const response = await fetch('/set_quotation_phones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                body: JSON.stringify({ customer_phone: customerPhone, prepared_by_phone: preparedByPhone }),
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to update phones');
+            }
+            // Update values and make readonly again
+            customerPhoneInput.value = data.customer_phone;
+            preparedByPhoneInput.value = data.prepared_by_phone;
+            makeReadonly(customerPhoneInput, editCustomerBtn);
+            makeReadonly(preparedByPhoneInput, editPreparedByBtn);
+        } catch (err) {
+            alert('Error updating phone numbers: ' + err.message);
+        }
+    }
+
+    if (editPreparedByBtn) {
+        editPreparedByBtn.addEventListener('click', function() {
+            if (preparedByPhoneInput.hasAttribute('readonly')) {
+                makeEditable(preparedByPhoneInput, editPreparedByBtn);
+            } else {
+                savePhones();
+            }
+        });
+    }
+    if (editCustomerBtn) {
+        editCustomerBtn.addEventListener('click', function() {
+            if (customerPhoneInput.hasAttribute('readonly')) {
+                makeEditable(customerPhoneInput, editCustomerBtn);
+            } else {
+                savePhones();
+            }
+        });
+    }
+
+    // Save on Enter when editing
+    [preparedByPhoneInput, customerPhoneInput].forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !input.hasAttribute('readonly')) {
+                e.preventDefault();
+                savePhones();
+            }
+        });
+    });
 });
 
 function downloadQuotationPdf() {
