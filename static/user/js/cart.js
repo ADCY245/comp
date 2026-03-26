@@ -3047,14 +3047,6 @@ function updateItemDisplay(item, data) {
             unitPrice = parseFloat(data.unit_price || item.getAttribute('data-unit-price') || 0);
             quantity = parseInt(data.quantity || 1);
             subtotal = unitPrice * quantity;
-            // Fallback: if unitPrice is 0 but subtotal and quantity are sensible, derive unitPrice
-            if (unitPrice === 0 && quantity > 0) {
-                const altSubtotal = parseFloat(data.subtotal ?? 0);
-                if (altSubtotal > 0) {
-                    unitPrice = altSubtotal / quantity;
-                    subtotal = altSubtotal;
-                }
-            }
             discountPercent = parseFloat(data.discount_percent || item.getAttribute('data-discount-percent') || 0);
             discountAmount = (subtotal * discountPercent) / 100;
             totalBeforeGst = subtotal - discountAmount;

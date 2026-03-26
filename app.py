@@ -3615,8 +3615,8 @@ def get_user_cart():
                     except Exception as _mpack_recalc_error:
                         app.logger.warning(f"MPack recalc skipped due to error: {_mpack_recalc_error}")
 
-                if 'calculations' not in product:
-                    # If calculations are missing, recalculate them
+                if 'calculations' not in product or not isinstance(product.get('calculations'), dict):
+                    # If calculations are missing or invalid, recalculate them
                     if product.get('type') == 'blanket':
                         base_price = float(product.get('base_price', 0))
                         bar_price = float(product.get('bar_price', 0))
@@ -3631,11 +3631,17 @@ def get_user_cart():
                         gst_amount = (discounted_subtotal * gst_percent) / 100
                         final_total = discounted_subtotal + gst_amount
                         
+                        product['unit_price'] = round(price_per_unit, 2)
                         product['calculations'] = {
-                            'price_per_unit': round(price_per_unit, 2),
+                            'base_price': round(base_price, 2),
+                            'bar_price': round(bar_price, 2),
+                            'unit_price': round(price_per_unit, 2),
+                            'quantity': quantity,
                             'subtotal': round(subtotal, 2),
+                            'discount_percent': discount_percent,
                             'discount_amount': round(discount_amount, 2),
                             'discounted_subtotal': round(discounted_subtotal, 2),
+                            'gst_percent': gst_percent,
                             'gst_amount': round(gst_amount, 2),
                             'final_total': round(final_total, 2)
                         }
@@ -3645,23 +3651,49 @@ def get_user_cart():
                         discount_percent = float(product.get('discount_percent', 0))
                         gst_percent = float(product.get('gst_percent', 18))
                         
-                        discount_amount = (price * discount_percent / 100)
-                        price_after_discount = price - discount_amount
-                        gst_amount = (price_after_discount * gst_percent / 100)
-                        final_unit_price = price_after_discount + gst_amount
-                        final_total = final_unit_price * quantity
+                        subtotal = price * quantity
+                        discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
+                        price_after_discount = subtotal - discount_amount
+                        gst_amount = (price_after_discount * gst_percent / 100) if gst_percent else 0
+                        final_total = price_after_discount + gst_amount
                         
                         product['calculations'] = {
                             'unit_price': round(price, 2),
+                            'quantity': quantity,
+                            'subtotal': round(subtotal, 2),
+                            'discount_percent': discount_percent,
                             'discount_amount': round(discount_amount, 2),
                             'price_after_discount': round(price_after_discount, 2),
+                            'gst_percent': gst_percent,
                             'gst_amount': round(gst_amount, 2),
-                            'gst_percent': round(gst_percent, 2),
-                            'final_unit_price': round(final_unit_price, 2),
                             'final_total': round(final_total, 2)
                         }
                     elif product.get('type') == 'rule':
                         recalc_rule_pricing(product)
+                    else:
+                        # Generic fallback for any other item type with missing/zero calculations
+                        unit_price = float(product.get('unit_price', 0))
+                        quantity = int(product.get('quantity', 1))
+                        discount_percent = float(product.get('discount_percent', 0))
+                        gst_percent = float(product.get('gst_percent', 18))
+                        
+                        subtotal = unit_price * quantity
+                        discount_amount = (subtotal * discount_percent / 100) if discount_percent else 0
+                        discounted_subtotal = subtotal - discount_amount
+                        gst_amount = (discounted_subtotal * gst_percent / 100) if gst_percent else 0
+                        final_total = discounted_subtotal + gst_amount
+                        
+                        product['calculations'] = {
+                            'unit_price': round(unit_price, 2),
+                            'quantity': quantity,
+                            'subtotal': round(subtotal, 2),
+                            'discount_percent': discount_percent,
+                            'discount_amount': round(discount_amount, 2),
+                            'discounted_subtotal': round(discounted_subtotal, 2),
+                            'gst_percent': gst_percent,
+                            'gst_amount': round(gst_amount, 2),
+                            'final_total': round(final_total, 2)
+                        }
             
             products = sanitized_products
             return {"products": products}
@@ -6736,6 +6768,19 @@ def set_quotation_phones():
     session['quotation_prepared_by_phone'] = prepared_by_phone
     session.modified = True
 
+    # Persist customer phone to the selected company record in MongoDB
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and customer_phone:
+        company_id = session.get('company_id') or (session.get('selected_company', {}).get('id') if isinstance(session.get('selected_company'), dict) else None)
+        if company_id and ObjectId.is_valid(str(company_id)):
+            try:
+                mongo_db.companies.update_one(
+                    {'_id': ObjectId(str(company_id))},
+                    {'$set': {'Phone': customer_phone, 'updated_at': datetime.utcnow()}}
+                )
+                app.logger.info(f"Updated company {company_id} phone to {customer_phone}")
+            except Exception as e:
+                app.logger.error(f"Failed to update company phone: {e}")
+
     return jsonify({'success': True, 'customer_phone': customer_phone, 'prepared_by_phone': prepared_by_phone})
 
 # ---------------------------------------------------------------------------
@@ -6868,6 +6913,18 @@ def send_quotation():
                     )
                 except Exception as e:
                     app.logger.error(f"Error updating user's company info: {str(e)}")
+            
+            # Persist customer phone to the selected company record in MongoDB
+            company_id = session.get('company_id') or (session.get('selected_company', {}).get('id') if isinstance(session.get('selected_company'), dict) else None)
+            if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and customer_phone and company_id and ObjectId.is_valid(str(company_id)):
+                try:
+                    mongo_db.companies.update_one(
+                        {'_id': ObjectId(str(company_id))},
+                        {'$set': {'Phone': customer_phone, 'updated_at': datetime.utcnow()}}
+                    )
+                    app.logger.info(f"Updated company {company_id} phone to {customer_phone} on send_quotation")
+                except Exception as e:
+                    app.logger.error(f"Failed to update company phone on send_quotation: {e}")
             
             # Update session
             session['company_name'] = customer_name
