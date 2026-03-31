@@ -408,28 +408,6 @@ const ChemoApp = (function() {
             }, true); // Use capture phase to ensure we catch the event early
         }
         
-        if (elements.mpacksLink) {
-            elements.mpacksLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (state.selectedCompany && state.selectedCompany.id) {
-                    window.location.href = `/mpacks?company_id=${state.selectedCompany.id}`;
-                } else {
-                    showAlert('Please select a customer before continuing.', 'warning');
-                }
-            });
-        }
-        
-        if (elements.blanketsLink) {
-            elements.blanketsLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (state.selectedCompany && state.selectedCompany.id) {
-                    window.location.href = `/blankets?company_id=${state.selectedCompany.id}`;
-                } else {
-                    showAlert('Please select a customer before continuing.', 'warning');
-                }
-            });
-        }
-
         document.addEventListener('click', (e) => {
             if (!elements.companySelector) return;
             if (!elements.companySelector.contains(e.target)) {
