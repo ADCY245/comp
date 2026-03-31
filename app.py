@@ -398,15 +398,6 @@ def render_company_product_page(template_name, extra_context=None):
     if company_id:
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
-        session.modified = True
     else:
         selected_company = session.get('selected_company', {})
         company_name = selected_company.get('name') or session.get('company_name')
@@ -8054,15 +8045,6 @@ def mpacks():
         # Try to get company info by ID
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-        
-        # Update session with the selected company
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
     else:
         # Fall back to session data if no company_id in URL
         selected_company = session.get('selected_company', {})
@@ -8100,16 +8082,6 @@ def spray_powder():
     if company_id:
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
-        session.modified = True
     else:
         selected_company = session.get('selected_company', {})
         company_name = selected_company.get('name') or session.get('company_name')
@@ -8213,16 +8185,6 @@ def cutting_rule():
     if company_id:
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
-        session.modified = True
     else:
         selected_company = session.get('selected_company', {})
         company_name = selected_company.get('name') or session.get('company_name')
@@ -8256,16 +8218,6 @@ def creasing_matrix():
     if company_id:
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
-        session.modified = True
     else:
         selected_company = session.get('selected_company', {})
         company_name = selected_company.get('name') or session.get('company_name')
@@ -8303,15 +8255,6 @@ def chemicals_maintenance():
     if company_id:
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
     else:
         selected_company = session.get('selected_company', {})
         company_name = selected_company.get('name') or session.get('company_name')
@@ -8352,16 +8295,6 @@ def blankets():
         # Try to get company info by ID
         company_name = get_company_name_by_id(company_id)
         company_email = get_company_email_by_id(company_id)
-        
-        # Update session with the selected company
-        session['selected_company'] = {
-            'id': company_id,
-            'name': company_name,
-            'email': company_email
-        }
-        session['company_name'] = company_name
-        session['company_email'] = company_email
-        session['company_id'] = company_id
     else:
         # Fall back to session data if no company_id in URL
         selected_company = session.get('selected_company', {})
