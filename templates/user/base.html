@@ -741,45 +741,13 @@
         }
 
         // If we get here, no company was found
-        console.log('No company found, showing company selection');
+        console.log('No company found, showing popup error');
         
-        // Store the current URL for redirection after company selection
-        sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+        // Show popup error
+        alert('Please select a company first before navigating to this page.');
         
-        // Show the company selection UI if it exists
-        const companySearchWrapper = document.getElementById('companySearchWrapper');
-        const customerInfoContent = document.getElementById('customerInfoContent');
-        
-        if (companySearchWrapper && customerInfoContent) {
-            // Show the company search box
-            customerInfoContent.style.display = 'none';
-            companySearchWrapper.style.display = 'block';
-            
-            // Focus on the search input if it exists
-            const companySearchInput = document.getElementById('companySearchInput');
-            if (companySearchInput) {
-                companySearchInput.focus();
-            }
-            
-            // Show a message to the user
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-info alert-dismissible fade show mb-3';
-            alertDiv.role = 'alert';
-            alertDiv.innerHTML = `
-                <strong>Select a Company</strong>
-                <p>Please select a company to continue.</p>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            
-            // Insert the alert at the top of the company search section
-            companySearchWrapper.insertBefore(alertDiv, companySearchWrapper.firstChild);
-            
-            // Scroll to the company selection area
-            companySearchWrapper.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            // Just redirect; flash will be shown by the server
-            window.location.href = '/';
-        }
+        // Redirect to home for company selection
+        window.location.href = '/';
     }
     
     // Function to update cart count
