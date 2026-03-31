@@ -352,8 +352,8 @@ def company_required(view_func):
         app.logger.info("[DEBUG] company_required decorator called for %s", request.path)
 
         # Allow admin routes and profile page without company enforcement
-        if request.path.startswith('/admin/') or request.path == '/profile':
-            app.logger.info("[DEBUG] Bypassing company_required for admin route or profile: %s", request.path)
+        if request.path.startswith('/admin/') or request.path == '/profile' or request.path in ['/', '/index', '/company-selection', '/product_selection', '/signup', '/login', '/logout']:
+            app.logger.info("[DEBUG] Bypassing company_required for admin route or public page: %s", request.path)
             return view_func(*args, **kwargs)
 
         # If session already has a selected company id, allow
@@ -377,20 +377,12 @@ def company_required(view_func):
                 active_company_id = selected_company.get('id')
 
         # Final fallback: if user has company info on the user record, hydrate session automatically.
+        # BUT only if they're not explicitly trying to bypass selection
         if not active_company_id and getattr(current_user, 'is_authenticated', False):
-            user_company_id = getattr(current_user, 'company_id', None)
-            if user_company_id:
-                session['selected_company'] = {
-                    'id': str(user_company_id),
-                    'name': getattr(current_user, 'company_name', '') or session.get('company_name', ''),
-                    'email': getattr(current_user, 'company_email', '') or session.get('company_email', '')
-                }
-                session['company_id'] = str(user_company_id)
-                session['company_name'] = session['selected_company'].get('name', '')
-                session['company_email'] = session['selected_company'].get('email', '')
-                session.modified = True
-                selected_company = session.get('selected_company', {}) or {}
-                active_company_id = selected_company.get('id')
+            # Do NOT auto-hydrate from user record; force explicit company selection
+            # This prevents users from bypassing the company selection step
+            app.logger.info("[DEBUG] No company selected and user authenticated; blocking access")
+            pass
 
         if active_company_id:
             # Ensure the selected_company dict is populated with the active id
