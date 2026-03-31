@@ -28,6 +28,21 @@
   align-items: flex-start;
 }
 
+/* Mobile responsiveness: stack sidebar below */
+@media (max-width: 991.98px) {
+  .chem-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .chem-configurator {
+    grid-column: 1 / -1;
+  }
+  .chem-summary {
+    grid-column: 1 / -1;
+    order: 2;
+  }
+}
+
 .chem-configurator { 
   grid-column: 1/2; 
 }

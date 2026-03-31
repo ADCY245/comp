@@ -293,3 +293,16 @@
     opacity: 0.35;
     color: var(--color-gold);
 }
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .stats-card {
+    margin-bottom: 1rem;
+  }
+  .quotations-header {
+    font-size: 1.5rem;
+  }
+  .admin-quotations-page {
+    padding: 1rem;
+  }
+}
