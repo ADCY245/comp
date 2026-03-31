@@ -254,7 +254,15 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="companyPaymentTerms" class="form-label">Payment Terms</label>
-                                <input type="text" class="form-control" id="companyPaymentTerms" name="last_payment_terms" placeholder="e.g. 100% advance">
+                                <select class="form-select" id="companyPaymentTerms" name="last_payment_terms">
+                                    <option value="">Select payment terms</option>
+                                    <option value="100% advance">100% advance</option>
+                                    <option value="P.O.D">P.O.D</option>
+                                    <option value="15 Days">15 Days</option>
+                                    <option value="30 Days">30 Days</option>
+                                    <option value="45 Days">45 Days</option>
+                                    <option value="2 Month">2 Month</option>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label for="companyBillingAttention" class="form-label">Billing Attention <span class="text-danger">*</span></label>

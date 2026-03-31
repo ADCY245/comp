@@ -356,69 +356,20 @@ def company_required(view_func):
             app.logger.info("[DEBUG] Bypassing company_required for admin route or public page: %s", request.path)
             return view_func(*args, **kwargs)
 
-        # If session already has a selected company id, allow
-        selected_company = session.get('selected_company', {}) or {}
-        app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
         # Only allow access if an explicit company has been selected in this session
-        active_company_id = selected_company.get('id')
+        # (must be an object with a non-empty `id`).
+        selected_company = session.get('selected_company', {})
+        if not isinstance(selected_company, dict):
+            selected_company = {}
+        app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
+        active_company_id = (selected_company.get('id') or '').strip()
 
-        # Backwards-compatible fallback: accept existing session company_id/company_name/company_email
-        # and hydrate session['selected_company'] so downstream logic can proceed.
-        if not active_company_id:
-            fallback_company_id = session.get('company_id')
-            if fallback_company_id:
-                session['selected_company'] = {
-                    'id': fallback_company_id,
-                    'name': session.get('company_name', ''),
-                    'email': session.get('company_email', '')
-                }
-                session.modified = True
-                selected_company = session.get('selected_company', {}) or {}
-                active_company_id = selected_company.get('id')
-
-        # Final fallback: if user has company info on the user record, hydrate session automatically.
-        # BUT only if they're not explicitly trying to bypass selection
-        if not active_company_id and getattr(current_user, 'is_authenticated', False):
-            # Do NOT auto-hydrate from user record; force explicit company selection
-            # This prevents users from bypassing the company selection step
-            app.logger.info("[DEBUG] No company selected and user authenticated; blocking access")
-            pass
+        # No implicit fallbacks to session legacy fields or current_user are allowed here.
+        # The user must explicitly select a company.
 
         if active_company_id:
-            # Ensure the selected_company dict is populated with the active id
-            if not selected_company.get('id'):
-                session['selected_company'] = {
-                    'id': active_company_id,
-                    'name': selected_company.get('name') or session.get('company_name', ''),
-                    'email': selected_company.get('email') or session.get('company_email', '')
-                }
-                session.modified = True
             app.logger.info("[DEBUG] Company already selected (id=%s), allowing access", active_company_id)
             return view_func(*args, **kwargs)
-
-        # Attempt to use company_id from query parameters (first-time access)
-        company_id = request.args.get('company_id')
-        app.logger.info("[DEBUG] No company in session, checking for company_id in query params: %s", company_id)
-        
-        if company_id:
-            # Lazy import to avoid circular dependencies
-            from app import get_company_name_by_id, get_company_email_by_id  # type: ignore
-            company_name = get_company_name_by_id(company_id) or ''
-            company_email = get_company_email_by_id(company_id) or ''
-            app.logger.info("[DEBUG] Found company details - name: %s, email: %s", company_name, company_email)
-            
-            if company_name or company_email:
-                session['selected_company'] = {
-                    'id': company_id,
-                    'name': company_name,
-                    'email': company_email
-                }
-                session['company_name'] = company_name
-                session['company_email'] = company_email
-                session['company_id'] = company_id  # Ensure company_id is set in session
-                session.modified = True
-                app.logger.info("[DEBUG] Updated session with company details")
-                return view_func(*args, **kwargs)
 
         # Otherwise, block access.
         # For AJAX/JSON requests, return a JSON error instead of redirecting to index.
@@ -461,13 +412,6 @@ def render_company_product_page(template_name, extra_context=None):
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
 
     session['company_name'] = company_name
     session['company_email'] = company_email
@@ -3901,34 +3845,9 @@ def cart():
                 'total': round(total, 2)
             }
         
-        # Get company info with proper fallbacks
-        # Get company name with fallbacks after ensuring active id
-        company_name = (
-            selected_company.get('name') or 
-            session.get('company_name') or 
-            (hasattr(current_user, 'company_name') and current_user.company_name) or
-            (current_user.company_id and get_company_name_by_id(current_user.company_id)) or 
-            'Your Company'
-        )
-        
-        # Get company email with fallbacks
-        company_email = (
-            selected_company.get('email') or 
-            session.get('company_email') or
-            (hasattr(current_user, 'company_email') and current_user.company_email) or
-            (current_user.company_id and get_company_email_by_id(current_user.company_id)) or 
-            ''
-        )
-        
-        # Ensure session is updated with the latest values
-        if company_name and company_name != 'Your Company':
-            session['company_name'] = company_name
-            session['company_email'] = company_email
-            session['selected_company'] = {
-                'name': company_name,
-                'email': company_email
-            }
-            session.modified = True
+        # Company details must come from an explicit selection (enforced by company_required)
+        company_name = (selected_company.get('name') or session.get('company_name') or '')
+        company_email = (selected_company.get('email') or session.get('company_email') or '')
             
         # Log the company info for debugging
         app.logger.info(f"Cart - Company: {company_name}, Email: {company_email}")
@@ -5143,14 +5062,10 @@ def company_selection():
             return redirect(url_for('company_selection'))
         
         # Save company info in session for convenience
+        # NOTE: this legacy flow does not provide an id, so it should not count as a selection
+        # for company_required-protected pages.
         session['company'] = company
         session['email'] = email
-
-        # Store a consistent dict for selected_company used by downstream routes
-        session['selected_company'] = {
-            'name': company,
-            'email': email
-        }
         
         # Redirect to product selection
         return redirect(url_for('product_selection'))
@@ -6952,15 +6867,7 @@ def send_quotation():
                 except Exception as e:
                     app.logger.error(f"Failed to update company phone on send_quotation: {e}")
             
-            # Update session
-            session['company_name'] = customer_name
-            session['company_email'] = customer_email
-            session['selected_company'] = {
-                'name': customer_name,
-                'email': customer_email,
-                'id': current_user.company_id if hasattr(current_user, 'company_id') else session.get('company_id', '')
-            }
-            session.modified = True
+            # Do not hydrate session company selection here. Company selection must be explicit.
 
         customer_details = build_quotation_company_details(
             selected_company,
@@ -8162,14 +8069,6 @@ def mpacks():
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-        
-        # Fall back to user's company info if not found
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
     
     # Update session with final values
     session['company_name'] = company_name
@@ -8216,13 +8115,6 @@ def spray_powder():
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
 
     session['company_name'] = company_name
     session['company_email'] = company_email
@@ -8337,13 +8229,6 @@ def cutting_rule():
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
 
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
-
     session['company_name'] = company_name
     session['company_email'] = company_email
     session['company_id'] = company_id
@@ -8386,13 +8271,6 @@ def creasing_matrix():
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
 
     session['company_name'] = company_name
     session['company_email'] = company_email
@@ -8439,13 +8317,6 @@ def chemicals_maintenance():
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
 
     session['company_name'] = company_name
     session['company_email'] = company_email
@@ -8497,14 +8368,6 @@ def blankets():
         company_name = selected_company.get('name') or session.get('company_name')
         company_email = selected_company.get('email') or session.get('company_email')
         company_id = selected_company.get('id') or session.get('company_id')
-        
-        # Fall back to user's company info if not found
-        if not company_name and hasattr(current_user, 'company_name'):
-            company_name = current_user.company_name
-        if not company_email and hasattr(current_user, 'company_email'):
-            company_email = current_user.company_email
-        if not company_id and hasattr(current_user, 'company_id'):
-            company_id = current_user.company_id
     
     # Update session with final values
     session['company_name'] = company_name
