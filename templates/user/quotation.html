@@ -64,6 +64,13 @@
         z-index: 2;
         background-color: transparent;
     }
+
+    #editCustomerPhoneBtn,
+    #editPreparedByPhoneBtn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        min-width: 42px;
+    }
 </style>
 {% endblock %}
 
@@ -141,7 +148,7 @@
                             <div class="input-group">
                                 {% set prepared_phone_value = session.get('quotation_prepared_by_phone') or current_user.phone or '' %}
                                 <input type="tel" class="form-control" id="preparedByPhone" placeholder="Enter your phone" required value="{{ prepared_phone_value }}" {% if prepared_phone_value %}readonly{% endif %}>
-                                <button type="button" class="btn btn-outline-secondary" id="editPreparedByPhoneBtn" title="Edit phone">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="editPreparedByPhoneBtn" title="Edit phone">
                                     <i class="fas fa-pencil-alt"></i>
                                 </button>
                             </div>
@@ -190,7 +197,7 @@
                                 <div class="input-group">
                                     {% set customer_phone_value = session.get('quotation_customer_phone') or company_details.phone or '' %}
                                     <input type="tel" class="form-control" id="customerPhone" placeholder="Enter customer phone" required value="{{ customer_phone_value }}" {% if customer_phone_value %}readonly{% endif %}>
-                                    <button type="button" class="btn btn-outline-secondary" id="editCustomerPhoneBtn" title="Edit phone">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="editCustomerPhoneBtn" title="Edit phone">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
                                 </div>
@@ -531,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const preparedByPhone = preparedByPhoneInput.value.trim();
 
         try {
-            const response = await fetch('/set_quotation_phones', {
+            const response = await fetch('/api/quotation_phones', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
                 body: JSON.stringify({ customer_phone: customerPhone, prepared_by_phone: preparedByPhone }),

@@ -1416,6 +1416,7 @@ def admin_create_company():
         billing_phone = (data.get('billing_phone') or phone or '').strip()
 
         billing_street = (data.get('billing_street') or '').strip()
+        last_payment_terms = (data.get('last_payment_terms') or '').strip()
         assigned_to = normalize_assigned_companies(data.get('assigned_to', []))
 
         if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None:
@@ -1425,6 +1426,7 @@ def admin_create_company():
                     'Company Name': name,
                     'EmailID': email,
                     'Phone': phone,
+                    'last_payment_terms': last_payment_terms,
                     'Billing Attention': billing_attention,
                     'Billing Address': billing_address,
                     'Billing Street': billing_street,
@@ -1452,6 +1454,7 @@ def admin_create_company():
             'Company Name': name,
             'EmailID': email,
             'Phone': phone,
+            'last_payment_terms': last_payment_terms,
             'Billing Attention': billing_attention,
             'Billing Address': billing_address,
             'Billing Street': billing_street,
@@ -1491,6 +1494,8 @@ def admin_update_company(company_id):
                     update_fields['EmailID'] = data['email']
                 if 'phone' in data:
                     update_fields['Phone'] = data['phone']
+                if 'last_payment_terms' in data:
+                    update_fields['last_payment_terms'] = data['last_payment_terms']
                 if 'billing_attention' in data:
                     update_fields['Billing Attention'] = data['billing_attention']
                 if 'billing_address' in data:
@@ -1533,6 +1538,8 @@ def admin_update_company(company_id):
                     company['EmailID'] = data['email']
                 if 'phone' in data:
                     company['Phone'] = data['phone']
+                if 'last_payment_terms' in data:
+                    company['last_payment_terms'] = data['last_payment_terms']
                 if 'billing_attention' in data:
                     company['Billing Attention'] = data['billing_attention']
                 if 'billing_address' in data:
@@ -2426,6 +2433,7 @@ def normalize_company_record(company_doc):
     name = _get_company_field(company_doc, 'name', 'Company Name')
     email = _get_company_field(company_doc, 'email', 'EmailID')
     phone = _get_company_field(company_doc, 'phone', 'Phone')
+    last_payment_terms = _get_company_field(company_doc, 'last_payment_terms', 'Last Payment Terms')
     billing_attention = _get_company_field(company_doc, 'billing_attention', 'Billing Attention')
     billing_address = _get_company_field(
         company_doc,
@@ -2449,6 +2457,7 @@ def normalize_company_record(company_doc):
         'name': _normalize_company_text(name),
         'email': _normalize_company_text(email),
         'phone': _normalize_company_text(phone),
+        'last_payment_terms': _normalize_company_text(last_payment_terms),
         'billing_attention': _normalize_company_text(billing_attention),
         'billing_address': _normalize_company_text(billing_address),
         'billing_street': _normalize_company_text(billing_street),
@@ -6754,6 +6763,17 @@ def set_payment_terms():
     session['payment_terms'] = payment_terms
     session['payment_terms_company_id'] = str(session.get('company_id') or (session.get('selected_company', {}) or {}).get('id') or '')
     session.modified = True
+
+    company_id = session.get('company_id') or (session.get('selected_company', {}) or {}).get('id')
+    if MONGO_AVAILABLE and USE_MONGO and mongo_db is not None and payment_terms and company_id and ObjectId.is_valid(str(company_id)):
+        try:
+            mongo_db.companies.update_one(
+                {'_id': ObjectId(str(company_id))},
+                {'$set': {'last_payment_terms': payment_terms, 'updated_at': datetime.utcnow()}},
+                upsert=False
+            )
+        except Exception as e:
+            app.logger.warning(f"Failed to persist payment terms for company {company_id}: {e}")
 
     return jsonify({'success': True, 'payment_terms': payment_terms})
 

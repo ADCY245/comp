@@ -247,6 +247,10 @@
                                 <input type="text" class="form-control" id="companyPhone" name="phone" required>
                             </div>
                             <div class="col-md-6">
+                                <label for="companyPaymentTerms" class="form-label">Payment Terms</label>
+                                <input type="text" class="form-control" id="companyPaymentTerms" name="last_payment_terms" placeholder="e.g. 100% advance">
+                            </div>
+                            <div class="col-md-6">
                                 <label for="companyBillingAttention" class="form-label">Billing Attention <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="companyBillingAttention" name="billing_attention" required>
                             </div>
@@ -902,21 +906,55 @@ function getRoleBadgeColor(role) {
         function buildCompanyItemContent(company) {
             const assignedCount = getCompanyAssignedCount(company);
             const lastPaymentTerms = company.last_payment_terms || '';
+            const phone = company.phone || '';
+            const billingAttention = company.billing_attention || '';
+            const billingCity = company.billing_city || '';
+            const billingState = company.billing_state || '';
+            const billingPostal = company.billing_postal_code || '';
             return `
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${company.name} <span class="badge bg-info">${assignedCount}</span></h6>
-                        <p class="mb-1 text-muted">${company.email}</p>
-                        ${lastPaymentTerms ? `<div class="small text-muted">Payment Terms: <strong>${lastPaymentTerms}</strong></div>` : ''}
-                        <small class="text-muted">${company.billing_address || company.address || '-'}</small>
+                <div class="company-item__header">
+                    <div class="company-item__title">
+                        <h6 class="mb-0">${company.name}</h6>
+                        <span class="badge bg-info" title="Assigned users">${assignedCount}</span>
                     </div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary btn-action" onclick="editCompany('${company.id}')">
+                    <div class="company-item__actions">
+                        <button class="btn btn-sm btn-outline-primary btn-action" onclick="editCompany('${company.id}')" title="Edit company">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteCompany('${company.id}')">
+                        <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteCompany('${company.id}')" title="Delete company">
                             <i class="fas fa-trash"></i>
                         </button>
+                    </div>
+                </div>
+                <div class="company-item__meta">
+                    <div class="company-item__row">
+                        <span class="company-item__label">Email</span>
+                        <span class="company-item__value">${company.email || '-'}</span>
+                    </div>
+                    <div class="company-item__row">
+                        <span class="company-item__label">Phone</span>
+                        <span class="company-item__value">${phone || '-'}</span>
+                    </div>
+                    ${lastPaymentTerms ? `
+                    <div class="company-item__row">
+                        <span class="company-item__label">Payment Terms</span>
+                        <span class="company-item__value"><strong>${lastPaymentTerms}</strong></span>
+                    </div>` : ''}
+                    <div class="company-item__row">
+                        <span class="company-item__label">Billing Attention</span>
+                        <span class="company-item__value">${billingAttention || '-'}</span>
+                    </div>
+                    <div class="company-item__row">
+                        <span class="company-item__label">Billing Address</span>
+                        <span class="company-item__value">${company.billing_address || company.address || '-'}</span>
+                    </div>
+                    <div class="company-item__row">
+                        <span class="company-item__label">City / State</span>
+                        <span class="company-item__value">${[billingCity, billingState].filter(Boolean).join(', ') || '-'}</span>
+                    </div>
+                    <div class="company-item__row">
+                        <span class="company-item__label">Postal Code</span>
+                        <span class="company-item__value">${billingPostal || '-'}</span>
                     </div>
                 </div>
             `;
@@ -1384,6 +1422,7 @@ function getRoleBadgeColor(role) {
                     document.getElementById('companyName').value = company.name || '';
                     document.getElementById('companyEmail').value = company.email || '';
                     document.getElementById('companyPhone').value = company.phone || '';
+                    document.getElementById('companyPaymentTerms').value = (company.last_payment_terms && company.last_payment_terms !== '-') ? company.last_payment_terms : '';
                     document.getElementById('companyBillingAttention').value = company.billing_attention || '';
                     document.getElementById('companyBillingAddress').value = company.billing_address || '';
                     document.getElementById('companyBillingStreet').value = company.billing_street || '';
