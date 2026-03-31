@@ -4922,6 +4922,7 @@ def index():
             return redirect(url_for('gm_page'))
     try:
         set_pricing_mode('standard')
+        reset_company_selection_session()
         companies = load_companies_data()
         
         needs_warning = session.pop('needs_company_warning', False)
