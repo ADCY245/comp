@@ -408,28 +408,6 @@
             });
         });
     }
-
-    // Initialize company data in sessionStorage if it doesn't exist
-    document.addEventListener('DOMContentLoaded', function() {
-        // Only initialize if not already set
-        if (!sessionStorage.getItem('companyName')) {
-            const companyData = {
-                name: '{{ session.get("company_name", "") | safe }}',
-                email: '{{ session.get("company_email", "") | safe }}'
-            };
-            
-            if (companyData.name) {
-                sessionStorage.setItem('companyName', companyData.name);
-                sessionStorage.setItem('companyEmail', companyData.email);
-                
-                // Also update localStorage for persistence
-                localStorage.setItem('selectedCompany', JSON.stringify({
-                    name: companyData.name,
-                    email: companyData.email
-                }));
-            }
-        }
-    });
     </script>
     
     <!-- Bootstrap JS and dependencies -->
@@ -658,19 +636,6 @@
                 return selectedCompany;
             }
 
-            // Legacy fallback: check Flask session company_id/name (but only if non-empty and not 'test')
-            const legacyId = '{{ session.get("company_id", "") }}';
-            const legacyName = '{{ session.get("company_name", "") | tojson | safe }}'.replace(/^"|"$/g, '');
-            if (legacyId && legacyId.trim() && legacyName && legacyName.trim() && legacyId.trim().toLowerCase() !== 'test') {
-                const companyData = { id: legacyId, name: legacyName, email: '{{ session.get("company_email", "") | tojson | safe }}'.replace(/^"|"$/g, '') };
-                const companyStr = JSON.stringify(companyData);
-                sessionStorage.setItem('selectedCompany', companyStr);
-                sessionStorage.setItem('companyId', companyData.id);
-                sessionStorage.setItem('companyName', companyData.name);
-                if (companyData.email) sessionStorage.setItem('companyEmail', companyData.email);
-                return companyData;
-            }
-
             // Check session storage next
             const sessionCompany = sessionStorage.getItem('selectedCompany');
             if (sessionCompany) {
@@ -716,16 +681,15 @@
             const companyNameInput = document.getElementById('companyName');
             const companyEmailInput = document.getElementById('companyEmail');
             
-            if (companyIdInput && companyNameInput && 
-                (companyIdInput.value || companyNameInput.value)) {
+            if (companyIdInput && companyNameInput && companyIdInput.value) {
                 company = {
-                    id: companyIdInput.value || '',
+                    id: companyIdInput.value,
                     name: companyNameInput.value || '',
                     email: (companyEmailInput && companyEmailInput.value) || ''
                 };
                 
                 // Save to storage for next time
-                if (company.id || company.name) {
+                if (company.id) {
                     const companyStr = JSON.stringify(company);
                     sessionStorage.setItem('selectedCompany', companyStr);
                     if (company.id) sessionStorage.setItem('companyId', company.id);
@@ -739,7 +703,7 @@
         }
 
         // If we have a company, update the state and navigate
-        if (company) {
+        if (company && company.id) {
             // Update ChemoApp state if it exists
             if (window.ChemoApp) {
                 if (!window.ChemoApp.state) window.ChemoApp.state = {};
