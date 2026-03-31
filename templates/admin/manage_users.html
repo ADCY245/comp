@@ -243,12 +243,8 @@
                                 <input type="email" class="form-control" id="companyEmail" name="email" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="companyPhone" class="form-label">Company Phone <span class="text-danger">*</span></label>
+                                <label for="companyPhone" class="form-label">Phone <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="companyPhone" name="phone" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="companyBillingPhone" class="form-label">Billing Phone <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="companyBillingPhone" name="billing_phone" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="companyBillingAttention" class="form-label">Billing Attention <span class="text-danger">*</span></label>
@@ -1317,7 +1313,7 @@ function getRoleBadgeColor(role) {
             const form = document.getElementById('companyForm');
             const formData = new FormData(form);
             const companyData = Object.fromEntries(formData);
-            const requiredFields = ['name', 'email', 'phone', 'billing_phone', 'billing_attention', 'billing_address', 'billing_city', 'billing_state', 'billing_postal_code'];
+            const requiredFields = ['name', 'email', 'phone', 'billing_attention', 'billing_address', 'billing_city', 'billing_state', 'billing_postal_code'];
             for (const field of requiredFields) {
                 if (!companyData[field] || !companyData[field].trim()) {
                     alert('Please fill out all required company fields.');
@@ -1394,7 +1390,6 @@ function getRoleBadgeColor(role) {
                     document.getElementById('companyBillingCity').value = company.billing_city || '';
                     document.getElementById('companyBillingState').value = company.billing_state || '';
                     document.getElementById('companyPostalCode').value = company.billing_postal_code || '';
-                    document.getElementById('companyBillingPhone').value = company.billing_phone || '';
 
                     // Populate and preselect assigned users if provided
                     await populateCompanyAssignedTo(company.assigned_to || []);

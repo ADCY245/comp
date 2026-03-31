@@ -1409,9 +1409,11 @@ def admin_create_company():
             billing_city = _required('billing_city')
             billing_state = _required('billing_state')
             billing_postal_code = _required('billing_postal_code')
-            billing_phone = _required('billing_phone')
         except ValueError as missing_field:
             return jsonify({'success': False, 'error': f"Missing required field: {missing_field}"}), 400
+
+        # Admin dashboard uses a single phone field; keep Billing Phone for backward compatibility.
+        billing_phone = (data.get('billing_phone') or phone or '').strip()
 
         billing_street = (data.get('billing_street') or '').strip()
         assigned_to = normalize_assigned_companies(data.get('assigned_to', []))
