@@ -350,7 +350,12 @@ def company_required(view_func):
     @wraps(view_func)
     def wrapped_view(*args, **kwargs):
         app.logger.info("[DEBUG] company_required decorator called for %s", request.path)
-        
+
+        # Allow admin routes and profile page without company enforcement
+        if request.path.startswith('/admin/') or request.path == '/profile':
+            app.logger.info("[DEBUG] Bypassing company_required for admin route or profile: %s", request.path)
+            return view_func(*args, **kwargs)
+
         # If session already has a selected company id, allow
         selected_company = session.get('selected_company', {}) or {}
         app.logger.info("[DEBUG] Current selected_company from session: %s", selected_company)
@@ -1133,6 +1138,7 @@ def admin_create_user():
         email = (data.get('email') or '').strip().lower()
         password = data.get('password')
         phone = (data.get('phone') or '').strip()
+        position = (data.get('position') or '').strip()
         role = (data.get('role') or 'user').lower()
         assigned_companies = normalize_assigned_companies(data.get('assigned_companies', []))
 
@@ -1153,6 +1159,7 @@ def admin_create_user():
                     'email': email,
                     'password_hash': hashed_password,
                     'phone': phone,
+                    'position': position,
                     'role': role,
                     'is_verified': True,
                     'assigned_companies': assigned_companies,
@@ -1215,6 +1222,8 @@ def admin_update_user(user_id):
                     update_fields['email'] = data['email'].lower()
                 if 'phone' in data:
                     update_fields['phone'] = data['phone'].strip()
+                if 'position' in data:
+                    update_fields['position'] = data['position'].strip()
                 if 'role' in data:
                     role_value = normalize_role_key(data['role'])
                     if not can_assign_role(current_user, role_value):
@@ -1248,6 +1257,8 @@ def admin_update_user(user_id):
             user['email'] = data['email'].lower()
         if 'phone' in data:
             user['phone'] = data['phone'].strip()
+        if 'position' in data:
+            user['position'] = data['position'].strip()
         if 'role' in data:
             role_value = normalize_role_key(data['role'])
             if not can_assign_role(current_user, role_value):
@@ -2789,6 +2800,7 @@ def serialize_admin_user(user_doc):
         'username': user_doc.get('username') or user_doc.get('email', '')[: user_doc.get('email', '').find('@')],
         'email': user_doc.get('email') or user_doc.get('Email', ''),
         'phone': user_doc.get('phone') or '',
+        'position': user_doc.get('position') or '',
         'role': user_doc.get('role', 'user'),
         'is_verified': bool(user_doc.get('is_verified', True)),
         'created_at': str(user_doc.get('created_at') or user_doc.get('Created', '')),

@@ -88,6 +88,14 @@
                         <input type="text" class="form-control" id="role" name="role" value="{{ user.role if user.role else 'User' }}" readonly>
                     </div>
                     <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone or '' }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="position" class="form-label">Position</label>
+                        <input type="text" class="form-control" id="position" name="position" value="{{ user.position or '' }}" readonly>
+                    </div>
+                    <div class="mb-3">
                         <label for="created_at" class="form-label">Account Created</label>
                         <input type="text" class="form-control" id="created_at" name="created_at" value="{{ user.created_at.strftime('%B %d, %Y') if user.created_at else '' }}" readonly>
                     </div>

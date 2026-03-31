@@ -158,6 +158,12 @@
                                     <input type="tel" class="form-control" id="userPhone">
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="userPosition" class="form-label">Position</label>
+                                    <input type="text" class="form-control" id="userPosition">
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -1191,6 +1197,7 @@ function getRoleBadgeColor(role) {
             const username = document.getElementById('username').value.trim();
             const email = document.getElementById('email').value.trim();
             const phone = document.getElementById('userPhone').value.trim();
+            const position = document.getElementById('userPosition').value.trim();
             const password = document.getElementById('password').value;
             const role = document.getElementById('role').value;
             
@@ -1203,6 +1210,7 @@ function getRoleBadgeColor(role) {
                 username,
                 email,
                 phone,
+                position,
                 role,
                 assigned_companies: getSelectedCompanyIds()
             };
@@ -1302,6 +1310,7 @@ function getRoleBadgeColor(role) {
                         document.getElementById('username').value = user.username;
                         document.getElementById('email').value = user.email;
                         document.getElementById('userPhone').value = user.phone || '';
+                        document.getElementById('userPosition').value = user.position || '';
                         document.getElementById('role').value = user.role;
                         document.getElementById('password').required = false;
                         
