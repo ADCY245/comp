@@ -20,52 +20,35 @@
     width: 100%;
   }
 
+  .pdf-page {
+    border: 7px solid #d8b66a;
+    border-radius: 10px;
+    padding: 18px 18px 14px 18px;
+  }
+
   .pdf-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: flex-start;
-    border-bottom: 1px solid #d9d9d9;
-    padding-bottom: 10px;
+    text-align: center;
+    padding-bottom: 14px;
     margin-bottom: 14px;
   }
 
-  .pdf-header__left {
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-  }
-
   .pdf-logo {
-    width: 42mm;
-    height: 28mm;
+    width: 16mm;
+    height: 16mm;
     object-fit: contain;
-  }
-
-  .pdf-seller {
-    font-size: 10.5pt;
-    line-height: 1.25;
-  }
-
-  .pdf-seller .pdf-seller__name {
-    font-weight: 700;
-  }
-
-  .pdf-title {
-    text-align: right;
-    min-width: 55mm;
+    display: inline-block;
   }
 
   .pdf-title__text {
-    font-size: 20pt;
+    font-size: 18pt;
+    font-weight: 700;
     letter-spacing: 0.08em;
-    font-weight: 500;
-    margin: 0;
+    margin: 10px 0 4px 0;
   }
 
   .pdf-meta {
-    margin-top: 8px;
     font-size: 10pt;
+    color: #6c757d;
   }
 
   .pdf-grid {
@@ -76,15 +59,22 @@
   }
 
   .pdf-card {
-    border: 1px solid #e3e3e3;
-    padding: 10px;
-    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    overflow: hidden;
   }
 
   .pdf-card__title {
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 700;
-    margin: 0 0 6px 0;
+    margin: 0;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 12px;
+  }
+
+  .pdf-card__body {
+    padding: 12px;
   }
 
   .pdf-kv {
@@ -120,7 +110,8 @@
   }
 
   thead th {
-    background: #f3f3f3;
+    background: #0b4a6b;
+    color: #fff;
     font-weight: 700;
   }
 
@@ -156,51 +147,84 @@
   .totals tr:last-child td {
     font-weight: 700;
   }
+
+  .section {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .section__header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 12px;
+    font-weight: 700;
+  }
+
+  .section__body {
+    padding: 12px;
+    font-size: 10pt;
+    line-height: 1.45;
+  }
 </style>
 </head>
 <body>
 <div class="pdf-wrap">
-  <div class="pdf-header">
-    <div class="pdf-header__left">
+  <div class="pdf-page">
+    <div class="pdf-header">
       <img class="pdf-logo" src="https://cgi-logo.tiiny.site/CGI_LOGO.svg" alt="CGI Logo">
-      <div class="pdf-seller">
-        <div class="pdf-seller__name">Chemo Graphic International</div>
-        <div>113-114 High Tech Industrial Centre, Caves Road,</div>
-        <div>Jogeshwari East, (Near Bank of Baroda Branch)</div>
-        <div>Mumbai - 400060, Maharashtra, India.</div>
-        <div>GSTIN: 27AAAPB9020H1Z6</div>
-        <div>Phone: 09619888755</div>
-        <div>Email: info@chemo.in  </div>
-        <div>Website: www.chemo.in</div>
-      </div>
+      <div class="pdf-title__text">QUOTATION</div>
+      <div class="pdf-meta">{{ quote_date }}</div>
     </div>
-    <div class="pdf-title">
-      <p class="pdf-title__text">ESTIMATE</p>
-      <div class="pdf-meta muted">Generated: {{ quote_date }} {{ quote_time }}</div>
-    </div>
-  </div>
 
   <div class="pdf-grid">
     <div class="pdf-card">
-      <div class="pdf-card__title">Bill To</div>
-      <div class="pdf-kv">
-        <div class="k">Company</div>
-        <div class="v">{{ company_details.name or company_name or 'Not specified' }}</div>
-        <div class="k">Email</div>
-        <div class="v">{{ company_details.email or company_email or '' }}</div>
+      <div class="pdf-card__title">Company Information</div>
+      <div class="pdf-card__body">
+        <div class="pdf-kv">
+          <div class="k">Company Name</div>
+          <div class="v">Chemo Graphic International (CGI)</div>
+          <div class="k">Email</div>
+          <div class="v">info@chemo.in</div>
+          <div class="k">Address</div>
+          <div class="v">113, High Tech Industrial Centre,<br>Caves Road, Jogeshwari (East),<br>Mumbai - 400060</div>
+          <div class="k">GSTIN</div>
+          <div class="v">27AAAPB9020H1Z6</div>
+          <div class="k">Phone</div>
+          <div class="v">9930070755</div>
+          <div class="k">Prepared By</div>
+          <div class="v">{{ current_user.username }}<br>{{ current_user.email }}</div>
+        </div>
       </div>
     </div>
 
     <div class="pdf-card">
-      <div class="pdf-card__title">Document Details</div>
-      <div class="pdf-kv">
-        <div class="k">Estimate Date</div>
-        <div class="v">{{ quote_date }}</div>
-        <div class="k">Sales Person</div>
-        <div class="v">{{ current_user.username }}</div>
-        <div class="k">Payment Terms</div>
-        <div class="v">{{ payment_terms or '---' }}</div>
+      <div class="pdf-card__title">Customer Information</div>
+      <div class="pdf-card__body">
+        <div class="pdf-kv">
+          <div class="k">Company Name</div>
+          <div class="v">{{ company_details.name or company_name or 'Not specified' }}</div>
+          <div class="k">Email</div>
+          <div class="v">{{ company_details.email or company_email or '--' }}</div>
+          <div class="k">Address</div>
+          <div class="v">{{ company_details.address or '-' }}</div>
+          <div class="k">GSTIN</div>
+          <div class="v">{{ company_details.gst_display or 'URP' }}</div>
+          <div class="k">Quotation Details</div>
+          <div class="v">{{ quote_date }} | {{ quote_time }}</div>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__header">Quotation Details</div>
+    <div class="section__body">
+      <p style="margin: 0 0 10px 0;">Hello <strong>{{ company_details.name or company_name or 'Customer' }}</strong>,</p>
+      <p style="margin: 0 0 10px 0;">This is <strong>{{ current_user.username }}</strong> from CGI.</p>
+      <p style="margin: 0 0 10px 0;">Here is the proposed quotation for the required products:</p>
+      <p style="margin: 0;"><strong>Payment Terms:</strong> {{ payment_terms or '---' }}</p>
     </div>
   </div>
 
@@ -353,15 +377,17 @@
         </tr>
         {% endif %}
         <tr>
-          <td class="num">GST</td>
+          <td class="num">GST (18%)</td>
           <td class="num">₹{{ '%.2f'|format(((calculations.gst_breakdown|default({})).total_gst|default(0))) }}</td>
         </tr>
         <tr>
-          <td class="num">Total</td>
+          <td class="num">Total (After GST)</td>
           <td class="num">₹{{ '%.2f'|format((calculations.total|default(0))) }}</td>
         </tr>
       </tbody>
     </table>
+  </div>
+
   </div>
 </div>
 
