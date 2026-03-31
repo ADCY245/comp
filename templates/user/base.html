@@ -638,22 +638,36 @@
 
         // Function to get company from storage
         const getStoredCompany = () => {
-            // Check if we have company data in Flask session (from server-side rendering)
-            const companyData = {
-                id: '{{ session.get("company_id", "") }}',
-                name: '{{ session.get("company_name", "") | tojson | safe }}'.replace(/^"|"$/g, ''),
-                email: '{{ session.get("company_email", "") | tojson | safe }}'.replace(/^"|"$/g, '')
-            };
-            
-            if (companyData.id && companyData.name) {
+            // First, check for explicit selected_company from server (matches @company_required)
+            const selectedCompanyStr = '{{ session.get("selected_company", "{}") | tojson | safe }}';
+            let selectedCompany = {};
+            try {
+                selectedCompany = JSON.parse(selectedCompanyStr);
+            } catch (e) {
+                selectedCompany = {};
+            }
+            if (selectedCompany && selectedCompany.id && selectedCompany.id.trim()) {
                 // Save to session storage for client-side access
+                const companyStr = JSON.stringify(selectedCompany);
+                sessionStorage.setItem('selectedCompany', companyStr);
+                sessionStorage.setItem('companyId', selectedCompany.id);
+                sessionStorage.setItem('companyName', selectedCompany.name || '');
+                if (selectedCompany.email) {
+                    sessionStorage.setItem('companyEmail', selectedCompany.email);
+                }
+                return selectedCompany;
+            }
+
+            // Legacy fallback: check Flask session company_id/name (but only if non-empty and not 'test')
+            const legacyId = '{{ session.get("company_id", "") }}';
+            const legacyName = '{{ session.get("company_name", "") | tojson | safe }}'.replace(/^"|"$/g, '');
+            if (legacyId && legacyId.trim() && legacyName && legacyName.trim() && legacyId.trim().toLowerCase() !== 'test') {
+                const companyData = { id: legacyId, name: legacyName, email: '{{ session.get("company_email", "") | tojson | safe }}'.replace(/^"|"$/g, '') };
                 const companyStr = JSON.stringify(companyData);
                 sessionStorage.setItem('selectedCompany', companyStr);
                 sessionStorage.setItem('companyId', companyData.id);
                 sessionStorage.setItem('companyName', companyData.name);
-                if (companyData.email) {
-                    sessionStorage.setItem('companyEmail', companyData.email);
-                }
+                if (companyData.email) sessionStorage.setItem('companyEmail', companyData.email);
                 return companyData;
             }
 
@@ -661,7 +675,10 @@
             const sessionCompany = sessionStorage.getItem('selectedCompany');
             if (sessionCompany) {
                 try {
-                    return JSON.parse(sessionCompany);
+                    const parsed = JSON.parse(sessionCompany);
+                    if (parsed && parsed.id && parsed.id.trim() && parsed.id.trim().toLowerCase() !== 'test') {
+                        return parsed;
+                    }
                 } catch (e) {
                     console.error('Error parsing session company:', e);
                 }
@@ -672,15 +689,17 @@
             if (localCompany) {
                 try {
                     const company = JSON.parse(localCompany);
-                    // Update session storage for next time
-                    const companyStr = JSON.stringify(company);
-                    sessionStorage.setItem('selectedCompany', companyStr);
-                    sessionStorage.setItem('companyId', company.id);
-                    sessionStorage.setItem('companyName', company.name);
-                    if (company.email) {
-                        sessionStorage.setItem('companyEmail', company.email);
+                    if (company && company.id && company.id.trim() && company.id.trim().toLowerCase() !== 'test') {
+                        // Update session storage for next time
+                        const companyStr = JSON.stringify(company);
+                        sessionStorage.setItem('selectedCompany', companyStr);
+                        sessionStorage.setItem('companyId', company.id);
+                        sessionStorage.setItem('companyName', company.name);
+                        if (company.email) {
+                            sessionStorage.setItem('companyEmail', company.email);
+                        }
+                        return company;
                     }
-                    return company;
                 } catch (e) {
                     console.error('Error parsing local company:', e);
                 }
