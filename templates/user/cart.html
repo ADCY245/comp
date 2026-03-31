@@ -780,9 +780,9 @@
                                             <div class="price-row">
                                                 <span class="price-label">Unit Price:</span>
                                                 <span class="price-value unit-price">
-                                                    ₹{{ "%.2f"|format((item.unit_price|default(0) - item.bar_price|default(0))|abs) }}
+                                                    ₹{{ "%.2f"|format((item.calculations.unit_price|default(item.unit_price|default(0) - item.bar_price|default(0))|abs)) }}
                                                 </span>
-                                                <input type="hidden" class="unit-price-value" value="{{ (item.unit_price|default(0) - item.bar_price|default(0))|abs }}">
+                                                <input type="hidden" class="unit-price-value" value="{{ (item.calculations.unit_price|default(item.unit_price|default(0) - item.bar_price|default(0))|abs) }}">
                                             </div>
                                             {% if item.bar_price and item.bar_price > 0 %}
                                             <div class="price-row">
@@ -813,7 +813,7 @@
                                             <div class="price-row">
                                                 <span class="price-label">Subtotal:</span>
                                                 <span class="price-value subtotal-value">
-                                                    ₹{{ "%.2f"|format((((item.unit_price|default(0) - item.bar_price|default(0)) + item.bar_price|default(0)) * item.quantity|default(1))|round(2)) }}
+                                                    ₹{{ "%.2f"|format(item.calculations.subtotal|default((((item.unit_price|default(0) - item.bar_price|default(0)) + item.bar_price|default(0)) * item.quantity|default(1))|round(2))) }}
                                                 </span>
                                             </div>
                                             <!-- Discount input row with amount aligned to right -->
@@ -841,7 +841,7 @@
                                                 </div>
                                                 <span class="price-value discount-amount" style="min-width: 100px; text-align: right;">
                                                     {% if item.discount_percent and item.discount_percent > 0 %}
-                                                        -₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (item.discount_percent|default(0)) / 100) }}
+                                                        -₹{{ "%.2f"|format(item.calculations.discount_amount|default((item.unit_price|default(0)) * (item.quantity|default(1)) * (item.discount_percent|default(0)) / 100)) }}
                                                     {% else %}
                                                         -₹0.00
                                                     {% endif %}
@@ -850,16 +850,16 @@
                                             <div class="price-row pre-gst-total border-top pt-2 mt-2">
                                                 <span class="price-label fw-medium">Amount (Pre-GST):</span>
                                                 <span class="price-value pre-gst-amount fw-medium">
-                                                    ₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100)) }}
+                                                    ₹{{ "%.2f"|format(item.calculations.discounted_subtotal|default((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100))) }}
                                                 </span>
                                             </div>
                                             <div class="price-row gst-row">
                                                 <span class="price-label">GST (<span class="gst-percent">{{ item.gst_percent|default(18) }}</span>%):</span>
-                                                <span class="price-value gst-amount">₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (item.gst_percent|default(18)) / 100) }}</span>
+                                                <span class="price-value gst-amount">₹{{ "%.2f"|format(item.calculations.gst_amount|default((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (item.gst_percent|default(18)) / 100)) }}</span>
                                             </div>
                                             <div class="price-row fw-bold border-top mt-2 pt-2">
                                                 <span>Total:</span>
-                                                <span class="total-value">₹{{ "%.2f"|format((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (1 + (item.gst_percent|default(18)) / 100)) }}</span>
+                                                <span class="total-value">₹{{ "%.2f"|format(item.calculations.final_total|default((item.unit_price|default(0)) * (item.quantity|default(1)) * (1 - (item.discount_percent|default(0)) / 100) * (1 + (item.gst_percent|default(18)) / 100))) }}</span>
                                             </div>
                                         </div>
                                     </div>
