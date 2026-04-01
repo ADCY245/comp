@@ -28,8 +28,8 @@
   align-items: flex-start;
 }
 
-/* Mobile responsiveness: stack sidebar below */
-@media (max-width: 991.98px) {
+/* Mobile responsiveness: stack sidebar below on phones only */
+@media (max-width: 575.98px) {
   .chem-layout {
     grid-template-columns: 1fr;
     gap: 1.5rem;
