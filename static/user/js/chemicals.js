@@ -382,7 +382,9 @@
       return;
     }
 
-    categoryOptionsEl.innerHTML = state.categories
+    // Batch render using fragment to reduce reflows
+    const fragment = document.createDocumentFragment();
+    const buttonsHTML = state.categories
       .map(category => {
         const isActive = state.selectedCategory?.id === category.id;
         const icon = category.icon || 'fas fa-vial';
@@ -397,13 +399,21 @@
         `;
       })
       .join('');
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = buttonsHTML;
+    while (tempDiv.firstChild) {
+      fragment.appendChild(tempDiv.firstChild);
+    }
+    categoryOptionsEl.innerHTML = '';
+    categoryOptionsEl.appendChild(fragment);
 
-    categoryOptionsEl.querySelectorAll('.chem-option').forEach(button => {
-      button.addEventListener('click', () => {
-        const { categoryId } = button.dataset;
-        if (!categoryId) return;
-        selectCategory(categoryId);
-      });
+    // Attach listeners with delegation to avoid per-button closures
+    categoryOptionsEl.addEventListener('click', e => {
+      const button = e.target.closest('.chem-option');
+      if (!button) return;
+      const { categoryId } = button.dataset;
+      if (!categoryId) return;
+      selectCategory(categoryId);
     });
   }
 
