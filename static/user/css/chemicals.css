@@ -36,6 +36,8 @@
   }
   .chem-configurator {
     grid-column: 1 / -1;
+    max-width: none;
+    width: 100%;
   }
   .chem-summary {
     grid-column: 1 / -1;
