@@ -28,20 +28,25 @@
   align-items: flex-start;
 }
 
-/* Mobile responsiveness: stack sidebar below on phones only */
-@media (max-width: 575.98px) {
+/* Stack the summary below the configurator on mobile/tablet widths */
+@media (max-width: 767.98px) {
   .chem-layout {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
+
   .chem-configurator {
     grid-column: 1 / -1;
     max-width: none;
     width: 100%;
+    order: 1;
   }
+
   .chem-summary {
     grid-column: 1 / -1;
     order: 2;
+    width: 100%;
+    max-width: none;
   }
 }
 
