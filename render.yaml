@@ -12,6 +12,16 @@ services:
         value: 3.9.0
       - key: PORT
         value: 10000
+      - key: MONGO_URI
+        fromDatabase:
+          name: mongodb
+          property: connectionString
+      - key: MONGODB_URI
+        fromDatabase:
+          name: mongodb
+          property: connectionString
+      - key: DB_NAME
+        value: moneda_db
       - key: FLASK_ENV
         value: production
       - key: FLASK_APP

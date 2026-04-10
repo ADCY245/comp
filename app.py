@@ -799,7 +799,11 @@ from pymongo import MongoClient, ReturnDocument
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import time
 
-MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+MONGO_URI = (
+    os.environ.get('MONGO_URI')
+    or os.environ.get('MONGODB_URI')
+    or 'mongodb://localhost:27017/'
+)
 DB_NAME = os.environ.get('DB_NAME', 'moneda_db')
 MONGO_AVAILABLE = False
 USE_MONGO = os.environ.get('USE_MONGO', 'true').lower() == 'true'
